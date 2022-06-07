@@ -1,2 +1,2 @@
-# accounts-and-balances-bc
-EXPERIMENTAL vNext Accounts and Balances Bounded Context
+# Accounts and Balances - Bounded Context
+
