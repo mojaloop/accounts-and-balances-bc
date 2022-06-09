@@ -1,0 +1,41 @@
+{
+  "name": "@mojaloop/accounts-and-balances-bc-service",
+  "version": "0.0.1",
+  "description": "Accounts and balances bounded context - service.",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/mojaloop/accounts-and-balances-bc/tree/main/modules/service",
+  "bugs": {
+    "url": "https://github.com/mojaloop/accounts-and-balances-bc/issues#readme"
+  },
+  "contributors": [
+    "Gonçalo Garcia <goncalogarcia99@gmail.com>",
+    "Pedro Sousa Barreto <pedrob@crosslaketech.com>"
+  ],
+  "private": true,
+  "main": "./dist/application/index.js",
+  "types": "./dist/application/index.d.ts",
+  "files": [
+    "/dist"
+  ],
+  "scripts": {
+    "start": "yarn run service",
+    "service": "tsc && node dist/application/index.js",
+    "build": "tsc",
+    "test:unit": "jest --passWithNoTests --testMatch '**/test/unit/**/*.test.ts'",
+    "test:integration": "jest --passWithNoTests --testMatch '**/test/integration/**/*.test.ts'"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.13",
+    "@types/node": "^17.0.41",
+    "eslint": "^8.17.0",
+    "husky": "^8.0.1",
+    "jest": "^28.1.1",
+    "npm-check-updates": "^13.1.2",
+    "ts-jest": "^28.0.4",
+    "typescript": "^4.7.3"
+  },
+  "dependencies": {
+    "@mojaloop/logging-bc-public-types-lib": "^0.0.3",
+    "express": "^4.18.1"
+  }
+}
