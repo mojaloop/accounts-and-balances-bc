@@ -29,31 +29,20 @@
 
 "use strict";
 
-import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
+export class Account {
+	id: string;
+	type: AccountType;
+	state: AccountState;
+	debitLimit: number;
+	creditLimit: number;
+	debitBalance: number;
+	creditBalance: number;
+}
 
-export class Aggregate {
-	// Properties received through the constructor.
-	private readonly logger: ILogger;
-	// Other properties.
+export enum AccountType {
+	// TODO.
+}
 
-	constructor(
-		logger: ILogger,
-	) {
-		this.logger = logger;
-	}
-
-	async init(): Promise<void> {
-	}
-
-	async createAccount(): Promise<void> {
-	}
-
-	async createAccountEntries(): Promise<void> {
-	}
-
-	async getAccountDetails(): Promise<any> {
-	}
-
-	async getAccountEntries(): Promise<any> {
-	}
+export enum AccountState {
+	// TODO.
 }
