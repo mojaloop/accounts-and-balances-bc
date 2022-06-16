@@ -29,40 +29,13 @@
 
 "use strict";
 
-import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {Aggregate} from "../../domain/aggregate";
-import express from "express";
+import {IAccount} from "@mojaloop/accounts-and-balances-public-types";
 
-export class ExpressRoutes {
-	// Properties received through the constructor.
-	private readonly logger: ILogger;
-	private readonly aggregate: Aggregate;
-	// Other properties.
-	private readonly _router: express.Router;
-
-	constructor(
-		logger: ILogger,
-		aggregate: Aggregate
-	) {
-		this.logger = logger;
-		this.aggregate = aggregate;
-
-		this._router = express.Router();
-
-		this.setUp();
-	}
-
-	private setUp(): void {
-	}
-
-	get router(): express.Router {
-		return this._router;
-	}
-
-	private sendErrorResponse(res: express.Response, statusCode: number, message: string) {
-		res.status(statusCode).json({
-			result: "error",
-			message: message
-		});
-	}
+export interface IRepo {
+	init(): Promise<void>;
+	destroy(): Promise<void>;
+	accountExists(accountId: string): Promise<boolean>;
+	storeAccount(account: IAccount): Promise<void>;
+	getAccount(accountId: string): Promise<IAccount | null>;
+	deleteAccount(accountId: string): Promise<void>;
 }

@@ -31,46 +31,56 @@
 
 import {ConsoleLogger, ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {Aggregate} from "../domain/aggregate";
-import {ExpressWebServer} from "./web-server/express_web_server";
+import {IRepo} from "../domain/infrastructure-interfaces/irepo";
+import {KafkaEventConsumer} from "./event-consumer/kafka_event_consumer";
 
 /* Constants. */
-const SERVICE_NAME: string = "accounts and balances service";
-// Web server.
-const WEB_SERVER_HOST: string = process.env.SCHEDULING_HOST_SERVER ?? "localhost";
-const WEB_SERVER_PORT_NO: number = parseInt(process.env.SCHEDULING_PORT_NO_SERVER ?? "") || 1234;
-const WEB_SERVER_PATH_ROUTER: string = "/reminders";
+const SERVICE_NAME: string = "Accounts and Balances Event Handler";
+// Event stream.
+const EVENT_STREAM_HOST: string =
+	process.env.ACCOUNTS_AND_BALANCES_EVENT_STREAM_HOST ?? "localhost";
+const EVENT_STREAM_PORT_NO: number =
+	parseInt(process.env.ACCOUNTS_AND_BALANCES_EVENT_STREAM_PORT_NO ?? "") || 9092;
+const EVENT_STREAM_URL: string = `${EVENT_STREAM_HOST}:${EVENT_STREAM_PORT_NO}`;
+const EVENT_CONSUMER_ID: string = SERVICE_NAME;
 
 // Logger.
 const logger: ILogger = new ConsoleLogger();
+// Infrastructure.
+const repo: IRepo = new MongoRepo(
+	logger,
+	REPO_URL,
+	DB_NAME,
+	COLLECTION_NAME
+);
 // Domain.
 const aggregate: Aggregate = new Aggregate(
-	logger
+	logger,
+	repo
 );
 // Application.
-const webServer: ExpressWebServer = new ExpressWebServer(
+const eventConsumer: KafkaEventConsumer = new KafkaEventConsumer(
 	logger,
-	WEB_SERVER_HOST,
-	WEB_SERVER_PORT_NO,
-	WEB_SERVER_PATH_ROUTER,
+	EVENT_STREAM_URL,
+	EVENT_CONSUMER_ID,
 	aggregate
 );
 
 async function start(): Promise<void> {
-	webServer.start();
+	await aggregate.init(); // No need to handle exceptions. TODO.
+	await eventConsumer.init(); // No need to handle exceptions. TODO.
 }
 
-async function handleIntAndTermSignals(signal: NodeJS.Signals): Promise<void> {
-	logger.info(`${SERVICE_NAME} - ${signal} received, cleaning up...`);
-	process.exit();
-}
-
-// SIGINT (Ctrl + c).
-process.on("SIGINT", handleIntAndTermSignals.bind(this));
-// SIGTERM.
+process.on("SIGINT", handleIntAndTermSignals.bind(this)); // Ctrl + c.
 process.on("SIGTERM", handleIntAndTermSignals.bind(this));
-// Exit.
+async function handleIntAndTermSignals(signal: NodeJS.Signals): Promise<void> {
+	logger.info(`${signal} received`);
+	await aggregate.destroy();
+	await eventConsumer.destroy();
+	process.exit(); // TODO: necessary?
+}
 process.on("exit", () => {
-	logger.info(`${SERVICE_NAME} - exiting...`);
+	logger.info(`exiting ${SERVICE_NAME}`);
 });
 
 start();

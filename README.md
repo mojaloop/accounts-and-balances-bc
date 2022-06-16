@@ -1,2 +1,1 @@
-# Accounts and Balances - Bounded Context
-
+# Accounts and Balances Bounded Context

@@ -30,55 +30,78 @@
 "use strict";
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import express from "express";
-import {ExpressRoutes} from "./express_routes";
-import {Aggregate} from "../../domain/aggregate";
+import {IMessageProducer} from "@mojaloop/platform-shared-lib-messaging-types-lib";
+import {IAccount} from "@mojaloop/accounts-and-balances-public-types";
 
-export class ExpressWebServer {
+export class Aggregate {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
-	private readonly HOST: string;
-	private readonly PORT_NO: number;
-	private readonly PATH_ROUTER: string;
+	private readonly eventProducer: IMessageProducer;
 	// Other properties.
-	private readonly BASE_URL: string;
-	private readonly app: express.Express;
-	private readonly routes: ExpressRoutes;
 
 	constructor(
 		logger: ILogger,
-		HOST: string,
-		PORT_NO: number,
-		PATH_ROUTER: string,
-		aggregate: Aggregate
+		eventProducer: IMessageProducer
 	) {
 		this.logger = logger;
-		this.HOST = HOST;
-		this.PORT_NO = PORT_NO;
-		this.PATH_ROUTER = PATH_ROUTER;
-
-		this.BASE_URL = `http://${this.HOST}:${this.PORT_NO}`;
-		this.app = express();
-		this.routes = new ExpressRoutes(
-			logger,
-			aggregate
-		);
-
-		this.configure();
+		this.eventProducer = eventProducer;
 	}
 
-	private configure() {
-		this.app.use(express.json()); // For parsing application/json.
-		this.app.use(express.urlencoded({extended: true})); // For parsing application/x-www-form-urlencoded.
-		this.app.use(this.PATH_ROUTER, this.routes.router);
+	async init(): Promise<void> {
+		try {
+			await this.eventProducer.connect(); // Throws if the event producer is unreachable.
+		} catch (e: unknown) {
+			this.logger.fatal(e); // TODO: fatal?
+			throw e; // No need to be specific.
+		}
 	}
 
-	start(): void {
-		this.app.listen(this.PORT_NO, () => {
-			this.logger.info("Server on.");
-			this.logger.info(`Host: ${this.HOST}`);
-			this.logger.info(`Port: ${this.PORT_NO}`);
-			this.logger.info(`Base URL: ${this.BASE_URL}`);
+	async destroy(): Promise<void> {
+		await this.eventProducer.destroy(); // TODO: check if throws.
+	}
+
+	async createAccount(account: IAccount): Promise<void> {
+		try {
+			await this.eventProducer.send({ // TODO: check if throws.
+				topic: "TODO",
+				value: account
+			});
+		} catch (e: unknown) {
+			this.logger.error(e);
+			throw e; // No need to be specific - internal server error.
+		}
+	}
+
+	async createAccountEntries(x: any /* TODO. */): Promise<void> {
+		await this.eventProducer.send({ // TODO: check if throws.
+			topic: "TODO",
+			value: x
 		});
 	}
+
+	async getAccountDetails(accountId: string): Promise<any> {
+		await this.eventProducer.send({ // TODO: check if throws.
+			topic: "TODO",
+			value: accountId
+		});
+	}
+
+	async getAccountEntries(accountId: string): Promise<any> {
+		await this.eventProducer.send({ // TODO: check if throws.
+			topic: "TODO",
+			value: accountId
+		});
+	}
+
+	/*async insertJournalEntry(): Promise<void> {
+	}
+
+	async queryAccount(): Promise<void> {
+	}
+
+	async queryJournalEntries(): Promise<void> {
+	}
+
+	async closeAccount(): Promise<void> {
+	}*/
 }

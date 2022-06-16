@@ -1,9 +1,9 @@
 {
-  "name": "@mojaloop/accounts-and-balances-bc-service",
+  "name": "@mojaloop/accounts-and-balances-web-server",
   "version": "0.0.1",
-  "description": "Accounts and balances bounded context - service.",
+  "description": "Accounts and balances web server.",
   "license": "Apache-2.0",
-  "homepage": "https://github.com/mojaloop/accounts-and-balances-bc/tree/main/modules/service",
+  "homepage": "https://github.com/mojaloop/accounts-and-balances-bc/tree/main/modules/web-server",
   "bugs": {
     "url": "https://github.com/mojaloop/accounts-and-balances-bc/issues#readme"
   },
@@ -35,7 +35,10 @@
     "typescript": "^4.7.3"
   },
   "dependencies": {
+    "@mojaloop/accounts-and-balances-public-types": "^0.0.1",
     "@mojaloop/logging-bc-public-types-lib": "^0.0.3",
+    "@mojaloop/platform-shared-lib-messaging-types-lib": "^0.0.3",
+    "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib": "^0.0.8",
     "express": "^4.18.1"
   }
 }

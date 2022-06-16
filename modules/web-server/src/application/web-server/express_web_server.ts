@@ -30,30 +30,60 @@
 "use strict";
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
+import express from "express";
+import {ExpressRoutes} from "./express_routes";
+import {Aggregate} from "../../domain/aggregate";
 
-export class Aggregate {
+export class ExpressWebServer {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
+	private readonly HOST: string;
+	private readonly PORT_NO: number;
+	private readonly PATH_ROUTER: string;
 	// Other properties.
+	private readonly BASE_URL: string;
+	private readonly app: express.Express;
+	private readonly routes: ExpressRoutes;
 
 	constructor(
 		logger: ILogger,
+		HOST: string,
+		PORT_NO: number,
+		PATH_ROUTER: string,
+		aggregate: Aggregate
 	) {
 		this.logger = logger;
+		this.HOST = HOST;
+		this.PORT_NO = PORT_NO;
+		this.PATH_ROUTER = PATH_ROUTER;
+
+		this.BASE_URL = `http://${this.HOST}:${this.PORT_NO}`;
+		this.app = express();
+		this.routes = new ExpressRoutes(
+			logger,
+			aggregate
+		);
+
+		this.configure();
 	}
 
-	async init(): Promise<void> {
+	private configure() {
+		this.app.use(express.json()); // For parsing application/json.
+		this.app.use(express.urlencoded({extended: true})); // For parsing application/x-www-form-urlencoded.
+		this.app.use(this.PATH_ROUTER, this.routes.router);
 	}
 
-	async createAccount(): Promise<void> {
-	}
-
-	async createAccountEntries(): Promise<void> {
-	}
-
-	async getAccountDetails(): Promise<any> {
-	}
-
-	async getAccountEntries(): Promise<any> {
+	start(): void {
+		try {
+			this.app.listen(this.PORT_NO, () => {
+				this.logger.info("Server on.");
+				this.logger.info(`Host: ${this.HOST}`);
+				this.logger.info(`Port: ${this.PORT_NO}`);
+				this.logger.info(`Base URL: ${this.BASE_URL}`);
+			});
+		} catch (e: unknown) {
+			this.logger.fatal(e); // TODO: fatal?
+			throw e; // No need to be specific.
+		}
 	}
 }
