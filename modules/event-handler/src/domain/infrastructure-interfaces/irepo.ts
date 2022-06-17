@@ -37,5 +37,6 @@ export interface IRepo {
 	accountExists(accountId: string): Promise<boolean>;
 	storeAccount(account: IAccount): Promise<void>;
 	getAccount(accountId: string): Promise<IAccount | null>;
+	getAccounts(): Promise<IAccount[]>;
 	deleteAccount(accountId: string): Promise<void>;
 }

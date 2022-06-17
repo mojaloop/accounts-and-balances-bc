@@ -33,6 +33,7 @@ import {ConsoleLogger, ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {Aggregate} from "../domain/aggregate";
 import {IRepo} from "../domain/infrastructure-interfaces/irepo";
 import {KafkaEventConsumer} from "./event-consumer/kafka_event_consumer";
+import {MongoRepo} from "../infrastructure/mongo_repo";
 
 /* Constants. */
 const SERVICE_NAME: string = "Accounts and Balances Event Handler";
@@ -42,7 +43,15 @@ const EVENT_STREAM_HOST: string =
 const EVENT_STREAM_PORT_NO: number =
 	parseInt(process.env.ACCOUNTS_AND_BALANCES_EVENT_STREAM_PORT_NO ?? "") || 9092;
 const EVENT_STREAM_URL: string = `${EVENT_STREAM_HOST}:${EVENT_STREAM_PORT_NO}`;
-const EVENT_CONSUMER_ID: string = SERVICE_NAME;
+const EVENT_CONSUMER_ID: string = "SERVICE_NAME";
+// Repo.
+const REPO_HOST: string =
+	process.env.ACCOUNTS_AND_BALANCES_REPO_HOST ?? "localhost";
+const REPO_PORT_NO: number =
+	parseInt(process.env.ACCOUNTS_AND_BALANCES_REPO_PORT_NO ?? "") || 27017;
+const REPO_URL: string = `mongodb://${REPO_HOST}:${REPO_PORT_NO}`;
+const DB_NAME: string = "AccountsAndBalances";
+const COLLECTION_NAME: string = "Accounts";
 
 // Logger.
 const logger: ILogger = new ConsoleLogger();

@@ -63,3 +63,10 @@ export interface IJournalEntry {
 export enum JournalEntryType {
 	// TODO.
 }
+
+export enum TopicsEventStream {
+	CREATE_ACCOUNT = "CREATE_ACCOUNT",
+	CREATE_ACCOUNT_ENTRIES = "CREATE_ACCOUNT_ENTRIES",
+	GET_ACCOUNT_DETAILS = "GET_ACCOUNT_DETAILS",
+	GET_ACCOUNT_ENTRIES = "GET_ACCOUNT_ENTRIES"
+}

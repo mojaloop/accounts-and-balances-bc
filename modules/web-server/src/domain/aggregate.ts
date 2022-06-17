@@ -31,7 +31,7 @@
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {IMessageProducer} from "@mojaloop/platform-shared-lib-messaging-types-lib";
-import {IAccount} from "@mojaloop/accounts-and-balances-public-types";
+import {IAccount, TopicsEventStream} from "@mojaloop/accounts-and-balances-public-types";
 
 export class Aggregate {
 	// Properties received through the constructor.
@@ -63,7 +63,7 @@ export class Aggregate {
 	async createAccount(account: IAccount): Promise<void> {
 		try {
 			await this.eventProducer.send({ // TODO: check if throws.
-				topic: "TODO",
+				topic: TopicsEventStream.CREATE_ACCOUNT, // TODO.
 				value: account
 			});
 		} catch (e: unknown) {
@@ -74,21 +74,21 @@ export class Aggregate {
 
 	async createAccountEntries(x: any /* TODO. */): Promise<void> {
 		await this.eventProducer.send({ // TODO: check if throws.
-			topic: "TODO",
+			topic: TopicsEventStream.CREATE_ACCOUNT_ENTRIES, // TODO.
 			value: x
 		});
 	}
 
 	async getAccountDetails(accountId: string): Promise<any> {
 		await this.eventProducer.send({ // TODO: check if throws.
-			topic: "TODO",
+			topic: TopicsEventStream.GET_ACCOUNT_DETAILS, // TODO.
 			value: accountId
 		});
 	}
 
 	async getAccountEntries(accountId: string): Promise<any> {
 		await this.eventProducer.send({ // TODO: check if throws.
-			topic: "TODO",
+			topic: TopicsEventStream.GET_ACCOUNT_ENTRIES, // TODO.
 			value: accountId
 		});
 	}

@@ -49,7 +49,7 @@ const EVENT_STREAM_HOST: string =
 const EVENT_STREAM_PORT_NO: number =
 	parseInt(process.env.ACCOUNTS_AND_BALANCES_EVENT_STREAM_PORT_NO ?? "") || 9092;
 const EVENT_STREAM_URL: string = `${EVENT_STREAM_HOST}:${EVENT_STREAM_PORT_NO}`;
-const EVENT_PRODUCER_ID: string = SERVICE_NAME;
+const EVENT_PRODUCER_ID: string = "SERVICE_NAME";
 
 // Logger.
 const logger: ILogger = new ConsoleLogger();

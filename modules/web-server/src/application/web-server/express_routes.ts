@@ -56,11 +56,11 @@ export class ExpressRoutes {
 	private setUp(): void {
 		// TODO: paths.
 		// Posts.
-		this._router.post("/accounts", this.postAccount.bind(this)); // TODO: bind?
-		this._router.post("/entries", this.postAccountEntries.bind(this)); // TODO: bind?
+		this._router.post("/accounts", this.postAccount.bind(this));
+		this._router.post("/entries", this.postAccountEntries.bind(this));
 		// Gets.
-		this._router.get("/accounts/:accountId", this.getAccountDetails.bind(this)); // TODO: bind?
-		this._router.get("/accounts/:accountId", this.getAccountEntries.bind(this)); // TODO: bind?
+		this._router.get("/accounts/:accountId", this.getAccountDetails.bind(this));
+		this._router.get("/accounts/:accountId", this.getAccountEntries.bind(this));
 	}
 
 	get router(): express.Router {

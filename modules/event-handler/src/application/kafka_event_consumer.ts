@@ -30,14 +30,17 @@
 "use strict";
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {Aggregate} from "@mojaloop/accounts-and-balances-web-server/dist/domain/aggregate";
-import {IMessageConsumer} from "@mojaloop/platform-shared-lib-messaging-types-lib";
+import {Aggregate} from "../domain/aggregate";
+import {IMessageConsumer, IMessage} from "@mojaloop/platform-shared-lib-messaging-types-lib";
 import {MLKafkaConsumer, MLKafkaConsumerOutputType} from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib";
+import {IAccount, TopicsEventStream} from "@mojaloop/accounts-and-balances-public-types";
 
 export class KafkaEventConsumer {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
-	private readonly topics: string[];
+	private readonly EVENT_STREAM_URL: string;
+	private readonly EVENT_CONSUMER_ID: string;
+	private readonly aggregate: Aggregate;
 	// Other properties.
 	private readonly eventConsumer: IMessageConsumer;
 
@@ -45,18 +48,17 @@ export class KafkaEventConsumer {
 		logger: ILogger,
 		EVENT_STREAM_URL: string,
 		EVENT_CONSUMER_ID: string,
-		aggregate: Aggregate
+		aggregate: Aggregate,
 	) {
 		this.logger = logger;
+		this.EVENT_STREAM_URL = EVENT_STREAM_URL;
+		this.EVENT_CONSUMER_ID = EVENT_CONSUMER_ID;
+		this.aggregate = aggregate;
 
-		this.callbacks = new KafkaCallbacks(
-			logger,
-			aggregate
-		);
 		this.eventConsumer = new MLKafkaConsumer(
 			{
-				kafkaBrokerList: EVENT_STREAM_URL,
-				kafkaGroupId: EVENT_CONSUMER_ID,
+				kafkaBrokerList: this.EVENT_STREAM_URL,
+				kafkaGroupId: this.EVENT_CONSUMER_ID,
 				outputType: MLKafkaConsumerOutputType.Json // TODO.
 			},
 			logger
@@ -65,9 +67,9 @@ export class KafkaEventConsumer {
 
 	async init(): Promise<void> {
 		try {
-			await this.eventConsumer.connect(); // TODO: check if throws.
-			this.eventConsumer.setCallbackFn(handler); // TODO: check if throws.
-			this.eventConsumer.setTopics(this.topics); // TODO: check if throws.
+			this.eventConsumer.setTopics(Object.values(TopicsEventStream)); // TODO: check if throws.
+			this.eventConsumer.setCallbackFn(this.eventHandler.bind(this)); // TODO: check if throws.
+			await this.eventConsumer.connect(); // Has to come after setting the topics and callback. TODO: check if throws.
 			/*this.app.listen(this.PORT_NO, () => {
 				this.logger.info("Server on.");
 				this.logger.info(`Host: ${this.HOST}`);
@@ -83,5 +85,41 @@ export class KafkaEventConsumer {
 
 	async destroy(): Promise<void> {
 		await this.eventConsumer.destroy(false); // TODO: boolean; check if throws.
+	}
+
+	private async eventHandler(message: IMessage): Promise<void> {
+		this.logger.debug(message);
+		switch (message.topic) {
+			case TopicsEventStream.CREATE_ACCOUNT:
+				try {
+					await this.aggregate.createAccount(message.value as IAccount); // TODO: type check;
+				} catch (e: unknown) {
+				}
+				break;
+
+			case TopicsEventStream.CREATE_ACCOUNT_ENTRIES:
+				try {
+					await this.aggregate.createAccountEntries(message.value);
+				} catch (e: unknown) {
+				}
+				break;
+
+			case TopicsEventStream.GET_ACCOUNT_DETAILS:
+				try {
+					const accountDetails: any = await this.aggregate.getAccountDetails(message.value as string); // TODO: return type; type check.
+				} catch (e: unknown) {
+				}
+				break;
+
+			case TopicsEventStream.GET_ACCOUNT_ENTRIES:
+				try {
+					const accountEntries: any = await this.aggregate.getAccountEntries(message.value as string); // TODO: return type; type check.
+				} catch (e: unknown) {
+				}
+				break;
+
+			default:
+				break;
+		}
 	}
 }

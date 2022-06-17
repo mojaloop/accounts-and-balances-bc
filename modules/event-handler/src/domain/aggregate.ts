@@ -52,7 +52,7 @@ export class Aggregate {
 			await this.repo.init();
 		} catch (e: unknown) {
 			this.logger.fatal(e); // TODO: fatal?
-			throw e; // No need to be specific - internal server error.
+			throw e; // No need to be specific.
 		}
 	}
 
