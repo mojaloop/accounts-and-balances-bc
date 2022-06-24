@@ -36,6 +36,7 @@
   },
   "dependencies": {
     "@mojaloop/accounts-and-balances-public-types": "^0.0.1",
+    "@mojaloop/logging-bc-client-lib": "^0.0.10",
     "@mojaloop/logging-bc-public-types-lib": "^0.0.3",
     "@mojaloop/platform-shared-lib-messaging-types-lib": "^0.0.3",
     "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib": "^0.0.8",

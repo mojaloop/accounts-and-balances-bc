@@ -60,7 +60,7 @@ export class ExpressRoutes {
 		this._router.post("/entries", this.postAccountEntries.bind(this));
 		// Gets.
 		this._router.get("/accounts/:accountId", this.getAccountDetails.bind(this));
-		this._router.get("/accounts/:accountId", this.getAccountEntries.bind(this));
+		this._router.get("/entries/:entryId", this.getAccountEntries.bind(this));
 	}
 
 	get router(): express.Router {
@@ -99,7 +99,7 @@ export class ExpressRoutes {
 
 	private async getAccountDetails(req: express.Request, res: express.Response): Promise<void> {
 		try {
-			const accountDetails: any = await this.aggregate.getAccountDetails(req.params.accountId); // TODO: type.
+			const accountDetails: any = await this.aggregate.getAccount(req.params.accountId); // TODO: type.
 			res.status(200).json({
 				status: "success",
 				accountDetails: accountDetails

@@ -29,42 +29,49 @@
 
 "use strict";
 
-import {ConsoleLogger, ILogger} from "@mojaloop/logging-bc-public-types-lib";
+import {ILogger, LogLevel} from "@mojaloop/logging-bc-public-types-lib";
+import {DefaultLogger} from "@mojaloop/logging-bc-client-lib";
 import {Aggregate} from "../domain/aggregate";
 import {ExpressWebServer} from "./web-server/express_web_server";
-import {IMessageProducer} from "@mojaloop/platform-shared-lib-messaging-types-lib";
-import {MLKafkaProducer} from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib";
+import {IRepo} from "@mojaloop/accounts-and-balances-event-handler/dist/domain/infrastructure-interfaces/irepo";
+import {MongoRepo} from "@mojaloop/accounts-and-balances-event-handler/dist/infrastructure/mongo_repo";
 
 /* Constants. */
 const SERVICE_NAME: string = "Accounts and Balances Web Server";
+const SERVICE_VERSION: string = "0.1.1";
 // Web server.
 const WEB_SERVER_HOST: string =
 	process.env.ACCOUNTS_AND_BALANCES_WEB_SERVER_HOST ?? "localhost";
 const WEB_SERVER_PORT_NO: number =
 	parseInt(process.env.ACCOUNTS_AND_BALANCES_WEB_SERVER_PORT_NO ?? "") || 1234;
 const WEB_SERVER_PATH_ROUTER: string = "/"; // TODO.
-// Event stream.
-const EVENT_STREAM_HOST: string =
-	process.env.ACCOUNTS_AND_BALANCES_EVENT_STREAM_HOST ?? "localhost";
-const EVENT_STREAM_PORT_NO: number =
-	parseInt(process.env.ACCOUNTS_AND_BALANCES_EVENT_STREAM_PORT_NO ?? "") || 9092;
-const EVENT_STREAM_URL: string = `${EVENT_STREAM_HOST}:${EVENT_STREAM_PORT_NO}`;
-const EVENT_PRODUCER_ID: string = "SERVICE_NAME";
+// Repo.
+const REPO_HOST: string =
+	process.env.ACCOUNTS_AND_BALANCES_REPO_HOST ?? "localhost";
+const REPO_PORT_NO: number =
+	parseInt(process.env.ACCOUNTS_AND_BALANCES_REPO_PORT_NO ?? "") || 27017;
+const REPO_URL: string = `mongodb://${REPO_HOST}:${REPO_PORT_NO}`;
+const DB_NAME: string = "AccountsAndBalances";
+const ACCOUNTS_COLLECTION_NAME: string = "Accounts";
+const JOURNAL_ENTRIES_COLLECTION_NAME: string = "JournalEntries";
 
 // Logger.
-const logger: ILogger = new ConsoleLogger();
+const logger: ILogger = new DefaultLogger( // TODO.
+	"", // TODO.
+	SERVICE_NAME, // TODO.
+	SERVICE_VERSION,
+	LogLevel.TRACE); // TODO default?
 // Infrastructure.
-const eventProducer: IMessageProducer = new MLKafkaProducer( // TODO: reduce logs.
-	{
-		kafkaBrokerList: EVENT_STREAM_URL,
-		producerClientId: EVENT_PRODUCER_ID
-	},
-	logger
+const repo: IRepo = new MongoRepo(
+	logger,
+	REPO_URL,
+	DB_NAME,
+	COLLECTION_NAME
 );
 // Domain.
 const aggregate: Aggregate = new Aggregate(
 	logger,
-	eventProducer
+	repo
 );
 // Application.
 const webServer: ExpressWebServer = new ExpressWebServer(
@@ -76,8 +83,8 @@ const webServer: ExpressWebServer = new ExpressWebServer(
 );
 
 async function start(): Promise<void> {
-	await aggregate.init(); // No need to handle exceptions. TODO.
-	webServer.start(); // No need to handle exceptions. TODO.
+	await aggregate.init(); // No need to handle exceptions.
+	webServer.start(); // No need to handle exceptions.
 }
 
 process.on("SIGINT", handleIntAndTermSignals.bind(this)); // Ctrl + c.
@@ -85,7 +92,7 @@ process.on("SIGTERM", handleIntAndTermSignals.bind(this));
 async function handleIntAndTermSignals(signal: NodeJS.Signals): Promise<void> {
 	logger.info(`${signal} received`);
 	await aggregate.destroy();
-	process.exit(); // TODO: necessary?
+	process.exit();
 }
 process.on("exit", () => {
 	logger.info(`exiting ${SERVICE_NAME}`);

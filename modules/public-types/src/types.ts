@@ -31,8 +31,10 @@
 
 export interface IAccount {
 	id: string; // TODO: name. Needs to be generated or comes from another BC?
-	participantId: string; // TODO: name.
 	currency: string; // https://en.wikipedia.org/wiki/ISO_4217 TODO: change name to "ledger"?
+
+
+	participantId: string; // TODO: name.
 	type: AccountType; // TODO: name.
 	state: AccountState; // TODO: name.
 	debitBalance: number;
@@ -46,7 +48,8 @@ export enum AccountType {
 }
 
 export enum AccountState {
-	// TODO.
+	OPEN = "OPEN",
+	CLOSED = "CLOSED"
 }
 
 export interface IJournalEntry {

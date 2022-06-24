@@ -29,64 +29,14 @@
 
 "use strict";
 
-import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {IAccount} from "@mojaloop/accounts-and-balances-public-types";
-import {IRepo} from "@mojaloop/accounts-and-balances-event-handler/dist/domain/infrastructure-interfaces/irepo";
 
-export class Aggregate {
-	// Properties received through the constructor.
-	private readonly logger: ILogger;
-	private readonly repo: IRepo;
-	// Other properties.
-
-	constructor(
-		logger: ILogger,
-		repo: IRepo
-	) {
-		this.logger = logger;
-		this.repo = repo;
-	}
-
-	async init(): Promise<void> {
-		try {
-			await this.repo.init();
-		} catch (e: unknown) {
-			this.logger.fatal(e);
-			throw e; // No need to be specific.
-		}
-	}
-
-	async destroy(): Promise<void> {
-		await this.repo.destroy();
-	}
-
-	async createAccount(account: IAccount): Promise<void> {
-		try {
-		} catch (e: unknown) {
-		}
-	}
-
-	async createJournalEntry(account: IAccount): Promise<void> {
-		try {
-		} catch (e: unknown) {
-		}
-	}
-
-	async createAccountEntries(x: any /* TODO. */): Promise<void> {
-		try {
-		} catch (e: unknown) {
-		}
-	}
-
-	async getAccount(accountId: string): Promise<any> {
-		try {
-		} catch (e: unknown) {
-		}
-	}
-
-	async getAccountEntries(accountId: string): Promise<any> {
-		try {
-		} catch (e: unknown) {
-		}
-	}
+export interface IRepo {
+	init(): Promise<void>;
+	destroy(): Promise<void>;
+	accountExists(accountId: string): Promise<boolean>;
+	storeAccount(account: IAccount): Promise<void>;
+	getAccount(accountId: string): Promise<IAccount | null>;
+	getAccounts(): Promise<IAccount[]>;
+	deleteAccount(accountId: string): Promise<void>;
 }

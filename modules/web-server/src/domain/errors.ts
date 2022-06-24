@@ -28,3 +28,11 @@
  ******/
 
 "use strict";
+
+export class UnableToInitRepoError extends Error {}
+export class UnableToGetAccountError extends Error {}
+export class UnableToGetAccountsError extends Error {}
+export class AccountAlreadyExistsError extends Error {}
+export class UnableToStoreAccountError extends Error {}
+export class NoSuchAccountError extends Error {}
+export class UnableToDeleteAccountError extends Error {}
