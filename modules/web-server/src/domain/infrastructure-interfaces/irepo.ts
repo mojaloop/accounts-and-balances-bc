@@ -29,14 +29,22 @@
 
 "use strict";
 
-import {IAccount} from "@mojaloop/accounts-and-balances-public-types";
+import {IAccount} from "@mojaloop/accounts-and-balances-private-types";
+import {IJournalEntry} from "@mojaloop/accounts-and-balances-private-types/dist";
 
 export interface IRepo {
 	init(): Promise<void>;
 	destroy(): Promise<void>;
 	accountExists(accountId: string): Promise<boolean>;
+	journalEntryExists(journalEntryId: string): Promise<boolean>;
 	storeAccount(account: IAccount): Promise<void>;
+	storeJournalEntry(journalEntry: IJournalEntry): Promise<void>;
 	getAccount(accountId: string): Promise<IAccount | null>;
 	getAccounts(): Promise<IAccount[]>;
+	getJournalEntry(journalEntryId: string): Promise<IJournalEntry | null>;
+	getJournalEntries(): Promise<IJournalEntry[]>;
 	deleteAccount(accountId: string): Promise<void>;
+	deleteJournalEntry(journalEntryId: string): Promise<void>;
+	deleteAccounts(): Promise<void>;
+	deleteJournalEntries(): Promise<void>;
 }

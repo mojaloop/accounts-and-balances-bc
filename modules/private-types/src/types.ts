@@ -29,10 +29,42 @@
 
 "use strict";
 
-export class UnableToInitRepoError extends Error {}
-export class UnableToGetAccountError extends Error {}
-export class UnableToGetAccountsError extends Error {}
-export class AccountAlreadyExistsError extends Error {}
-export class UnableToStoreAccountError extends Error {}
-export class NoSuchAccountError extends Error {}
-export class UnableToDeleteAccountError extends Error {}
+// TODO: names.
+export interface IAccount {
+	id: string;
+	participantId: string | null; // TODO.
+	state: AccountState;
+	type: AccountType;
+	currency: string; // https://en.wikipedia.org/wiki/ISO_4217
+	creditBalance: number;
+	debitBalance: number;
+	// TODO: why not only a single balance?
+}
+
+// TODO: any other states?
+export enum AccountState {
+	CLOSED = "CLOSED",
+	OPEN = "OPEN"
+}
+
+// TODO: any other types?
+export enum AccountType {
+	POSITION = "POSITION",
+	SETTLEMENT = "SETTLEMENT"
+}
+
+// TODO: names.
+export interface IJournalEntry {
+	id: string;
+	participantId: string | null; // TODO.
+	type: JournalEntryType;
+	currency: string;
+	creditAccountId: string;
+	debitAccountId: string;
+	transferAmount: number;
+	timeStamp: Date;
+}
+
+export enum JournalEntryType {
+	// TODO.
+}

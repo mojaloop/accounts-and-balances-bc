@@ -32,6 +32,8 @@
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {Aggregate} from "../../domain/aggregate";
 import express from "express";
+import {IAccount} from "@mojaloop/accounts-and-balances-private-types";
+import {IJournalEntry} from "@mojaloop/accounts-and-balances-private-types/dist";
 
 export class ExpressRoutes {
 	// Properties received through the constructor.
@@ -57,10 +59,17 @@ export class ExpressRoutes {
 		// TODO: paths.
 		// Posts.
 		this._router.post("/accounts", this.postAccount.bind(this));
-		this._router.post("/entries", this.postAccountEntries.bind(this));
+		this._router.post("/journalEntries", this.postJournalEntry.bind(this));
 		// Gets.
-		this._router.get("/accounts/:accountId", this.getAccountDetails.bind(this));
-		this._router.get("/entries/:entryId", this.getAccountEntries.bind(this));
+		this._router.get("/accounts/:accountId", this.getAccount.bind(this));
+		this._router.get("/journalEntries/:journalEntryId", this.getJournalEntry.bind(this));
+		this._router.get("/accounts", this.getAccounts.bind(this));
+		this._router.get("/journalEntries", this.getJournalEntries.bind(this));
+		// Deletes.
+		this._router.delete("/accounts/:accountId", this.deleteAccount.bind(this));
+		this._router.delete("/journalEntries/:journalEntryId", this.deleteJournalEntry.bind(this));
+		this._router.delete("/accounts", this.deleteAccounts.bind(this));
+		this._router.delete("/journalEntries", this.deleteJournalEntries.bind(this));
 	}
 
 	get router(): express.Router {
@@ -69,40 +78,10 @@ export class ExpressRoutes {
 
 	private async postAccount(req: express.Request, res: express.Response): Promise<void> {
 		try {
-			await this.aggregate.createAccount(req.body);
-			res.status(200).json({
-				status: "success"
-			});
-		} catch (e: unknown) {
-			this.sendErrorResponse(
-				res,
-				500,
-				this.UNKNOWN_ERROR
-			);
-		}
-	}
-
-	private async postAccountEntries(req: express.Request, res: express.Response): Promise<void> {
-		try {
-			await this.aggregate.createAccountEntries(req.body);
-			res.status(200).json({
-				status: "success"
-			});
-		} catch (e: unknown) {
-			this.sendErrorResponse(
-				res,
-				500,
-				this.UNKNOWN_ERROR
-			);
-		}
-	}
-
-	private async getAccountDetails(req: express.Request, res: express.Response): Promise<void> {
-		try {
-			const accountDetails: any = await this.aggregate.getAccount(req.params.accountId); // TODO: type.
+			const accountId: string = await this.aggregate.createAccount(req.body);
 			res.status(200).json({
 				status: "success",
-				accountDetails: accountDetails
+				accountId: accountId
 			});
 		} catch (e: unknown) {
 			this.sendErrorResponse(
@@ -113,12 +92,140 @@ export class ExpressRoutes {
 		}
 	}
 
-	private async getAccountEntries(req: express.Request, res: express.Response): Promise<void> {
+	private async postJournalEntry(req: express.Request, res: express.Response): Promise<void> {
 		try {
-			const accountEntries: any = await this.aggregate.getAccountEntries(req.params.accountId); // TODO: type.
+			const journalEntryId: string = await this.aggregate.createJournalEntry(req.body);
 			res.status(200).json({
 				status: "success",
-				accountEntries: accountEntries
+				journalEntryId: journalEntryId
+			});
+		} catch (e: unknown) {
+			this.sendErrorResponse(
+				res,
+				500,
+				this.UNKNOWN_ERROR
+			);
+		}
+	}
+
+	private async getAccount(req: express.Request, res: express.Response): Promise<void> {
+		try {
+			const account: IAccount | null = await this.aggregate.getAccount(req.params.accountId);
+			res.status(200).json({
+				status: "success",
+				account: account
+			});
+		} catch (e: unknown) {
+			this.sendErrorResponse(
+				res,
+				500,
+				this.UNKNOWN_ERROR
+			);
+		}
+	}
+
+	private async getJournalEntry(req: express.Request, res: express.Response): Promise<void> {
+		try {
+			const journalEntry: IJournalEntry | null = await this.aggregate.getJournalEntry(req.params.journalEntryId);
+			res.status(200).json({
+				status: "success",
+				journalEntry: journalEntry
+			});
+		} catch (e: unknown) {
+			this.sendErrorResponse(
+				res,
+				500,
+				this.UNKNOWN_ERROR
+			);
+		}
+	}
+
+	private async getAccounts(req: express.Request, res: express.Response): Promise<void> {
+		try {
+			const accounts: IAccount[] = await this.aggregate.getAccounts();
+			res.status(200).json({
+				status: "success",
+				accounts: accounts
+			});
+		} catch (e: unknown) {
+			this.sendErrorResponse(
+				res,
+				500,
+				this.UNKNOWN_ERROR
+			);
+		}
+	}
+
+	private async getJournalEntries(req: express.Request, res: express.Response): Promise<void> {
+		try {
+			const journalEntries: IJournalEntry[] = await this.aggregate.getJournalEntries();
+			res.status(200).json({
+				status: "success",
+				journalEntries: journalEntries
+			});
+		} catch (e: unknown) {
+			this.sendErrorResponse(
+				res,
+				500,
+				this.UNKNOWN_ERROR
+			);
+		}
+	}
+
+	private async deleteAccount(req: express.Request, res: express.Response): Promise<void> {
+		try {
+			await this.aggregate.deleteAccount(req.params.accountId);
+			res.status(200).json({
+				status: "success",
+				message: "account deleted"
+			});
+		} catch (e: unknown) {
+			this.sendErrorResponse(
+				res,
+				500,
+				this.UNKNOWN_ERROR
+			);
+		}
+	}
+
+	private async deleteJournalEntry(req: express.Request, res: express.Response): Promise<void> {
+		try {
+			await this.aggregate.deleteJournalEntry(req.params.journalEntryId);
+			res.status(200).json({
+				status: "success",
+				message: "journal entry deleted"
+			});
+		} catch (e: unknown) {
+			this.sendErrorResponse(
+				res,
+				500,
+				this.UNKNOWN_ERROR
+			);
+		}
+	}
+
+	private async deleteAccounts(req: express.Request, res: express.Response): Promise<void> {
+		try {
+			await this.aggregate.deleteAccounts();
+			res.status(200).json({
+				status: "success",
+				message: "accounts deleted"
+			});
+		} catch (e: unknown) {
+			this.sendErrorResponse(
+				res,
+				500,
+				this.UNKNOWN_ERROR
+			);
+		}
+	}
+
+	private async deleteJournalEntries(req: express.Request, res: express.Response): Promise<void> {
+		try {
+			await this.aggregate.deleteJournalEntries();
+			res.status(200).json({
+				status: "success",
+				message: "journal entries deleted"
 			});
 		} catch (e: unknown) {
 			this.sendErrorResponse(

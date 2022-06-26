@@ -31,13 +31,18 @@
 
 import {IRepo} from "../domain/infrastructure-interfaces/irepo";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {IAccount} from "@mojaloop/accounts-and-balances-public-types";
+import {IAccount, IJournalEntry} from "@mojaloop/accounts-and-balances-private-types";
 import {MongoClient, Collection, DeleteResult} from "mongodb";
 import {
-	AccountAlreadyExistsError, NoSuchAccountError, UnableToDeleteAccountError,
-	UnableToGetAccountError, UnableToGetAccountsError,
+	AccountAlreadyExistsError,
+	JournalEntryAlreadyExistsError,
+	NoSuchAccountError,
+	NoSuchJournalEntryError,
+	UnableToDeleteAccountError, UnableToDeleteJournalEntryError,
+	UnableToGetAccountError,
+	UnableToGetAccountsError, UnableToGetJournalEntriesError, UnableToGetJournalEntryError,
 	UnableToInitRepoError,
-	UnableToStoreAccountError
+	UnableToStoreAccountError, UnableToStoreJournalEntryError
 } from "../domain/errors";
 
 export class MongoRepo implements IRepo {
@@ -45,21 +50,25 @@ export class MongoRepo implements IRepo {
 	private readonly logger: ILogger;
 	private readonly REPO_URL: string;
 	private readonly DB_NAME: string;
-	private readonly COLLECTION_NAME: string;
+	private readonly ACCOUNTS_COLLECTION_NAME: string;
+	private readonly JOURNAL_ENTRIES_COLLECTION_NAME: string;
 	// Other properties.
 	private readonly mongoClient: MongoClient;
 	private accounts: Collection;
+	private journalEntries: Collection;
 
 	constructor(
 		logger: ILogger,
 		REPO_URL: string,
 		DB_NAME: string,
-		COLLECTION_NAME: string
+		ACCOUNTS_COLLECTION_NAME: string, // TODO.
+		JOURNAL_ENTRIES_COLLECTION_NAME: string // TODO.
 	) {
 		this.logger = logger;
 		this.REPO_URL = REPO_URL;
 		this.DB_NAME = DB_NAME;
-		this.COLLECTION_NAME = COLLECTION_NAME;
+		this.ACCOUNTS_COLLECTION_NAME = ACCOUNTS_COLLECTION_NAME;
+		this.JOURNAL_ENTRIES_COLLECTION_NAME = JOURNAL_ENTRIES_COLLECTION_NAME;
 
 		this.mongoClient = new MongoClient(this.REPO_URL);
 	}
@@ -71,7 +80,8 @@ export class MongoRepo implements IRepo {
 			throw new UnableToInitRepoError(); // TODO.
 		}
 		// The following doesn't throw if the repo is unreachable, nor if the db or collection don't exist.
-		this.accounts = this.mongoClient.db(this.DB_NAME).collection(this.COLLECTION_NAME);
+		this.accounts = this.mongoClient.db(this.DB_NAME).collection(this.ACCOUNTS_COLLECTION_NAME);
+		this.journalEntries = this.mongoClient.db(this.DB_NAME).collection(this.JOURNAL_ENTRIES_COLLECTION_NAME);
 	}
 
 	async destroy(): Promise<void> {
@@ -88,10 +98,20 @@ export class MongoRepo implements IRepo {
 		}
 	}
 
+	async journalEntryExists(journalEntryId: string): Promise<boolean> {
+		try {
+			// findOne() doesn't throw if no item is found - null is returned.
+			const journalEntry: any = await this.journalEntries.findOne({id: journalEntryId}); // TODO: type.
+			return journalEntry !== null;
+		} catch (e: unknown) {
+			throw new UnableToGetJournalEntryError();
+		}
+	}
+
 	async storeAccount(account: IAccount): Promise<void> {
 		try {
 			// insertOne() allows for duplicates.
-			if (await this.accountExists(account.id)) { // TODO: call class's function?
+			if (await this.accountExists(account.id)) {
 				throw new AccountAlreadyExistsError(); // TODO: throw inside try?
 			}
 			await this.accounts.insertOne(account);
@@ -103,6 +123,21 @@ export class MongoRepo implements IRepo {
 		}
 	}
 
+	async storeJournalEntry(journalEntry: IJournalEntry): Promise<void> {
+		try {
+			// insertOne() allows for duplicates.
+			if (await this.journalEntryExists(journalEntry.id)) {
+				throw new JournalEntryAlreadyExistsError(); // TODO: throw inside try?
+			}
+			await this.journalEntries.insertOne(journalEntry);
+		} catch (e: unknown) {
+			if (e instanceof JournalEntryAlreadyExistsError) {
+				throw e;
+			}
+			throw new UnableToStoreJournalEntryError();
+		}
+	}
+
 	async getAccount(accountId: string): Promise<IAccount | null> {
 		try {
 			// findOne() doesn't throw if no item is found - null is returned.
@@ -110,6 +145,16 @@ export class MongoRepo implements IRepo {
 			return account as unknown as IAccount; // TODO.
 		} catch (e: unknown) {
 			throw new UnableToGetAccountError();
+		}
+	}
+
+	async getJournalEntry(journalEntryId: string): Promise<IJournalEntry | null> {
+		try {
+			// findOne() doesn't throw if no item is found - null is returned.
+			const journalEntry: any = await this.journalEntries.findOne({id: journalEntryId}); // TODO: type.
+			return journalEntry as unknown as IJournalEntry; // TODO.
+		} catch (e: unknown) {
+			throw new UnableToGetJournalEntryError();
 		}
 	}
 
@@ -128,6 +173,21 @@ export class MongoRepo implements IRepo {
 		}
 	}
 
+	async getJournalEntries(): Promise<IJournalEntry[]> {
+		try {
+			// find() doesn't throw if no items are found.
+			const journalEntries: any = // TODO: type.
+				await this.journalEntries
+				.find(
+					{}, // All documents.
+					{projection: {_id: 0}}) // Don't return the _id field.
+				.toArray();
+			return journalEntries as unknown as IJournalEntry[]; // TODO.
+		} catch (e: unknown) {
+			throw new UnableToGetJournalEntriesError();
+		}
+	}
+
 	async deleteAccount(accountId: string): Promise<void> {
 		try {
 			// deleteOne() doesn't throw if the item doesn't exist.
@@ -141,6 +201,34 @@ export class MongoRepo implements IRepo {
 				throw e;
 			}
 			throw new UnableToDeleteAccountError();
+		}
+	}
+
+	async deleteJournalEntry(journalEntryId: string): Promise<void> {
+		try {
+			// deleteOne() doesn't throw if the item doesn't exist.
+			const deleteResult: DeleteResult = await this.journalEntries.deleteOne({id: journalEntryId});
+			// deleteResult.acknowledged is true whether the item exists or not.
+			if (deleteResult.deletedCount === 0) {
+				throw new NoSuchJournalEntryError(); // TODO: throw inside try?
+			}
+		} catch (e: unknown) {
+			if (e instanceof NoSuchJournalEntryError) {
+				throw e;
+			}
+			throw new UnableToDeleteJournalEntryError();
+		}
+	}
+
+	async deleteAccounts(): Promise<void> {
+		try {
+		} catch (e: unknown) {
+		}
+	}
+
+	async deleteJournalEntries(): Promise<void> {
+		try {
+		} catch (e: unknown) {
 		}
 	}
 }

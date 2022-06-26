@@ -29,10 +29,40 @@
 
 "use strict";
 
+// Account-specific.
+export class InvalidAccountIdTypeError extends Error {}
+export class InvalidAccountStateTypeError extends Error {}
+export class InvalidAccountStateError extends Error {}
+export class InvalidAccountTypeTypeError extends Error {}
+export class InvalidAccountTypeError extends Error {}
+
+// JournalEntry-specific.
+export class InvalidJournalEntryIdTypeError extends Error {}
+export class InvalidJournalEntryTypeTypeError extends Error {}
+export class InvalidJournalEntryTypeError extends Error {}
+
+export class InvalidParticipantIdTypeError extends Error {}
+export class InvalidCurrencyTypeError extends Error {}
+export class InvalidCurrencyError extends Error {}
+export class InvalidBalanceTypeError extends Error {}
+export class InvalidBalanceError extends Error {}
+
+export class InvalidTransferAmountTypeError extends Error {}
+export class InvalidTransferAmountError extends Error {}
+export class InvalidTimeStampTypeError extends Error {}
+export class InvalidTimeStampError extends Error {}
+
+// Repo-related.
 export class UnableToInitRepoError extends Error {}
 export class UnableToGetAccountError extends Error {}
 export class UnableToGetAccountsError extends Error {}
+export class UnableToGetJournalEntryError extends Error {}
+export class UnableToGetJournalEntriesError extends Error {}
 export class AccountAlreadyExistsError extends Error {}
+export class JournalEntryAlreadyExistsError extends Error {}
 export class UnableToStoreAccountError extends Error {}
+export class UnableToStoreJournalEntryError extends Error {}
 export class NoSuchAccountError extends Error {}
+export class NoSuchJournalEntryError extends Error {}
 export class UnableToDeleteAccountError extends Error {}
+export class UnableToDeleteJournalEntryError extends Error {}

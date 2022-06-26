@@ -971,26 +971,26 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mojaloop/accounts-and-balances-event-handler@workspace:modules/event-handler":
+"@mojaloop/accounts-and-balances-client@workspace:modules/client":
   version: 0.0.0-use.local
-  resolution: "@mojaloop/accounts-and-balances-event-handler@workspace:modules/event-handler"
+  resolution: "@mojaloop/accounts-and-balances-client@workspace:modules/client"
   dependencies:
-    "@mojaloop/accounts-and-balances-public-types": ^0.0.1
+    "@mojaloop/accounts-and-balances-private-types": ^0.0.1
+    "@mojaloop/logging-bc-client-lib": ^0.0.10
     "@mojaloop/logging-bc-public-types-lib": ^0.0.3
     "@types/node": ^17.0.41
     eslint: ^8.17.0
     husky: ^8.0.1
     jest: ^28.1.1
-    mongodb: ^4.7.0
     npm-check-updates: ^13.1.2
     ts-jest: ^28.0.4
     typescript: ^4.7.3
   languageName: unknown
   linkType: soft
 
-"@mojaloop/accounts-and-balances-public-types@^0.0.1, @mojaloop/accounts-and-balances-public-types@workspace:modules/public-types":
+"@mojaloop/accounts-and-balances-private-types@^0.0.1, @mojaloop/accounts-and-balances-private-types@workspace:modules/private-types":
   version: 0.0.0-use.local
-  resolution: "@mojaloop/accounts-and-balances-public-types@workspace:modules/public-types"
+  resolution: "@mojaloop/accounts-and-balances-private-types@workspace:modules/private-types"
   dependencies:
     "@types/node": ^17.0.41
     eslint: ^8.17.0
@@ -1006,20 +1006,23 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@mojaloop/accounts-and-balances-web-server@workspace:modules/web-server"
   dependencies:
-    "@mojaloop/accounts-and-balances-public-types": ^0.0.1
+    "@mojaloop/accounts-and-balances-private-types": ^0.0.1
     "@mojaloop/logging-bc-client-lib": ^0.0.10
     "@mojaloop/logging-bc-public-types-lib": ^0.0.3
-    "@mojaloop/platform-shared-lib-messaging-types-lib": ^0.0.3
-    "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib": ^0.0.8
+    "@mojaloop/platform-configuration-bc-client-lib": ^0.0.8
+    "@mojaloop/platform-configuration-bc-types-lib": ^0.0.5
     "@types/express": ^4.17.13
     "@types/node": ^17.0.41
+    "@types/uuid": ^8.3.4
     eslint: ^8.17.0
     express: ^4.18.1
     husky: ^8.0.1
     jest: ^28.1.1
+    mongodb: ^4.7.0
     npm-check-updates: ^13.1.2
     ts-jest: ^28.0.4
     typescript: ^4.7.3
+    uuid: ^8.3.2
   languageName: unknown
   linkType: soft
 
@@ -1041,17 +1044,27 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@mojaloop/platform-configuration-bc-client-lib@npm:^0.0.8":
+  version: 0.0.8
+  resolution: "@mojaloop/platform-configuration-bc-client-lib@npm:0.0.8"
+  dependencies:
+    "@mojaloop/platform-configuration-bc-types-lib": 0.0.5
+    axios: ^0.27.1
+  checksum: 31362b7cb14a9afcd0d6d10e44aee73ca2f626c3ef74f629d28f5bf193e25132bdc01c41935548ba0ccd026b9d7f136b2a81dbbf2882688edddd30c47532e005
+  languageName: node
+  linkType: hard
+
+"@mojaloop/platform-configuration-bc-types-lib@npm:0.0.5, @mojaloop/platform-configuration-bc-types-lib@npm:^0.0.5":
+  version: 0.0.5
+  resolution: "@mojaloop/platform-configuration-bc-types-lib@npm:0.0.5"
+  checksum: 1a9273fff605269f207137bc5ff4adfa79ebe6f3dba1553e49147dff2ca4c25a029fbd7da0c0a1d08d1348aabaf463dfda2199e263c65b1cb7045c42f3ae4c08
+  languageName: node
+  linkType: hard
+
 "@mojaloop/platform-shared-lib-messaging-types-lib@npm:^0.0.1":
   version: 0.0.1
   resolution: "@mojaloop/platform-shared-lib-messaging-types-lib@npm:0.0.1"
   checksum: 844cad7a9a76e5aa5c76228ecd61415ecf0c37717bf46c8d6489a8e0b66b5f8716aa1d260d09612a2960fbdc133322105f002ad6021116f4be8e584ba585f3c9
-  languageName: node
-  linkType: hard
-
-"@mojaloop/platform-shared-lib-messaging-types-lib@npm:^0.0.3":
-  version: 0.0.3
-  resolution: "@mojaloop/platform-shared-lib-messaging-types-lib@npm:0.0.3"
-  checksum: 818f58167edf4c03629741afdcdf8a860ae60a0d4a06a6b9cc3364c5f28fc098b143fd6dfe2a694fec41bbef22077bb60ade688893b006c84f45af71c8e54143
   languageName: node
   linkType: hard
 
@@ -1474,6 +1487,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/uuid@npm:^8.3.4":
+  version: 8.3.4
+  resolution: "@types/uuid@npm:8.3.4"
+  checksum: 6f11f3ff70f30210edaa8071422d405e9c1d4e53abbe50fdce365150d3c698fe7bbff65c1e71ae080cbfb8fded860dbb5e174da96fdbbdfcaa3fb3daa474d20f
+  languageName: node
+  linkType: hard
+
 "@types/webidl-conversions@npm:*":
   version: 6.1.1
   resolution: "@types/webidl-conversions@npm:6.1.1"
@@ -1482,12 +1502,12 @@ __metadata:
   linkType: hard
 
 "@types/whatwg-url@npm:^8.2.1":
-  version: 8.2.1
-  resolution: "@types/whatwg-url@npm:8.2.1"
+  version: 8.2.2
+  resolution: "@types/whatwg-url@npm:8.2.2"
   dependencies:
     "@types/node": "*"
     "@types/webidl-conversions": "*"
-  checksum: 975987a9ca14a8d5a883523acb4fa0df7760cd8ca8dee56cd57753821e56060bfbead94df84f4504fe0b4270776d81cbb40fcd1f8643dab86da3a9abe926fb5c
+  checksum: 5dc5afe078dfa1a8a266745586fa3db9baa8ce7cc904789211d1dca1d34d7f3dd17d0b7423c36bc9beab9d98aa99338f1fc60798c0af6cbb8356f20e20d9f243
   languageName: node
   linkType: hard
 
@@ -1861,6 +1881,16 @@ __metadata:
   version: 0.4.0
   resolution: "asynckit@npm:0.4.0"
   checksum: 7b78c451df768adba04e2d02e63e2d0bf3b07adcd6e42b4cf665cb7ce899bedd344c69a1dcbce355b5f972d597b25aaa1c1742b52cffd9caccb22f348114f6be
+  languageName: node
+  linkType: hard
+
+"axios@npm:^0.27.1":
+  version: 0.27.2
+  resolution: "axios@npm:0.27.2"
+  dependencies:
+    follow-redirects: ^1.14.9
+    form-data: ^4.0.0
+  checksum: 38cb7540465fe8c4102850c4368053c21683af85c5fdf0ea619f9628abbcb59415d1e22ebc8a6390d2bbc9b58a9806c874f139767389c862ec9b772235f06854
   languageName: node
   linkType: hard
 
@@ -3336,6 +3366,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"follow-redirects@npm:^1.14.9":
+  version: 1.15.1
+  resolution: "follow-redirects@npm:1.15.1"
+  peerDependenciesMeta:
+    debug:
+      optional: true
+  checksum: 6aa4e3e3cdfa3b9314801a1cd192ba756a53479d9d8cca65bf4db3a3e8834e62139245cd2f9566147c8dfe2efff1700d3e6aefd103de4004a7b99985e71dd533
+  languageName: node
+  linkType: hard
+
 "form-data@npm:^3.0.0":
   version: 3.0.1
   resolution: "form-data@npm:3.0.1"
@@ -3344,6 +3384,17 @@ __metadata:
     combined-stream: ^1.0.8
     mime-types: ^2.1.12
   checksum: b019e8d35c8afc14a2bd8a7a92fa4f525a4726b6d5a9740e8d2623c30e308fbb58dc8469f90415a856698933c8479b01646a9dff33c87cc4e76d72aedbbf860d
+  languageName: node
+  linkType: hard
+
+"form-data@npm:^4.0.0":
+  version: 4.0.0
+  resolution: "form-data@npm:4.0.0"
+  dependencies:
+    asynckit: ^0.4.0
+    combined-stream: ^1.0.8
+    mime-types: ^2.1.12
+  checksum: 01135bf8675f9d5c61ff18e2e2932f719ca4de964e3be90ef4c36aacfc7b9cb2fceb5eca0b7e0190e3383fe51c5b37f4cb80b62ca06a99aaabfcfd6ac7c9328c
   languageName: node
   linkType: hard
 
@@ -7515,6 +7566,15 @@ __metadata:
   version: 1.0.1
   resolution: "utils-merge@npm:1.0.1"
   checksum: c81095493225ecfc28add49c106ca4f09cdf56bc66731aa8dabc2edbbccb1e1bfe2de6a115e5c6a380d3ea166d1636410b62ef216bb07b3feb1cfde1d95d5080
+  languageName: node
+  linkType: hard
+
+"uuid@npm:^8.3.2":
+  version: 8.3.2
+  resolution: "uuid@npm:8.3.2"
+  bin:
+    uuid: dist/bin/uuid
+  checksum: 5575a8a75c13120e2f10e6ddc801b2c7ed7d8f3c8ac22c7ed0c7b2ba6383ec0abda88c905085d630e251719e0777045ae3236f04c812184b7c765f63a70e58df
   languageName: node
   linkType: hard
 

@@ -29,14 +29,12 @@
 
 "use strict";
 
-import {IAccount} from "@mojaloop/accounts-and-balances-public-types";
+export class UnableToReachServerError extends Error{}
 
-export interface IRepo {
-	init(): Promise<void>;
-	destroy(): Promise<void>;
-	accountExists(accountId: string): Promise<boolean>;
-	storeAccount(account: IAccount): Promise<void>;
-	getAccount(accountId: string): Promise<IAccount | null>;
-	getAccounts(): Promise<IAccount[]>;
-	deleteAccount(accountId: string): Promise<void>;
-}
+export class UnableToCreateAccountError extends Error{}
+export class UnableToGetAccountError extends Error{}
+export class UnableToDeleteAccountError extends Error{}
+
+export class UnableToCreateJournalEntryError extends Error{}
+export class UnableToGetJournalEntryError extends Error{}
+export class UnableToDeleteJournalEntryError extends Error{}

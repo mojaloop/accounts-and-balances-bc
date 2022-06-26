@@ -29,12 +29,14 @@
 
 "use strict";
 
+import {AppConfiguration, IConfigProvider, DefaultConfigProvider} from "@mojaloop/platform-configuration-bc-client-lib";
+import {ConfigParameterTypes} from "@mojaloop/platform-configuration-bc-types-lib";
 import {ILogger, LogLevel} from "@mojaloop/logging-bc-public-types-lib";
 import {DefaultLogger} from "@mojaloop/logging-bc-client-lib";
 import {Aggregate} from "../domain/aggregate";
 import {ExpressWebServer} from "./web-server/express_web_server";
-import {IRepo} from "@mojaloop/accounts-and-balances-event-handler/dist/domain/infrastructure-interfaces/irepo";
-import {MongoRepo} from "@mojaloop/accounts-and-balances-event-handler/dist/infrastructure/mongo_repo";
+import {MongoRepo} from "../infrastructure/mongo_repo";
+import {IRepo} from "../domain/infrastructure-interfaces/irepo";
 
 /* Constants. */
 const SERVICE_NAME: string = "Accounts and Balances Web Server";
@@ -55,6 +57,22 @@ const DB_NAME: string = "AccountsAndBalances";
 const ACCOUNTS_COLLECTION_NAME: string = "Accounts";
 const JOURNAL_ENTRIES_COLLECTION_NAME: string = "JournalEntries";
 
+// Platform configuration.
+const defaultConfigProvider: IConfigProvider = new DefaultConfigProvider();
+const appConfiguration = new AppConfiguration(
+	"", // TODO.
+	"", // TODO.
+	SERVICE_NAME,
+	SERVICE_VERSION,
+	defaultConfigProvider
+);
+appConfiguration.addNewParam(
+	"stringParam1",
+	ConfigParameterTypes.STRING,
+	"default val",
+	"description string param 1"
+);
+
 // Logger.
 const logger: ILogger = new DefaultLogger( // TODO.
 	"", // TODO.
@@ -66,7 +84,8 @@ const repo: IRepo = new MongoRepo(
 	logger,
 	REPO_URL,
 	DB_NAME,
-	COLLECTION_NAME
+	ACCOUNTS_COLLECTION_NAME,
+	JOURNAL_ENTRIES_COLLECTION_NAME
 );
 // Domain.
 const aggregate: Aggregate = new Aggregate(
