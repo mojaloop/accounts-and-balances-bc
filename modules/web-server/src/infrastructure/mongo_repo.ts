@@ -38,11 +38,17 @@ import {
 	JournalEntryAlreadyExistsError,
 	NoSuchAccountError,
 	NoSuchJournalEntryError,
-	UnableToDeleteAccountError, UnableToDeleteJournalEntryError,
+	UnableToDeleteAccountError,
+	UnableToDeleteAccountsError,
+	UnableToDeleteJournalEntriesError,
+	UnableToDeleteJournalEntryError,
 	UnableToGetAccountError,
-	UnableToGetAccountsError, UnableToGetJournalEntriesError, UnableToGetJournalEntryError,
+	UnableToGetAccountsError,
+	UnableToGetJournalEntriesError,
+	UnableToGetJournalEntryError,
 	UnableToInitRepoError,
-	UnableToStoreAccountError, UnableToStoreJournalEntryError
+	UnableToStoreAccountError,
+	UnableToStoreJournalEntryError
 } from "../domain/errors";
 
 export class MongoRepo implements IRepo {
@@ -138,6 +144,7 @@ export class MongoRepo implements IRepo {
 		}
 	}
 
+	// TODO: why tf is _id returned??
 	async getAccount(accountId: string): Promise<IAccount | null> {
 		try {
 			// findOne() doesn't throw if no item is found - null is returned.
@@ -148,6 +155,7 @@ export class MongoRepo implements IRepo {
 		}
 	}
 
+	// TODO: why tf is _id returned??
 	async getJournalEntry(journalEntryId: string): Promise<IJournalEntry | null> {
 		try {
 			// findOne() doesn't throw if no item is found - null is returned.
@@ -220,15 +228,23 @@ export class MongoRepo implements IRepo {
 		}
 	}
 
+	// TODO.
 	async deleteAccounts(): Promise<void> {
 		try {
+			// deleteMany() doesn't throw if no items exist.
+			await this.accounts.deleteMany({}); // All documents.
 		} catch (e: unknown) {
+			throw new UnableToDeleteAccountsError();
 		}
 	}
 
+	// TODO.
 	async deleteJournalEntries(): Promise<void> {
 		try {
+			// deleteMany() doesn't throw if no items exist.
+			await this.journalEntries.deleteMany({}); // All documents.
 		} catch (e: unknown) {
+			throw new UnableToDeleteJournalEntriesError();
 		}
 	}
 }

@@ -68,3 +68,15 @@ export interface IJournalEntry {
 export enum JournalEntryType {
 	// TODO.
 }
+
+// TODO.
+export interface IResponse {
+	result: ResponseResult;
+	data: any;
+}
+
+// TODO.
+export enum ResponseResult {
+	ERROR = "ERROR",
+	SUCCESS = "SUCCESS"
+}

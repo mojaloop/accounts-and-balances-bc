@@ -35,6 +35,7 @@
   "dependencies": {
     "@mojaloop/accounts-and-balances-private-types": "^0.0.1",
     "@mojaloop/logging-bc-client-lib": "^0.0.10",
-    "@mojaloop/logging-bc-public-types-lib": "^0.0.3"
+    "@mojaloop/logging-bc-public-types-lib": "^0.0.3",
+    "axios": "^0.27.2"
   }
 }

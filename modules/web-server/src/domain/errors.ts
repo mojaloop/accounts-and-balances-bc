@@ -40,11 +40,16 @@ export class InvalidAccountTypeError extends Error {}
 export class InvalidJournalEntryIdTypeError extends Error {}
 export class InvalidJournalEntryTypeTypeError extends Error {}
 export class InvalidJournalEntryTypeError extends Error {}
+export class InvalidCreditAccountIdTypeError extends Error {}
+export class InvalidDebitAccountIdTypeError extends Error {}
 
 export class InvalidParticipantIdTypeError extends Error {}
 export class InvalidCurrencyTypeError extends Error {}
 export class InvalidCurrencyError extends Error {}
-export class InvalidBalanceTypeError extends Error {}
+export class InvalidCreditBalanceTypeError extends Error {}
+export class InvalidCreditBalanceError extends Error {}
+export class InvalidDebitBalanceTypeError extends Error {}
+export class InvalidDebitBalanceError extends Error {}
 export class InvalidBalanceError extends Error {}
 
 export class InvalidTransferAmountTypeError extends Error {}
@@ -66,3 +71,5 @@ export class NoSuchAccountError extends Error {}
 export class NoSuchJournalEntryError extends Error {}
 export class UnableToDeleteAccountError extends Error {}
 export class UnableToDeleteJournalEntryError extends Error {}
+export class UnableToDeleteAccountsError extends Error {}
+export class UnableToDeleteJournalEntriesError extends Error {}

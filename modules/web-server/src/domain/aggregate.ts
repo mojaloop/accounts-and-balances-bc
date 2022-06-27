@@ -39,7 +39,6 @@ import {
 } from "./errors";
 import {IRepo} from "./infrastructure-interfaces/irepo";
 import {Account, JournalEntry} from "./types";
-import {IAccount} from "@mojaloop/accounts-and-balances-private-types";
 
 export class Aggregate {
 	// Properties received through the constructor.

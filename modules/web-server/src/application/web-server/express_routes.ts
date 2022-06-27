@@ -32,8 +32,34 @@
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {Aggregate} from "../../domain/aggregate";
 import express from "express";
-import {IAccount} from "@mojaloop/accounts-and-balances-private-types";
+import {
+	IAccount,
+	IResponse,
+	ResponseResult
+} from "@mojaloop/accounts-and-balances-private-types";
 import {IJournalEntry} from "@mojaloop/accounts-and-balances-private-types/dist";
+import {
+	AccountAlreadyExistsError,
+	InvalidAccountIdTypeError,
+	InvalidAccountStateError,
+	InvalidAccountStateTypeError,
+	InvalidAccountTypeError,
+	InvalidAccountTypeTypeError,
+	InvalidCreditAccountIdTypeError,
+	InvalidCreditBalanceTypeError,
+	InvalidCurrencyTypeError,
+	InvalidDebitAccountIdTypeError,
+	InvalidDebitBalanceTypeError,
+	InvalidJournalEntryIdTypeError,
+	InvalidJournalEntryTypeError,
+	InvalidJournalEntryTypeTypeError,
+	InvalidParticipantIdTypeError,
+	InvalidTimeStampTypeError,
+	InvalidTransferAmountTypeError,
+	JournalEntryAlreadyExistsError,
+	NoSuchAccountError,
+	NoSuchJournalEntryError
+} from "../../domain/errors";
 
 export class ExpressRoutes {
 	// Properties received through the constructor.
@@ -79,74 +105,211 @@ export class ExpressRoutes {
 	private async postAccount(req: express.Request, res: express.Response): Promise<void> {
 		try {
 			const accountId: string = await this.aggregate.createAccount(req.body);
-			res.status(200).json({
-				status: "success",
-				accountId: accountId
-			});
-		} catch (e: unknown) {
-			this.sendErrorResponse(
+			this.sendSuccessResponse(
 				res,
-				500,
-				this.UNKNOWN_ERROR
+				200,
+				{accountId: accountId}
 			);
+		} catch (e: unknown) {
+			if (e instanceof InvalidAccountIdTypeError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid account id type");
+			} else if (e instanceof InvalidParticipantIdTypeError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid participant id type");
+			} else if (e instanceof InvalidAccountStateTypeError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid account state type");
+			} else if (e instanceof InvalidAccountStateError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid account state");
+			} else if (e instanceof InvalidAccountTypeTypeError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid account type type (the type of the account type)");
+			} else if (e instanceof InvalidAccountTypeError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid account type");
+			} else if (e instanceof InvalidCurrencyTypeError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid currency type");
+			} else if (e instanceof InvalidCreditBalanceTypeError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid credit balance type");
+			} else if (e instanceof InvalidDebitBalanceTypeError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid debit balance type");
+			} else if (e instanceof AccountAlreadyExistsError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"account already exists");
+			} else {
+				this.sendErrorResponse(
+					res,
+					500,
+					this.UNKNOWN_ERROR
+				);
+			}
 		}
 	}
 
 	private async postJournalEntry(req: express.Request, res: express.Response): Promise<void> {
 		try {
 			const journalEntryId: string = await this.aggregate.createJournalEntry(req.body);
-			res.status(200).json({
-				status: "success",
-				journalEntryId: journalEntryId
-			});
-		} catch (e: unknown) {
-			this.sendErrorResponse(
+			this.sendSuccessResponse(
 				res,
-				500,
-				this.UNKNOWN_ERROR
+				200,
+				{journalEntryId: journalEntryId}
 			);
+		} catch (e: unknown) {
+			if (e instanceof InvalidJournalEntryIdTypeError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid journal entry id type");
+			} else if (e instanceof InvalidParticipantIdTypeError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid participant id type");
+			} else if (e instanceof InvalidJournalEntryTypeTypeError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid journal entry type type (the type of the journal entry type)");
+			} else if (e instanceof InvalidJournalEntryTypeError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid journal entry type");
+			} else if (e instanceof InvalidCurrencyTypeError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid currency type");
+			} else if (e instanceof InvalidCreditAccountIdTypeError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid credit account id type");
+			} else if (e instanceof InvalidDebitAccountIdTypeError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid debit account id type");
+			} else if (e instanceof InvalidTransferAmountTypeError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid transfer amount type");
+			} else if (e instanceof InvalidTimeStampTypeError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid time stamp type");
+			} else if (e instanceof JournalEntryAlreadyExistsError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"journal entry already exists");
+			} else {
+				this.sendErrorResponse(
+					res,
+					500,
+					this.UNKNOWN_ERROR
+				);
+			}
 		}
 	}
 
 	private async getAccount(req: express.Request, res: express.Response): Promise<void> {
 		try {
 			const account: IAccount | null = await this.aggregate.getAccount(req.params.accountId);
-			res.status(200).json({
-				status: "success",
-				account: account
-			});
-		} catch (e: unknown) {
-			this.sendErrorResponse(
+			if (account === null) {
+				this.sendErrorResponse(
+					res,
+					404,
+					"no such account");
+				return;
+			}
+			this.sendSuccessResponse(
 				res,
-				500,
-				this.UNKNOWN_ERROR
+				200,
+				{account: account}
 			);
+		} catch (e: unknown) {
+			if (e instanceof InvalidAccountIdTypeError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid account id type");
+			} else {
+				this.sendErrorResponse(
+					res,
+					500,
+					this.UNKNOWN_ERROR
+				);
+			}
 		}
 	}
 
 	private async getJournalEntry(req: express.Request, res: express.Response): Promise<void> {
 		try {
 			const journalEntry: IJournalEntry | null = await this.aggregate.getJournalEntry(req.params.journalEntryId);
-			res.status(200).json({
-				status: "success",
-				journalEntry: journalEntry
-			});
-		} catch (e: unknown) {
-			this.sendErrorResponse(
+			if (journalEntry === null) {
+				this.sendErrorResponse(
+					res,
+					404,
+					"no such journal entry");
+				return;
+			}
+			this.sendSuccessResponse(
 				res,
-				500,
-				this.UNKNOWN_ERROR
+				200,
+				{journalEntry: journalEntry}
 			);
+		} catch (e: unknown) {
+			if (e instanceof InvalidJournalEntryIdTypeError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid journal entry id type");
+			} else {
+				this.sendErrorResponse(
+					res,
+					500,
+					this.UNKNOWN_ERROR
+				);
+			}
 		}
 	}
 
 	private async getAccounts(req: express.Request, res: express.Response): Promise<void> {
 		try {
 			const accounts: IAccount[] = await this.aggregate.getAccounts();
-			res.status(200).json({
-				status: "success",
-				accounts: accounts
-			});
+			this.sendSuccessResponse(
+				res,
+				200,
+				{accounts: accounts}
+			);
 		} catch (e: unknown) {
 			this.sendErrorResponse(
 				res,
@@ -159,10 +322,11 @@ export class ExpressRoutes {
 	private async getJournalEntries(req: express.Request, res: express.Response): Promise<void> {
 		try {
 			const journalEntries: IJournalEntry[] = await this.aggregate.getJournalEntries();
-			res.status(200).json({
-				status: "success",
-				journalEntries: journalEntries
-			});
+			this.sendSuccessResponse(
+				res,
+				200,
+				{journalEntries: journalEntries}
+			);
 		} catch (e: unknown) {
 			this.sendErrorResponse(
 				res,
@@ -175,42 +339,71 @@ export class ExpressRoutes {
 	private async deleteAccount(req: express.Request, res: express.Response): Promise<void> {
 		try {
 			await this.aggregate.deleteAccount(req.params.accountId);
-			res.status(200).json({
-				status: "success",
-				message: "account deleted"
-			});
-		} catch (e: unknown) {
-			this.sendErrorResponse(
+			this.sendSuccessResponse(
 				res,
-				500,
-				this.UNKNOWN_ERROR
+				200,
+				{message: "account deleted"}
 			);
+		} catch (e: unknown) {
+			if (e instanceof InvalidAccountIdTypeError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid account id type");
+			} else if (e instanceof NoSuchAccountError) {
+				this.sendErrorResponse(
+					res,
+					404,
+					"no such account");
+				return;
+			} else {
+				this.sendErrorResponse(
+					res,
+					500,
+					this.UNKNOWN_ERROR
+				);
+			}
 		}
 	}
 
 	private async deleteJournalEntry(req: express.Request, res: express.Response): Promise<void> {
 		try {
 			await this.aggregate.deleteJournalEntry(req.params.journalEntryId);
-			res.status(200).json({
-				status: "success",
-				message: "journal entry deleted"
-			});
-		} catch (e: unknown) {
-			this.sendErrorResponse(
+			this.sendSuccessResponse(
 				res,
-				500,
-				this.UNKNOWN_ERROR
+				200,
+				{message: "journal entry deleted"}
 			);
+		} catch (e: unknown) {
+			if (e instanceof InvalidJournalEntryIdTypeError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid journal entry id type");
+			} else if (e instanceof NoSuchJournalEntryError) {
+				this.sendErrorResponse(
+					res,
+					404,
+					"no such journal entry");
+				return;
+			} else {
+				this.sendErrorResponse(
+					res,
+					500,
+					this.UNKNOWN_ERROR
+				);
+			}
 		}
 	}
 
 	private async deleteAccounts(req: express.Request, res: express.Response): Promise<void> {
 		try {
 			await this.aggregate.deleteAccounts();
-			res.status(200).json({
-				status: "success",
-				message: "accounts deleted"
-			});
+			this.sendSuccessResponse(
+				res,
+				200,
+				{message: "accounts deleted"}
+			);
 		} catch (e: unknown) {
 			this.sendErrorResponse(
 				res,
@@ -223,10 +416,11 @@ export class ExpressRoutes {
 	private async deleteJournalEntries(req: express.Request, res: express.Response): Promise<void> {
 		try {
 			await this.aggregate.deleteJournalEntries();
-			res.status(200).json({
-				status: "success",
-				message: "journal entries deleted"
-			});
+			this.sendSuccessResponse(
+				res,
+				200,
+				{message: "journal entries deleted"}
+			);
 		} catch (e: unknown) {
 			this.sendErrorResponse(
 				res,
@@ -237,9 +431,19 @@ export class ExpressRoutes {
 	}
 
 	private sendErrorResponse(res: express.Response, statusCode: number, message: string) {
-		res.status(statusCode).json({
-			result: "error",
-			message: message
-		});
+		const response: IResponse = {
+			result: ResponseResult.ERROR,
+			data: {message: message}
+		}
+		res.status(statusCode).json(response);
 	}
+
+	private sendSuccessResponse(res: express.Response, statusCode: number, data: any) {
+		const response: IResponse = {
+			result: ResponseResult.SUCCESS,
+			data: data
+		}
+		res.status(statusCode).json(response);
+	}
+
 }

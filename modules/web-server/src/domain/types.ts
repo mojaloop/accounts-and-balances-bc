@@ -41,12 +41,12 @@ import {
 	InvalidAccountStateError,
 	InvalidAccountTypeError,
 	InvalidAccountTypeTypeError,
-	InvalidBalanceTypeError,
-	InvalidCurrencyTypeError,
+	InvalidCreditAccountIdTypeError, InvalidCreditBalanceError, InvalidCreditBalanceTypeError,
+	InvalidCurrencyTypeError, InvalidDebitAccountIdTypeError, InvalidDebitBalanceError, InvalidDebitBalanceTypeError,
 	InvalidJournalEntryIdTypeError, InvalidJournalEntryTypeError, InvalidJournalEntryTypeTypeError,
-	InvalidParticipantIdTypeError, InvalidTimeStampTypeError, InvalidTransferAmountTypeError
+	InvalidParticipantIdTypeError, InvalidTimeStampTypeError, InvalidTransferAmountError, InvalidTransferAmountTypeError,
+	InvalidAccountStateTypeError
 } from "./errors";
-import {InvalidAccountStateTypeError} from "./errors";
 
 export class Account implements IAccount {
 	id: string;
@@ -81,7 +81,8 @@ export class Account implements IAccount {
 			throw new InvalidAccountIdTypeError();
 		}
 		// participantId.
-		if (typeof account.participantId !== "string") {
+		if (typeof account.participantId !== "string"
+			&& account.participantId !== null) {
 			throw new InvalidParticipantIdTypeError();
 		}
 		// state.
@@ -105,14 +106,18 @@ export class Account implements IAccount {
 		// TODO: valid currency.
 		// creditBalance.
 		if (typeof account.creditBalance !== "number") {
-			throw new InvalidBalanceTypeError();
+			throw new InvalidCreditBalanceTypeError();
 		}
-		// TODO: check integer; check negatives.
+		if (account.creditBalance < 0) {
+			throw new InvalidCreditBalanceError();
+		}
 		// debitBalance.
 		if (typeof account.debitBalance !== "number") {
-			throw new InvalidBalanceTypeError();
+			throw new InvalidDebitBalanceTypeError();
 		}
-		// TODO: check integer; check negatives.
+		if (account.debitBalance < 0) {
+			throw new InvalidDebitBalanceError();
+		}
 	}
 }
 
@@ -152,16 +157,18 @@ export class JournalEntry implements IJournalEntry {
 			throw new InvalidJournalEntryIdTypeError();
 		}
 		// participantId.
-		if (typeof journalEntry.participantId !== "string") {
+		if (typeof journalEntry.participantId !== "string"
+			&& journalEntry.participantId !== null) {
 			throw new InvalidParticipantIdTypeError();
 		}
 		// type.
 		if (typeof journalEntry.type !== "string") {
 			throw new InvalidJournalEntryTypeTypeError();
 		}
-		if (!(journalEntry.type in JournalEntryType)) {
+		// TODO.
+		/*if (!(journalEntry.type in JournalEntryType)) {
 			throw new InvalidJournalEntryTypeError();
-		}
+		}*/
 		// currency.
 		if (typeof journalEntry.currency !== "string") {
 			throw new InvalidCurrencyTypeError();
@@ -169,17 +176,19 @@ export class JournalEntry implements IJournalEntry {
 		// TODO: valid currency.
 		// creditAccountId.
 		if (typeof journalEntry.creditAccountId !== "string") {
-			throw new InvalidAccountIdTypeError();
+			throw new InvalidCreditAccountIdTypeError();
 		}
 		// debitAccountId.
 		if (typeof journalEntry.debitAccountId !== "string") {
-			throw new InvalidAccountIdTypeError();
+			throw new InvalidDebitAccountIdTypeError();
 		}
 		// transferAmount.
 		if (typeof journalEntry.transferAmount !== "number") {
 			throw new InvalidTransferAmountTypeError();
 		}
-		// TODO: check integer; check negatives.
+		if (journalEntry.transferAmount <= 0) { // TODO: = 0?
+			throw new InvalidTransferAmountError();
+		}
 		// timeStamp.
 		if (typeof journalEntry.timeStamp !== "string") {
 			throw new InvalidTimeStampTypeError();

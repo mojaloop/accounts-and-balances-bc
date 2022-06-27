@@ -57,28 +57,20 @@ const DB_NAME: string = "AccountsAndBalances";
 const ACCOUNTS_COLLECTION_NAME: string = "Accounts";
 const JOURNAL_ENTRIES_COLLECTION_NAME: string = "JournalEntries";
 
-// Platform configuration.
-const defaultConfigProvider: IConfigProvider = new DefaultConfigProvider();
+// Platform configuration. TODO.
 const appConfiguration = new AppConfiguration(
 	"", // TODO.
 	"", // TODO.
 	SERVICE_NAME,
 	SERVICE_VERSION,
-	defaultConfigProvider
+	null // Standalone mode.
 );
-appConfiguration.addNewParam(
-	"stringParam1",
-	ConfigParameterTypes.STRING,
-	"default val",
-	"description string param 1"
-);
-
 // Logger.
 const logger: ILogger = new DefaultLogger( // TODO.
 	"", // TODO.
 	SERVICE_NAME, // TODO.
 	SERVICE_VERSION,
-	LogLevel.TRACE); // TODO default?
+	LogLevel.INFO); // TODO.
 // Infrastructure.
 const repo: IRepo = new MongoRepo(
 	logger,
@@ -102,6 +94,7 @@ const webServer: ExpressWebServer = new ExpressWebServer(
 );
 
 async function start(): Promise<void> {
+	await appConfiguration.fetch(); // TODO.
 	await aggregate.init(); // No need to handle exceptions.
 	webServer.start(); // No need to handle exceptions.
 }
