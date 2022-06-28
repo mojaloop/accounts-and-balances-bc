@@ -82,7 +82,7 @@ export class AccountsAndBalancesClient {
 			// axiosResponse.data can only be an IResponse.
 			const serverSuccessResponse: IResponse = axiosResponse.data;
 			return serverSuccessResponse.data.journalEntryId;
-		} catch (e: unknown) { // TODO.
+		} catch (e: unknown) {
 			const axiosError: AxiosError = e as AxiosError; // e can only be an AxiosError.
 			if (axiosError.response === undefined) {
 				this.logger.error(e);
@@ -150,7 +150,7 @@ export class AccountsAndBalancesClient {
 		}
 	}
 
-	async deleteAccount(accountId: string): Promise<void> {
+	/*async deleteAccount(accountId: string): Promise<void> {
 		try {
 			await this.httpClient.delete(`/accounts/${accountId}`);
 		} catch (e: unknown) {
@@ -163,20 +163,5 @@ export class AccountsAndBalancesClient {
 			const serverErrorResponse: IResponse = axiosError.response.data as IResponse;
 			throw new UnableToDeleteAccountError(serverErrorResponse.data.message);
 		}
-	}
-
-	async deleteJournalEntry(journalEntryId: string): Promise<void> {
-		try {
-			await this.httpClient.delete(`/journalEntries/${journalEntryId}`);
-		} catch (e: unknown) {
-			const axiosError: AxiosError = e as AxiosError; // e can only be an AxiosError.
-			if (axiosError.response === undefined) {
-				this.logger.error(e);
-				throw new UnableToReachServerError();
-			}
-			// axiosError.response.data can only be an IResponse.
-			const serverErrorResponse: IResponse = axiosError.response.data as IResponse;
-			throw new UnableToDeleteJournalEntryError(serverErrorResponse.data.message);
-		}
-	}
+	}*/
 }

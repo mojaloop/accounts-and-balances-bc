@@ -32,10 +32,14 @@
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import * as uuid from "uuid";
 import {
-	AccountAlreadyExistsError,
+	AccountAlreadyExistsError, CreditedAccountAndDebitedAccountCurrenciesDifferError,
 	InvalidAccountIdTypeError,
 	InvalidJournalEntryIdTypeError,
-	JournalEntryAlreadyExistsError, NoSuchAccountError, NoSuchJournalEntryError
+	JournalEntryAlreadyExistsError,
+	NoSuchAccountError,
+	NoSuchCreditedAccountError,
+	NoSuchDebitedAccountError,
+	NoSuchJournalEntryError
 } from "./errors";
 import {IRepo} from "./infrastructure-interfaces/irepo";
 import {Account, JournalEntry} from "./types";
@@ -69,10 +73,16 @@ export class Aggregate {
 
 	async createAccount(account: Account): Promise<string> { // TODO: Account or IAccount?
 		// To facilitate the creation of accounts, undefined/null ids are accepted and converted to empty strings
-		// (so that random UUIds are generated).
+		// (so that random UUIds are generated when storing the accounts).
 		if (account.id === undefined || account.id === null) { // TODO.
 			account.id = "";
 		}
+		// TODO.
+		// To facilitate the creation of accounts, undefined/null balances are accepted and automatically calculated
+		// based on the credit and debit balances provided (balance = creditBalance - debitBalance).
+		/*if (account.balance === undefined || account.balance === null) { // TODO.
+			account.balance = account.creditBalance - account.debitBalance;
+		}*/
 		Account.validateAccount(account);
 		try {
 			if (account.id === "") {
@@ -87,17 +97,44 @@ export class Aggregate {
 			}
 			throw e;
 		}
-		// TODO: save the accounts in memory?
 		return account.id;
 	}
 
 	async createJournalEntry(journalEntry: JournalEntry): Promise<string> { // TODO: JournalEntry or IJournalEntry?
 		// To facilitate the creation of journal entries, undefined/null ids are accepted and converted to empty
-		// strings (so that random UUIds are generated).
+		// strings (so that random UUIds are generated when storing the journal entries).
 		if (journalEntry.id === undefined || journalEntry.id === null) { // TODO.
 			journalEntry.id = "";
 		}
 		JournalEntry.validateJournalEntry(journalEntry);
+		// Check if the credited and debited accounts exist and if their currencies match.
+		// Instead of using the repo's accountExists and journalEntryExists functions, the accounts are fetched and
+		// compared to null; this is done because the accounts' balances and time stamps need to be updated when a
+		// journal entry is created, so it doesn't make sense to call those functions when the accounts need to be
+		// fetched anyway.
+		let creditedAccount: Account | null; // TODO: Account or IAccount?
+		let debitedAccount: Account | null; // TODO: Account or IAccount?
+		try {
+			creditedAccount = await this.repo.getAccount(journalEntry.creditedAccountId);
+			if (creditedAccount === null) {
+				throw new NoSuchCreditedAccountError(); // TODO: throw inside try?
+			}
+			debitedAccount = await this.repo.getAccount(journalEntry.debitedAccountId);
+			if (debitedAccount === null) {
+				throw new NoSuchDebitedAccountError(); // TODO: throw inside try?
+			}
+			if (creditedAccount.currency !== debitedAccount.currency) {
+				throw new CreditedAccountAndDebitedAccountCurrenciesDifferError(); // TODO: throw inside try?
+			}
+		} catch (e: unknown) {
+			if (!(e instanceof NoSuchCreditedAccountError)
+				&& !(e instanceof NoSuchDebitedAccountError)
+				&& !(e instanceof CreditedAccountAndDebitedAccountCurrenciesDifferError)) {
+				this.logger.error(e);
+			}
+			throw e;
+		}
+		// Generate a random UUId, if needed, and store the journal entry.
 		try {
 			if (journalEntry.id === "") {
 				do {
@@ -111,7 +148,22 @@ export class Aggregate {
 			}
 			throw e;
 		}
-		// TODO: save the journal entries in memory?
+		// Update the accounts' balances.
+		creditedAccount.creditBalance += journalEntry.amount; // TODO.
+		creditedAccount.balance += journalEntry.amount; // TODO.
+		debitedAccount.debitBalance += journalEntry.amount; // TODO.
+		debitedAccount.balance -= journalEntry.amount; // TODO.
+		// Update the accounts' time stamps.
+		creditedAccount.timeStampLastJournalEntry = journalEntry.timeStamp;
+		debitedAccount.timeStampLastJournalEntry = journalEntry.timeStamp;
+		try {
+			await this.repo.updateAccount(creditedAccount); // TODO.
+			await this.repo.updateAccount(debitedAccount); // TODO.
+		} catch (e: unknown) {
+			// TODO: revert.
+			this.logger.error(e); // TODO.
+			throw e;
+		}
 		return journalEntry.id;
 	}
 

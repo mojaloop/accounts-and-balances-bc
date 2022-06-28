@@ -58,13 +58,13 @@ const ACCOUNTS_COLLECTION_NAME: string = "Accounts";
 const JOURNAL_ENTRIES_COLLECTION_NAME: string = "JournalEntries";
 
 // Platform configuration. TODO.
-const appConfiguration = new AppConfiguration(
+/*const appConfiguration = new AppConfiguration(
 	"", // TODO.
 	"", // TODO.
 	SERVICE_NAME,
 	SERVICE_VERSION,
 	null // Standalone mode.
-);
+);*/
 // Logger.
 const logger: ILogger = new DefaultLogger( // TODO.
 	"", // TODO.
@@ -94,7 +94,7 @@ const webServer: ExpressWebServer = new ExpressWebServer(
 );
 
 async function start(): Promise<void> {
-	await appConfiguration.fetch(); // TODO.
+	// await appConfiguration.fetch(); // TODO.
 	await aggregate.init(); // No need to handle exceptions.
 	webServer.start(); // No need to handle exceptions.
 }

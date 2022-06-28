@@ -34,28 +34,29 @@ import {Aggregate} from "../../domain/aggregate";
 import express from "express";
 import {
 	IAccount,
+	IJournalEntry,
 	IResponse,
 	ResponseResult
 } from "@mojaloop/accounts-and-balances-private-types";
-import {IJournalEntry} from "@mojaloop/accounts-and-balances-private-types/dist";
 import {
 	AccountAlreadyExistsError,
 	InvalidAccountIdTypeError,
 	InvalidAccountStateError,
 	InvalidAccountStateTypeError,
 	InvalidAccountTypeError,
-	InvalidAccountTypeTypeError,
-	InvalidCreditAccountIdTypeError,
+	InvalidAccountTypeTypeError, InvalidBalanceError,
+	InvalidBalanceTypeError,
+	InvalidCreditBalanceError,
 	InvalidCreditBalanceTypeError,
+	InvalidCreditedAccountIdTypeError,
 	InvalidCurrencyTypeError,
-	InvalidDebitAccountIdTypeError,
+	InvalidDebitBalanceError,
 	InvalidDebitBalanceTypeError,
-	InvalidJournalEntryIdTypeError,
-	InvalidJournalEntryTypeError,
-	InvalidJournalEntryTypeTypeError,
-	InvalidParticipantIdTypeError,
-	InvalidTimeStampTypeError,
-	InvalidTransferAmountTypeError,
+	InvalidDebitedAccountIdTypeError,
+	InvalidExtCategoryTypeError,
+	InvalidExtIdTypeError, InvalidJournalEntryAmountError,
+	InvalidJournalEntryAmountTypeError,
+	InvalidJournalEntryIdTypeError, InvalidTimeStampTypeError,
 	JournalEntryAlreadyExistsError,
 	NoSuchAccountError,
 	NoSuchJournalEntryError
@@ -116,11 +117,11 @@ export class ExpressRoutes {
 					res,
 					400,
 					"invalid account id type");
-			} else if (e instanceof InvalidParticipantIdTypeError) {
+			} else if (e instanceof InvalidExtIdTypeError) {
 				this.sendErrorResponse(
 					res,
 					400,
-					"invalid participant id type");
+					"invalid ext id type");
 			} else if (e instanceof InvalidAccountStateTypeError) {
 				this.sendErrorResponse(
 					res,
@@ -151,11 +152,36 @@ export class ExpressRoutes {
 					res,
 					400,
 					"invalid credit balance type");
+			} else if (e instanceof InvalidCreditBalanceError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid credit balance");
 			} else if (e instanceof InvalidDebitBalanceTypeError) {
 				this.sendErrorResponse(
 					res,
 					400,
 					"invalid debit balance type");
+			} else if (e instanceof InvalidDebitBalanceError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid debit balance");
+			} else if (e instanceof InvalidBalanceTypeError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid balance type");
+			} else if (e instanceof InvalidBalanceError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid balance");
+			} else if (e instanceof InvalidTimeStampTypeError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid time stamp type");
 			} else if (e instanceof AccountAlreadyExistsError) {
 				this.sendErrorResponse(
 					res,
@@ -185,41 +211,41 @@ export class ExpressRoutes {
 					res,
 					400,
 					"invalid journal entry id type");
-			} else if (e instanceof InvalidParticipantIdTypeError) {
+			} else if (e instanceof InvalidExtIdTypeError) {
 				this.sendErrorResponse(
 					res,
 					400,
-					"invalid participant id type");
-			} else if (e instanceof InvalidJournalEntryTypeTypeError) {
+					"invalid ext id type");
+			} else if (e instanceof InvalidExtCategoryTypeError) {
 				this.sendErrorResponse(
 					res,
 					400,
-					"invalid journal entry type type (the type of the journal entry type)");
-			} else if (e instanceof InvalidJournalEntryTypeError) {
-				this.sendErrorResponse(
-					res,
-					400,
-					"invalid journal entry type");
+					"invalid ext category type");
 			} else if (e instanceof InvalidCurrencyTypeError) {
 				this.sendErrorResponse(
 					res,
 					400,
 					"invalid currency type");
-			} else if (e instanceof InvalidCreditAccountIdTypeError) {
+			} else if (e instanceof InvalidJournalEntryAmountTypeError) {
 				this.sendErrorResponse(
 					res,
 					400,
-					"invalid credit account id type");
-			} else if (e instanceof InvalidDebitAccountIdTypeError) {
+					"invalid journal entry amount type");
+			} else if (e instanceof InvalidJournalEntryAmountError) {
 				this.sendErrorResponse(
 					res,
 					400,
-					"invalid debit account id type");
-			} else if (e instanceof InvalidTransferAmountTypeError) {
+					"invalid journal entry amount");
+			} else if (e instanceof InvalidCreditedAccountIdTypeError) {
 				this.sendErrorResponse(
 					res,
 					400,
-					"invalid transfer amount type");
+					"invalid credited account id type");
+			} else if (e instanceof InvalidDebitedAccountIdTypeError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid debited account id type");
 			} else if (e instanceof InvalidTimeStampTypeError) {
 				this.sendErrorResponse(
 					res,

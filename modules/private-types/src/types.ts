@@ -29,44 +29,43 @@
 
 "use strict";
 
+// TODO: why interfaces and not classes?
+
 // TODO: names.
 export interface IAccount {
 	id: string;
-	participantId: string | null; // TODO.
+	extId: string | null;
 	state: AccountState;
 	type: AccountType;
 	currency: string; // https://en.wikipedia.org/wiki/ISO_4217
-	creditBalance: number;
-	debitBalance: number;
-	// TODO: why not only a single balance?
+	creditBalance: bigint;
+	debitBalance: bigint;
+	balance: bigint; // TODO: why not only this balance?
+	timeStampLastJournalEntry: number;
 }
 
-// TODO: any other states?
+// TODO: names.
 export enum AccountState {
-	CLOSED = "CLOSED",
-	OPEN = "OPEN"
+	ACTIVE = "ACTIVE",
+	DELETED = "DELETED"
 }
 
-// TODO: any other types?
+// TODO: names.
 export enum AccountType {
 	POSITION = "POSITION",
-	SETTLEMENT = "SETTLEMENT"
+	SETTLEMENT = "SETTLEMENT" // TODO: settlement or settlementS?
 }
 
 // TODO: names.
 export interface IJournalEntry {
 	id: string;
-	participantId: string | null; // TODO.
-	type: JournalEntryType;
+	extId: string | null;
+	extCategory: string | null;
 	currency: string;
-	creditAccountId: string;
-	debitAccountId: string;
-	transferAmount: number;
-	timeStamp: Date;
-}
-
-export enum JournalEntryType {
-	// TODO.
+	amount: bigint;
+	creditedAccountId: string;
+	debitedAccountId: string;
+	timeStamp: number;
 }
 
 // TODO.

@@ -33,46 +33,62 @@ import {
 	AccountState,
 	AccountType,
 	IAccount,
-	IJournalEntry,
-	JournalEntryType
+	IJournalEntry
 } from "@mojaloop/accounts-and-balances-private-types";
 import {
 	InvalidAccountIdTypeError,
 	InvalidAccountStateError,
 	InvalidAccountTypeError,
 	InvalidAccountTypeTypeError,
-	InvalidCreditAccountIdTypeError, InvalidCreditBalanceError, InvalidCreditBalanceTypeError,
-	InvalidCurrencyTypeError, InvalidDebitAccountIdTypeError, InvalidDebitBalanceError, InvalidDebitBalanceTypeError,
-	InvalidJournalEntryIdTypeError, InvalidJournalEntryTypeError, InvalidJournalEntryTypeTypeError,
-	InvalidParticipantIdTypeError, InvalidTimeStampTypeError, InvalidTransferAmountError, InvalidTransferAmountTypeError,
-	InvalidAccountStateTypeError
+	InvalidCreditBalanceError,
+	InvalidCreditBalanceTypeError,
+	InvalidCurrencyTypeError,
+	InvalidDebitBalanceError,
+	InvalidDebitBalanceTypeError,
+	InvalidJournalEntryIdTypeError,
+	InvalidAccountStateTypeError,
+	InvalidBalanceTypeError,
+	InvalidExtIdTypeError,
+	InvalidExtCategoryTypeError,
+	InvalidJournalEntryAmountTypeError,
+	InvalidJournalEntryAmountError,
+	InvalidCreditedAccountIdTypeError,
+	InvalidDebitedAccountIdTypeError,
+	InvalidBalanceError,
+	InvalidTimeStampTypeError
 } from "./errors";
 
 export class Account implements IAccount {
 	id: string;
-	participantId: string | null; // TODO.
+	extId: string | null;
 	state: AccountState;
 	type: AccountType;
 	currency: string;
-	creditBalance: number;
-	debitBalance: number;
+	creditBalance: bigint;
+	debitBalance: bigint;
+	balance: bigint;
+	timeStampLastJournalEntry: number;
 
 	constructor(
-		id: string = "",
-		participantId: string | null = null, // TODO.
+		id: string,
+		extId: string | null = null,
 		state: AccountState,
 		type: AccountType,
 		currency: string,
-		creditBalance: number,
-		debitBalance: number
+		creditBalance: bigint,
+		debitBalance: bigint,
+		balance: bigint = creditBalance - debitBalance, // TODO.
+		timeStampLastJournalEntry: number
 	) {
 		this.id = id;
-		this.participantId = participantId;
+		this.extId = extId;
 		this.state = state;
 		this.type = type;
 		this.currency = currency;
 		this.creditBalance = creditBalance;
 		this.debitBalance = debitBalance;
+		this.balance = balance;
+		this.timeStampLastJournalEntry = timeStampLastJournalEntry;
 	}
 
 	static validateAccount(account: IAccount): void { // TODO: IAccount or Account?
@@ -80,10 +96,10 @@ export class Account implements IAccount {
 		if (typeof account.id !== "string") {
 			throw new InvalidAccountIdTypeError();
 		}
-		// participantId.
-		if (typeof account.participantId !== "string"
-			&& account.participantId !== null) {
-			throw new InvalidParticipantIdTypeError();
+		// extId.
+		if (typeof account.extId !== "string"
+			&& account.extId !== null) {
+			throw new InvalidExtIdTypeError();
 		}
 		// state.
 		if (typeof account.state !== "string") {
@@ -103,51 +119,63 @@ export class Account implements IAccount {
 		if (typeof account.currency !== "string") {
 			throw new InvalidCurrencyTypeError();
 		}
-		// TODO: valid currency.
+		// TODO: validate currency.
 		// creditBalance.
-		if (typeof account.creditBalance !== "number") {
+		if (typeof account.creditBalance !== "number") { // TODO: bigint.
 			throw new InvalidCreditBalanceTypeError();
 		}
 		if (account.creditBalance < 0) {
 			throw new InvalidCreditBalanceError();
 		}
 		// debitBalance.
-		if (typeof account.debitBalance !== "number") {
+		if (typeof account.debitBalance !== "number") { // TODO: bigint.
 			throw new InvalidDebitBalanceTypeError();
 		}
 		if (account.debitBalance < 0) {
 			throw new InvalidDebitBalanceError();
+		}
+		// balance.
+		if (typeof account.balance !== "number") { // TODO: bigint.
+			throw new InvalidBalanceTypeError();
+		}
+		if (account.balance !== account.creditBalance - account.debitBalance) {
+			throw new InvalidBalanceError();
+		}
+		// TODO: can the balance be negative?
+		// timeStampLastJournalEntry.
+		if (typeof account.timeStampLastJournalEntry !== "number") {
+			throw new InvalidTimeStampTypeError();
 		}
 	}
 }
 
 export class JournalEntry implements IJournalEntry {
 	id: string;
-	participantId: string | null; // TODO.
-	type: JournalEntryType;
+	extId: string | null;
+	extCategory: string | null;
 	currency: string;
-	creditAccountId: string;
-	debitAccountId: string;
-	transferAmount: number;
-	timeStamp: Date;
+	amount: bigint;
+	creditedAccountId: string;
+	debitedAccountId: string;
+	timeStamp: number;
 
 	constructor(
-		id: string = "",
-		participantId: string | null = null, // TODO.
-		type: JournalEntryType,
+		id: string,
+		extId: string | null = null,
+		extCategory: string | null = null,
 		currency: string,
-		creditAccountId: string,
-		debitAccountId: string,
-		transferAmount: number,
-		timeStamp: Date
+		amount: bigint,
+		creditedAccountId: string,
+		debitedAccountId: string,
+		timeStamp: number
 	) {
 		this.id = id;
-		this.participantId = participantId;
-		this.type = type;
+		this.extId = extId;
+		this.extCategory = extCategory;
 		this.currency = currency;
-		this.creditAccountId = creditAccountId;
-		this.debitAccountId = debitAccountId;
-		this.transferAmount = transferAmount;
+		this.amount = amount;
+		this.creditedAccountId = creditedAccountId;
+		this.debitedAccountId = debitedAccountId;
 		this.timeStamp = timeStamp;
 	}
 
@@ -156,43 +184,39 @@ export class JournalEntry implements IJournalEntry {
 		if (typeof journalEntry.id !== "string") {
 			throw new InvalidJournalEntryIdTypeError();
 		}
-		// participantId.
-		if (typeof journalEntry.participantId !== "string"
-			&& journalEntry.participantId !== null) {
-			throw new InvalidParticipantIdTypeError();
+		// extId.
+		if (typeof journalEntry.extId !== "string"
+			&& journalEntry.extId !== null) {
+			throw new InvalidExtIdTypeError();
 		}
-		// type.
-		if (typeof journalEntry.type !== "string") {
-			throw new InvalidJournalEntryTypeTypeError();
+		// extCategory.
+		if (typeof journalEntry.extCategory !== "string"
+			&& journalEntry.extCategory !== null) {
+			throw new InvalidExtCategoryTypeError();
 		}
-		// TODO.
-		/*if (!(journalEntry.type in JournalEntryType)) {
-			throw new InvalidJournalEntryTypeError();
-		}*/
 		// currency.
 		if (typeof journalEntry.currency !== "string") {
 			throw new InvalidCurrencyTypeError();
 		}
-		// TODO: valid currency.
-		// creditAccountId.
-		if (typeof journalEntry.creditAccountId !== "string") {
-			throw new InvalidCreditAccountIdTypeError();
+		// TODO: validate currency.
+		// amount.
+		if (typeof journalEntry.amount !== "number") { // TODO: bigint.
+			throw new InvalidJournalEntryAmountTypeError();
 		}
-		// debitAccountId.
-		if (typeof journalEntry.debitAccountId !== "string") {
-			throw new InvalidDebitAccountIdTypeError();
+		if (journalEntry.amount <= 0) {
+			throw new InvalidJournalEntryAmountError();
 		}
-		// transferAmount.
-		if (typeof journalEntry.transferAmount !== "number") {
-			throw new InvalidTransferAmountTypeError();
+		// creditedAccountId.
+		if (typeof journalEntry.creditedAccountId !== "string") {
+			throw new InvalidCreditedAccountIdTypeError();
 		}
-		if (journalEntry.transferAmount <= 0) { // TODO: = 0?
-			throw new InvalidTransferAmountError();
+		// debitedAccountId.
+		if (typeof journalEntry.debitedAccountId !== "string") {
+			throw new InvalidDebitedAccountIdTypeError();
 		}
 		// timeStamp.
-		if (typeof journalEntry.timeStamp !== "string") {
+		if (typeof journalEntry.timeStamp !== "number") {
 			throw new InvalidTimeStampTypeError();
 		}
-		// TODO: valid time stamp.
 	}
 }

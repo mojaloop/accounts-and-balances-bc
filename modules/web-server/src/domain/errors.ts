@@ -29,47 +29,57 @@
 
 "use strict";
 
-// Account-specific.
+// Account.
 export class InvalidAccountIdTypeError extends Error {}
 export class InvalidAccountStateTypeError extends Error {}
 export class InvalidAccountStateError extends Error {}
 export class InvalidAccountTypeTypeError extends Error {}
 export class InvalidAccountTypeError extends Error {}
-
-// JournalEntry-specific.
-export class InvalidJournalEntryIdTypeError extends Error {}
-export class InvalidJournalEntryTypeTypeError extends Error {}
-export class InvalidJournalEntryTypeError extends Error {}
-export class InvalidCreditAccountIdTypeError extends Error {}
-export class InvalidDebitAccountIdTypeError extends Error {}
-
-export class InvalidParticipantIdTypeError extends Error {}
-export class InvalidCurrencyTypeError extends Error {}
-export class InvalidCurrencyError extends Error {}
 export class InvalidCreditBalanceTypeError extends Error {}
 export class InvalidCreditBalanceError extends Error {}
 export class InvalidDebitBalanceTypeError extends Error {}
 export class InvalidDebitBalanceError extends Error {}
+export class InvalidBalanceTypeError extends Error {}
 export class InvalidBalanceError extends Error {}
 
-export class InvalidTransferAmountTypeError extends Error {}
-export class InvalidTransferAmountError extends Error {}
-export class InvalidTimeStampTypeError extends Error {}
-export class InvalidTimeStampError extends Error {}
+// JournalEntry.
+export class InvalidJournalEntryIdTypeError extends Error {}
+export class InvalidExtCategoryTypeError extends Error {}
+export class InvalidJournalEntryAmountTypeError extends Error {}
+export class InvalidJournalEntryAmountError extends Error {}
+export class InvalidCreditedAccountIdTypeError extends Error {}
+export class InvalidDebitedAccountIdTypeError extends Error {}
 
-// Repo-related.
+// Account and JournalEntry.
+export class InvalidExtIdTypeError extends Error {}
+export class InvalidCurrencyTypeError extends Error {}
+export class InvalidTimeStampTypeError extends Error {}
+
+// Repo.
 export class UnableToInitRepoError extends Error {}
-export class UnableToGetAccountError extends Error {}
-export class UnableToGetAccountsError extends Error {}
-export class UnableToGetJournalEntryError extends Error {}
-export class UnableToGetJournalEntriesError extends Error {}
+// Item already exists.
 export class AccountAlreadyExistsError extends Error {}
 export class JournalEntryAlreadyExistsError extends Error {}
+// No such item.
+export class NoSuchAccountError extends Error {}
+export class NoSuchCreditedAccountError extends Error {}
+export class NoSuchDebitedAccountError extends Error {}
+export class NoSuchJournalEntryError extends Error {}
+// Stores.
 export class UnableToStoreAccountError extends Error {}
 export class UnableToStoreJournalEntryError extends Error {}
-export class NoSuchAccountError extends Error {}
-export class NoSuchJournalEntryError extends Error {}
+// Gets.
+export class UnableToGetAccountError extends Error {}
+export class UnableToGetJournalEntryError extends Error {}
+export class UnableToGetAccountsError extends Error {}
+export class UnableToGetJournalEntriesError extends Error {}
+// Updates.
+export class UnableToUpdateAccountError extends Error {}
+// Deletes.
 export class UnableToDeleteAccountError extends Error {}
 export class UnableToDeleteJournalEntryError extends Error {}
 export class UnableToDeleteAccountsError extends Error {}
 export class UnableToDeleteJournalEntriesError extends Error {}
+
+// Others.
+export class CreditedAccountAndDebitedAccountCurrenciesDifferError extends Error {}

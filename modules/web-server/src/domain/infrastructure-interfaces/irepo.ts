@@ -43,6 +43,7 @@ export interface IRepo {
 	getAccounts(): Promise<IAccount[]>;
 	getJournalEntry(journalEntryId: string): Promise<IJournalEntry | null>;
 	getJournalEntries(): Promise<IJournalEntry[]>;
+	updateAccount(account : IAccount): Promise<void>; // TODO: return value;
 	deleteAccount(accountId: string): Promise<void>;
 	deleteJournalEntry(journalEntryId: string): Promise<void>;
 	deleteAccounts(): Promise<void>;

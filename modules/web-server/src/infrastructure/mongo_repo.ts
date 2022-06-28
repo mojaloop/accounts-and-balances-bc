@@ -32,7 +32,7 @@
 import {IRepo} from "../domain/infrastructure-interfaces/irepo";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {IAccount, IJournalEntry} from "@mojaloop/accounts-and-balances-private-types";
-import {MongoClient, Collection, DeleteResult} from "mongodb";
+import {MongoClient, Collection, DeleteResult, UpdateResult, Document} from "mongodb";
 import {
 	AccountAlreadyExistsError,
 	JournalEntryAlreadyExistsError,
@@ -48,7 +48,7 @@ import {
 	UnableToGetJournalEntryError,
 	UnableToInitRepoError,
 	UnableToStoreAccountError,
-	UnableToStoreJournalEntryError
+	UnableToStoreJournalEntryError, UnableToUpdateAccountError
 } from "../domain/errors";
 
 export class MongoRepo implements IRepo {
@@ -144,22 +144,26 @@ export class MongoRepo implements IRepo {
 		}
 	}
 
-	// TODO: why tf is _id returned??
 	async getAccount(accountId: string): Promise<IAccount | null> {
 		try {
 			// findOne() doesn't throw if no item is found - null is returned.
-			const account: any = await this.accounts.findOne({id: accountId}); // TODO: type.
+			const account: any = await this.accounts.findOne( // TODO: type.
+				{id: accountId},
+				{projection: {_id: 0}} // Don't return the _id field. TODO: why is _id returned without this?
+			);
 			return account as unknown as IAccount; // TODO.
 		} catch (e: unknown) {
 			throw new UnableToGetAccountError();
 		}
 	}
 
-	// TODO: why tf is _id returned??
 	async getJournalEntry(journalEntryId: string): Promise<IJournalEntry | null> {
 		try {
 			// findOne() doesn't throw if no item is found - null is returned.
-			const journalEntry: any = await this.journalEntries.findOne({id: journalEntryId}); // TODO: type.
+			const journalEntry: any = await this.journalEntries.findOne( // TODO: type.
+				{id: journalEntryId},
+				{projection: {_id: 0}} // Don't return the _id field. TODO: why is _id returned without this?
+			);
 			return journalEntry as unknown as IJournalEntry; // TODO.
 		} catch (e: unknown) {
 			throw new UnableToGetJournalEntryError();
@@ -193,6 +197,25 @@ export class MongoRepo implements IRepo {
 			return journalEntries as unknown as IJournalEntry[]; // TODO.
 		} catch (e: unknown) {
 			throw new UnableToGetJournalEntriesError();
+		}
+	}
+
+	// TODO: replace the entire account?
+	async updateAccount(account:IAccount): Promise<void> {
+		try {
+			// replaceOne() doesn't throw if no item is found.
+			const updateResult: UpdateResult | Document = await this.accounts.replaceOne( // TODO: return type - why Document?
+				{id: account.id},
+				account
+			);
+			if (updateResult.modifiedCount === 0) {
+				throw new NoSuchAccountError(); // TODO: throw inside try?
+			}
+		} catch (e: unknown) {
+			if (e instanceof NoSuchAccountError) {
+				throw e;
+			}
+			throw new UnableToUpdateAccountError();
 		}
 	}
 
