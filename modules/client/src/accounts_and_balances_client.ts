@@ -78,12 +78,12 @@ export class AccountsAndBalancesClient {
 		}
 	}
 
-	async createJournalEntries(journalEntries: IJournalEntry[]): Promise<number> { // TODO: return value.
+	async createJournalEntries(journalEntries: IJournalEntry[]): Promise<string[]> {
 		try {
 			const axiosResponse: AxiosResponse = await this.httpClient.post("/journalEntries", journalEntries);
 			// axiosResponse.data can only be an IResponse.
 			const serverSuccessResponse: IResponse = axiosResponse.data;
-			return serverSuccessResponse.data.countJournalEntriesCreated; // TODO.
+			return serverSuccessResponse.data.idsJournalEntries;
 		} catch (e: unknown) {
 			const axiosError: AxiosError = e as AxiosError; // e can only be an AxiosError.
 			if (axiosError.response === undefined) {
@@ -99,7 +99,7 @@ export class AccountsAndBalancesClient {
 	async getAccountById(accountId: string): Promise<IAccount | null> {
 		try {
 			const axiosResponse: AxiosResponse = await this.httpClient.get(
-				`/accounts/${accountId}`,
+				`/accounts?id=${accountId}`,
 				{
 					validateStatus: (statusCode: number) => {
 						return statusCode === 200 || statusCode === 404; // Resolve only 200s and 404s.
@@ -126,7 +126,9 @@ export class AccountsAndBalancesClient {
 
 	async getAccountsByExternalId(externalId: string): Promise<IAccount[]> {
 		try {
-			const axiosResponse: AxiosResponse = await this.httpClient.get(`/accounts/${externalId}`); // TODO: path.
+			const axiosResponse: AxiosResponse = await this.httpClient.get(
+				`/accounts?externalId=${externalId}`
+			);
 			// axiosResponse.data can only be an IResponse.
 			const serverSuccessResponse: IResponse = axiosResponse.data;
 			return serverSuccessResponse.data.accounts;
@@ -142,9 +144,11 @@ export class AccountsAndBalancesClient {
 		}
 	}
 
-	async getJournalEntriesByExternalId(externalId: string): Promise<IJournalEntry[]> {
+	async getJournalEntriesByAccountId(accountId: string): Promise<IJournalEntry[]> {
 		try {
-			const axiosResponse: AxiosResponse = await this.httpClient.get(`/journalEntries/${externalId}`);
+			const axiosResponse: AxiosResponse = await this.httpClient.get(
+				`/journalEntries?accountId=${accountId}`
+			);
 			// axiosResponse.data can only be an IResponse.
 			const serverSuccessResponse: IResponse = axiosResponse.data;
 			return serverSuccessResponse.data.journalEntries;

@@ -44,7 +44,7 @@ export interface IRepo {
 	getAllAccounts(): Promise<IAccount[]>;
 	getAllJournalEntries(): Promise<IJournalEntry[]>;
 	getAccountsByExternalId(externalId: string): Promise<IAccount[]>;
-	getJournalEntriesByExternalId(externalId: string): Promise<IJournalEntry[]>;
+	getJournalEntriesByAccountId(accountId: string): Promise<IJournalEntry[]>;
 	updateAccountCreditBalanceById(
 		accountId: string,
 		creditBalance: bigint,

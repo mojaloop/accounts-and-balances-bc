@@ -179,7 +179,7 @@ export class Aggregate {
 		return journalEntry.id;
 	}
 
-	async createJournalEntries(journalEntries: JournalEntry[]): Promise<number> { // TODO: JournalEntry or IJournalEntry?
+	async createJournalEntries(journalEntries: JournalEntry[]): Promise<string> { // TODO: JournalEntry or IJournalEntry?
 		throw new Error("not implemented yet");
 	}
 
@@ -245,12 +245,12 @@ export class Aggregate {
 		}
 	}
 
-	async getJournalEntriesByExternalId(externalId: string): Promise<JournalEntry[]> { // TODO: JournalEntry or IJournalEntry?
-		if (typeof externalId !== "string") { // TODO.
-			throw new InvalidExternalIdTypeError();
+	async getJournalEntriesByAccountId(accountId: string): Promise<JournalEntry[]> { // TODO: JournalEntry or IJournalEntry?
+		if (typeof accountId !== "string") { // TODO.
+			throw new InvalidAccountIdTypeError();
 		}
 		try {
-			return await this.repo.getJournalEntriesByExternalId(externalId);
+			return await this.repo.getJournalEntriesByAccountId(accountId);
 		} catch (e: unknown) { // TODO.
 			this.logger.error(e);
 			throw e;

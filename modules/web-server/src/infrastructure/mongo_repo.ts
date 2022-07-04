@@ -94,7 +94,7 @@ export class MongoRepo implements IRepo {
 		await this.mongoClient.close(); // Doesn't throw if the repo is unreachable.
 	}
 
-	async accountExists(accountId: string): Promise<boolean> {
+	async accountExistsById(accountId: string): Promise<boolean> {
 		try {
 			// findOne() doesn't throw if no item is found - null is returned.
 			const account: any = await this.accounts.findOne({id: accountId}); // TODO: type.
@@ -104,7 +104,7 @@ export class MongoRepo implements IRepo {
 		}
 	}
 
-	async journalEntryExists(journalEntryId: string): Promise<boolean> {
+	async journalEntryExistsById(journalEntryId: string): Promise<boolean> {
 		try {
 			// findOne() doesn't throw if no item is found - null is returned.
 			const journalEntry: any = await this.journalEntries.findOne({id: journalEntryId}); // TODO: type.
@@ -117,7 +117,7 @@ export class MongoRepo implements IRepo {
 	async storeAccount(account: IAccount): Promise<void> {
 		try {
 			// insertOne() allows for duplicates.
-			if (await this.accountExists(account.id)) {
+			if (await this.accountExistsById(account.id)) {
 				throw new AccountAlreadyExistsError(); // TODO: throw inside try?
 			}
 			await this.accounts.insertOne(account);
@@ -132,7 +132,7 @@ export class MongoRepo implements IRepo {
 	async storeJournalEntry(journalEntry: IJournalEntry): Promise<void> {
 		try {
 			// insertOne() allows for duplicates.
-			if (await this.journalEntryExists(journalEntry.id)) {
+			if (await this.journalEntryExistsById(journalEntry.id)) {
 				throw new JournalEntryAlreadyExistsError(); // TODO: throw inside try?
 			}
 			await this.journalEntries.insertOne(journalEntry);
@@ -144,7 +144,7 @@ export class MongoRepo implements IRepo {
 		}
 	}
 
-	async getAccount(accountId: string): Promise<IAccount | null> {
+	async getAccountById(accountId: string): Promise<IAccount | null> {
 		try {
 			// findOne() doesn't throw if no item is found - null is returned.
 			const account: any = await this.accounts.findOne( // TODO: type.
@@ -157,7 +157,7 @@ export class MongoRepo implements IRepo {
 		}
 	}
 
-	async getJournalEntry(journalEntryId: string): Promise<IJournalEntry | null> {
+	async getJournalEntryById(journalEntryId: string): Promise<IJournalEntry | null> {
 		try {
 			// findOne() doesn't throw if no item is found - null is returned.
 			const journalEntry: any = await this.journalEntries.findOne( // TODO: type.
@@ -200,13 +200,48 @@ export class MongoRepo implements IRepo {
 		}
 	}
 
-	// TODO: replace the entire account?
-	async updateAccount(account:IAccount): Promise<void> {
+	// TODO.
+	async getAccountsByExternalId(externalId: string): Promise<IAccount[]> {
 		try {
-			// replaceOne() doesn't throw if no item is found.
-			const updateResult: UpdateResult | Document = await this.accounts.replaceOne( // TODO: return type - why Document?
-				{id: account.id},
-				account
+			// find() doesn't throw if no items are found.
+			const accounts: any = // TODO: type.
+				await this.accounts
+				.find(
+					{externalId: externalId}, // TODO.
+					{projection: {_id: 0}}) // Don't return the _id field.
+				.toArray();
+			return accounts as unknown as IAccount[]; // TODO.
+		} catch (e: unknown) {
+			throw new UnableToGetJournalEntriesError();
+		}
+	}
+
+	// TODO.
+	async getJournalEntriesByAccountId(accountId: string): Promise<IJournalEntry[]> {
+		try {
+			// find() doesn't throw if no items are found.
+			const journalEntries: any = // TODO: type.
+				await this.journalEntries
+				.find(
+					{$or: [{creditedAccountId: accountId}, {debitedAccountId: accountId}]}, // TODO.
+					{projection: {_id: 0}}) // Don't return the _id field.
+				.toArray();
+			return journalEntries as unknown as IJournalEntry[]; // TODO.
+		} catch (e: unknown) {
+			throw new UnableToGetJournalEntriesError();
+		}
+	}
+
+	// TODO.
+	async updateAccountCreditBalanceById(
+		accountId: string,
+		creditBalance: bigint,
+		timeStampLastJournalEntry: number): Promise<void> {
+		try {
+			// updateOne() doesn't throw if no item is found.
+			const updateResult: UpdateResult = await this.accounts.updateOne(
+				{id: accountId},
+				{$set: {creditBalance: creditBalance, timeStampLastJournalEntry: timeStampLastJournalEntry}} // TODO.
 			);
 			if (updateResult.modifiedCount === 0) {
 				throw new NoSuchAccountError(); // TODO: throw inside try?
@@ -219,7 +254,29 @@ export class MongoRepo implements IRepo {
 		}
 	}
 
-	async deleteAccount(accountId: string): Promise<void> {
+	// TODO.
+	async updateAccountDebitBalanceById(
+		accountId: string,
+		debitBalance: bigint,
+		timeStampLastJournalEntry: number): Promise<void> {
+		try {
+			// updateOne() doesn't throw if no item is found.
+			const updateResult: UpdateResult = await this.accounts.updateOne(
+				{id: accountId},
+				{$set: {debitBalance: debitBalance, timeStampLastJournalEntry: timeStampLastJournalEntry}} // TODO.
+			);
+			if (updateResult.modifiedCount === 0) {
+				throw new NoSuchAccountError(); // TODO: throw inside try?
+			}
+		} catch (e: unknown) {
+			if (e instanceof NoSuchAccountError) {
+				throw e;
+			}
+			throw new UnableToUpdateAccountError();
+		}
+	}
+
+	async deleteAccountById(accountId: string): Promise<void> {
 		try {
 			// deleteOne() doesn't throw if the item doesn't exist.
 			const deleteResult: DeleteResult = await this.accounts.deleteOne({id: accountId});
@@ -235,7 +292,7 @@ export class MongoRepo implements IRepo {
 		}
 	}
 
-	async deleteJournalEntry(journalEntryId: string): Promise<void> {
+	async deleteJournalEntryById(journalEntryId: string): Promise<void> {
 		try {
 			// deleteOne() doesn't throw if the item doesn't exist.
 			const deleteResult: DeleteResult = await this.journalEntries.deleteOne({id: journalEntryId});
