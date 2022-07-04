@@ -33,9 +33,11 @@ import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import axios, {AxiosInstance, AxiosResponse, AxiosError} from "axios";
 import {IAccount, IJournalEntry, IResponse} from "@mojaloop/accounts-and-balances-private-types";
 import {
-	UnableToCreateAccountError, UnableToCreateJournalEntryError,
-	UnableToDeleteAccountError, UnableToDeleteJournalEntryError,
-	UnableToGetAccountError, UnableToGetJournalEntryError,
+	UnableToCreateAccountError,
+	UnableToCreateJournalEntriesError,
+	UnableToGetAccountError,
+	UnableToGetAccountsError,
+	UnableToGetJournalEntriesError,
 	UnableToReachServerError
 } from "./errors";
 
@@ -76,12 +78,12 @@ export class AccountsAndBalancesClient {
 		}
 	}
 
-	async createJournalEntry(journalEntry: IJournalEntry): Promise<string> {
+	async createJournalEntries(journalEntries: IJournalEntry[]): Promise<number> { // TODO: return value.
 		try {
-			const axiosResponse: AxiosResponse = await this.httpClient.post("/journalEntries", journalEntry);
+			const axiosResponse: AxiosResponse = await this.httpClient.post("/journalEntries", journalEntries);
 			// axiosResponse.data can only be an IResponse.
 			const serverSuccessResponse: IResponse = axiosResponse.data;
-			return serverSuccessResponse.data.journalEntryId;
+			return serverSuccessResponse.data.countJournalEntriesCreated; // TODO.
 		} catch (e: unknown) {
 			const axiosError: AxiosError = e as AxiosError; // e can only be an AxiosError.
 			if (axiosError.response === undefined) {
@@ -90,11 +92,11 @@ export class AccountsAndBalancesClient {
 			}
 			// axiosError.response.data can only be an IResponse.
 			const serverErrorResponse: IResponse = axiosError.response.data as IResponse;
-			throw new UnableToCreateJournalEntryError(serverErrorResponse.data.message);
+			throw new UnableToCreateJournalEntriesError(serverErrorResponse.data.message);
 		}
 	}
 
-	async getAccount(accountId: string): Promise<IAccount | null> {
+	async getAccountById(accountId: string): Promise<IAccount | null> {
 		try {
 			const axiosResponse: AxiosResponse = await this.httpClient.get(
 				`/accounts/${accountId}`,
@@ -122,22 +124,12 @@ export class AccountsAndBalancesClient {
 		}
 	}
 
-	async getJournalEntry(journalEntryId: string): Promise<IAccount | null> {
+	async getAccountsByExternalId(externalId: string): Promise<IAccount[]> {
 		try {
-			const axiosResponse: AxiosResponse = await this.httpClient.get(
-				`/journalEntries/${journalEntryId}`,
-				{
-					validateStatus: (statusCode: number) => {
-						return statusCode === 200 || statusCode === 404; // Resolve only 200s and 404s.
-					}
-				}
-			);
-			if (axiosResponse.status === 404) {
-				return null;
-			}
+			const axiosResponse: AxiosResponse = await this.httpClient.get(`/accounts/${externalId}`); // TODO: path.
 			// axiosResponse.data can only be an IResponse.
 			const serverSuccessResponse: IResponse = axiosResponse.data;
-			return serverSuccessResponse.data.journalEntry;
+			return serverSuccessResponse.data.accounts;
 		} catch (e: unknown) {
 			const axiosError: AxiosError = e as AxiosError; // e can only be an AxiosError.
 			if (axiosError.response === undefined) {
@@ -146,13 +138,16 @@ export class AccountsAndBalancesClient {
 			}
 			// axiosError.response.data can only be an IResponse.
 			const serverErrorResponse: IResponse = axiosError.response.data as IResponse;
-			throw new UnableToGetJournalEntryError(serverErrorResponse.data.message);
+			throw new UnableToGetAccountsError(serverErrorResponse.data.message);
 		}
 	}
 
-	/*async deleteAccount(accountId: string): Promise<void> {
+	async getJournalEntriesByExternalId(externalId: string): Promise<IJournalEntry[]> {
 		try {
-			await this.httpClient.delete(`/accounts/${accountId}`);
+			const axiosResponse: AxiosResponse = await this.httpClient.get(`/journalEntries/${externalId}`);
+			// axiosResponse.data can only be an IResponse.
+			const serverSuccessResponse: IResponse = axiosResponse.data;
+			return serverSuccessResponse.data.journalEntries;
 		} catch (e: unknown) {
 			const axiosError: AxiosError = e as AxiosError; // e can only be an AxiosError.
 			if (axiosError.response === undefined) {
@@ -161,7 +156,7 @@ export class AccountsAndBalancesClient {
 			}
 			// axiosError.response.data can only be an IResponse.
 			const serverErrorResponse: IResponse = axiosError.response.data as IResponse;
-			throw new UnableToDeleteAccountError(serverErrorResponse.data.message);
+			throw new UnableToGetJournalEntriesError(serverErrorResponse.data.message);
 		}
-	}*/
+	}
 }

@@ -170,7 +170,7 @@ export class MongoRepo implements IRepo {
 		}
 	}
 
-	async getAccounts(): Promise<IAccount[]> {
+	async getAllAccounts(): Promise<IAccount[]> {
 		try {
 			// find() doesn't throw if no items are found.
 			const accounts: any = // TODO: type.
@@ -185,7 +185,7 @@ export class MongoRepo implements IRepo {
 		}
 	}
 
-	async getJournalEntries(): Promise<IJournalEntry[]> {
+	async getAllJournalEntries(): Promise<IJournalEntry[]> {
 		try {
 			// find() doesn't throw if no items are found.
 			const journalEntries: any = // TODO: type.
@@ -252,7 +252,7 @@ export class MongoRepo implements IRepo {
 	}
 
 	// TODO.
-	async deleteAccounts(): Promise<void> {
+	async deleteAllAccounts(): Promise<void> {
 		try {
 			// deleteMany() doesn't throw if no items exist.
 			await this.accounts.deleteMany({}); // All documents.
@@ -262,7 +262,7 @@ export class MongoRepo implements IRepo {
 	}
 
 	// TODO.
-	async deleteJournalEntries(): Promise<void> {
+	async deleteAllJournalEntries(): Promise<void> {
 		try {
 			// deleteMany() doesn't throw if no items exist.
 			await this.journalEntries.deleteMany({}); // All documents.

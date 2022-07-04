@@ -33,8 +33,7 @@ export class UnableToReachServerError extends Error{}
 
 export class UnableToCreateAccountError extends Error{}
 export class UnableToGetAccountError extends Error{}
-export class UnableToDeleteAccountError extends Error{}
+export class UnableToGetAccountsError extends Error{}
 
-export class UnableToCreateJournalEntryError extends Error{}
-export class UnableToGetJournalEntryError extends Error{}
-export class UnableToDeleteJournalEntryError extends Error{}
+export class UnableToCreateJournalEntriesError extends Error{}
+export class UnableToGetJournalEntriesError extends Error{}

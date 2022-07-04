@@ -44,14 +44,14 @@ export class InvalidBalanceError extends Error {}
 
 // JournalEntry.
 export class InvalidJournalEntryIdTypeError extends Error {}
-export class InvalidExtCategoryTypeError extends Error {}
+export class InvalidExternalCategoryTypeError extends Error {}
 export class InvalidJournalEntryAmountTypeError extends Error {}
 export class InvalidJournalEntryAmountError extends Error {}
 export class InvalidCreditedAccountIdTypeError extends Error {}
 export class InvalidDebitedAccountIdTypeError extends Error {}
 
 // Account and JournalEntry.
-export class InvalidExtIdTypeError extends Error {}
+export class InvalidExternalIdTypeError extends Error {}
 export class InvalidCurrencyTypeError extends Error {}
 export class InvalidTimeStampTypeError extends Error {}
 
@@ -82,4 +82,4 @@ export class UnableToDeleteAccountsError extends Error {}
 export class UnableToDeleteJournalEntriesError extends Error {}
 
 // Others.
-export class CreditedAccountAndDebitedAccountCurrenciesDifferError extends Error {}
+export class CurrenciesDifferError extends Error {}

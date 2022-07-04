@@ -48,8 +48,8 @@ import {
 	InvalidJournalEntryIdTypeError,
 	InvalidAccountStateTypeError,
 	InvalidBalanceTypeError,
-	InvalidExtIdTypeError,
-	InvalidExtCategoryTypeError,
+	InvalidExternalIdTypeError,
+	InvalidExternalCategoryTypeError,
 	InvalidJournalEntryAmountTypeError,
 	InvalidJournalEntryAmountError,
 	InvalidCreditedAccountIdTypeError,
@@ -60,34 +60,31 @@ import {
 
 export class Account implements IAccount {
 	id: string;
-	extId: string | null;
+	externalId: string | null;
 	state: AccountState;
 	type: AccountType;
 	currency: string;
 	creditBalance: bigint;
 	debitBalance: bigint;
-	balance: bigint;
 	timeStampLastJournalEntry: number;
 
 	constructor(
 		id: string,
-		extId: string | null = null,
+		externalId: string | null = null,
 		state: AccountState,
 		type: AccountType,
 		currency: string,
 		creditBalance: bigint,
 		debitBalance: bigint,
-		balance: bigint = creditBalance - debitBalance, // TODO.
 		timeStampLastJournalEntry: number
 	) {
 		this.id = id;
-		this.extId = extId;
+		this.externalId = externalId;
 		this.state = state;
 		this.type = type;
 		this.currency = currency;
 		this.creditBalance = creditBalance;
 		this.debitBalance = debitBalance;
-		this.balance = balance;
 		this.timeStampLastJournalEntry = timeStampLastJournalEntry;
 	}
 
@@ -96,10 +93,10 @@ export class Account implements IAccount {
 		if (typeof account.id !== "string") {
 			throw new InvalidAccountIdTypeError();
 		}
-		// extId.
-		if (typeof account.extId !== "string"
-			&& account.extId !== null) {
-			throw new InvalidExtIdTypeError();
+		// externalId.
+		if (typeof account.externalId !== "string"
+			&& account.externalId !== null) {
+			throw new InvalidExternalIdTypeError();
 		}
 		// state.
 		if (typeof account.state !== "string") {
@@ -134,13 +131,6 @@ export class Account implements IAccount {
 		if (account.debitBalance < 0) {
 			throw new InvalidDebitBalanceError();
 		}
-		// balance.
-		if (typeof account.balance !== "number") { // TODO: bigint.
-			throw new InvalidBalanceTypeError();
-		}
-		if (account.balance !== account.creditBalance - account.debitBalance) {
-			throw new InvalidBalanceError();
-		}
 		// TODO: can the balance be negative?
 		// timeStampLastJournalEntry.
 		if (typeof account.timeStampLastJournalEntry !== "number") {
@@ -151,8 +141,8 @@ export class Account implements IAccount {
 
 export class JournalEntry implements IJournalEntry {
 	id: string;
-	extId: string | null;
-	extCategory: string | null;
+	externalId: string | null;
+	externalCategory: string | null;
 	currency: string;
 	amount: bigint;
 	creditedAccountId: string;
@@ -161,8 +151,8 @@ export class JournalEntry implements IJournalEntry {
 
 	constructor(
 		id: string,
-		extId: string | null = null,
-		extCategory: string | null = null,
+		externalId: string | null = null,
+		externalCategory: string | null = null,
 		currency: string,
 		amount: bigint,
 		creditedAccountId: string,
@@ -170,8 +160,8 @@ export class JournalEntry implements IJournalEntry {
 		timeStamp: number
 	) {
 		this.id = id;
-		this.extId = extId;
-		this.extCategory = extCategory;
+		this.externalId = externalId;
+		this.externalCategory = externalCategory;
 		this.currency = currency;
 		this.amount = amount;
 		this.creditedAccountId = creditedAccountId;
@@ -184,15 +174,15 @@ export class JournalEntry implements IJournalEntry {
 		if (typeof journalEntry.id !== "string") {
 			throw new InvalidJournalEntryIdTypeError();
 		}
-		// extId.
-		if (typeof journalEntry.extId !== "string"
-			&& journalEntry.extId !== null) {
-			throw new InvalidExtIdTypeError();
+		// externalId.
+		if (typeof journalEntry.externalId !== "string"
+			&& journalEntry.externalId !== null) {
+			throw new InvalidExternalIdTypeError();
 		}
-		// extCategory.
-		if (typeof journalEntry.extCategory !== "string"
-			&& journalEntry.extCategory !== null) {
-			throw new InvalidExtCategoryTypeError();
+		// externalCategory.
+		if (typeof journalEntry.externalCategory !== "string"
+			&& journalEntry.externalCategory !== null) {
+			throw new InvalidExternalCategoryTypeError();
 		}
 		// currency.
 		if (typeof journalEntry.currency !== "string") {

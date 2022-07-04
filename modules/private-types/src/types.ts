@@ -34,13 +34,12 @@
 // TODO: names.
 export interface IAccount {
 	id: string;
-	extId: string | null;
+	externalId: string | null;
 	state: AccountState;
 	type: AccountType;
 	currency: string; // https://en.wikipedia.org/wiki/ISO_4217
 	creditBalance: bigint;
 	debitBalance: bigint;
-	balance: bigint; // TODO: why not only this balance?
 	timeStampLastJournalEntry: number;
 }
 
@@ -59,8 +58,8 @@ export enum AccountType {
 // TODO: names.
 export interface IJournalEntry {
 	id: string;
-	extId: string | null;
-	extCategory: string | null;
+	externalId: string | null;
+	externalCategory: string | null;
 	currency: string;
 	amount: bigint;
 	creditedAccountId: string;
