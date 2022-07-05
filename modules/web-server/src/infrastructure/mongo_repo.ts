@@ -31,7 +31,7 @@
 
 import {IRepo} from "../domain/infrastructure-interfaces/irepo";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {IAccount, IJournalEntry} from "@mojaloop/accounts-and-balances-private-types";
+import {IAccount, IJournalEntry} from "@mojaloop/accounts-and-balances-bc-private-types";
 import {MongoClient, Collection, DeleteResult, UpdateResult, Document} from "mongodb";
 import {
 	AccountAlreadyExistsError,

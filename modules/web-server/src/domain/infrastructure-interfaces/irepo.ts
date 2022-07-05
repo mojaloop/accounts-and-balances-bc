@@ -29,8 +29,8 @@
 
 "use strict";
 
-import {IAccount} from "@mojaloop/accounts-and-balances-private-types";
-import {IJournalEntry} from "@mojaloop/accounts-and-balances-private-types/dist";
+import {IAccount} from "@mojaloop/accounts-and-balances-bc-private-types";
+import {IJournalEntry} from "@mojaloop/accounts-and-balances-bc-private-types/dist";
 
 export interface IRepo {
 	init(): Promise<void>;

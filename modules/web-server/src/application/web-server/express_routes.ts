@@ -37,7 +37,7 @@ import {
 	IJournalEntry,
 	IResponse,
 	ResponseResult
-} from "@mojaloop/accounts-and-balances-private-types";
+} from "@mojaloop/accounts-and-balances-bc-private-types";
 import {
 	AccountAlreadyExistsError,
 	InvalidAccountIdTypeError,

@@ -1,7 +1,7 @@
 {
-  "name": "@mojaloop/accounts-and-balances-private-types",
-  "version": "0.0.1",
-  "description": "Accounts and balances private types.",
+  "name": "@mojaloop/accounts-and-balances-bc-private-types",
+  "version": "0.0.2",
+  "description": "Accounts & Balances BC private types.",
   "license": "Apache-2.0",
   "homepage": "https://github.com/mojaloop/accounts-and-balances-bc/tree/main/modules/private-types",
   "bugs": {
@@ -17,7 +17,8 @@
     "/dist"
   ],
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "publish": "yarn run build && yarn version patch && yarn npm publish --tag=latest --access public"
   },
   "devDependencies": {
     "@types/node": "^17.0.41",
