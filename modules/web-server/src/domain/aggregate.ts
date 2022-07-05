@@ -100,7 +100,7 @@ export class Aggregate {
 		return account.id;
 	}
 
-	async createJournalEntry(journalEntry: JournalEntry): Promise<string> { // TODO: JournalEntry or IJournalEntry?
+	private async createJournalEntry(journalEntry: JournalEntry): Promise<string> { // TODO: JournalEntry or IJournalEntry?
 		// To facilitate the creation of journal entries, undefined/null ids are accepted and converted to empty
 		// strings (so that random UUIds are generated when storing the journal entries).
 		if (journalEntry.id === undefined || journalEntry.id === null) { // TODO.
@@ -179,7 +179,7 @@ export class Aggregate {
 		return journalEntry.id;
 	}
 
-	async createJournalEntries(journalEntries: JournalEntry[]): Promise<string> { // TODO: JournalEntry or IJournalEntry?
+	async createJournalEntries(journalEntries: JournalEntry[]): Promise<string[]> { // TODO: JournalEntry or IJournalEntry?
 		throw new Error("not implemented yet");
 	}
 
