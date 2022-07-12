@@ -32,17 +32,23 @@
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import * as uuid from "uuid";
 import {
-	AccountAlreadyExistsError, CurrenciesDifferError,
-	InvalidAccountIdTypeError, InvalidExternalIdTypeError,
+	AccountAlreadyExistsError,
+	CreditedAndDebitedAccountsAreTheSameError,
+	CurrenciesDifferError,
+	InsufficientBalanceError, InvalidAccountError,
+	InvalidAccountIdTypeError,
+	InvalidExternalIdTypeError, InvalidJournalEntryError,
 	InvalidJournalEntryIdTypeError,
 	JournalEntryAlreadyExistsError,
 	NoSuchAccountError,
 	NoSuchCreditedAccountError,
 	NoSuchDebitedAccountError,
-	NoSuchJournalEntryError
+	NoSuchJournalEntryError,
+	NotAnArrayError
 } from "./errors";
 import {IRepo} from "./infrastructure-interfaces/irepo";
 import {Account, JournalEntry} from "./types";
+import {type} from "os";
 
 export class Aggregate {
 	// Properties received through the constructor.
@@ -58,61 +64,92 @@ export class Aggregate {
 		this.repo = repo;
 	}
 
+	// DONE.
 	async init(): Promise<void> {
 		try {
 			await this.repo.init();
 		} catch (e: unknown) {
 			this.logger.fatal(e);
-			throw e; // No need to be specific.
+			throw e;
 		}
 	}
 
+	// DONE.
 	async destroy(): Promise<void> {
 		await this.repo.destroy();
 	}
 
-	async createAccount(account: Account): Promise<string> { // TODO: Account or IAccount?
-		// To facilitate the creation of accounts, undefined/null ids are accepted and converted to empty strings
-		// (so that random UUIds are generated when storing the accounts).
-		if (account.id === undefined || account.id === null) { // TODO.
+	async createAccount(account: any): Promise<string> { // TODO: any?
+		if (typeof account !== "object" || account === null) {
+			throw new InvalidAccountError(); // TODO.
+		}
+		// To facilitate the creation of accounts, undefined/null ids are accepted and converted to empty strings,
+		// so that random UUIds are generated when storing the accounts. TODO.
+		if (account.id === undefined || account.id === null) {
 			account.id = "";
 		}
-		// TODO.
-		// To facilitate the creation of accounts, undefined/null balances are accepted and automatically calculated
-		// based on the credit and debit balances provided (balance = creditBalance - debitBalance).
-		/*if (account.balance === undefined || account.balance === null) { // TODO.
-			account.balance = account.creditBalance - account.debitBalance;
-		}*/
 		Account.validateAccount(account);
+		// Generate a random UUId, if needed, and store the account.
+		// TODO.
+		let randomIdGenerated: boolean = false;
 		try {
 			if (account.id === "") {
-				do {
-					account.id = uuid.v4();
-				} while (await this.repo.accountExistsById(account.id));
+				account.id = uuid.v4();
+				randomIdGenerated = true;
 			}
 			await this.repo.storeAccount(account);
-		} catch (e: unknown) { // TODO.
-			if (!(e instanceof AccountAlreadyExistsError)) {
-				this.logger.error(e);
+		} catch (e: unknown) {
+			if (e instanceof AccountAlreadyExistsError) {
+				if (randomIdGenerated) { // Generate a new random id.
+					try {
+						do {
+							account.id = uuid.v4();
+						} while (await this.repo.accountExistsById(account.id));
+						await this.repo.storeAccount(account);
+					} catch (e: unknown) {
+						this.logger.error(e);
+						throw e;
+					}
+					return account.id;
+				}
+				throw new AccountAlreadyExistsError();
 			}
+			this.logger.error(e);
 			throw e;
 		}
 		return account.id;
 	}
 
-	private async createJournalEntry(journalEntry: JournalEntry): Promise<string> { // TODO: JournalEntry or IJournalEntry?
+	async createJournalEntries(journalEntries: unknown): Promise<string[]> { // TODO: unknown?
+		if (!Array.isArray(journalEntries)) { // TODO.
+			throw new NotAnArrayError(); // TODO.
+		}
+		const idsJournalEntries: string[] = []; // TODO.
+		for (const journalEntry of journalEntries) { // TODO: of?
+			idsJournalEntries.push(await this.createJournalEntry(journalEntry)); // TODO.
+		}
+		return idsJournalEntries;
+	}
+
+	// TODO: shouldn't some of these validations be done outside of this bounded context?
+	private async createJournalEntry(journalEntry: any): Promise<string> { // TODO: any?
+		if (typeof journalEntry !== "object" || journalEntry === null) {
+			throw new InvalidJournalEntryError(); // TODO.
+		}
 		// To facilitate the creation of journal entries, undefined/null ids are accepted and converted to empty
-		// strings (so that random UUIds are generated when storing the journal entries).
-		if (journalEntry.id === undefined || journalEntry.id === null) { // TODO.
+		// strings, so that random UUIds are generated when storing the journal entries. TODO.
+		if (journalEntry.id === undefined || journalEntry.id === null) {
 			journalEntry.id = "";
 		}
 		JournalEntry.validateJournalEntry(journalEntry);
-		// Check if the credited and debited accounts exist and if their currencies, as well as the currency of the
-		// journal entry, match.
-		// Instead of using the repo's accountExists and journalEntryExists functions, the accounts are fetched and
-		// compared to null; this is done because the accounts' balances and time stamps need to be updated when a
-		// journal entry is created, so it doesn't make sense to call those functions when the accounts need to be
-		// fetched anyway.
+		// Check if the credited and debited accounts are the same. TODO: required?
+		if (journalEntry.creditedAccountId === journalEntry.debitedAccountId) {
+			throw new CreditedAndDebitedAccountsAreTheSameError(); // TODO.
+		}
+		// Check if the credited and debited accounts exist.
+		// Instead of using the repo's accountExistsById and journalEntryExistsById functions, the accounts are fetched
+		// and compared to null; this is done because some of the accounts' properties need to be consulted, so it
+		// doesn't make sense to call those functions when the accounts need to be fetched anyway.
 		let creditedAccount: Account | null; // TODO: Account or IAccount?
 		let debitedAccount: Account | null; // TODO: Account or IAccount?
 		try {
@@ -131,27 +168,43 @@ export class Aggregate {
 			}
 			throw e;
 		}
+		// Check if the currencies of the credited and debited accounts and the journal entry match.
 		if (creditedAccount.currency !== debitedAccount.currency
 			|| creditedAccount.currency !== journalEntry.currency) {
-			throw new CurrenciesDifferError();
+			throw new CurrenciesDifferError(); // TODO.
 		}
-		// TODO: check if there's enough balance; create function to calculate the balance.
-		if (this.calculateBalance(creditedAccount) - journalEntry.amount < 0n) { // TODO.
-			throw new InsufficientBalanceError();
+		// Check if the balance is sufficient.
+		if (this.calculateAccountBalance(creditedAccount) - journalEntry.amount < 0n) { // TODO.
+			throw new InsufficientBalanceError(); // TODO.
 		}
 		// Generate a random UUId, if needed, and store the journal entry.
+		// TODO.
+		let randomIdGenerated: boolean = false;
 		try {
 			if (journalEntry.id === "") {
-				do {
-					journalEntry.id = uuid.v4(); // TODO.
-				} while (await this.repo.journalEntryExistsById(journalEntry.id));
+				journalEntry.id = uuid.v4();
+				randomIdGenerated = true;
 			}
 			await this.repo.storeJournalEntry(journalEntry);
-		} catch (e: unknown) { // TODO.
-			if (!(e instanceof JournalEntryAlreadyExistsError)) {
+		} catch (e: unknown) {
+			if (e instanceof JournalEntryAlreadyExistsError) {
+				if (randomIdGenerated) { // Generate a new random id.
+					try {
+						do {
+							journalEntry.id = uuid.v4();
+						} while (await this.repo.journalEntryExistsById(journalEntry.id));
+						await this.repo.storeJournalEntry(journalEntry);
+					} catch (e: unknown) {
+						this.logger.error(e);
+						throw e;
+					}
+				} else { // TODO: else?
+					throw new JournalEntryAlreadyExistsError();
+				}
+			} else { // TODO: else?
 				this.logger.error(e);
+				throw e;
 			}
-			throw e;
 		}
 		// Update the accounts' balances and time stamps.
 		try {
@@ -161,8 +214,8 @@ export class Aggregate {
 				journalEntry.timeStamp
 			);
 		} catch (e: unknown) {
-			// TODO: revert.
-			this.logger.error(e); // TODO.
+			// TODO: revert store.
+			this.logger.error(e);
 			throw e;
 		}
 		try {
@@ -172,19 +225,15 @@ export class Aggregate {
 				journalEntry.timeStamp
 			);
 		} catch (e: unknown) {
-			// TODO: revert.
-			this.logger.error(e); // TODO.
+			// TODO: revert store.
+			this.logger.error(e);
 			throw e;
 		}
 		return journalEntry.id;
 	}
 
-	async createJournalEntries(journalEntries: JournalEntry[]): Promise<string[]> { // TODO: JournalEntry or IJournalEntry?
-		throw new Error("not implemented yet");
-	}
-
 	// DONE.
-	async getAccountById(accountId: string): Promise<Account | null> { // TODO: Account or IAccount?
+	async getAccountById(accountId: unknown): Promise<Account | null> { // TODO: unknown? Account or IAccount?
 		if (typeof accountId !== "string") { // TODO.
 			throw new InvalidAccountIdTypeError();
 		}
@@ -199,7 +248,7 @@ export class Aggregate {
 	}
 
 	// DONE.
-	async getJournalEntryById(journalEntryId: string): Promise<JournalEntry | null> { // TODO: JournalEntry or IJournalEntry?
+	async getJournalEntryById(journalEntryId: unknown): Promise<JournalEntry | null> { // TODO: unknown? JournalEntry or IJournalEntry?
 		if (typeof journalEntryId !== "string") { // TODO.
 			throw new InvalidJournalEntryIdTypeError();
 		}
@@ -233,7 +282,8 @@ export class Aggregate {
 		}
 	}
 
-	async getAccountsByExternalId(externalId: string): Promise<Account[]> { // TODO: Account or IAccount?
+	// DONE.
+	async getAccountsByExternalId(externalId: unknown): Promise<Account[]> { // TODO: unknown? Account or IAccount?
 		if (typeof externalId !== "string") { // TODO.
 			throw new InvalidExternalIdTypeError();
 		}
@@ -245,7 +295,8 @@ export class Aggregate {
 		}
 	}
 
-	async getJournalEntriesByAccountId(accountId: string): Promise<JournalEntry[]> { // TODO: JournalEntry or IJournalEntry?
+	// DONE.
+	async getJournalEntriesByAccountId(accountId: unknown): Promise<JournalEntry[]> { // TODO: unknown? JournalEntry or IJournalEntry?
 		if (typeof accountId !== "string") { // TODO.
 			throw new InvalidAccountIdTypeError();
 		}
@@ -258,7 +309,7 @@ export class Aggregate {
 	}
 
 	// DONE.
-	async deleteAccountById(accountId: string): Promise<void> {
+	async deleteAccountById(accountId: unknown): Promise<void> { // TODO: unknown?
 		if (typeof accountId !== "string") { // TODO.
 			throw new InvalidAccountIdTypeError();
 		}
@@ -273,7 +324,7 @@ export class Aggregate {
 	}
 
 	// DONE.
-	async deleteJournalEntryById(journalEntryId: string): Promise<void> {
+	async deleteJournalEntryById(journalEntryId: unknown): Promise<void> { // TODO: unknown?
 		if (typeof journalEntryId !== "string") { // TODO.
 			throw new InvalidJournalEntryIdTypeError();
 		}
@@ -307,7 +358,8 @@ export class Aggregate {
 		}
 	}
 
-	private calculateBalance(account: Account): bigint { // TODO: Account or IAccount?
+	// DONE.
+	private calculateAccountBalance(account: Account): bigint { // TODO: Account or IAccount?
 		return account.creditBalance - account.debitBalance;
 	}
 }

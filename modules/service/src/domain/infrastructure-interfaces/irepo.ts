@@ -29,22 +29,26 @@
 
 "use strict";
 
-import {IAccount} from "@mojaloop/accounts-and-balances-bc-private-types";
-import {IJournalEntry} from "@mojaloop/accounts-and-balances-bc-private-types/dist";
+import {IAccount, IJournalEntry} from "@mojaloop/accounts-and-balances-bc-private-types";
 
 export interface IRepo {
+	// Init and destroy.
 	init(): Promise<void>;
 	destroy(): Promise<void>;
+	// Exists.
 	accountExistsById(accountId: string): Promise<boolean>;
 	journalEntryExistsById(journalEntryId: string): Promise<boolean>;
+	// Stores.
 	storeAccount(account: IAccount): Promise<void>;
 	storeJournalEntry(journalEntry: IJournalEntry): Promise<void>;
+	// Gets.
 	getAccountById(accountId: string): Promise<IAccount | null>;
 	getJournalEntryById(journalEntryId: string): Promise<IJournalEntry | null>;
 	getAllAccounts(): Promise<IAccount[]>;
 	getAllJournalEntries(): Promise<IJournalEntry[]>;
 	getAccountsByExternalId(externalId: string): Promise<IAccount[]>;
 	getJournalEntriesByAccountId(accountId: string): Promise<IJournalEntry[]>;
+	// Updates.
 	updateAccountCreditBalanceById(
 		accountId: string,
 		creditBalance: bigint,
@@ -52,8 +56,9 @@ export interface IRepo {
 	updateAccountDebitBalanceById(
 		accountId: string,
 		debitBalance: bigint,
-		timeStampLastJournalEntry: number): Promise<void>;
-	deleteAccountById(accountId: string): Promise<void>; // TODO: return value;
+		timeStampLastJournalEntry: number): Promise<void>; // TODO: return value;
+	// Deletes.
+	deleteAccountById(accountId: string): Promise<void>;
 	deleteJournalEntryById(journalEntryId: string): Promise<void>;
 	deleteAllAccounts(): Promise<void>;
 	deleteAllJournalEntries(): Promise<void>;

@@ -1,9 +1,9 @@
 {
-  "name": "@mojaloop/accounts-and-balances-bc-web-server",
+  "name": "@mojaloop/accounts-and-balances-bc-service",
   "version": "0.0.1",
-  "description": "Accounts & Balances BC web server.",
+  "description": "Accounts & Balances BC service.",
   "license": "Apache-2.0",
-  "homepage": "https://github.com/mojaloop/accounts-and-balances-bc/tree/main/modules/web-server",
+  "homepage": "https://github.com/mojaloop/accounts-and-balances-bc/tree/main/modules/service",
   "bugs": {
     "url": "https://github.com/mojaloop/accounts-and-balances-bc/issues#readme"
   },

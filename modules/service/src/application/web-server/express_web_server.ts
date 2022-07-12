@@ -83,7 +83,7 @@ export class ExpressWebServer {
 			});
 		} catch (e: unknown) {
 			this.logger.fatal(e); // TODO: fatal?
-			throw e; // No need to be specific.
+			throw e;
 		}
 	}
 }

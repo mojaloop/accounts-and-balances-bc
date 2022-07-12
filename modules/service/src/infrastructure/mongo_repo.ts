@@ -200,30 +200,28 @@ export class MongoRepo implements IRepo {
 		}
 	}
 
-	// TODO.
 	async getAccountsByExternalId(externalId: string): Promise<IAccount[]> {
 		try {
 			// find() doesn't throw if no items are found.
 			const accounts: any = // TODO: type.
 				await this.accounts
 				.find(
-					{externalId: externalId}, // TODO.
+					{externalId: externalId},
 					{projection: {_id: 0}}) // Don't return the _id field.
 				.toArray();
 			return accounts as unknown as IAccount[]; // TODO.
 		} catch (e: unknown) {
-			throw new UnableToGetJournalEntriesError();
+			throw new UnableToGetAccountsError();
 		}
 	}
 
-	// TODO.
 	async getJournalEntriesByAccountId(accountId: string): Promise<IJournalEntry[]> {
 		try {
 			// find() doesn't throw if no items are found.
 			const journalEntries: any = // TODO: type.
 				await this.journalEntries
 				.find(
-					{$or: [{creditedAccountId: accountId}, {debitedAccountId: accountId}]}, // TODO.
+					{$or: [{creditedAccountId: accountId}, {debitedAccountId: accountId}]},
 					{projection: {_id: 0}}) // Don't return the _id field.
 				.toArray();
 			return journalEntries as unknown as IJournalEntry[]; // TODO.
@@ -232,7 +230,7 @@ export class MongoRepo implements IRepo {
 		}
 	}
 
-	// TODO.
+	// TODO: this function and the next one are very similar - any way to "merge" them?
 	async updateAccountCreditBalanceById(
 		accountId: string,
 		creditBalance: bigint,
@@ -241,7 +239,7 @@ export class MongoRepo implements IRepo {
 			// updateOne() doesn't throw if no item is found.
 			const updateResult: UpdateResult = await this.accounts.updateOne(
 				{id: accountId},
-				{$set: {creditBalance: creditBalance, timeStampLastJournalEntry: timeStampLastJournalEntry}} // TODO.
+				{$set: {creditBalance: creditBalance, timeStampLastJournalEntry: timeStampLastJournalEntry}}
 			);
 			if (updateResult.modifiedCount === 0) {
 				throw new NoSuchAccountError(); // TODO: throw inside try?
@@ -254,7 +252,6 @@ export class MongoRepo implements IRepo {
 		}
 	}
 
-	// TODO.
 	async updateAccountDebitBalanceById(
 		accountId: string,
 		debitBalance: bigint,
@@ -263,7 +260,7 @@ export class MongoRepo implements IRepo {
 			// updateOne() doesn't throw if no item is found.
 			const updateResult: UpdateResult = await this.accounts.updateOne(
 				{id: accountId},
-				{$set: {debitBalance: debitBalance, timeStampLastJournalEntry: timeStampLastJournalEntry}} // TODO.
+				{$set: {debitBalance: debitBalance, timeStampLastJournalEntry: timeStampLastJournalEntry}}
 			);
 			if (updateResult.modifiedCount === 0) {
 				throw new NoSuchAccountError(); // TODO: throw inside try?
@@ -308,7 +305,6 @@ export class MongoRepo implements IRepo {
 		}
 	}
 
-	// TODO.
 	async deleteAllAccounts(): Promise<void> {
 		try {
 			// deleteMany() doesn't throw if no items exist.
@@ -318,7 +314,6 @@ export class MongoRepo implements IRepo {
 		}
 	}
 
-	// TODO.
 	async deleteAllJournalEntries(): Promise<void> {
 		try {
 			// deleteMany() doesn't throw if no items exist.

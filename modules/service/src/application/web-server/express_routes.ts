@@ -290,7 +290,8 @@ export class ExpressRoutes {
 	}
 
 	private async accounts(req: express.Request, res: express.Response): Promise<void> {
-		if (req.query === undefined) {
+		// req.query is always defined - if no query was specified, req.query is an empty object.
+		if (Object.keys(req.query).length === 0) { // TODO.
 			await this.getAllAccounts(req, res);
 			return;
 		}
@@ -310,8 +311,13 @@ export class ExpressRoutes {
 	}
 
 	private async journalEntries(req: express.Request, res: express.Response): Promise<void> {
-		if (req.query === undefined) {
+		// req.query is always defined - if no query was specified, req.query is an empty object.
+		if (Object.keys(req.query).length === 0) { // TODO.
 			await this.getAllJournalEntries(req, res);
+			return;
+		}
+		if (req.query.id !== undefined) {
+			await this.getJournalEntryById(req, res);
 			return;
 		}
 		if (req.query.accountId !== undefined) {
@@ -327,7 +333,8 @@ export class ExpressRoutes {
 
 	private async getAccountById(req: express.Request, res: express.Response): Promise<void> {
 		try {
-			const account: IAccount | null = await this.aggregate.getAccountById(req.query.id as string); // TODO: cast.
+			// The properties of the req.query object are always strings. TODO.
+			const account: IAccount | null = await this.aggregate.getAccountById(req.query.id);
 			if (account === null) {
 				this.sendErrorResponse(
 					res,
@@ -347,6 +354,40 @@ export class ExpressRoutes {
 					res,
 					400,
 					"invalid account id type"
+				);
+			} else {
+				this.sendErrorResponse(
+					res,
+					500,
+					this.UNKNOWN_ERROR
+				);
+			}
+		}
+	}
+
+	private async getJournalEntryById(req: express.Request, res: express.Response): Promise<void> {
+		try {
+			// The properties of the req.query object are always strings. TODO.
+			const journalEntry: IJournalEntry | null = await this.aggregate.getJournalEntryById(req.query.id);
+			if (journalEntry === null) {
+				this.sendErrorResponse(
+					res,
+					404,
+					"no such journal entry"
+				);
+				return;
+			}
+			this.sendSuccessResponse(
+				res,
+				200,
+				{journalEntry: journalEntry}
+			);
+		} catch (e: unknown) {
+			if (e instanceof InvalidJournalEntryIdTypeError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid journal entry id type"
 				);
 			} else {
 				this.sendErrorResponse(
@@ -393,22 +434,46 @@ export class ExpressRoutes {
 	}
 
 	private async getAccountsByExternalId(req: express.Request, res: express.Response): Promise<void> {
+		try {
+			// The properties of the req.query object are always strings. TODO.
+			const accounts: IAccount[] = await this.aggregate.getAccountsByExternalId(req.query.externalId);
+			this.sendSuccessResponse(
+				res,
+				200,
+				{accounts: accounts}
+			);
+		} catch (e: unknown) {
+			if (e instanceof InvalidExternalIdTypeError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid external id type"
+				);
+			} else {
+				this.sendErrorResponse(
+					res,
+					500,
+					this.UNKNOWN_ERROR
+				);
+			}
+		}
 	}
 
 	private async getJournalEntriesByAccountId(req: express.Request, res: express.Response): Promise<void> {
 		try {
-			const journalEntries: IJournalEntry[] = await this.aggregate.getJournalEntriesByAccountId(req.query.accountId as string);
+			// The properties of the req.query object are always strings. TODO.
+			const journalEntries: IJournalEntry[] = await this.aggregate.getJournalEntriesByAccountId(req.query.accountId);
 			this.sendSuccessResponse(
 				res,
 				200,
 				{journalEntries: journalEntries}
 			);
 		} catch (e: unknown) {
-			if (e instanceof InvalidJournalEntryIdTypeError) {
+			if (e instanceof InvalidAccountIdTypeError) {
 				this.sendErrorResponse(
 					res,
 					400,
-					"invalid journal entry id type"
+					"invalid account id type"
 				);
 			} else {
 				this.sendErrorResponse(
@@ -422,7 +487,7 @@ export class ExpressRoutes {
 
 	private async deleteAccountById(req: express.Request, res: express.Response): Promise<void> {
 		try {
-			await this.aggregate.deleteAccountById(req.query.id as string);
+			await this.aggregate.deleteAccountById(req.params.accountId);
 			this.sendSuccessResponse(
 				res,
 				200,
@@ -454,7 +519,7 @@ export class ExpressRoutes {
 
 	private async deleteJournalEntryById(req: express.Request, res: express.Response): Promise<void> {
 		try {
-			await this.aggregate.deleteJournalEntryById(req.query.id as string);
+			await this.aggregate.deleteJournalEntryById(req.params.journalEntryId);
 			this.sendSuccessResponse(
 				res,
 				200,

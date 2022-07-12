@@ -985,9 +985,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mojaloop/accounts-and-balances-bc-web-server@workspace:modules/web-server":
+"@mojaloop/accounts-and-balances-bc-service@workspace:modules/service":
   version: 0.0.0-use.local
-  resolution: "@mojaloop/accounts-and-balances-bc-web-server@workspace:modules/web-server"
+  resolution: "@mojaloop/accounts-and-balances-bc-service@workspace:modules/service"
   dependencies:
     "@mojaloop/accounts-and-balances-bc-private-types": ^0.0.2
     "@mojaloop/logging-bc-client-lib": ^0.0.10
