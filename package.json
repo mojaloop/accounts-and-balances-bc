@@ -24,7 +24,9 @@
     "test:unit": "yarn workspaces foreach -v run test:unit",
     "test:integration": "yarn workspaces foreach --parallel -v run test:integration",
     "test:coverage": "yarn workspaces foreach --parallel -v run test:coverage",
-    "test:coverage-check": "yarn workspaces foreach --parallel -v run test:coverage-check"
+    "test:coverage-check": "yarn workspaces foreach --parallel -v run test:coverage-check",
+    "publish:client-lib": "yarn workspace @mojaloop/accounts-and-balances-bc-client run publish",
+    "publish:private-types-lib": "yarn workspace @mojaloop/accounts-and-balances-bc-private-types run publish"
   },
   "devDependencies": {
     "@types/jest": "^27.0.3",

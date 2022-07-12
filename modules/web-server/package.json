@@ -1,7 +1,7 @@
 {
-  "name": "@mojaloop/accounts-and-balances-web-server",
+  "name": "@mojaloop/accounts-and-balances-bc-web-server",
   "version": "0.0.1",
-  "description": "Accounts and balances web server.",
+  "description": "Accounts & Balances BC web server.",
   "license": "Apache-2.0",
   "homepage": "https://github.com/mojaloop/accounts-and-balances-bc/tree/main/modules/web-server",
   "bugs": {
@@ -36,7 +36,7 @@
     "typescript": "^4.7.3"
   },
   "dependencies": {
-    "@mojaloop/accounts-and-balances-private-types": "^0.0.1",
+    "@mojaloop/accounts-and-balances-bc-private-types": "^0.0.2",
     "@mojaloop/logging-bc-client-lib": "^0.0.10",
     "@mojaloop/logging-bc-public-types-lib": "^0.0.3",
     "@mojaloop/platform-configuration-bc-client-lib": "^0.0.8",

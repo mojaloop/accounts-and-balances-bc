@@ -31,7 +31,7 @@
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import axios, {AxiosInstance, AxiosResponse, AxiosError} from "axios";
-import {IAccount, IJournalEntry, IResponse} from "@mojaloop/accounts-and-balances-private-types";
+import {IAccount, IJournalEntry, IResponse} from "@mojaloop/accounts-and-balances-bc-private-types";
 import {
 	UnableToCreateAccountError,
 	UnableToCreateJournalEntriesError,

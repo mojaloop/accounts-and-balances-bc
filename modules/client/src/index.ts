@@ -30,4 +30,4 @@
 "use strict";
 
 export * from "./accounts_and_balances_client";
-export * from "@mojaloop/accounts-and-balances-private-types";
+export * from "@mojaloop/accounts-and-balances-bc-private-types";

@@ -34,7 +34,7 @@ import {
 	AccountType,
 	IAccount,
 	IJournalEntry
-} from "@mojaloop/accounts-and-balances-private-types";
+} from "@mojaloop/accounts-and-balances-bc-private-types";
 import {
 	InvalidAccountIdTypeError,
 	InvalidAccountStateError,
