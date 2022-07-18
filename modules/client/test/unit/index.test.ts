@@ -28,3 +28,102 @@
  ******/
 
 "use strict";
+
+import {ConsoleLogger, ILogger} from "@mojaloop/logging-bc-public-types-lib";
+import {AccountsAndBalancesServiceMock} from "./accounts_and_balances_service_mock";
+import {AccountsAndBalancesClient} from "../../src";
+import {IAccountDTO, IJournalEntryDTO} from "../../src/types";
+import {UnableToCreateAccountError} from "../../dist/errors";
+
+const ACCOUNTS_AND_BALANCES_URL: string = "http://localhost:1234";
+const HTTP_CLIENT_TIMEOUT_MS: number = 10_000;
+
+const logger: ILogger = new ConsoleLogger();
+const accountsAndBalancesServiceMock: AccountsAndBalancesServiceMock = new AccountsAndBalancesServiceMock(
+	logger,
+	ACCOUNTS_AND_BALANCES_URL
+);
+const accountsAndBalancesClient: AccountsAndBalancesClient = new AccountsAndBalancesClient(
+	logger,
+	ACCOUNTS_AND_BALANCES_URL,
+	HTTP_CLIENT_TIMEOUT_MS
+);
+
+describe("accounts and balances client - unit tests", () => {
+	// Create account.
+	test("create non-existent account", async () => {
+		const accountIdExpected: string = AccountsAndBalancesServiceMock.NON_EXISTENT_ACCOUNT_ID;
+		const account: IAccountDTO = {
+			id: accountIdExpected,
+			externalId: null,
+			state: "ACTIVE",
+			type: "POSITION",
+			currency: "EUR",
+			creditBalance: 100,
+			debitBalance: 25,
+			timestampLastJournalEntry: 0
+		}
+		const accountIdReceived: string = await accountsAndBalancesClient.createAccount(account);
+		expect(accountIdReceived).toBe(accountIdExpected);
+	});
+	test("create existent account", async () => {
+		const accountIdExpected: string = AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID;
+		const account: IAccountDTO = {
+			id: accountIdExpected,
+			externalId: null,
+			state: "ACTIVE",
+			type: "POSITION",
+			currency: "EUR",
+			creditBalance: 100,
+			debitBalance: 25,
+			timestampLastJournalEntry: 0
+		}
+		await expect(
+			async () => {
+				await accountsAndBalancesClient.createAccount(account);
+			}
+		).rejects.toThrow(UnableToCreateAccountError); // TODO.
+	});
+
+	// Create journal entries.
+	test("create non-existent journal entries", async () => {
+	});
+	test("create existent journal entries", async () => {
+	});
+
+	// Get account by id.
+	test("get non-existent account by id", async () => {
+		const account: IAccountDTO | null =
+			await accountsAndBalancesClient.getAccountById(AccountsAndBalancesServiceMock.NON_EXISTENT_ACCOUNT_ID);
+		expect(account).toBeNull();
+	});
+	test("get existent account by id", async () => {
+		const account: IAccountDTO | null =
+			await accountsAndBalancesClient.getAccountById(AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID);
+		expect(account?.id).toBe(AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID);
+	});
+
+	// Get accounts by external id.
+	test("get non-existent accounts by external id", async () => {
+		const accounts: IAccountDTO[] = await accountsAndBalancesClient
+			.getAccountsByExternalId(AccountsAndBalancesServiceMock.NON_EXISTENT_EXTERNAL_ID);
+		expect(accounts).toEqual([]);
+	});
+	test("get existent accounts by external id", async () => {
+		const accounts: IAccountDTO[] = await accountsAndBalancesClient
+			.getAccountsByExternalId(AccountsAndBalancesServiceMock.EXISTENT_EXTERNAL_ID);
+		// expect(accounts).toBe();
+	});
+
+	// Get journal entries by account id.
+	test("get non-existent journal entries by account id", async () => {
+		const journalEntries: IJournalEntryDTO[] = await accountsAndBalancesClient
+			.getJournalEntriesByAccountId(AccountsAndBalancesServiceMock.NON_EXISTENT_ACCOUNT_ID);
+		expect(journalEntries).toEqual([]);
+	});
+	test("get existent journal entries by account id", async () => {
+		const journalEntries: IJournalEntryDTO[] = await accountsAndBalancesClient
+			.getJournalEntriesByAccountId(AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID);
+		// expect(journalEntries).toBe();
+	});
+});

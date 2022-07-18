@@ -31,28 +31,20 @@
 
 // TODO: why interfaces and not classes?
 
-// TODO: names.
 export interface IAccount {
 	id: string;
 	externalId: string | null;
-	state: AccountState;
-	type: AccountType;
+	state: AccountState; // TODO: also change to string?
+	type: string;
 	currency: string; // https://en.wikipedia.org/wiki/ISO_4217
 	creditBalance: bigint;
 	debitBalance: bigint;
-	timeStampLastJournalEntry: number;
+	timestampLastJournalEntry: number; // TODO: bigint?
 }
 
-// TODO: names.
 export enum AccountState {
 	ACTIVE = "ACTIVE",
 	DELETED = "DELETED"
-}
-
-// TODO: names.
-export enum AccountType {
-	POSITION = "POSITION",
-	SETTLEMENT = "SETTLEMENT" // TODO: settlement or settlementS?
 }
 
 // TODO: names.
@@ -64,7 +56,7 @@ export interface IJournalEntry {
 	amount: bigint;
 	creditedAccountId: string;
 	debitedAccountId: string;
-	timeStamp: number;
+	timestamp: number; // TODO: bigint?
 }
 
 // TODO.

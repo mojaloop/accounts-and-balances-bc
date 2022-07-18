@@ -31,8 +31,8 @@
 
 import {IRepo} from "../domain/infrastructure-interfaces/irepo";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {IAccount, IJournalEntry} from "@mojaloop/accounts-and-balances-bc-private-types";
-import {MongoClient, Collection, DeleteResult, UpdateResult, Document} from "mongodb";
+import {IAccount, IJournalEntry} from "@mojaloop/accounts-and-balances-bc-types";
+import {MongoClient, Collection, DeleteResult, UpdateResult} from "mongodb";
 import {
 	AccountAlreadyExistsError,
 	JournalEntryAlreadyExistsError,
@@ -114,8 +114,8 @@ export class MongoRepo implements IRepo {
 		}
 	}
 
-	async storeAccount(account: IAccount): Promise<void> {
-		try {
+	async storeNewAccount(account: IAccount): Promise<void> {
+		/*try {
 			// insertOne() allows for duplicates.
 			if (await this.accountExistsById(account.id)) {
 				throw new AccountAlreadyExistsError(); // TODO: throw inside try?
@@ -126,10 +126,27 @@ export class MongoRepo implements IRepo {
 				throw e;
 			}
 			throw new UnableToStoreAccountError();
+		}*/
+
+		// TODO.
+		let accountExists: boolean;
+		try {
+			accountExists = await this.accountExistsById(account.id);
+		} catch (e: unknown) {
+			throw new UnableToStoreAccountError();
+		}
+		if (accountExists) {
+			throw new AccountAlreadyExistsError();
+		}
+		try {
+			// insertOne() allows for duplicates.
+			await this.accounts.insertOne(account);
+		} catch (e: unknown) {
+			throw new UnableToStoreAccountError();
 		}
 	}
 
-	async storeJournalEntry(journalEntry: IJournalEntry): Promise<void> {
+	async storeNewJournalEntry(journalEntry: IJournalEntry): Promise<void> {
 		try {
 			// insertOne() allows for duplicates.
 			if (await this.journalEntryExistsById(journalEntry.id)) {
@@ -230,25 +247,22 @@ export class MongoRepo implements IRepo {
 		}
 	}
 
-	// TODO: this function and the next one are very similar - any way to "merge" them?
 	async updateAccountCreditBalanceById(
 		accountId: string,
 		creditBalance: bigint,
 		timeStampLastJournalEntry: number): Promise<void> {
+		let updateResult: UpdateResult;
 		try {
 			// updateOne() doesn't throw if no item is found.
-			const updateResult: UpdateResult = await this.accounts.updateOne(
+			updateResult = await this.accounts.updateOne(
 				{id: accountId},
 				{$set: {creditBalance: creditBalance, timeStampLastJournalEntry: timeStampLastJournalEntry}}
 			);
-			if (updateResult.modifiedCount === 0) {
-				throw new NoSuchAccountError(); // TODO: throw inside try?
-			}
 		} catch (e: unknown) {
-			if (e instanceof NoSuchAccountError) {
-				throw e;
-			}
 			throw new UnableToUpdateAccountError();
+		}
+		if (updateResult.modifiedCount === 0) {
+			throw new NoSuchAccountError();
 		}
 	}
 
@@ -256,52 +270,46 @@ export class MongoRepo implements IRepo {
 		accountId: string,
 		debitBalance: bigint,
 		timeStampLastJournalEntry: number): Promise<void> {
+		let updateResult: UpdateResult;
 		try {
 			// updateOne() doesn't throw if no item is found.
-			const updateResult: UpdateResult = await this.accounts.updateOne(
+			updateResult = await this.accounts.updateOne(
 				{id: accountId},
 				{$set: {debitBalance: debitBalance, timeStampLastJournalEntry: timeStampLastJournalEntry}}
 			);
-			if (updateResult.modifiedCount === 0) {
-				throw new NoSuchAccountError(); // TODO: throw inside try?
-			}
 		} catch (e: unknown) {
-			if (e instanceof NoSuchAccountError) {
-				throw e;
-			}
 			throw new UnableToUpdateAccountError();
+		}
+		if (updateResult.modifiedCount === 0) {
+			throw new NoSuchAccountError();
 		}
 	}
 
 	async deleteAccountById(accountId: string): Promise<void> {
+		let deleteResult: DeleteResult;
 		try {
 			// deleteOne() doesn't throw if the item doesn't exist.
-			const deleteResult: DeleteResult = await this.accounts.deleteOne({id: accountId});
-			// deleteResult.acknowledged is true whether the item exists or not.
-			if (deleteResult.deletedCount === 0) {
-				throw new NoSuchAccountError(); // TODO: throw inside try?
-			}
+			deleteResult = await this.accounts.deleteOne({id: accountId});
 		} catch (e: unknown) {
-			if (e instanceof NoSuchAccountError) {
-				throw e;
-			}
 			throw new UnableToDeleteAccountError();
+		}
+		// deleteResult.acknowledged is true whether the item exists or not.
+		if (deleteResult.deletedCount === 0) {
+			throw new NoSuchAccountError();
 		}
 	}
 
 	async deleteJournalEntryById(journalEntryId: string): Promise<void> {
+		let deleteResult: DeleteResult;
 		try {
 			// deleteOne() doesn't throw if the item doesn't exist.
-			const deleteResult: DeleteResult = await this.journalEntries.deleteOne({id: journalEntryId});
-			// deleteResult.acknowledged is true whether the item exists or not.
-			if (deleteResult.deletedCount === 0) {
-				throw new NoSuchJournalEntryError(); // TODO: throw inside try?
-			}
+			deleteResult = await this.journalEntries.deleteOne({id: journalEntryId});
 		} catch (e: unknown) {
-			if (e instanceof NoSuchJournalEntryError) {
-				throw e;
-			}
 			throw new UnableToDeleteJournalEntryError();
+		}
+		// deleteResult.acknowledged is true whether the item exists or not.
+		if (deleteResult.deletedCount === 0) {
+			throw new NoSuchJournalEntryError();
 		}
 	}
 

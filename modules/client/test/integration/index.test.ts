@@ -28,3 +28,316 @@
  ******/
 
 "use strict";
+
+// TODO: repeat code?
+
+// TODO: import index.ts?
+import {ConsoleLogger, ILogger} from "@mojaloop/logging-bc-public-types-lib";
+import {AccountsAndBalancesClient} from "../../src";
+import {UnableToCreateAccountError, UnableToCreateJournalEntriesError} from "../../src/errors";
+import {IAccountDTO, IJournalEntryDTO} from "../../src/types";
+
+// TODO: here or inside the describe function?
+const ACCOUNTS_AND_BALANCES_URL: string = "http://localhost:1234";
+const HTTP_CLIENT_TIMEOUT_MS: number = 10_000;
+
+const logger: ILogger = new ConsoleLogger(); // TODO: which type of logger to use?
+const accountsAndBalancesClient: AccountsAndBalancesClient = new AccountsAndBalancesClient(
+	logger,
+	ACCOUNTS_AND_BALANCES_URL,
+	HTTP_CLIENT_TIMEOUT_MS
+);
+
+describe("accounts and balances client - integration tests", () => {
+	// Create account.
+	test("create non-existent account", async () => {
+		const accountIdExpected: string = Date.now().toString();
+		const account: IAccountDTO = { // TODO.
+			id: accountIdExpected,
+			externalId: null,
+			state: "ACTIVE",
+			type: "POSITION",
+			currency: "EUR",
+			creditBalance: 100,
+			debitBalance: 25,
+			timestampLastJournalEntry: 0
+		}
+		const accountIdReceived: string = await accountsAndBalancesClient.createAccount(account);
+		expect(accountIdReceived).toBe(accountIdExpected);
+	});
+	test("create existent account", async () => {
+		const accountIdExpected: string = Date.now().toString();
+		const account: IAccountDTO = { // TODO.
+			id: accountIdExpected,
+			externalId: null,
+			state: "ACTIVE",
+			type: "POSITION",
+			currency: "EUR",
+			creditBalance: 100,
+			debitBalance: 25,
+			timestampLastJournalEntry: 0
+		}
+		const accountIdReceived: string = await accountsAndBalancesClient.createAccount(account);
+		expect(accountIdReceived).toBe(accountIdExpected);
+		await expect(
+			async () => {
+				await accountsAndBalancesClient.createAccount(account);
+			}
+		).rejects.toThrow(UnableToCreateAccountError); // TODO.
+	});
+
+	// Create journal entries.
+	test("create non-existent journal entries", async () => {
+		// The accounts regarding the journal entries need to be created first.
+		// Account A.
+		const accountAIdExpected: string = Date.now().toString();
+		const accountA: IAccountDTO = { // TODO.
+			id: accountAIdExpected,
+			externalId: null,
+			state: "ACTIVE",
+			type: "POSITION",
+			currency: "EUR",
+			creditBalance: 100,
+			debitBalance: 25,
+			timestampLastJournalEntry: 0
+		}
+		const accountAIdReceived: string = await accountsAndBalancesClient.createAccount(accountA);
+		expect(accountAIdReceived).toBe(accountAIdExpected);
+		// Account B.
+		const accountBIdExpected: string = Date.now().toString();
+		const accountB: IAccountDTO = { // TODO.
+			id: accountBIdExpected,
+			externalId: null,
+			state: "ACTIVE",
+			type: "POSITION",
+			currency: "EUR",
+			creditBalance: 100,
+			debitBalance: 25,
+			timestampLastJournalEntry: 0
+		}
+		const accountBIdReceived: string = await accountsAndBalancesClient.createAccount(accountB);
+		expect(accountBIdReceived).toBe(accountBIdExpected);
+		// Journal entry A.
+		const journalEntryAIdExpected: string = Date.now().toString();
+		const journalEntryA: IJournalEntryDTO = { // TODO.
+			id: journalEntryAIdExpected,
+			externalId: null,
+			externalCategory: null,
+			currency: "EUR",
+			amount: 5,
+			creditedAccountId: "a",
+			debitedAccountId: "b",
+			timestamp: 0
+		}
+		// Journal entry B.
+		const journalEntryBIdExpected: string = (Date.now() + 1).toString();
+		const journalEntryB: IJournalEntryDTO = { // TODO.
+			id: journalEntryBIdExpected,
+			externalId: null,
+			externalCategory: null,
+			currency: "EUR",
+			amount: 5,
+			creditedAccountId: "b",
+			debitedAccountId: "a",
+			timestamp: 0
+		}
+		const idsJournalEntriesReceived: string[] =
+			await accountsAndBalancesClient.createJournalEntries([journalEntryA, journalEntryB]);
+		expect(idsJournalEntriesReceived).toEqual([journalEntryAIdExpected, journalEntryBIdExpected]);
+	});
+	test("create existent journal entries", async () => {
+		// The accounts regarding the journal entries need to be created first.
+		// Account A.
+		const accountAIdExpected: string = Date.now().toString();
+		const accountA: IAccountDTO = { // TODO.
+			id: accountAIdExpected,
+			externalId: null,
+			state: "ACTIVE",
+			type: "POSITION",
+			currency: "EUR",
+			creditBalance: 100,
+			debitBalance: 25,
+			timestampLastJournalEntry: 0
+		}
+		const accountAIdReceived: string = await accountsAndBalancesClient.createAccount(accountA);
+		expect(accountAIdReceived).toBe(accountAIdExpected);
+		// Account B.
+		const accountBIdExpected: string = Date.now().toString();
+		const accountB: IAccountDTO = { // TODO.
+			id: accountBIdExpected,
+			externalId: null,
+			state: "ACTIVE",
+			type: "POSITION",
+			currency: "EUR",
+			creditBalance: 100,
+			debitBalance: 25,
+			timestampLastJournalEntry: 0
+		}
+		const accountBIdReceived: string = await accountsAndBalancesClient.createAccount(accountB);
+		expect(accountBIdReceived).toBe(accountBIdExpected);
+		// Journal entry A.
+		const journalEntryAIdExpected: string = Date.now().toString();
+		const journalEntryA: IJournalEntryDTO = { // TODO.
+			id: journalEntryAIdExpected,
+			externalId: null,
+			externalCategory: null,
+			currency: "EUR",
+			amount: 5,
+			creditedAccountId: "a",
+			debitedAccountId: "b",
+			timestamp: 0
+		}
+		// Journal entry B.
+		const journalEntryBIdExpected: string = (Date.now() + 1).toString();
+		const journalEntryB: IJournalEntryDTO = { // TODO.
+			id: journalEntryBIdExpected,
+			externalId: null,
+			externalCategory: null,
+			currency: "EUR",
+			amount: 5,
+			creditedAccountId: "b",
+			debitedAccountId: "a",
+			timestamp: 0
+		}
+		const idsJournalEntriesReceived: string[] =
+			await accountsAndBalancesClient.createJournalEntries([journalEntryA, journalEntryB]);
+		expect(idsJournalEntriesReceived).toEqual([journalEntryAIdExpected, journalEntryBIdExpected]);
+		await expect(
+			async () => {
+				await accountsAndBalancesClient.createJournalEntries([journalEntryA, journalEntryB]);
+			}
+		).rejects.toThrow(UnableToCreateJournalEntriesError); // TODO.
+	});
+
+	// Get account by id.
+	test("get non-existent account by id", async () => {
+		const accountId: string = Date.now().toString();
+		const account: IAccountDTO | null = await accountsAndBalancesClient.getAccountById(accountId);
+		expect(account).toBeNull();
+	});
+	test("get existent account by id", async () => {
+		const accountIdExpected: string = Date.now().toString();
+		const accountSent: IAccountDTO = { // TODO.
+			id: accountIdExpected,
+			externalId: null,
+			state: "ACTIVE",
+			type: "POSITION",
+			currency: "EUR",
+			creditBalance: 100,
+			debitBalance: 25,
+			timestampLastJournalEntry: 0
+		}
+		const accountIdReceived: string = await accountsAndBalancesClient.createAccount(accountSent);
+		expect(accountIdReceived).toBe(accountIdExpected);
+		const accountReceived: IAccountDTO | null = await accountsAndBalancesClient.getAccountById(accountIdExpected);
+		expect(accountReceived?.id).toBe(accountIdExpected);
+	});
+
+	// Get accounts by external id.
+	test("get non-existent accounts by external id", async () => {
+		const externalId: string = Date.now().toString();
+		const accounts: IAccountDTO[] = await accountsAndBalancesClient.getAccountsByExternalId(externalId);
+		expect(accounts).toEqual([]); // TODO.
+	});
+	test("get existent accounts by external id", async () => {
+		const externalId: string = Date.now().toString();
+		// Account A.
+		const accountAIdExpected: string = Date.now().toString();
+		const accountA: IAccountDTO = { // TODO.
+			id: accountAIdExpected,
+			externalId: externalId,
+			state: "ACTIVE",
+			type: "POSITION",
+			currency: "EUR",
+			creditBalance: 100,
+			debitBalance: 25,
+			timestampLastJournalEntry: 0
+		}
+		const accountAIdReceived: string = await accountsAndBalancesClient.createAccount(accountA);
+		expect(accountAIdReceived).toBe(accountAIdExpected);
+		// Account B.
+		const accountBIdExpected: string = Date.now().toString();
+		const accountB: IAccountDTO = { // TODO.
+			id: accountBIdExpected,
+			externalId: externalId,
+			state: "ACTIVE",
+			type: "POSITION",
+			currency: "EUR",
+			creditBalance: 100,
+			debitBalance: 25,
+			timestampLastJournalEntry: 0
+		}
+		const accountBIdReceived: string = await accountsAndBalancesClient.createAccount(accountB);
+		expect(accountBIdReceived).toBe(accountBIdExpected);
+		const accounts: IAccountDTO[] = await accountsAndBalancesClient.getAccountsByExternalId(externalId);
+		expect(accounts).toEqual([accountA, accountB]); // TODO.
+	});
+
+	// Get journal entries by account id.
+	test("get non-existent journal entries by account id", async () => {
+		const accountId: string = Date.now().toString();
+		const journalEntries: IJournalEntryDTO[] = await accountsAndBalancesClient.getJournalEntriesByAccountId(accountId);
+		expect(journalEntries).toEqual([]); // TODO.
+	});
+	test("get existent journal entries by account id", async () => {
+		const accountId: string = Date.now().toString();
+		// The accounts regarding the journal entries need to be created first.
+		// Account A.
+		const accountAIdExpected: string = accountId;
+		const accountA: IAccountDTO = { // TODO.
+			id: accountAIdExpected,
+			externalId: null,
+			state: "ACTIVE",
+			type: "POSITION",
+			currency: "EUR",
+			creditBalance: 100,
+			debitBalance: 25,
+			timestampLastJournalEntry: 0
+		}
+		const accountAIdReceived: string = await accountsAndBalancesClient.createAccount(accountA);
+		expect(accountAIdReceived).toBe(accountAIdExpected);
+		// Account B.
+		const accountBIdExpected: string = Date.now().toString();
+		const accountB: IAccountDTO = { // TODO.
+			id: accountBIdExpected,
+			externalId: null,
+			state: "ACTIVE",
+			type: "POSITION",
+			currency: "EUR",
+			creditBalance: 100,
+			debitBalance: 25,
+			timestampLastJournalEntry: 0
+		}
+		const accountBIdReceived: string = await accountsAndBalancesClient.createAccount(accountB);
+		expect(accountBIdReceived).toBe(accountBIdExpected);
+		// Journal entry A.
+		const journalEntryAIdExpected: string = Date.now().toString();
+		const journalEntryA: IJournalEntryDTO = { // TODO.
+			id: journalEntryAIdExpected,
+			externalId: null,
+			externalCategory: null,
+			currency: "EUR",
+			amount: 5,
+			creditedAccountId: accountAIdExpected,
+			debitedAccountId: accountBIdExpected,
+			timestamp: 0
+		}
+		// Journal entry B.
+		const journalEntryBIdExpected: string = (Date.now() + 1).toString(); // +1 because otherwise the time is the same as the last one. TODO.
+		const journalEntryB: IJournalEntryDTO = { // TODO.
+			id: journalEntryBIdExpected,
+			externalId: null,
+			externalCategory: null,
+			currency: "EUR",
+			amount: 5,
+			creditedAccountId: accountBIdExpected,
+			debitedAccountId: accountAIdExpected,
+			timestamp: 0
+		}
+		const idsJournalEntriesReceived: string[] =
+			await accountsAndBalancesClient.createJournalEntries([journalEntryA, journalEntryB]);
+		expect(idsJournalEntriesReceived).toEqual([journalEntryAIdExpected, journalEntryBIdExpected]);
+		const journalEntriesReceived: IJournalEntryDTO[] = await accountsAndBalancesClient.getJournalEntriesByAccountId(accountId);
+		expect(journalEntriesReceived).toEqual([journalEntryA, journalEntryB]); // TODO.
+	});
+});

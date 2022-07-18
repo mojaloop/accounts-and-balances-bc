@@ -1,9 +1,9 @@
 {
-  "name": "@mojaloop/accounts-and-balances-bc-private-types",
+  "name": "@mojaloop/accounts-and-balances-bc-types",
   "version": "0.0.2",
-  "description": "Accounts & Balances BC private types.",
+  "description": "Accounts & Balances BC types.",
   "license": "Apache-2.0",
-  "homepage": "https://github.com/mojaloop/accounts-and-balances-bc/tree/main/modules/private-types",
+  "homepage": "https://github.com/mojaloop/accounts-and-balances-bc/tree/main/modules/types",
   "bugs": {
     "url": "https://github.com/mojaloop/accounts-and-balances-bc/issues#readme"
   },

@@ -37,7 +37,7 @@ import {
 	IJournalEntry,
 	IResponse,
 	ResponseResult
-} from "@mojaloop/accounts-and-balances-bc-private-types";
+} from "@mojaloop/accounts-and-balances-bc-types";
 import {
 	AccountAlreadyExistsError,
 	InvalidAccountIdTypeError,
@@ -334,7 +334,7 @@ export class ExpressRoutes {
 	private async getAccountById(req: express.Request, res: express.Response): Promise<void> {
 		try {
 			// The properties of the req.query object are always strings. TODO.
-			const account: IAccount | null = await this.aggregate.getAccountById(req.query.id);
+			const account: IAccount | null = await this.aggregate.getAccountById(req.query.id as string); // TODO: cast?
 			if (account === null) {
 				this.sendErrorResponse(
 					res,
@@ -368,7 +368,7 @@ export class ExpressRoutes {
 	private async getJournalEntryById(req: express.Request, res: express.Response): Promise<void> {
 		try {
 			// The properties of the req.query object are always strings. TODO.
-			const journalEntry: IJournalEntry | null = await this.aggregate.getJournalEntryById(req.query.id);
+			const journalEntry: IJournalEntry | null = await this.aggregate.getJournalEntryById(req.query.id as string); // TODO: cast?
 			if (journalEntry === null) {
 				this.sendErrorResponse(
 					res,
@@ -436,7 +436,7 @@ export class ExpressRoutes {
 	private async getAccountsByExternalId(req: express.Request, res: express.Response): Promise<void> {
 		try {
 			// The properties of the req.query object are always strings. TODO.
-			const accounts: IAccount[] = await this.aggregate.getAccountsByExternalId(req.query.externalId);
+			const accounts: IAccount[] = await this.aggregate.getAccountsByExternalId(req.query.externalId as string); // TODO: cast?
 			this.sendSuccessResponse(
 				res,
 				200,
@@ -462,7 +462,7 @@ export class ExpressRoutes {
 	private async getJournalEntriesByAccountId(req: express.Request, res: express.Response): Promise<void> {
 		try {
 			// The properties of the req.query object are always strings. TODO.
-			const journalEntries: IJournalEntry[] = await this.aggregate.getJournalEntriesByAccountId(req.query.accountId);
+			const journalEntries: IJournalEntry[] = await this.aggregate.getJournalEntriesByAccountId(req.query.accountId as string); // TODO: cast?
 			this.sendSuccessResponse(
 				res,
 				200,

@@ -30,15 +30,8 @@
 "use strict";
 
 import {
-	AccountState,
-	AccountType,
-	IAccount,
-	IJournalEntry
-} from "@mojaloop/accounts-and-balances-bc-private-types";
-import {
 	InvalidAccountIdTypeError,
 	InvalidAccountStateError,
-	InvalidAccountTypeError,
 	InvalidAccountTypeTypeError,
 	InvalidCreditBalanceError,
 	InvalidCreditBalanceTypeError,
@@ -47,36 +40,35 @@ import {
 	InvalidDebitBalanceTypeError,
 	InvalidJournalEntryIdTypeError,
 	InvalidAccountStateTypeError,
-	InvalidBalanceTypeError,
 	InvalidExternalIdTypeError,
 	InvalidExternalCategoryTypeError,
 	InvalidJournalEntryAmountTypeError,
 	InvalidJournalEntryAmountError,
 	InvalidCreditedAccountIdTypeError,
 	InvalidDebitedAccountIdTypeError,
-	InvalidBalanceError,
-	InvalidTimeStampTypeError
+	InvalidTimeStampTypeError, InvalidJournalEntryIdError, InvalidAccountIdError
 } from "./errors";
+import {AccountState, IAccount, IJournalEntry} from "@mojaloop/accounts-and-balances-bc-types";
 
 export class Account implements IAccount {
 	id: string;
 	externalId: string | null;
 	state: AccountState;
-	type: AccountType;
-	currency: string;
+	type: string;
+	currency: string; // https://en.wikipedia.org/wiki/ISO_4217
 	creditBalance: bigint;
 	debitBalance: bigint;
-	timeStampLastJournalEntry: number;
+	timestampLastJournalEntry: number;
 
 	constructor(
 		id: string,
 		externalId: string | null = null,
 		state: AccountState,
-		type: AccountType,
+		type: string,
 		currency: string,
 		creditBalance: bigint,
 		debitBalance: bigint,
-		timeStampLastJournalEntry: number
+		timestampLastJournalEntry: number
 	) {
 		this.id = id;
 		this.externalId = externalId;
@@ -85,13 +77,16 @@ export class Account implements IAccount {
 		this.currency = currency;
 		this.creditBalance = creditBalance;
 		this.debitBalance = debitBalance;
-		this.timeStampLastJournalEntry = timeStampLastJournalEntry;
+		this.timestampLastJournalEntry = timestampLastJournalEntry;
 	}
 
-	static validateAccount(account: IAccount): void { // TODO: IAccount or Account?
+	static validateAccount(account: Account): void {
 		// id.
 		if (typeof account.id !== "string") {
 			throw new InvalidAccountIdTypeError();
+		}
+		if (account.id === "") {
+			throw new InvalidAccountIdError();
 		}
 		// externalId.
 		if (typeof account.externalId !== "string"
@@ -108,9 +103,6 @@ export class Account implements IAccount {
 		// type.
 		if (typeof account.type !== "string") {
 			throw new InvalidAccountTypeTypeError();
-		}
-		if (!(account.type in AccountType)) {
-			throw new InvalidAccountTypeError();
 		}
 		// currency.
 		if (typeof account.currency !== "string") {
@@ -133,7 +125,7 @@ export class Account implements IAccount {
 		}
 		// TODO: can the balance be negative?
 		// timeStampLastJournalEntry.
-		if (typeof account.timeStampLastJournalEntry !== "number") {
+		if (typeof account.timestampLastJournalEntry !== "number") {
 			throw new InvalidTimeStampTypeError();
 		}
 	}
@@ -147,7 +139,7 @@ export class JournalEntry implements IJournalEntry {
 	amount: bigint;
 	creditedAccountId: string;
 	debitedAccountId: string;
-	timeStamp: number;
+	timestamp: number;
 
 	constructor(
 		id: string,
@@ -157,7 +149,7 @@ export class JournalEntry implements IJournalEntry {
 		amount: bigint,
 		creditedAccountId: string,
 		debitedAccountId: string,
-		timeStamp: number
+		timestamp: number
 	) {
 		this.id = id;
 		this.externalId = externalId;
@@ -166,13 +158,16 @@ export class JournalEntry implements IJournalEntry {
 		this.amount = amount;
 		this.creditedAccountId = creditedAccountId;
 		this.debitedAccountId = debitedAccountId;
-		this.timeStamp = timeStamp;
+		this.timestamp = timestamp;
 	}
 
-	static validateJournalEntry(journalEntry: IJournalEntry): void { // TODO: IJournalEntry or JournalEntry?
+	static validateJournalEntry(journalEntry: JournalEntry): void {
 		// id.
 		if (typeof journalEntry.id !== "string") {
 			throw new InvalidJournalEntryIdTypeError();
+		}
+		if (journalEntry.id === "") {
+			throw new InvalidJournalEntryIdError();
 		}
 		// externalId.
 		if (typeof journalEntry.externalId !== "string"
@@ -205,7 +200,7 @@ export class JournalEntry implements IJournalEntry {
 			throw new InvalidDebitedAccountIdTypeError();
 		}
 		// timeStamp.
-		if (typeof journalEntry.timeStamp !== "number") {
+		if (typeof journalEntry.timestamp !== "number") {
 			throw new InvalidTimeStampTypeError();
 		}
 	}

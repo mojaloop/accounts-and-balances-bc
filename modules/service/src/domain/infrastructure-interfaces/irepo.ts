@@ -29,7 +29,7 @@
 
 "use strict";
 
-import {IAccount, IJournalEntry} from "@mojaloop/accounts-and-balances-bc-private-types";
+import {IAccount, IJournalEntry} from "@mojaloop/accounts-and-balances-bc-types";
 
 export interface IRepo {
 	// Init and destroy.
@@ -39,8 +39,8 @@ export interface IRepo {
 	accountExistsById(accountId: string): Promise<boolean>;
 	journalEntryExistsById(journalEntryId: string): Promise<boolean>;
 	// Stores.
-	storeAccount(account: IAccount): Promise<void>;
-	storeJournalEntry(journalEntry: IJournalEntry): Promise<void>;
+	storeNewAccount(account: IAccount): Promise<void>; // Throws if account.id is not unique.
+	storeNewJournalEntry(journalEntry: IJournalEntry): Promise<void>; // Throws if account.id is not unique.
 	// Gets.
 	getAccountById(accountId: string): Promise<IAccount | null>;
 	getJournalEntryById(journalEntryId: string): Promise<IJournalEntry | null>;

@@ -28,3 +28,310 @@
  ******/
 
 "use strict";
+
+// TODO: import index.ts?
+import {AccountState, AccountType, IAccount, IJournalEntry} from "@mojaloop/accounts-and-balances-bc-private-types";
+import {ConsoleLogger, ILogger} from "@mojaloop/logging-bc-public-types-lib";
+import {AccountsAndBalancesClientMock} from "./accounts_and_balances_client_mock";
+
+// TODO: here or inside the describe function?
+const ACCOUNTS_AND_BALANCES_URL: string = "http://localhost:1234";
+const HTTP_CLIENT_TIMEOUT_MS: number = 10_000;
+
+const logger: ILogger = new ConsoleLogger(); // TODO: which type of logger to use?
+const accountsAndBalancesClientMock: AccountsAndBalancesClientMock = new AccountsAndBalancesClientMock(
+	logger,
+	ACCOUNTS_AND_BALANCES_URL,
+	HTTP_CLIENT_TIMEOUT_MS
+);
+
+describe("accounts and balances service - integration tests", () => {
+	// Create account.
+	test("create non-existent account", async () => {
+		const accountIdExpected: string = Date.now().toString();
+		const account: IAccount = { // TODO.
+			id: accountIdExpected,
+			externalId: null,
+			state: AccountState.ACTIVE,
+			type: AccountType.POSITION,
+			currency: "EUR",
+			creditBalance: 100,
+			debitBalance: 25,
+			timeStampLastJournalEntry: 0
+		}
+		const statusCodeResponse: number = await accountsAndBalancesClientMock.createAccount(account);
+		expect(statusCodeResponse).toBe(200);
+	});
+	test("create existent account", async () => {
+		const accountIdExpected: string = Date.now().toString();
+		const account: IAccount = { // TODO.
+			id: accountIdExpected,
+			externalId: null,
+			state: AccountState.ACTIVE,
+			type: AccountType.POSITION,
+			currency: "EUR",
+			creditBalance: 100,
+			debitBalance: 25,
+			timeStampLastJournalEntry: 0
+		}
+		const statusCodeResponseCreateFirst: number = await accountsAndBalancesClientMock.createAccount(account);
+		expect(statusCodeResponseCreateFirst).toBe(200);
+		const statusCodeResponseCreateSecond: number = await accountsAndBalancesClientMock.createAccount(account);
+		expect(statusCodeResponseCreateSecond).toBe(400);
+	});
+
+	// Create journal entries.
+	test("create non-existent journal entries", async () => {
+		// The accounts regarding the journal entries need to be created first.
+		// Account A.
+		const accountAIdExpected: string = Date.now().toString();
+		const accountA: IAccount = { // TODO.
+			id: accountAIdExpected,
+			externalId: null,
+			state: AccountState.ACTIVE,
+			type: AccountType.POSITION,
+			currency: "EUR",
+			creditBalance: 100,
+			debitBalance: 25,
+			timeStampLastJournalEntry: 0
+		}
+		const statusCodeResponseCreateAccountA: number = await accountsAndBalancesClientMock.createAccount(accountA);
+		expect(statusCodeResponseCreateAccountA).toBe(200);
+		// Account B.
+		const accountBIdExpected: string = Date.now().toString();
+		const accountB: IAccount = { // TODO.
+			id: accountBIdExpected,
+			externalId: null,
+			state: AccountState.ACTIVE,
+			type: AccountType.POSITION,
+			currency: "EUR",
+			creditBalance: 100,
+			debitBalance: 25,
+			timeStampLastJournalEntry: 0
+		}
+		const statusCodeResponseCreateAccountB: number = await accountsAndBalancesClientMock.createAccount(accountB);
+		expect(statusCodeResponseCreateAccountB).toBe(200);
+		// Journal entry A.
+		const journalEntryAIdExpected: string = Date.now().toString();
+		const journalEntryA: IJournalEntry = { // TODO.
+			id: journalEntryAIdExpected,
+			externalId: null,
+			externalCategory: null,
+			currency: "EUR",
+			amount: 5,
+			creditedAccountId: "a",
+			debitedAccountId: "b",
+			timeStamp: 0
+		}
+		// Journal entry B.
+		const journalEntryBIdExpected: string = (Date.now() + 1).toString();
+		const journalEntryB: IJournalEntry = { // TODO.
+			id: journalEntryBIdExpected,
+			externalId: null,
+			externalCategory: null,
+			currency: "EUR",
+			amount: 5,
+			creditedAccountId: "b",
+			debitedAccountId: "a",
+			timeStamp: 0
+		}
+		const statusCodeResponseCreateJournalEntries: number =
+			await accountsAndBalancesClientMock.createJournalEntries([journalEntryA, journalEntryB]);
+		expect(statusCodeResponseCreateJournalEntries).toBe(200);
+	});
+	test("create existent journal entries", async () => {
+		// The accounts regarding the journal entries need to be created first.
+		// Account A.
+		const accountAIdExpected: string = Date.now().toString();
+		const accountA: IAccount = { // TODO.
+			id: accountAIdExpected,
+			externalId: null,
+			state: AccountState.ACTIVE,
+			type: AccountType.POSITION,
+			currency: "EUR",
+			creditBalance: 100,
+			debitBalance: 25,
+			timeStampLastJournalEntry: 0
+		}
+		const statusCodeResponseCreateAccountA: number = await accountsAndBalancesClientMock.createAccount(accountA);
+		expect(statusCodeResponseCreateAccountA).toBe(200);
+		// Account B.
+		const accountBIdExpected: string = Date.now().toString();
+		const accountB: IAccount = { // TODO.
+			id: accountBIdExpected,
+			externalId: null,
+			state: AccountState.ACTIVE,
+			type: AccountType.POSITION,
+			currency: "EUR",
+			creditBalance: 100,
+			debitBalance: 25,
+			timeStampLastJournalEntry: 0
+		}
+		const statusCodeResponseCreateAccountB: number = await accountsAndBalancesClientMock.createAccount(accountB);
+		expect(statusCodeResponseCreateAccountB).toBe(200);
+		// Journal entry A.
+		const journalEntryAIdExpected: string = Date.now().toString();
+		const journalEntryA: IJournalEntry = { // TODO.
+			id: journalEntryAIdExpected,
+			externalId: null,
+			externalCategory: null,
+			currency: "EUR",
+			amount: 5,
+			creditedAccountId: "a",
+			debitedAccountId: "b",
+			timeStamp: 0
+		}
+		// Journal entry B.
+		const journalEntryBIdExpected: string = (Date.now() + 1).toString();
+		const journalEntryB: IJournalEntry = { // TODO.
+			id: journalEntryBIdExpected,
+			externalId: null,
+			externalCategory: null,
+			currency: "EUR",
+			amount: 5,
+			creditedAccountId: "b",
+			debitedAccountId: "a",
+			timeStamp: 0
+		}
+		const statusCodeResponseCreateJournalEntriesFirst: number =
+			await accountsAndBalancesClientMock.createJournalEntries([journalEntryA, journalEntryB]);
+		expect(statusCodeResponseCreateJournalEntriesFirst).toBe(200);
+		const statusCodeResponseCreateJournalEntriesSecond: number =
+			await accountsAndBalancesClientMock.createJournalEntries([journalEntryA, journalEntryB]);
+		expect(statusCodeResponseCreateJournalEntriesSecond).toBe(400);
+	});
+
+	// Get account by id.
+	test("get non-existent account by id", async () => {
+		const accountId: string = Date.now().toString();
+		const statusCodeResponse: number = await accountsAndBalancesClientMock.getAccountById(accountId);
+		expect(statusCodeResponse).toBe(404);
+	});
+	test("get existent account by id", async () => {
+		const accountIdExpected: string = Date.now().toString();
+		const accountSent: IAccount = { // TODO.
+			id: accountIdExpected,
+			externalId: null,
+			state: AccountState.ACTIVE,
+			type: AccountType.POSITION,
+			currency: "EUR",
+			creditBalance: 100,
+			debitBalance: 25,
+			timeStampLastJournalEntry: 0
+		}
+		const statusCodeResponseCreate: number = await accountsAndBalancesClientMock.createAccount(accountSent);
+		expect(statusCodeResponseCreate).toBe(200);
+		const statusCodeResponseGet: number = await accountsAndBalancesClientMock.getAccountById(accountIdExpected);
+		expect(statusCodeResponseGet).toBe(200);
+	});
+
+	// Get accounts by external id.
+	test("get non-existent accounts by external id", async () => {
+		const externalId: string = Date.now().toString();
+		const statusCodeResponse: number = await accountsAndBalancesClientMock.getAccountsByExternalId(externalId);
+		expect(statusCodeResponse).toBe(200);
+	});
+	test("get existent accounts by external id", async () => {
+		const externalId: string = Date.now().toString();
+		// Account A.
+		const accountAIdExpected: string = Date.now().toString();
+		const accountA: IAccount = { // TODO.
+			id: accountAIdExpected,
+			externalId: externalId,
+			state: AccountState.ACTIVE,
+			type: AccountType.POSITION,
+			currency: "EUR",
+			creditBalance: 100,
+			debitBalance: 25,
+			timeStampLastJournalEntry: 0
+		}
+		const statusCodeResponseCreateAccountA: number = await accountsAndBalancesClientMock.createAccount(accountA);
+		expect(statusCodeResponseCreateAccountA).toBe(200);
+		// Account B.
+		const accountBIdExpected: string = Date.now().toString();
+		const accountB: IAccount = { // TODO.
+			id: accountBIdExpected,
+			externalId: externalId,
+			state: AccountState.ACTIVE,
+			type: AccountType.POSITION,
+			currency: "EUR",
+			creditBalance: 100,
+			debitBalance: 25,
+			timeStampLastJournalEntry: 0
+		}
+		const statusCodeResponseCreateAccountB: number = await accountsAndBalancesClientMock.createAccount(accountB);
+		expect(statusCodeResponseCreateAccountB).toBe(200);
+		const statusCodeResponseGetAccounts: number =
+			await accountsAndBalancesClientMock.getAccountsByExternalId(externalId);
+		expect(statusCodeResponseCreateAccountB).toBe(200);
+	});
+
+	// Get journal entries by account id.
+	test("get non-existent journal entries by account id", async () => {
+		const accountId: string = Date.now().toString();
+		const statusCodeResponse: number = await accountsAndBalancesClientMock.getJournalEntriesByAccountId(accountId);
+		expect(statusCodeResponse).toBe(200);
+	});
+	test("get existent journal entries by account id", async () => {
+		const accountId: string = Date.now().toString();
+		// The accounts regarding the journal entries need to be created first.
+		// Account A.
+		const accountAIdExpected: string = accountId;
+		const accountA: IAccount = { // TODO.
+			id: accountAIdExpected,
+			externalId: null,
+			state: AccountState.ACTIVE,
+			type: AccountType.POSITION,
+			currency: "EUR",
+			creditBalance: 100,
+			debitBalance: 25,
+			timeStampLastJournalEntry: 0
+		}
+		const statusCodeResponseCreateAccountA: number = await accountsAndBalancesClientMock.createAccount(accountA);
+		expect(statusCodeResponseCreateAccountA).toBe(200);
+		// Account B.
+		const accountBIdExpected: string = Date.now().toString();
+		const accountB: IAccount = { // TODO.
+			id: accountBIdExpected,
+			externalId: null,
+			state: AccountState.ACTIVE,
+			type: AccountType.POSITION,
+			currency: "EUR",
+			creditBalance: 100,
+			debitBalance: 25,
+			timeStampLastJournalEntry: 0
+		}
+		const statusCodeResponseCreateAccountB: number = await accountsAndBalancesClientMock.createAccount(accountB);
+		expect(statusCodeResponseCreateAccountB).toBe(200);
+		// Journal entry A.
+		const journalEntryAIdExpected: string = Date.now().toString();
+		const journalEntryA: IJournalEntry = { // TODO.
+			id: journalEntryAIdExpected,
+			externalId: null,
+			externalCategory: null,
+			currency: "EUR",
+			amount: 5,
+			creditedAccountId: accountAIdExpected,
+			debitedAccountId: accountBIdExpected,
+			timeStamp: 0
+		}
+		// Journal entry B.
+		const journalEntryBIdExpected: string = (Date.now() + 1).toString(); // +1 because otherwise the time is the same as the last one. TODO.
+		const journalEntryB: IJournalEntry = { // TODO.
+			id: journalEntryBIdExpected,
+			externalId: null,
+			externalCategory: null,
+			currency: "EUR",
+			amount: 5,
+			creditedAccountId: accountBIdExpected,
+			debitedAccountId: accountAIdExpected,
+			timeStamp: 0
+		}
+		const statusCodeResponseCreateJournalEntries: number =
+			await accountsAndBalancesClientMock.createJournalEntries([journalEntryA, journalEntryB]);
+		expect(statusCodeResponseCreateJournalEntries).toBe(200);
+		const statusCodeResponseGetJournalEntries: number =
+			await accountsAndBalancesClientMock.getJournalEntriesByAccountId(accountId);
+		expect(statusCodeResponseGetJournalEntries).toBe(200);
+	});
+});

@@ -18,7 +18,7 @@
   ],
   "scripts": {
     "start": "yarn run service",
-    "service": "tsc && node dist/application/index.js",
+    "service": "tsc && node dist/index.js",
     "build": "tsc",
     "test:unit": "jest --passWithNoTests --testMatch '**/test/unit/**/*.test.ts'",
     "test:integration": "jest --passWithNoTests --testMatch '**/test/integration/**/*.test.ts'",
@@ -37,6 +37,7 @@
     "@mojaloop/accounts-and-balances-bc-private-types": "^0.0.2",
     "@mojaloop/logging-bc-client-lib": "^0.0.10",
     "@mojaloop/logging-bc-public-types-lib": "^0.0.3",
-    "axios": "^0.27.2"
+    "axios": "^0.27.2",
+    "nock": "^13.2.8"
   }
 }
