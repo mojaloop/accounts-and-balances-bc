@@ -13,7 +13,7 @@
   ],
   "scripts": {
     "start": "yarn workspaces foreach --parallel -v run start",
-    "start:scheduling-svc": "yarn workspace @mojaloop/scheduling-bc-scheduling-svc run start",
+    "start:web-service-app": "yarn workspace @mojaloop/accounts-and-balances-bc-web-service-app run start",
     "build": "yarn workspaces foreach -v run build",
     "watch": "yarn workspaces foreach --parallel -v run watch",
     "clean": "yarn run clean:dist",

@@ -1,9 +1,9 @@
 {
-  "name": "@mojaloop/accounts-and-balances-bc-client",
-  "version": "0.0.2",
-  "description": "Accounts & Balances BC client.",
+  "name": "@mojaloop/accounts-and-balances-bc-web-service-app",
+  "version": "0.0.1",
+  "description": "Accounts & Balances BC web service application.",
   "license": "Apache-2.0",
-  "homepage": "https://github.com/mojaloop/accounts-and-balances-bc/tree/main/modules/client",
+  "homepage": "https://github.com/mojaloop/accounts-and-balances-bc/tree/main/modules/web-service-app",
   "bugs": {
     "url": "https://github.com/mojaloop/accounts-and-balances-bc/issues#readme"
   },
@@ -11,6 +11,7 @@
     "Gonçalo Garcia <goncalogarcia99@gmail.com>",
     "Pedro Sousa Barreto <pedrob@crosslaketech.com>"
   ],
+  "private": true,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
@@ -21,10 +22,12 @@
     "service": "tsc && node dist/index.js",
     "build": "tsc",
     "test:unit": "jest --passWithNoTests --testMatch '**/test/unit/**/*.test.ts'",
-    "test:integration": "jest --passWithNoTests --testMatch '**/test/integration/**/*.test.ts'",
-    "publish": "yarn run build && yarn version patch && yarn npm publish --tag=latest --access public"
+    "test:integration": "jest --passWithNoTests --testMatch '**/test/integration/**/*.test.ts'"
   },
   "devDependencies": {
+    "@types/express": "^4.17.13",
+    "@types/node": "^17.0.41",
+    "@types/uuid": "^8.3.4",
     "eslint": "^8.17.0",
     "jest": "^28.1.1",
     "npm-check-updates": "^13.1.2",
@@ -32,9 +35,13 @@
     "typescript": "^4.7.3"
   },
   "dependencies": {
+    "@mojaloop/accounts-and-balances-bc-domain": "workspace:*",
     "@mojaloop/logging-bc-client-lib": "^0.0.10",
     "@mojaloop/logging-bc-public-types-lib": "^0.0.3",
-    "axios": "^0.27.2",
-    "nock": "^13.2.8"
+    "@mojaloop/platform-configuration-bc-client-lib": "^0.0.8",
+    "@mojaloop/platform-configuration-bc-types-lib": "^0.0.5",
+    "express": "^4.18.1",
+    "mongodb": "^4.7.0",
+    "uuid": "^8.3.2"
   }
 }

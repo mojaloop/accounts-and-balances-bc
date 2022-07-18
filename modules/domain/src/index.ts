@@ -19,48 +19,20 @@
  their names indented and be marked with a '-'. Email address can be added
  optionally within square brackets <email>.
 
+ * Gates Foundation
+ - Name Surname <name.surname@gatesfoundation.com>
+
+ - Gonçalo Garcia <goncalogarcia99@gmail.com>
+
  * Crosslake
  - Pedro Sousa Barreto <pedrob@crosslaketech.com>
-
- * Gonçalo Garcia <goncalogarcia99@gmail.com>
 
  --------------
  ******/
 
-"use strict";
+"use strict"
 
-// TODO: why interfaces and not classes?
-
-export interface IAccountDTO {
-	id: string;
-	externalId: string | null;
-	state: "ACTIVE" | "DELETED";
-	type: "POSITION" | "SETTLEMENT" | "FEE";
-	currency: string; // https://en.wikipedia.org/wiki/ISO_4217
-	creditBalance: number;
-	debitBalance: number;
-	timestampLastJournalEntry: number;
-}
-
-export interface IJournalEntryDTO {
-	id: string;
-	externalId: string | null;
-	externalCategory: string | null;
-	currency: string;
-	amount: number;
-	creditedAccountId: string;
-	debitedAccountId: string;
-	timestamp: number;
-}
-
-// TODO: is this needed?
-export interface IResponse {
-	result: ResponseResult;
-	data: any;
-}
-
-// TODO: is this needed?
-export enum ResponseResult {
-	ERROR = "ERROR",
-	SUCCESS = "SUCCESS"
-}
+export * from "./aggregate";
+export * from "./types";
+export * from "./errors";
+export * from "./infrastructure-interfaces";

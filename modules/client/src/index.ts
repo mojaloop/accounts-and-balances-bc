@@ -30,4 +30,5 @@
 "use strict";
 
 export * from "./accounts_and_balances_client";
-export * from "@mojaloop/accounts-and-balances-bc-private-types"; // TODO: why export this if it's imported on the client itself?
+export * from "./errors";
+export * from "./types";

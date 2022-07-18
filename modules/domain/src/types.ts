@@ -29,38 +29,36 @@
 
 "use strict";
 
-// TODO: why interfaces and not classes?
-
-export interface IAccountDTO {
+export interface IAccount {
 	id: string;
 	externalId: string | null;
-	state: "ACTIVE" | "DELETED";
-	type: "POSITION" | "SETTLEMENT" | "FEE";
+	state: AccountState;
+	type: AccountType;
 	currency: string; // https://en.wikipedia.org/wiki/ISO_4217
-	creditBalance: number;
-	debitBalance: number;
+	creditBalance: bigint;
+	debitBalance: bigint;
 	timestampLastJournalEntry: number;
 }
 
-export interface IJournalEntryDTO {
+export enum AccountState {
+	ACTIVE = "ACTIVE",
+	DELETED = "DELETED"
+}
+
+export enum AccountType {
+	POSITION = "POSITION",
+	SETTLEMENT = "SETTLEMENT",
+	FEE = "FEE"
+}
+
+// TODO: names.
+export interface IJournalEntry {
 	id: string;
 	externalId: string | null;
 	externalCategory: string | null;
 	currency: string;
-	amount: number;
+	amount: bigint;
 	creditedAccountId: string;
 	debitedAccountId: string;
 	timestamp: number;
-}
-
-// TODO: is this needed?
-export interface IResponse {
-	result: ResponseResult;
-	data: any;
-}
-
-// TODO: is this needed?
-export enum ResponseResult {
-	ERROR = "ERROR",
-	SUCCESS = "SUCCESS"
 }

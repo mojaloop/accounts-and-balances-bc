@@ -957,13 +957,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@mojaloop/accounts-and-balances-bc-client@workspace:modules/client"
   dependencies:
-    "@mojaloop/accounts-and-balances-bc-private-types": ^0.0.2
     "@mojaloop/logging-bc-client-lib": ^0.0.10
     "@mojaloop/logging-bc-public-types-lib": ^0.0.3
-    "@types/node": ^17.0.41
     axios: ^0.27.2
     eslint: ^8.17.0
-    husky: ^8.0.1
     jest: ^28.1.1
     nock: ^13.2.8
     npm-check-updates: ^13.1.2
@@ -972,18 +969,26 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mojaloop/accounts-and-balances-bc-private-types@npm:^0.0.2":
-  version: 0.0.2
-  resolution: "@mojaloop/accounts-and-balances-bc-private-types@npm:0.0.2"
-  checksum: d52a76b037c33a6a02b514e36149b3d2a7928e444a0496af2b85ecb209724c79d237de8d143f07fa84499e916f8572bf1c692c92b90cd3d42d43246211c94f3d
-  languageName: node
-  linkType: hard
-
-"@mojaloop/accounts-and-balances-bc-service@workspace:modules/service":
+"@mojaloop/accounts-and-balances-bc-domain@workspace:*, @mojaloop/accounts-and-balances-bc-domain@workspace:modules/domain":
   version: 0.0.0-use.local
-  resolution: "@mojaloop/accounts-and-balances-bc-service@workspace:modules/service"
+  resolution: "@mojaloop/accounts-and-balances-bc-domain@workspace:modules/domain"
   dependencies:
-    "@mojaloop/accounts-and-balances-bc-types": ^0.0.2
+    "@mojaloop/logging-bc-public-types-lib": ^0.0.3
+    "@types/uuid": ^8.3.4
+    eslint: ^8.17.0
+    jest: ^28.1.1
+    npm-check-updates: ^13.1.2
+    ts-jest: ^28.0.4
+    typescript: ^4.7.3
+    uuid: ^8.3.2
+  languageName: unknown
+  linkType: soft
+
+"@mojaloop/accounts-and-balances-bc-web-service-app@workspace:modules/web-service-app":
+  version: 0.0.0-use.local
+  resolution: "@mojaloop/accounts-and-balances-bc-web-service-app@workspace:modules/web-service-app"
+  dependencies:
+    "@mojaloop/accounts-and-balances-bc-domain": "workspace:*"
     "@mojaloop/logging-bc-client-lib": ^0.0.10
     "@mojaloop/logging-bc-public-types-lib": ^0.0.3
     "@mojaloop/platform-configuration-bc-client-lib": ^0.0.8
@@ -993,27 +998,12 @@ __metadata:
     "@types/uuid": ^8.3.4
     eslint: ^8.17.0
     express: ^4.18.1
-    husky: ^8.0.1
     jest: ^28.1.1
     mongodb: ^4.7.0
     npm-check-updates: ^13.1.2
     ts-jest: ^28.0.4
     typescript: ^4.7.3
     uuid: ^8.3.2
-  languageName: unknown
-  linkType: soft
-
-"@mojaloop/accounts-and-balances-bc-types@^0.0.2, @mojaloop/accounts-and-balances-bc-types@workspace:modules/types":
-  version: 0.0.0-use.local
-  resolution: "@mojaloop/accounts-and-balances-bc-types@workspace:modules/types"
-  dependencies:
-    "@types/node": ^17.0.41
-    eslint: ^8.17.0
-    husky: ^8.0.1
-    jest: ^28.1.1
-    npm-check-updates: ^13.1.2
-    ts-jest: ^28.0.4
-    typescript: ^4.7.3
   languageName: unknown
   linkType: soft
 
@@ -3765,7 +3755,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"husky@npm:^8.0.0, husky@npm:^8.0.1":
+"husky@npm:^8.0.0":
   version: 8.0.1
   resolution: "husky@npm:8.0.1"
   bin:
