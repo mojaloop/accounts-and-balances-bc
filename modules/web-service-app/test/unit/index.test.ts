@@ -1,4 +1,5 @@
-/*****
+/*
+/!*****
  License
  --------------
  Copyright © 2017 Bill & Melinda Gates Foundation
@@ -25,7 +26,7 @@
  * Gonçalo Garcia <goncalogarcia99@gmail.com>
 
  --------------
- ******/
+ ******!/
 
 "use strict";
 
@@ -42,7 +43,7 @@ import {MongoAccountsRepo} from "../../src/infrastructure/mongo_accounts_repo";
 import {MongoJournalEntriesRepo} from "../../src/infrastructure/mongo_journal_entries_repo";
 import {Account} from "@mojaloop/accounts-and-balances-bc-domain/dist/entities/account";
 
-/* Constants. */
+/!* Constants. *!/
 // Repo.
 const REPO_HOST: string =
 	process.env.ACCOUNTS_AND_BALANCES_REPO_HOST ?? "localhost";
@@ -253,3 +254,4 @@ describe("accounts and balances service - unit tests", () => {
 	test("get existent journal entries by account id", async () => {
 	});
 });
+*/

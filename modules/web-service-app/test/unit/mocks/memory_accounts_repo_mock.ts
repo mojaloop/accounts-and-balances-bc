@@ -1,4 +1,5 @@
-/*****
+/*
+/!*****
  License
  --------------
  Copyright © 2017 Bill & Melinda Gates Foundation
@@ -25,7 +26,7 @@
  * Gonçalo Garcia <goncalogarcia99@gmail.com>
 
  --------------
- ******/
+ ******!/
 
 "use strict";
 
@@ -103,3 +104,4 @@ export class MemoryAccountsRepo implements IAccountsRepo {
 	async deleteAllAccounts(): Promise<void> {
 	}
 }
+*/

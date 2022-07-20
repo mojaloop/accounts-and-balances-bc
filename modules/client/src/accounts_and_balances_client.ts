@@ -129,8 +129,16 @@ export class AccountsAndBalancesClient {
 	async getAccountsByExternalId(externalId: string): Promise<IAccountDTO[]> {
 		try {
 			const axiosResponse: AxiosResponse = await this.httpClient.get(
-				`/accounts?externalId=${externalId}`
+				`/accounts?externalId=${externalId}`,
+				{
+					validateStatus: (statusCode: number) => {
+						return statusCode === 200 || statusCode === 404; // Resolve only 200s and 404s.
+					}
+				}
 			);
+			if (axiosResponse.status === 404) {
+				return [];
+			}
 			// axiosResponse.data can only be an IResponse.
 			const serverSuccessResponse: IResponse = axiosResponse.data;
 			return serverSuccessResponse.data.accounts;
@@ -149,8 +157,16 @@ export class AccountsAndBalancesClient {
 	async getJournalEntriesByAccountId(accountId: string): Promise<IJournalEntryDTO[]> {
 		try {
 			const axiosResponse: AxiosResponse = await this.httpClient.get(
-				`/journalEntries?accountId=${accountId}`
+				`/journalEntries?accountId=${accountId}`,
+				{
+					validateStatus: (statusCode: number) => {
+						return statusCode === 200 || statusCode === 404; // Resolve only 200s and 404s.
+					}
+				}
 			);
+			if (axiosResponse.status === 404) {
+				return [];
+			}
 			// axiosResponse.data can only be an IResponse.
 			const serverSuccessResponse: IResponse = axiosResponse.data;
 			return serverSuccessResponse.data.journalEntries;

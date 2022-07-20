@@ -268,6 +268,14 @@ export class ExpressRoutes {
 	private async getAllAccounts(req: express.Request, res: express.Response): Promise<void> {
 		try {
 			const accounts: IAccount[] = await this.aggregate.getAllAccounts();
+			if (accounts === []) {
+				this.sendErrorResponse(
+					res,
+					404,
+					"no accounts"
+				);
+				return;
+			}
 			this.sendSuccessResponse(
 				res,
 				200,
@@ -285,6 +293,14 @@ export class ExpressRoutes {
 	private async getAllJournalEntries(req: express.Request, res: express.Response): Promise<void> {
 		try {
 			const journalEntries: IJournalEntry[] = await this.aggregate.getAllJournalEntries();
+			if (journalEntries === []) {
+				this.sendErrorResponse(
+					res,
+					404,
+					"no journal entries"
+				);
+				return;
+			}
 			this.sendSuccessResponse(
 				res,
 				200,
@@ -303,6 +319,14 @@ export class ExpressRoutes {
 		try {
 			// The properties of the req.query object are always strings. TODO: check.
 			const accounts: IAccount[] = await this.aggregate.getAccountsByExternalId(req.query.externalId as string); // TODO: cast?
+			if (accounts === []) {
+				this.sendErrorResponse(
+					res,
+					404,
+					"no accounts with the specified external id"
+				);
+				return;
+			}
 			this.sendSuccessResponse(
 				res,
 				200,
@@ -321,6 +345,14 @@ export class ExpressRoutes {
 		try {
 			// The properties of the req.query object are always strings. TODO: check.
 			const journalEntries: IJournalEntry[] = await this.aggregate.getJournalEntriesByAccountId(req.query.accountId as string); // TODO: cast?
+			if (journalEntries === []) {
+				this.sendErrorResponse(
+					res,
+					404,
+					"no journal entries with the specified account id"
+				);
+				return;
+			}
 			this.sendSuccessResponse(
 				res,
 				200,
