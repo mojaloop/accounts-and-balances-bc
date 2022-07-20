@@ -35,4 +35,4 @@
 export * from "./aggregate";
 export * from "./types";
 export * from "./errors";
-export * from "./infrastructure-interfaces";
+export * from "./infrastructure_interfaces";

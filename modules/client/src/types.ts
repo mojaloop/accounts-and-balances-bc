@@ -29,8 +29,6 @@
 
 "use strict";
 
-// TODO: why interfaces and not classes?
-
 export interface IAccountDTO {
 	id: string;
 	externalId: string | null;
@@ -53,13 +51,13 @@ export interface IJournalEntryDTO {
 	timestamp: number;
 }
 
-// TODO: is this needed?
+// TODO: remove this type.
 export interface IResponse {
 	result: ResponseResult;
 	data: any;
 }
 
-// TODO: is this needed?
+// TODO: remove this type.
 export enum ResponseResult {
 	ERROR = "ERROR",
 	SUCCESS = "SUCCESS"

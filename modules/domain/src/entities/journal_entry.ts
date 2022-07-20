@@ -31,13 +31,7 @@
 
 import {IJournalEntry} from "../types";
 import {
-	InvalidCreditedAccountIdTypeError,
-	InvalidCurrencyTypeError, InvalidDebitedAccountIdTypeError, InvalidExternalCategoryTypeError,
-	InvalidExternalIdTypeError,
-	InvalidJournalEntryAmountError, InvalidJournalEntryAmountTypeError,
-	InvalidJournalEntryIdError,
-	InvalidJournalEntryIdTypeError,
-	InvalidTimeStampTypeError
+	InvalidJournalEntryAmountError, InvalidJournalEntryIdError
 } from "../errors";
 
 export class JournalEntry implements IJournalEntry {
@@ -72,45 +66,13 @@ export class JournalEntry implements IJournalEntry {
 
 	static validateJournalEntry(journalEntry: JournalEntry): void {
 		// id.
-		if (typeof journalEntry.id !== "string") {
-			throw new InvalidJournalEntryIdTypeError();
-		}
 		if (journalEntry.id === "") {
 			throw new InvalidJournalEntryIdError();
 		}
-		// externalId.
-		if (typeof journalEntry.externalId !== "string"
-			&& journalEntry.externalId !== null) {
-			throw new InvalidExternalIdTypeError();
-		}
-		// externalCategory.
-		if (typeof journalEntry.externalCategory !== "string"
-			&& journalEntry.externalCategory !== null) {
-			throw new InvalidExternalCategoryTypeError();
-		}
-		// currency.
-		if (typeof journalEntry.currency !== "string") {
-			throw new InvalidCurrencyTypeError();
-		}
-		// TODO: validate currency.
+		// currency. TODO: validate currency.
 		// amount.
-		if (typeof journalEntry.amount !== "number") { // TODO: bigint.
-			throw new InvalidJournalEntryAmountTypeError();
-		}
 		if (journalEntry.amount <= 0) {
 			throw new InvalidJournalEntryAmountError();
-		}
-		// creditedAccountId.
-		if (typeof journalEntry.creditedAccountId !== "string") {
-			throw new InvalidCreditedAccountIdTypeError();
-		}
-		// debitedAccountId.
-		if (typeof journalEntry.debitedAccountId !== "string") {
-			throw new InvalidDebitedAccountIdTypeError();
-		}
-		// timeStamp.
-		if (typeof journalEntry.timestamp !== "number") {
-			throw new InvalidTimeStampTypeError();
 		}
 	}
 }

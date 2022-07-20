@@ -35,8 +35,8 @@ import {ILogger, LogLevel} from "@mojaloop/logging-bc-public-types-lib";
 import {DefaultLogger} from "@mojaloop/logging-bc-client-lib";
 import {Aggregate, IAccountsRepo, IJournalEntriesRepo} from "@mojaloop/accounts-and-balances-bc-domain";
 import {ExpressWebServer} from "./web-server/express_web_server";
-import {MongoJournalEntriesRepo} from "./infrastructure/mongo-journalentries-repo";
-import {MongoAccountsRepo} from "./infrastructure/mongo-accounts-repo";
+import {MongoJournalEntriesRepo} from "./infrastructure/mongo_journal_entries_repo";
+import {MongoAccountsRepo} from "./infrastructure/mongo_accounts_repo";
 
 
 /* Constants. */
@@ -47,7 +47,7 @@ const WEB_SERVER_HOST: string =
 	process.env.ACCOUNTS_AND_BALANCES_WEB_SERVER_HOST ?? "localhost";
 const WEB_SERVER_PORT_NO: number =
 	parseInt(process.env.ACCOUNTS_AND_BALANCES_WEB_SERVER_PORT_NO ?? "") || 1234;
-const WEB_SERVER_PATH_ROUTER: string = "/"; // TODO.
+const WEB_SERVER_PATH_ROUTER: string = "/";
 // Repo.
 const REPO_HOST: string =
 	process.env.ACCOUNTS_AND_BALANCES_REPO_HOST ?? "localhost";
@@ -58,21 +58,21 @@ const DB_NAME: string = "AccountsAndBalances";
 const ACCOUNTS_COLLECTION_NAME: string = "Accounts";
 const JOURNAL_ENTRIES_COLLECTION_NAME: string = "JournalEntries";
 
-// Platform configuration. TODO.
+// Platform configuration. TODO: set up.
 /*const appConfiguration = new AppConfiguration(
-	"", // TODO.
-	"", // TODO.
+	"", // TODO: what should this be?
+	"", // TODO: what should this be?
 	SERVICE_NAME,
 	SERVICE_VERSION,
 	null // Standalone mode.
 );*/
 
 // Logger.
-const logger: ILogger = new DefaultLogger( // TODO.
-	"", // TODO.
-	SERVICE_NAME, // TODO.
+const logger: ILogger = new DefaultLogger( // TODO: which type of logger to use?
+	"", // TODO: what should this be?
+	SERVICE_NAME, // TODO: what should this be?
 	SERVICE_VERSION,
-	LogLevel.INFO); // TODO.
+	LogLevel.INFO); // TODO: what should this be?
 
 // Infrastructure.
 const accountsRep: IAccountsRepo = new MongoAccountsRepo(
@@ -106,7 +106,7 @@ const webServer: ExpressWebServer = new ExpressWebServer(
 );
 
 async function start(): Promise<void> {
-	// await appConfiguration.fetch(); // TODO.
+	// await appConfiguration.fetch(); // TODO: set up platform configuration.
 	await aggregate.init(); // No need to handle exceptions.
 	webServer.start(); // No need to handle exceptions.
 }

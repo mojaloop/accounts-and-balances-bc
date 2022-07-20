@@ -33,7 +33,8 @@ import axios, {AxiosError, AxiosInstance, AxiosResponse} from "axios";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {IAccount, IJournalEntry} from "@mojaloop/accounts-and-balances-bc-domain";
 
-export class AccountsAndBalancesClientMock { // TODO: name.
+// TODO: what's the problem of using a mock?
+export class AccountsAndBalancesClientMock {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
 	// Other properties.
@@ -52,7 +53,7 @@ export class AccountsAndBalancesClientMock { // TODO: name.
 		});
 	}
 
-	async createAccount(account: IAccount): Promise<number> {
+	async createAccount(account: any): Promise<number> {
 		try {
 			const res: AxiosResponse = await this.httpClient.post("/accounts", account);
 			return res.status;
@@ -62,7 +63,7 @@ export class AccountsAndBalancesClientMock { // TODO: name.
 		}
 	}
 
-	async createJournalEntries(journalEntries: IJournalEntry[]): Promise<number> {
+	async createJournalEntries(journalEntries: any[]): Promise<number> {
 		try {
 			const res: AxiosResponse = await this.httpClient.post("/journalEntries", journalEntries);
 			return res.status;

@@ -33,7 +33,7 @@ import {ConsoleLogger, ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {AccountsAndBalancesServiceMock} from "./accounts_and_balances_service_mock";
 import {AccountsAndBalancesClient} from "../../src";
 import {IAccountDTO, IJournalEntryDTO} from "../../src/types";
-import {UnableToCreateAccountError} from "../../dist/errors";
+import {UnableToCreateAccountError, UnableToCreateJournalEntriesError} from "../../src/errors";
 
 const ACCOUNTS_AND_BALANCES_URL: string = "http://localhost:1234";
 const HTTP_CLIENT_TIMEOUT_MS: number = 10_000;
@@ -82,13 +82,69 @@ describe("accounts and balances client - unit tests", () => {
 			async () => {
 				await accountsAndBalancesClient.createAccount(account);
 			}
-		).rejects.toThrow(UnableToCreateAccountError); // TODO.
+		).rejects.toThrow(UnableToCreateAccountError);
 	});
 
 	// Create journal entries.
 	test("create non-existent journal entries", async () => {
+		// Journal entry A.
+		const journalEntryAIdExpected: string = AccountsAndBalancesServiceMock.NON_EXISTENT_JOURNAL_ENTRY_ID;
+		const journalEntryA: IJournalEntryDTO = {
+			id: journalEntryAIdExpected,
+			externalId: null,
+			externalCategory: null,
+			currency: "EUR",
+			amount: 5,
+			creditedAccountId: "a",
+			debitedAccountId: "b",
+			timestamp: 0
+		}
+		// Journal entry B.
+		const journalEntryBIdExpected: string = AccountsAndBalancesServiceMock.NON_EXISTENT_JOURNAL_ENTRY_ID;
+		const journalEntryB: IJournalEntryDTO = {
+			id: journalEntryBIdExpected,
+			externalId: null,
+			externalCategory: null,
+			currency: "EUR",
+			amount: 5,
+			creditedAccountId: "b",
+			debitedAccountId: "a",
+			timestamp: 0
+		}
+		const idsJournalEntriesReceived: string[] =
+			await accountsAndBalancesClient.createJournalEntries([journalEntryA, journalEntryB]);
+		expect(idsJournalEntriesReceived).toEqual([journalEntryAIdExpected, journalEntryBIdExpected]);
 	});
 	test("create existent journal entries", async () => {
+		// Journal entry A.
+		const journalEntryAIdExpected: string = AccountsAndBalancesServiceMock.EXISTENT_JOURNAL_ENTRY_ID;
+		const journalEntryA: IJournalEntryDTO = {
+			id: journalEntryAIdExpected,
+			externalId: null,
+			externalCategory: null,
+			currency: "EUR",
+			amount: 5,
+			creditedAccountId: "a",
+			debitedAccountId: "b",
+			timestamp: 0
+		}
+		// Journal entry B.
+		const journalEntryBIdExpected: string = AccountsAndBalancesServiceMock.EXISTENT_JOURNAL_ENTRY_ID;
+		const journalEntryB: IJournalEntryDTO = {
+			id: journalEntryBIdExpected,
+			externalId: null,
+			externalCategory: null,
+			currency: "EUR",
+			amount: 5,
+			creditedAccountId: "b",
+			debitedAccountId: "a",
+			timestamp: 0
+		}
+		await expect(
+			async () => {
+				await accountsAndBalancesClient.createJournalEntries([journalEntryA, journalEntryB]);
+			}
+		).rejects.toThrow(UnableToCreateJournalEntriesError);
 	});
 
 	// Get account by id.
@@ -112,7 +168,10 @@ describe("accounts and balances client - unit tests", () => {
 	test("get existent accounts by external id", async () => {
 		const accounts: IAccountDTO[] = await accountsAndBalancesClient
 			.getAccountsByExternalId(AccountsAndBalancesServiceMock.EXISTENT_EXTERNAL_ID);
-		// expect(accounts).toBe();
+		expect(accounts).toEqual([
+			{id: AccountsAndBalancesServiceMock.ID_ACCOUNT_A},
+			{id: AccountsAndBalancesServiceMock.ID_ACCOUNT_B}
+		]);
 	});
 
 	// Get journal entries by account id.
@@ -124,6 +183,9 @@ describe("accounts and balances client - unit tests", () => {
 	test("get existent journal entries by account id", async () => {
 		const journalEntries: IJournalEntryDTO[] = await accountsAndBalancesClient
 			.getJournalEntriesByAccountId(AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID);
-		// expect(journalEntries).toBe();
+		expect(journalEntries).toEqual([
+			{id: AccountsAndBalancesServiceMock.ID_JOURNAL_ENTRY_A},
+			{id: AccountsAndBalancesServiceMock.ID_JOURNAL_ENTRY_B}
+		]);
 	});
 });

@@ -39,8 +39,14 @@ export class AccountsAndBalancesServiceMock {
 	// Other properties.
 	public static readonly NON_EXISTENT_ACCOUNT_ID: string = "a";
 	public static readonly EXISTENT_ACCOUNT_ID: string = "b";
-	public static readonly NON_EXISTENT_EXTERNAL_ID: string = "c";
-	public static readonly EXISTENT_EXTERNAL_ID: string = "d";
+	public static readonly NON_EXISTENT_JOURNAL_ENTRY_ID: string = "c";
+	public static readonly EXISTENT_JOURNAL_ENTRY_ID: string = "d";
+	public static readonly NON_EXISTENT_EXTERNAL_ID: string = "e";
+	public static readonly EXISTENT_EXTERNAL_ID: string = "f";
+	public static readonly ID_ACCOUNT_A: string = "account_a";
+	public static readonly ID_ACCOUNT_B: string = "account_b";
+	public static readonly ID_JOURNAL_ENTRY_A: string = "journal_entry_a";
+	public static readonly ID_JOURNAL_ENTRY_B: string = "journal_entry_b";
 
 	constructor(
 		logger: ILogger,
@@ -55,147 +61,167 @@ export class AccountsAndBalancesServiceMock {
 	setUp(): void {
 		// Create account.
 		nock(this.ACCOUNTS_AND_BALANCES_URL)
-		.persist()
-		.post("/")
-		.reply(
-			(_, requestBody: any) => {
-				if (requestBody.id === AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID) {
+			.persist()
+			.post("/accounts")
+			.reply(
+				(_, requestBody: any) => {
+					if (requestBody.id === AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID) {
+						return [
+							400,
+							{
+								result: "ERROR",
+								data: {
+									message: "account already exists"
+								}
+							}
+						];
+					}
 					return [
-						400,
+						200,
 						{
-							result: "ERROR",
+							result: "SUCCESS",
 							data: {
-								message: "account already exists"
+								accountId: requestBody.id
 							}
 						}
 					];
 				}
-				return [
-					200,
-					{
-						result: "SUCCESS",
-						data: {
-							accountId: requestBody.id
-						}
-					}
-				];
-			}
-		);
-
-		// Get non-existent account by id.
-		nock(this.ACCOUNTS_AND_BALANCES_URL)
-		.persist()
-		.get(`/${(AccountsAndBalancesServiceMock.NON_EXISTENT_ACCOUNT_ID)}`)
-		.reply(
-			404,
-			{
-				result: "ERROR",
-				data: {
-					message: "no such account"
-				}
-			}
-		);
-		// Get existent account by id.
-		nock(this.ACCOUNTS_AND_BALANCES_URL)
-		.persist()
-		.get(`/${(AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID)}`)
-		.reply(
-			200,
-			{
-				result: "SUCCESS",
-				data: {
-					account: {
-						id: AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID
-					}
-				}
-			}
-		);
-
-		// Get non-existent accounts by external id.
-		nock(this.ACCOUNTS_AND_BALANCES_URL)
-		.persist()
-		.get(`/${(AccountsAndBalancesServiceMock.NON_EXISTENT_ACCOUNT_ID)}`)
-		.reply(
-			404,
-			{
-				result: "ERROR",
-				data: {
-					message: "no such account"
-				}
-			}
-		);
-		// Get existent accounts by external id.
-		nock(this.ACCOUNTS_AND_BALANCES_URL)
-		.persist()
-		.get(`/${(AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID)}`)
-		.reply(
-			200,
-			{
-				result: "SUCCESS",
-				data: {
-					account: {
-						id: AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID
-					}
-				}
-			}
-		);
+			);
 
 		// Create journal entries.
 		nock(this.ACCOUNTS_AND_BALANCES_URL)
-		.persist()
-		.post("/")
-		.reply(
-			(_, requestBody: any) => {
-				if (requestBody.id === AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID) {
+			.persist()
+			.post("/journalEntries")
+			.reply(
+				(_, requestBody: any) => {
+					const idsJournalEntries: string[] = [];
+					for (const journalEntry of requestBody) {
+						if (journalEntry.id === AccountsAndBalancesServiceMock.EXISTENT_JOURNAL_ENTRY_ID) {
+							return [
+								400,
+								{
+									result: "ERROR",
+									data: {
+										message: "journal entry already exists"
+									}
+								}
+							];
+						}
+						idsJournalEntries.push(journalEntry.id);
+					}
 					return [
-						400,
+						200,
 						{
-							result: "ERROR",
+							result: "SUCCESS",
 							data: {
-								message: "account already exists"
+								idsJournalEntries: idsJournalEntries
 							}
 						}
 					];
 				}
-				return [
-					200,
-					{
-						result: "SUCCESS",
-						data: {
-							accountId: requestBody.id
+			);
+
+		// Get non-existent account by id.
+		nock(this.ACCOUNTS_AND_BALANCES_URL)
+			.persist()
+			.get("/accounts")
+			.query({id: AccountsAndBalancesServiceMock.NON_EXISTENT_ACCOUNT_ID})
+			.reply(
+				404,
+				{
+					result: "ERROR",
+					data: {
+						message: "no such account"
+					}
+				}
+			);
+		// Get existent account by id.
+		nock(this.ACCOUNTS_AND_BALANCES_URL)
+			.persist()
+			.get("/accounts")
+			.query({id: AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID})
+			.reply(
+				200,
+				{
+					result: "SUCCESS",
+					data: {
+						account: {
+							id: AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID
 						}
 					}
-				];
-			}
-		);
+				}
+			);
+
+		// Get non-existent accounts by external id.
+		nock(this.ACCOUNTS_AND_BALANCES_URL)
+			.persist()
+			.get("/accounts")
+			.query({externalId: AccountsAndBalancesServiceMock.NON_EXISTENT_EXTERNAL_ID})
+			.reply(
+				200,
+				{
+					result: "SUCCESS",
+					data: {
+						accounts: []
+					}
+				}
+			);
+		// Get existent accounts by external id.
+		nock(this.ACCOUNTS_AND_BALANCES_URL)
+			.persist()
+			.get("/accounts")
+			.query({externalId: AccountsAndBalancesServiceMock.EXISTENT_EXTERNAL_ID})
+			.reply(
+				200,
+				{
+					result: "SUCCESS",
+					data: {
+						accounts: [
+							{
+								id: AccountsAndBalancesServiceMock.ID_ACCOUNT_A
+							},
+							{
+								id: AccountsAndBalancesServiceMock.ID_ACCOUNT_B
+							}
+						]
+					}
+				}
+			);
 
 		// Get non-existent journal entries by account id.
 		nock(this.ACCOUNTS_AND_BALANCES_URL)
-		.persist()
-		.get(`/${(AccountsAndBalancesServiceMock.NON_EXISTENT_ACCOUNT_ID)}`)
-		.reply(
-			404,
-			{
-				result: "ERROR",
-				data: {
-					message: "no such account"
-				}
-			}
-		);
-		// Get existent journal entries by account id.
-		nock(this.ACCOUNTS_AND_BALANCES_URL)
-		.persist()
-		.get(`/${(AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID)}`)
-		.reply(
-			200,
-			{
-				result: "SUCCESS",
-				data: {
-					account: {
-						id: AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID
+			.persist()
+			.get("/journalEntries")
+			.query({accountId: AccountsAndBalancesServiceMock.NON_EXISTENT_ACCOUNT_ID})
+			.reply(
+				200,
+				{
+					result: "SUCCESS",
+					data: {
+						journalEntries: []
 					}
 				}
-			}
-		);
+			);
+		// Get existent journal entries by account id.
+		nock(this.ACCOUNTS_AND_BALANCES_URL)
+			.persist()
+			.get("/journalEntries")
+			.query({accountId: AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID})
+			.reply(
+				200,
+				{
+					result: "SUCCESS",
+					data: {
+						journalEntries: [
+							{
+								id: AccountsAndBalancesServiceMock.ID_JOURNAL_ENTRY_A
+							},
+							{
+								id: AccountsAndBalancesServiceMock.ID_JOURNAL_ENTRY_B
+							}
+						]
+					}
+				}
+			);
 	}
 }

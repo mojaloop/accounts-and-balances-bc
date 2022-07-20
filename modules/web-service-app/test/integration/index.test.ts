@@ -49,7 +49,7 @@ describe("accounts and balances service - integration tests", () => {
 	// Create account.
 	test("create non-existent account", async () => {
 		const accountIdExpected: string = Date.now().toString();
-		const account: IAccount = { // TODO.
+		const account = { // TODO.
 			id: accountIdExpected,
 			externalId: null,
 			state: AccountState.ACTIVE,
@@ -64,7 +64,7 @@ describe("accounts and balances service - integration tests", () => {
 	});
 	test("create existent account", async () => {
 		const accountIdExpected: string = Date.now().toString();
-		const account: IAccount = { // TODO.
+		const account = { // TODO.
 			id: accountIdExpected,
 			externalId: null,
 			state: AccountState.ACTIVE,
@@ -85,7 +85,7 @@ describe("accounts and balances service - integration tests", () => {
 		// The accounts regarding the journal entries need to be created first.
 		// Account A.
 		const accountAIdExpected: string = Date.now().toString();
-		const accountA: IAccount = { // TODO.
+		const accountA = { // TODO.
 			id: accountAIdExpected,
 			externalId: null,
 			state: AccountState.ACTIVE,
@@ -99,7 +99,7 @@ describe("accounts and balances service - integration tests", () => {
 		expect(statusCodeResponseCreateAccountA).toBe(200);
 		// Account B.
 		const accountBIdExpected: string = Date.now().toString();
-		const accountB: IAccount = { // TODO.
+		const accountB = { // TODO.
 			id: accountBIdExpected,
 			externalId: null,
 			state: AccountState.ACTIVE,
@@ -113,26 +113,26 @@ describe("accounts and balances service - integration tests", () => {
 		expect(statusCodeResponseCreateAccountB).toBe(200);
 		// Journal entry A.
 		const journalEntryAIdExpected: string = Date.now().toString();
-		const journalEntryA: IJournalEntry = { // TODO.
+		const journalEntryA = { // TODO.
 			id: journalEntryAIdExpected,
 			externalId: null,
 			externalCategory: null,
 			currency: "EUR",
 			amount: 5,
-			creditedAccountId: "a",
-			debitedAccountId: "b",
+			creditedAccountId: accountAIdExpected,
+			debitedAccountId: accountBIdExpected,
 			timeStamp: 0
 		}
 		// Journal entry B.
 		const journalEntryBIdExpected: string = (Date.now() + 1).toString();
-		const journalEntryB: IJournalEntry = { // TODO.
+		const journalEntryB = { // TODO.
 			id: journalEntryBIdExpected,
 			externalId: null,
 			externalCategory: null,
 			currency: "EUR",
 			amount: 5,
-			creditedAccountId: "b",
-			debitedAccountId: "a",
+			creditedAccountId: accountBIdExpected,
+			debitedAccountId: accountAIdExpected,
 			timeStamp: 0
 		}
 		const statusCodeResponseCreateJournalEntries: number =
@@ -143,7 +143,7 @@ describe("accounts and balances service - integration tests", () => {
 		// The accounts regarding the journal entries need to be created first.
 		// Account A.
 		const accountAIdExpected: string = Date.now().toString();
-		const accountA: IAccount = { // TODO.
+		const accountA = { // TODO.
 			id: accountAIdExpected,
 			externalId: null,
 			state: AccountState.ACTIVE,
@@ -157,7 +157,7 @@ describe("accounts and balances service - integration tests", () => {
 		expect(statusCodeResponseCreateAccountA).toBe(200);
 		// Account B.
 		const accountBIdExpected: string = Date.now().toString();
-		const accountB: IAccount = { // TODO.
+		const accountB = { // TODO.
 			id: accountBIdExpected,
 			externalId: null,
 			state: AccountState.ACTIVE,
@@ -171,26 +171,26 @@ describe("accounts and balances service - integration tests", () => {
 		expect(statusCodeResponseCreateAccountB).toBe(200);
 		// Journal entry A.
 		const journalEntryAIdExpected: string = Date.now().toString();
-		const journalEntryA: IJournalEntry = { // TODO.
+		const journalEntryA = { // TODO.
 			id: journalEntryAIdExpected,
 			externalId: null,
 			externalCategory: null,
 			currency: "EUR",
 			amount: 5,
-			creditedAccountId: "a",
-			debitedAccountId: "b",
+			creditedAccountId: accountAIdExpected,
+			debitedAccountId: accountBIdExpected,
 			timeStamp: 0
 		}
 		// Journal entry B.
 		const journalEntryBIdExpected: string = (Date.now() + 1).toString();
-		const journalEntryB: IJournalEntry = { // TODO.
+		const journalEntryB = { // TODO.
 			id: journalEntryBIdExpected,
 			externalId: null,
 			externalCategory: null,
 			currency: "EUR",
 			amount: 5,
-			creditedAccountId: "b",
-			debitedAccountId: "a",
+			creditedAccountId: accountBIdExpected,
+			debitedAccountId: accountAIdExpected,
 			timeStamp: 0
 		}
 		const statusCodeResponseCreateJournalEntriesFirst: number =
@@ -209,7 +209,7 @@ describe("accounts and balances service - integration tests", () => {
 	});
 	test("get existent account by id", async () => {
 		const accountIdExpected: string = Date.now().toString();
-		const accountSent: IAccount = { // TODO.
+		const accountSent = { // TODO.
 			id: accountIdExpected,
 			externalId: null,
 			state: AccountState.ACTIVE,
@@ -235,7 +235,7 @@ describe("accounts and balances service - integration tests", () => {
 		const externalId: string = Date.now().toString();
 		// Account A.
 		const accountAIdExpected: string = Date.now().toString();
-		const accountA: IAccount = { // TODO.
+		const accountA = { // TODO.
 			id: accountAIdExpected,
 			externalId: externalId,
 			state: AccountState.ACTIVE,
@@ -249,7 +249,7 @@ describe("accounts and balances service - integration tests", () => {
 		expect(statusCodeResponseCreateAccountA).toBe(200);
 		// Account B.
 		const accountBIdExpected: string = Date.now().toString();
-		const accountB: IAccount = { // TODO.
+		const accountB = { // TODO.
 			id: accountBIdExpected,
 			externalId: externalId,
 			state: AccountState.ACTIVE,
@@ -277,7 +277,7 @@ describe("accounts and balances service - integration tests", () => {
 		// The accounts regarding the journal entries need to be created first.
 		// Account A.
 		const accountAIdExpected: string = accountId;
-		const accountA: IAccount = { // TODO.
+		const accountA = { // TODO.
 			id: accountAIdExpected,
 			externalId: null,
 			state: AccountState.ACTIVE,
@@ -291,7 +291,7 @@ describe("accounts and balances service - integration tests", () => {
 		expect(statusCodeResponseCreateAccountA).toBe(200);
 		// Account B.
 		const accountBIdExpected: string = Date.now().toString();
-		const accountB: IAccount = { // TODO.
+		const accountB = { // TODO.
 			id: accountBIdExpected,
 			externalId: null,
 			state: AccountState.ACTIVE,
@@ -305,7 +305,7 @@ describe("accounts and balances service - integration tests", () => {
 		expect(statusCodeResponseCreateAccountB).toBe(200);
 		// Journal entry A.
 		const journalEntryAIdExpected: string = Date.now().toString();
-		const journalEntryA: IJournalEntry = { // TODO.
+		const journalEntryA = { // TODO.
 			id: journalEntryAIdExpected,
 			externalId: null,
 			externalCategory: null,
@@ -317,7 +317,7 @@ describe("accounts and balances service - integration tests", () => {
 		}
 		// Journal entry B.
 		const journalEntryBIdExpected: string = (Date.now() + 1).toString(); // +1 because otherwise the time is the same as the last one. TODO.
-		const journalEntryB: IJournalEntry = { // TODO.
+		const journalEntryB = { // TODO.
 			id: journalEntryBIdExpected,
 			externalId: null,
 			externalCategory: null,

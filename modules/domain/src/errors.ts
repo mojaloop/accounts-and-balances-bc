@@ -30,33 +30,17 @@
 "use strict";
 
 // Account.
-export class InvalidAccountIdTypeError extends Error {}
 export class InvalidAccountIdError extends Error {}
-export class InvalidAccountStateTypeError extends Error {}
 export class InvalidAccountStateError extends Error {}
-export class InvalidAccountTypeTypeError extends Error {}
 export class InvalidAccountTypeError extends Error {}
-export class InvalidCreditBalanceTypeError extends Error {}
 export class InvalidCreditBalanceError extends Error {}
-export class InvalidDebitBalanceTypeError extends Error {}
 export class InvalidDebitBalanceError extends Error {}
-export class InvalidBalanceTypeError extends Error {}
 export class InvalidBalanceError extends Error {}
 
 // JournalEntry.
-export class InvalidJournalEntryIdTypeError extends Error {}
 export class InvalidJournalEntryIdError extends Error {}
-export class InvalidExternalCategoryTypeError extends Error {}
-export class InvalidJournalEntryAmountTypeError extends Error {}
 export class InvalidJournalEntryAmountError extends Error {}
-export class InvalidCreditedAccountIdTypeError extends Error {}
-export class InvalidDebitedAccountIdTypeError extends Error {}
 export class InsufficientBalanceError extends Error {}
-
-// Account and JournalEntry.
-export class InvalidExternalIdTypeError extends Error {}
-export class InvalidCurrencyTypeError extends Error {}
-export class InvalidTimeStampTypeError extends Error {}
 
 // Repo.
 export class UnableToInitRepoError extends Error {}

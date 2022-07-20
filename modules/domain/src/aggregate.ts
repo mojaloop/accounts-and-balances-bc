@@ -42,9 +42,9 @@ import {
 	NoSuchDebitedAccountError,
 	NoSuchJournalEntryError
 } from "./errors";
-import {IAccountsRepo, IJournalEntriesRepo} from "./infrastructure-interfaces";
+import {IAccountsRepo, IJournalEntriesRepo} from "./infrastructure_interfaces";
 import {Account} from "./entities/account";
-import {JournalEntry} from "./entities/journal-entry";
+import {JournalEntry} from "./entities/journal_entry";
 import {IAccount, IJournalEntry} from "./types";
 
 // Validate type of strings.

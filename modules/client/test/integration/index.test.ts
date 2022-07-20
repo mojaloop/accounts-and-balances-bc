@@ -31,7 +31,6 @@
 
 // TODO: repeat code?
 
-// TODO: import index.ts?
 import {ConsoleLogger, ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {AccountsAndBalancesClient} from "../../src";
 import {UnableToCreateAccountError, UnableToCreateJournalEntriesError} from "../../src/errors";

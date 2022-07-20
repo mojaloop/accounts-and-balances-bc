@@ -34,23 +34,12 @@ import express from "express";
 import {
 	Aggregate,
 	AccountAlreadyExistsError,
-	InvalidAccountIdTypeError,
 	InvalidAccountStateError,
-	InvalidAccountStateTypeError,
 	InvalidAccountTypeError,
-	InvalidAccountTypeTypeError, InvalidBalanceError,
-	InvalidBalanceTypeError,
+	InvalidBalanceError,
 	InvalidCreditBalanceError,
-	InvalidCreditBalanceTypeError,
-	InvalidCreditedAccountIdTypeError,
-	InvalidCurrencyTypeError,
 	InvalidDebitBalanceError,
-	InvalidDebitBalanceTypeError,
-	InvalidDebitedAccountIdTypeError,
-	InvalidExternalCategoryTypeError,
-	InvalidExternalIdTypeError, InvalidJournalEntryAmountError,
-	InvalidJournalEntryAmountTypeError,
-	InvalidJournalEntryIdTypeError, InvalidTimeStampTypeError,
+	InvalidJournalEntryAmountError,
 	JournalEntryAlreadyExistsError,
 	NoSuchAccountError,
 	NoSuchJournalEntryError,
@@ -79,7 +68,6 @@ export class ExpressRoutes {
 	}
 
 	private setUp(): void {
-		// TODO: paths.
 		// Posts.
 		this._router.post("/accounts", this.postAccount.bind(this));
 		this._router.post("/journalEntries", this.postJournalEntries.bind(this));
@@ -106,35 +94,11 @@ export class ExpressRoutes {
 				{accountId: accountId}
 			);
 		} catch (e: unknown) {
-			if (e instanceof InvalidAccountIdTypeError) {
-				this.sendErrorResponse(
-					res,
-					400,
-					"invalid account id type"
-				);
-			} else if (e instanceof InvalidExternalIdTypeError) {
-				this.sendErrorResponse(
-					res,
-					400,
-					"invalid ext id type"
-				);
-			} else if (e instanceof InvalidAccountStateTypeError) {
-				this.sendErrorResponse(
-					res,
-					400,
-					"invalid account state type"
-				);
-			} else if (e instanceof InvalidAccountStateError) {
+			if (e instanceof InvalidAccountStateError) {
 				this.sendErrorResponse(
 					res,
 					400,
 					"invalid account state"
-				);
-			} else if (e instanceof InvalidAccountTypeTypeError) {
-				this.sendErrorResponse(
-					res,
-					400,
-					"invalid account type type (the type of the account type)"
 				);
 			} else if (e instanceof InvalidAccountTypeError) {
 				this.sendErrorResponse(
@@ -142,29 +106,11 @@ export class ExpressRoutes {
 					400,
 					"invalid account type"
 				);
-			} else if (e instanceof InvalidCurrencyTypeError) {
-				this.sendErrorResponse(
-					res,
-					400,
-					"invalid currency type"
-				);
-			} else if (e instanceof InvalidCreditBalanceTypeError) {
-				this.sendErrorResponse(
-					res,
-					400,
-					"invalid credit balance type"
-				);
 			} else if (e instanceof InvalidCreditBalanceError) {
 				this.sendErrorResponse(
 					res,
 					400,
 					"invalid credit balance"
-				);
-			} else if (e instanceof InvalidDebitBalanceTypeError) {
-				this.sendErrorResponse(
-					res,
-					400,
-					"invalid debit balance type"
 				);
 			} else if (e instanceof InvalidDebitBalanceError) {
 				this.sendErrorResponse(
@@ -172,23 +118,11 @@ export class ExpressRoutes {
 					400,
 					"invalid debit balance"
 				);
-			} else if (e instanceof InvalidBalanceTypeError) {
-				this.sendErrorResponse(
-					res,
-					400,
-					"invalid balance type"
-				);
 			} else if (e instanceof InvalidBalanceError) {
 				this.sendErrorResponse(
 					res,
 					400,
 					"invalid balance"
-				);
-			} else if (e instanceof InvalidTimeStampTypeError) {
-				this.sendErrorResponse(
-					res,
-					400,
-					"invalid time stamp type"
 				);
 			} else if (e instanceof AccountAlreadyExistsError) {
 				this.sendErrorResponse(
@@ -215,59 +149,11 @@ export class ExpressRoutes {
 				{idsJournalEntries: idsJournalEntries}
 			);
 		} catch (e: unknown) {
-			if (e instanceof InvalidJournalEntryIdTypeError) {
-				this.sendErrorResponse(
-					res,
-					400,
-					"invalid journal entry id type"
-				);
-			} else if (e instanceof InvalidExternalIdTypeError) {
-				this.sendErrorResponse(
-					res,
-					400,
-					"invalid ext id type"
-				);
-			} else if (e instanceof InvalidExternalCategoryTypeError) {
-				this.sendErrorResponse(
-					res,
-					400,
-					"invalid ext category type"
-				);
-			} else if (e instanceof InvalidCurrencyTypeError) {
-				this.sendErrorResponse(
-					res,
-					400,
-					"invalid currency type"
-				);
-			} else if (e instanceof InvalidJournalEntryAmountTypeError) {
-				this.sendErrorResponse(
-					res,
-					400,
-					"invalid journal entry amount type"
-				);
-			} else if (e instanceof InvalidJournalEntryAmountError) {
+			if (e instanceof InvalidJournalEntryAmountError) {
 				this.sendErrorResponse(
 					res,
 					400,
 					"invalid journal entry amount"
-				);
-			} else if (e instanceof InvalidCreditedAccountIdTypeError) {
-				this.sendErrorResponse(
-					res,
-					400,
-					"invalid credited account id type"
-				);
-			} else if (e instanceof InvalidDebitedAccountIdTypeError) {
-				this.sendErrorResponse(
-					res,
-					400,
-					"invalid debited account id type"
-				);
-			} else if (e instanceof InvalidTimeStampTypeError) {
-				this.sendErrorResponse(
-					res,
-					400,
-					"invalid time stamp type"
 				);
 			} else if (e instanceof JournalEntryAlreadyExistsError) {
 				this.sendErrorResponse(
@@ -287,7 +173,7 @@ export class ExpressRoutes {
 
 	private async accounts(req: express.Request, res: express.Response): Promise<void> {
 		// req.query is always defined - if no query was specified, req.query is an empty object.
-		if (Object.keys(req.query).length === 0) { // TODO.
+		if (Object.keys(req.query).length === 0) { // TODO: is this ok?
 			await this.getAllAccounts(req, res);
 			return;
 		}
@@ -299,7 +185,7 @@ export class ExpressRoutes {
 			await this.getAccountsByExternalId(req, res);
 			return;
 		}
-		this.sendErrorResponse( // TODO.
+		this.sendErrorResponse( // TODO: should this be done?
 			res,
 			400,
 			"invalid query"
@@ -308,7 +194,7 @@ export class ExpressRoutes {
 
 	private async journalEntries(req: express.Request, res: express.Response): Promise<void> {
 		// req.query is always defined - if no query was specified, req.query is an empty object.
-		if (Object.keys(req.query).length === 0) { // TODO.
+		if (Object.keys(req.query).length === 0) { // TODO: is this ok?
 			await this.getAllJournalEntries(req, res);
 			return;
 		}
@@ -320,7 +206,7 @@ export class ExpressRoutes {
 			await this.getJournalEntriesByAccountId(req, res);
 			return;
 		}
-		this.sendErrorResponse( // TODO.
+		this.sendErrorResponse( // TODO: should this be done?
 			res,
 			400,
 			"invalid query"
@@ -329,7 +215,7 @@ export class ExpressRoutes {
 
 	private async getAccountById(req: express.Request, res: express.Response): Promise<void> {
 		try {
-			// The properties of the req.query object are always strings. TODO.
+			// The properties of the req.query object are always strings. TODO: check.
 			const account: IAccount | null = await this.aggregate.getAccountById(req.query.id as string); // TODO: cast?
 			if (account === null) {
 				this.sendErrorResponse(
@@ -345,25 +231,17 @@ export class ExpressRoutes {
 				{account: account}
 			);
 		} catch (e: unknown) {
-			if (e instanceof InvalidAccountIdTypeError) {
-				this.sendErrorResponse(
-					res,
-					400,
-					"invalid account id type"
-				);
-			} else {
-				this.sendErrorResponse(
-					res,
-					500,
-					this.UNKNOWN_ERROR
-				);
-			}
+			this.sendErrorResponse(
+				res,
+				500,
+				this.UNKNOWN_ERROR
+			);
 		}
 	}
 
 	private async getJournalEntryById(req: express.Request, res: express.Response): Promise<void> {
 		try {
-			// The properties of the req.query object are always strings. TODO.
+			// The properties of the req.query object are always strings. TODO: check.
 			const journalEntry: IJournalEntry | null = await this.aggregate.getJournalEntryById(req.query.id as string); // TODO: cast?
 			if (journalEntry === null) {
 				this.sendErrorResponse(
@@ -379,19 +257,11 @@ export class ExpressRoutes {
 				{journalEntry: journalEntry}
 			);
 		} catch (e: unknown) {
-			if (e instanceof InvalidJournalEntryIdTypeError) {
-				this.sendErrorResponse(
-					res,
-					400,
-					"invalid journal entry id type"
-				);
-			} else {
-				this.sendErrorResponse(
-					res,
-					500,
-					this.UNKNOWN_ERROR
-				);
-			}
+			this.sendErrorResponse(
+				res,
+				500,
+				this.UNKNOWN_ERROR
+			);
 		}
 	}
 
@@ -431,7 +301,7 @@ export class ExpressRoutes {
 
 	private async getAccountsByExternalId(req: express.Request, res: express.Response): Promise<void> {
 		try {
-			// The properties of the req.query object are always strings. TODO.
+			// The properties of the req.query object are always strings. TODO: check.
 			const accounts: IAccount[] = await this.aggregate.getAccountsByExternalId(req.query.externalId as string); // TODO: cast?
 			this.sendSuccessResponse(
 				res,
@@ -439,25 +309,17 @@ export class ExpressRoutes {
 				{accounts: accounts}
 			);
 		} catch (e: unknown) {
-			if (e instanceof InvalidExternalIdTypeError) {
-				this.sendErrorResponse(
-					res,
-					400,
-					"invalid external id type"
-				);
-			} else {
-				this.sendErrorResponse(
-					res,
-					500,
-					this.UNKNOWN_ERROR
-				);
-			}
+			this.sendErrorResponse(
+				res,
+				500,
+				this.UNKNOWN_ERROR
+			);
 		}
 	}
 
 	private async getJournalEntriesByAccountId(req: express.Request, res: express.Response): Promise<void> {
 		try {
-			// The properties of the req.query object are always strings. TODO.
+			// The properties of the req.query object are always strings. TODO: check.
 			const journalEntries: IJournalEntry[] = await this.aggregate.getJournalEntriesByAccountId(req.query.accountId as string); // TODO: cast?
 			this.sendSuccessResponse(
 				res,
@@ -465,19 +327,11 @@ export class ExpressRoutes {
 				{journalEntries: journalEntries}
 			);
 		} catch (e: unknown) {
-			if (e instanceof InvalidAccountIdTypeError) {
-				this.sendErrorResponse(
-					res,
-					400,
-					"invalid account id type"
-				);
-			} else {
-				this.sendErrorResponse(
-					res,
-					500,
-					this.UNKNOWN_ERROR
-				);
-			}
+			this.sendErrorResponse(
+				res,
+				500,
+				this.UNKNOWN_ERROR
+			);
 		}
 	}
 
@@ -490,13 +344,7 @@ export class ExpressRoutes {
 				{message: "account deleted"}
 			);
 		} catch (e: unknown) {
-			if (e instanceof InvalidAccountIdTypeError) {
-				this.sendErrorResponse(
-					res,
-					400,
-					"invalid account id type"
-				);
-			} else if (e instanceof NoSuchAccountError) {
+			if (e instanceof NoSuchAccountError) {
 				this.sendErrorResponse(
 					res,
 					404,
@@ -522,13 +370,7 @@ export class ExpressRoutes {
 				{message: "journal entry deleted"}
 			);
 		} catch (e: unknown) {
-			if (e instanceof InvalidJournalEntryIdTypeError) {
-				this.sendErrorResponse(
-					res,
-					400,
-					"invalid journal entry id type"
-				);
-			} else if (e instanceof NoSuchJournalEntryError) {
+			if (e instanceof NoSuchJournalEntryError) {
 				this.sendErrorResponse(
 					res,
 					404,

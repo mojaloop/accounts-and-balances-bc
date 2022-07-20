@@ -31,15 +31,10 @@
 
 import {
 	InvalidAccountIdError,
-	InvalidAccountIdTypeError,
 	InvalidAccountStateError,
-	InvalidAccountStateTypeError,
-	InvalidAccountTypeTypeError,
+	InvalidAccountTypeError,
 	InvalidCreditBalanceError,
-	InvalidCreditBalanceTypeError,
-	InvalidCurrencyTypeError,
-	InvalidDebitBalanceError,
-	InvalidDebitBalanceTypeError, InvalidExternalIdTypeError, InvalidTimeStampTypeError
+	InvalidDebitBalanceError
 } from "../errors";
 
 import {IAccount, AccountState, AccountType} from "../types";
@@ -76,51 +71,25 @@ export class Account implements IAccount {
 
 	static validateAccount(account: Account): void {
 		// id.
-		if (typeof account.id !== "string") {
-			throw new InvalidAccountIdTypeError();
-		}
 		if (account.id === "") {
 			throw new InvalidAccountIdError();
 		}
-		// externalId.
-		if (typeof account.externalId !== "string"
-			&& account.externalId !== null) {
-			throw new InvalidExternalIdTypeError();
-		}
 		// state.
-		if (typeof account.state !== "string") {
-			throw new InvalidAccountStateTypeError();
-		}
 		if (!(account.state in AccountState)) {
 			throw new InvalidAccountStateError();
 		}
-		// type. // TODO validate against correct type (enum instead of string)
-		if (typeof account.type !== "string") {
-			throw new InvalidAccountTypeTypeError();
+		// type.
+		if (!(account.type in AccountType)) {
+			throw new InvalidAccountTypeError();
 		}
-		// currency.
-		if (typeof account.currency !== "string") {
-			throw new InvalidCurrencyTypeError();
-		}
-		// TODO: validate currency.
+		// currency. TODO: validate currency.
 		// creditBalance.
-		if (typeof account.creditBalance !== "number") { // TODO: bigint.
-			throw new InvalidCreditBalanceTypeError();
-		}
 		if (account.creditBalance < 0) {
 			throw new InvalidCreditBalanceError();
 		}
 		// debitBalance.
-		if (typeof account.debitBalance !== "number") { // TODO: bigint.
-			throw new InvalidDebitBalanceTypeError();
-		}
 		if (account.debitBalance < 0) {
 			throw new InvalidDebitBalanceError();
-		}
-		// TODO: can the balance be negative?
-		// timeStampLastJournalEntry.
-		if (typeof account.timestampLastJournalEntry !== "number") {
-			throw new InvalidTimeStampTypeError();
 		}
 	}
 }

@@ -68,7 +68,7 @@ export class AccountsAndBalancesClient {
 			// axiosResponse.data can only be an IResponse.
 			const serverSuccessResponse: IResponse = axiosResponse.data;
 			return serverSuccessResponse.data.accountId;
-		} catch (e: unknown) { // TODO.
+		} catch (e: unknown) {
 			const axiosError: AxiosError = e as AxiosError; // e can only be an AxiosError.
 			if (axiosError.response === undefined) {
 				this.logger.error(e);

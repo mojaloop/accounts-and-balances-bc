@@ -29,11 +29,11 @@
 
 "use strict";
 
-import {IAccountsRepo, IAccount} from "@mojaloop/accounts-and-balances-bc-domain";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {MongoClient, Collection, DeleteResult, UpdateResult} from "mongodb";
 import {
-
+	IAccountsRepo,
+	IAccount,
 	AccountAlreadyExistsError,
 	NoSuchAccountError,
 	UnableToDeleteAccountError,
@@ -50,8 +50,7 @@ export class MongoAccountsRepo implements IAccountsRepo{
 	private readonly logger: ILogger;
 	private readonly REPO_URL: string;
 	private readonly DB_NAME: string;
-	private readonly ACCOUNTS_COLLECTION_NAME: string;
-
+	private readonly COLLECTION_NAME: string;
 	// Other properties.
 	private readonly mongoClient: MongoClient;
 	private accounts: Collection;
@@ -60,12 +59,12 @@ export class MongoAccountsRepo implements IAccountsRepo{
 		logger: ILogger,
 		REPO_URL: string,
 		DB_NAME: string,
-		ACCOUNTS_COLLECTION_NAME: string,
+		COLLECTION_NAME: string
 	) {
 		this.logger = logger;
 		this.REPO_URL = REPO_URL;
 		this.DB_NAME = DB_NAME;
-		this.ACCOUNTS_COLLECTION_NAME = ACCOUNTS_COLLECTION_NAME;
+		this.COLLECTION_NAME = COLLECTION_NAME;
 
 		this.mongoClient = new MongoClient(this.REPO_URL);
 	}
@@ -77,7 +76,7 @@ export class MongoAccountsRepo implements IAccountsRepo{
 			throw new UnableToInitRepoError();
 		}
 		// The following doesn't throw if the repo is unreachable, nor if the db or collection don't exist.
-		this.accounts = this.mongoClient.db(this.DB_NAME).collection(this.ACCOUNTS_COLLECTION_NAME);
+		this.accounts = this.mongoClient.db(this.DB_NAME).collection(this.COLLECTION_NAME);
 	}
 
 	async destroy(): Promise<void> {
@@ -95,20 +94,6 @@ export class MongoAccountsRepo implements IAccountsRepo{
 	}
 
 	async storeNewAccount(account: IAccount): Promise<void> {
-		/*try {
-			// insertOne() allows for duplicates.
-			if (await this.accountExistsById(account.id)) {
-				throw new AccountAlreadyExistsError(); // TODO: throw inside try?
-			}
-			await this.accounts.insertOne(account);
-		} catch (e: unknown) {
-			if (e instanceof AccountAlreadyExistsError) {
-				throw e;
-			}
-			throw new UnableToStoreAccountError();
-		}*/
-
-		// TODO.
 		let accountExists: boolean;
 		try {
 			accountExists = await this.accountExistsById(account.id);
@@ -133,7 +118,7 @@ export class MongoAccountsRepo implements IAccountsRepo{
 				{id: accountId},
 				{projection: {_id: 0}} // Don't return the _id field. TODO: why is _id returned without this?
 			);
-			return account as unknown as IAccount; // TODO.
+			return account as unknown as IAccount; // TODO: create schema.
 		} catch (e: unknown) {
 			throw new UnableToGetAccountError();
 		}
@@ -149,7 +134,7 @@ export class MongoAccountsRepo implements IAccountsRepo{
 					{}, // All documents.
 					{projection: {_id: 0}}) // Don't return the _id field.
 				.toArray();
-			return accounts as unknown as IAccount[]; // TODO.
+			return accounts as unknown as IAccount[]; // TODO: create schema.
 		} catch (e: unknown) {
 			throw new UnableToGetAccountsError();
 		}
@@ -164,7 +149,7 @@ export class MongoAccountsRepo implements IAccountsRepo{
 					{externalId: externalId},
 					{projection: {_id: 0}}) // Don't return the _id field.
 				.toArray();
-			return accounts as unknown as IAccount[]; // TODO.
+			return accounts as unknown as IAccount[]; // TODO: create schema.
 		} catch (e: unknown) {
 			throw new UnableToGetAccountsError();
 		}

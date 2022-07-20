@@ -29,7 +29,10 @@
 
 "use strict";
 
-import {IJournalEntry,IJournalEntriesRepo} from "@mojaloop/accounts-and-balances-bc-domain";
+import {
+	IJournalEntry,
+	IJournalEntriesRepo,
+} from "@mojaloop/accounts-and-balances-bc-domain";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {MongoClient, Collection, DeleteResult} from "mongodb";
 import {
@@ -49,7 +52,7 @@ export class MongoJournalEntriesRepo implements IJournalEntriesRepo {
 	private readonly logger: ILogger;
 	private readonly REPO_URL: string;
 	private readonly DB_NAME: string;
-	private readonly JOURNAL_ENTRIES_COLLECTION_NAME: string;
+	private readonly COLLECTION_NAME: string;
 	// Other properties.
 	private readonly mongoClient: MongoClient;
 	private journalEntries: Collection;
@@ -58,12 +61,12 @@ export class MongoJournalEntriesRepo implements IJournalEntriesRepo {
 		logger: ILogger,
 		REPO_URL: string,
 		DB_NAME: string,
-		JOURNAL_ENTRIES_COLLECTION_NAME: string // TODO.
+		COLLECTION_NAME: string
 	) {
 		this.logger = logger;
 		this.REPO_URL = REPO_URL;
 		this.DB_NAME = DB_NAME;
-		this.JOURNAL_ENTRIES_COLLECTION_NAME = JOURNAL_ENTRIES_COLLECTION_NAME;
+		this.COLLECTION_NAME = COLLECTION_NAME;
 
 		this.mongoClient = new MongoClient(this.REPO_URL);
 	}
@@ -72,10 +75,10 @@ export class MongoJournalEntriesRepo implements IJournalEntriesRepo {
 		try {
 			await this.mongoClient.connect(); // Throws if the repo is unreachable.
 		} catch (e: unknown) {
-			throw new UnableToInitRepoError(); // TODO.
+			throw new UnableToInitRepoError();
 		}
 		// The following doesn't throw if the repo is unreachable, nor if the db or collection don't exist.
-		this.journalEntries = this.mongoClient.db(this.DB_NAME).collection(this.JOURNAL_ENTRIES_COLLECTION_NAME);
+		this.journalEntries = this.mongoClient.db(this.DB_NAME).collection(this.COLLECTION_NAME);
 	}
 
 	async destroy(): Promise<void> {
@@ -93,16 +96,19 @@ export class MongoJournalEntriesRepo implements IJournalEntriesRepo {
 	}
 
 	async storeNewJournalEntry(journalEntry: IJournalEntry): Promise<void> {
+		let journalEntryExists: boolean;
+		try {
+			journalEntryExists = await this.journalEntryExistsById(journalEntry.id);
+		} catch (e: unknown) {
+			throw new UnableToStoreJournalEntryError();
+		}
+		if (journalEntryExists) {
+			throw new JournalEntryAlreadyExistsError();
+		}
 		try {
 			// insertOne() allows for duplicates.
-			if (await this.journalEntryExistsById(journalEntry.id)) {
-				throw new JournalEntryAlreadyExistsError(); // TODO: throw inside try?
-			}
 			await this.journalEntries.insertOne(journalEntry);
 		} catch (e: unknown) {
-			if (e instanceof JournalEntryAlreadyExistsError) {
-				throw e;
-			}
 			throw new UnableToStoreJournalEntryError();
 		}
 	}
@@ -114,7 +120,7 @@ export class MongoJournalEntriesRepo implements IJournalEntriesRepo {
 				{id: journalEntryId},
 				{projection: {_id: 0}} // Don't return the _id field. TODO: why is _id returned without this?
 			);
-			return journalEntry as unknown as IJournalEntry; // TODO.
+			return journalEntry as unknown as IJournalEntry; // TODO: create schema.
 		} catch (e: unknown) {
 			throw new UnableToGetJournalEntryError();
 		}
@@ -129,7 +135,7 @@ export class MongoJournalEntriesRepo implements IJournalEntriesRepo {
 					{}, // All documents.
 					{projection: {_id: 0}}) // Don't return the _id field.
 				.toArray();
-			return journalEntries as unknown as IJournalEntry[]; // TODO.
+			return journalEntries as unknown as IJournalEntry[]; // TODO: create schema.
 		} catch (e: unknown) {
 			throw new UnableToGetJournalEntriesError();
 		}
@@ -144,7 +150,7 @@ export class MongoJournalEntriesRepo implements IJournalEntriesRepo {
 					{$or: [{creditedAccountId: accountId}, {debitedAccountId: accountId}]},
 					{projection: {_id: 0}}) // Don't return the _id field.
 				.toArray();
-			return journalEntries as unknown as IJournalEntry[]; // TODO.
+			return journalEntries as unknown as IJournalEntry[]; // TODO: create schema.
 		} catch (e: unknown) {
 			throw new UnableToGetJournalEntriesError();
 		}
