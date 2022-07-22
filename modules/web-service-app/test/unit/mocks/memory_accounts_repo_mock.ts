@@ -1,5 +1,4 @@
-/*
-/!*****
+/*****
  License
  --------------
  Copyright © 2017 Bill & Melinda Gates Foundation
@@ -26,15 +25,15 @@
  * Gonçalo Garcia <goncalogarcia99@gmail.com>
 
  --------------
- ******!/
+ ******/
 
 "use strict";
 
 import {
 	IAccount,
 	IAccountsRepo,
-	JournalEntryAlreadyExistsError,
-	NoSuchJournalEntryError
+	NoSuchAccountError,
+	AccountAlreadyExistsError
 } from "@mojaloop/accounts-and-balances-bc-domain";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 
@@ -73,7 +72,7 @@ export class MemoryAccountsRepo implements IAccountsRepo {
 
 	async storeNewAccount(account: IAccount): Promise<void> {
 		if (this.accounts.has(account.id)) {
-			throw new JournalEntryAlreadyExistsError();
+			throw new AccountAlreadyExistsError();
 		}
 		this.accounts.set(account.id, account);
 	}
@@ -87,21 +86,40 @@ export class MemoryAccountsRepo implements IAccountsRepo {
 	}
 
 	async getAccountsByExternalId(externalId: string): Promise<IAccount[]> {
+		const accounts: IAccount[] = [];
+		this.accounts.forEach(account => {
+			if (account.externalId === externalId) {
+				accounts.push(account);
+			}
+		})
+		return accounts;
 	}
 
 	async updateAccountCreditBalanceById(accountId: string, creditBalance: bigint, timeStampLastJournalEntry: number): Promise<void> {
+		const account: IAccount | undefined = this.accounts.get(accountId);
+		if (account === undefined) {
+			throw new NoSuchAccountError();
+		}
+		account.creditBalance = creditBalance;
+		account.timestampLastJournalEntry = timeStampLastJournalEntry;
 	}
 
 	async updateAccountDebitBalanceById(accountId: string, debitBalance: bigint, timeStampLastJournalEntry: number): Promise<void> {
+		const account: IAccount | undefined = this.accounts.get(accountId);
+		if (account === undefined) {
+			throw new NoSuchAccountError();
+		}
+		account.debitBalance = debitBalance;
+		account.timestampLastJournalEntry = timeStampLastJournalEntry;
 	}
 
 	async deleteAccountById(accountId: string): Promise<void> {
 		if (!this.accounts.delete(accountId)) {
-			throw new NoSuchJournalEntryError();
+			throw new NoSuchAccountError();
 		}
 	}
 
 	async deleteAllAccounts(): Promise<void> {
+		this.accounts.clear();
 	}
 }
-*/

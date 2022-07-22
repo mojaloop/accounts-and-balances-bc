@@ -54,7 +54,6 @@ export class Aggregate {
 	private readonly logger: ILogger;
 	private readonly accountsRepo: IAccountsRepo;
 	private readonly journalEntriesRepo: IJournalEntriesRepo;
-	// Other properties.
 
 	constructor(
 		logger: ILogger,

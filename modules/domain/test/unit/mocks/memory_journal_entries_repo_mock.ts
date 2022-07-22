@@ -33,7 +33,7 @@ import {
 	IJournalEntriesRepo,
 	IJournalEntry,
 	JournalEntryAlreadyExistsError, NoSuchJournalEntryError
-} from "@mojaloop/accounts-and-balances-bc-domain";
+} from "../../../src";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 
 export class MemoryJournalEntriesRepo implements IJournalEntriesRepo {

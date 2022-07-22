@@ -35,28 +35,23 @@ export interface IAccountsRepo {
 	// Init and destroy.
 	init(): Promise<void>;
 	destroy(): Promise<void>;
-
 	// Exists.
 	accountExistsById(accountId: string): Promise<boolean>;
-
 	// Stores.
 	storeNewAccount(account: IAccount): Promise<void>; // Throws if account.id is not unique.
 	// Gets.
 	getAccountById(accountId: string): Promise<IAccount | null>;
-
 	getAllAccounts(): Promise<IAccount[]>;
 	getAccountsByExternalId(externalId: string): Promise<IAccount[]>;
-
 	// Updates.
 	updateAccountCreditBalanceById(
 		accountId: string,
 		creditBalance: bigint,
-		timeStampLastJournalEntry: number): Promise<void>; // TODO: return value;
+		timeStampLastJournalEntry: number): Promise<void>;
 	updateAccountDebitBalanceById(
 		accountId: string,
 		debitBalance: bigint,
-		timeStampLastJournalEntry: number): Promise<void>; // TODO: return value;
-
+		timeStampLastJournalEntry: number): Promise<void>;
 	// Deletes.
 	deleteAccountById(accountId: string): Promise<void>;
 	deleteAllAccounts(): Promise<void>;
@@ -66,18 +61,14 @@ export interface IJournalEntriesRepo {
 	// Init and destroy.
 	init(): Promise<void>;
 	destroy(): Promise<void>;
-
 	// Exists.
 	journalEntryExistsById(journalEntryId: string): Promise<boolean>;
-
 	// Stores.
 	storeNewJournalEntry(journalEntry: IJournalEntry): Promise<void>; // Throws if account.id is not unique.
-
 	// Gets.
 	getJournalEntryById(journalEntryId: string): Promise<IJournalEntry | null>;
 	getAllJournalEntries(): Promise<IJournalEntry[]>;
 	getJournalEntriesByAccountId(accountId: string): Promise<IJournalEntry[]>;
-
 	// Deletes.
 	deleteJournalEntryById(journalEntryId: string): Promise<void>;
 	deleteAllJournalEntries(): Promise<void>;

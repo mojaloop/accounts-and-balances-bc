@@ -75,7 +75,7 @@ const logger: ILogger = new DefaultLogger( // TODO: which type of logger to use?
 	LogLevel.INFO); // TODO: what should this be?
 
 // Infrastructure.
-const accountsRep: IAccountsRepo = new MongoAccountsRepo(
+const accountsRepo: IAccountsRepo = new MongoAccountsRepo(
 	logger,
 	REPO_URL,
 	DB_NAME,
@@ -88,11 +88,10 @@ const journalEntriesRepo: IJournalEntriesRepo = new MongoJournalEntriesRepo(
 	JOURNAL_ENTRIES_COLLECTION_NAME
 );
 
-
 // Domain.
 const aggregate: Aggregate = new Aggregate(
 	logger,
-	accountsRep,
+	accountsRepo,
 	journalEntriesRepo
 );
 

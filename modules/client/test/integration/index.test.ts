@@ -51,7 +51,7 @@ describe("accounts and balances client - integration tests", () => {
 	// Create account.
 	test("create non-existent account", async () => {
 		const accountIdExpected: string = Date.now().toString();
-		const account: IAccountDTO = { // TODO.
+		const account: IAccountDTO = {
 			id: accountIdExpected,
 			externalId: null,
 			state: "ACTIVE",
@@ -66,7 +66,7 @@ describe("accounts and balances client - integration tests", () => {
 	});
 	test("create existent account", async () => {
 		const accountIdExpected: string = Date.now().toString();
-		const account: IAccountDTO = { // TODO.
+		const account: IAccountDTO = {
 			id: accountIdExpected,
 			externalId: null,
 			state: "ACTIVE",

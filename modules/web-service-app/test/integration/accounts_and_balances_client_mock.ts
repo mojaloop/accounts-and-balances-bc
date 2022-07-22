@@ -31,7 +31,6 @@
 
 import axios, {AxiosError, AxiosInstance, AxiosResponse} from "axios";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {IAccount, IJournalEntry} from "@mojaloop/accounts-and-balances-bc-domain";
 
 // TODO: what's the problem of using a mock?
 export class AccountsAndBalancesClientMock {

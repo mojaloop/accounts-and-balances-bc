@@ -30,22 +30,79 @@
 "use strict";
 
 // TODO: import index.ts?
-import {AccountState, AccountType, IAccount, IJournalEntry} from "@mojaloop/accounts-and-balances-bc-domain";
+import {
+	AccountState,
+	AccountType,
+	Aggregate,
+	IAccountsRepo, IJournalEntriesRepo,
+} from "@mojaloop/accounts-and-balances-bc-domain";
 import {ConsoleLogger, ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {AccountsAndBalancesClientMock} from "./accounts_and_balances_client_mock";
+import {ExpressWebServer} from "../../src/web-server/express_web_server";
+import {MongoAccountsRepo} from "../../src/infrastructure/mongo_accounts_repo";
+import {MongoJournalEntriesRepo} from "../../src/infrastructure/mongo_journal_entries_repo";
 
 // TODO: here or inside the describe function?
-const ACCOUNTS_AND_BALANCES_URL: string = "http://localhost:1234";
+// Web server.
+const WEB_SERVER_HOST: string =
+	process.env.ACCOUNTS_AND_BALANCES_WEB_SERVER_HOST ?? "localhost";
+const WEB_SERVER_PORT_NO: number =
+	parseInt(process.env.ACCOUNTS_AND_BALANCES_WEB_SERVER_PORT_NO ?? "") || 1234;
+const WEB_SERVER_PATH_ROUTER: string = "/";
+// Repo.
+const REPO_HOST: string =
+	process.env.ACCOUNTS_AND_BALANCES_REPO_HOST ?? "localhost";
+const REPO_PORT_NO: number =
+	parseInt(process.env.ACCOUNTS_AND_BALANCES_REPO_PORT_NO ?? "") || 27017;
+const REPO_URL: string = `mongodb://${REPO_HOST}:${REPO_PORT_NO}`;
+const DB_NAME: string = "AccountsAndBalances";
+const ACCOUNTS_COLLECTION_NAME: string = "Accounts";
+const JOURNAL_ENTRIES_COLLECTION_NAME: string = "JournalEntries";
+
+const ACCOUNTS_AND_BALANCES_URL: string = `http://${WEB_SERVER_HOST}:${WEB_SERVER_PORT_NO}`;
 const HTTP_CLIENT_TIMEOUT_MS: number = 10_000;
 
 const logger: ILogger = new ConsoleLogger(); // TODO: which type of logger to use?
+const accountsRepo: IAccountsRepo = new MongoAccountsRepo(
+	logger,
+	REPO_URL,
+	DB_NAME,
+	ACCOUNTS_COLLECTION_NAME
+);
+const journalEntriesRepo: IJournalEntriesRepo = new MongoJournalEntriesRepo(
+	logger,
+	REPO_URL,
+	DB_NAME,
+	JOURNAL_ENTRIES_COLLECTION_NAME
+);
+const aggregate: Aggregate = new Aggregate(
+	logger,
+	accountsRepo,
+	journalEntriesRepo
+);
+const webServer: ExpressWebServer = new ExpressWebServer(
+	logger,
+	WEB_SERVER_HOST,
+	WEB_SERVER_PORT_NO,
+	WEB_SERVER_PATH_ROUTER,
+	aggregate
+);
+webServer.start();
 const accountsAndBalancesClientMock: AccountsAndBalancesClientMock = new AccountsAndBalancesClientMock(
 	logger,
 	ACCOUNTS_AND_BALANCES_URL,
 	HTTP_CLIENT_TIMEOUT_MS
 );
 
-describe("accounts and balances service - integration tests", () => {
+describe("accounts and balances web server app - integration tests", () => {
+	beforeAll(async () => {
+		await aggregate.init();
+	});
+
+	afterAll(async () => {
+		await aggregate.destroy();
+	});
+
 	// Create account.
 	test("create non-existent account", async () => {
 		const accountIdExpected: string = Date.now().toString();
