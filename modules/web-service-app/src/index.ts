@@ -37,11 +37,16 @@ import {Aggregate, IAccountsRepo, IJournalEntriesRepo} from "@mojaloop/accounts-
 import {ExpressWebServer} from "./web-server/express_web_server";
 import {MongoJournalEntriesRepo} from "./infrastructure/mongo_journal_entries_repo";
 import {MongoAccountsRepo} from "./infrastructure/mongo_accounts_repo";
+import {
+	AuditClient,
+	KafkaAuditClientDispatcher,
+	LocalAuditClientCryptoProvider
+} from "@mojaloop/auditing-bc-client-lib";
 
 
 /* Constants. */
-const SERVICE_NAME: string = "Accounts and Balances Web Server";
-const SERVICE_VERSION: string = "0.1.1";
+const APP_NAME: string = "Accounts and Balances Web Server";
+const APP_VERSION: string = "0.1.0";
 // Web server.
 const WEB_SERVER_HOST: string =
 	process.env.ACCOUNTS_AND_BALANCES_WEB_SERVER_HOST ?? "localhost";
@@ -62,16 +67,16 @@ const JOURNAL_ENTRIES_COLLECTION_NAME: string = "JournalEntries";
 /*const appConfiguration = new AppConfiguration(
 	"", // TODO: what should this be?
 	"", // TODO: what should this be?
-	SERVICE_NAME,
-	SERVICE_VERSION,
+	"", // TODO: what should this be?
+	0.1.0,
 	null // Standalone mode.
 );*/
 
 // Logger.
 const logger: ILogger = new DefaultLogger( // TODO: which type of logger to use?
 	"", // TODO: what should this be?
-	SERVICE_NAME, // TODO: what should this be?
-	SERVICE_VERSION,
+	APP_NAME,
+	APP_VERSION,
 	LogLevel.INFO); // TODO: what should this be?
 
 // Infrastructure.
@@ -87,12 +92,29 @@ const journalEntriesRepo: IJournalEntriesRepo = new MongoJournalEntriesRepo(
 	DB_NAME,
 	JOURNAL_ENTRIES_COLLECTION_NAME
 );
+if (!existsSync(AUDIT_CERT_FILE_PATH)) {
+	if (PRODUCTION_MODE) {
+		process.exit(9);
+	}
+	// create e tmp file
+	LocalAuditClientCryptoProvider.createRsaPrivateKeyFileSync(AUDIT_CERT_FILE_PATH, 2048);
+}
+const cryptoProvider = new LocalAuditClientCryptoProvider(AUDIT_CERT_FILE_PATH);
+const auditDispatcher = new KafkaAuditClientDispatcher(kafkaProducerOptions, KAFKA_AUDITS_TOPIC, logger);
+const auditClient: IAuditClient = new AuditClient(
+	"", // TODO: what should this be?
+	APP_NAME,
+	APP_VERSION,
+	cryptoProvider,
+	auditDispatcher
+);
 
 // Domain.
 const aggregate: Aggregate = new Aggregate(
 	logger,
 	accountsRepo,
-	journalEntriesRepo
+	journalEntriesRepo,
+	auditClient
 );
 
 // Application.
@@ -106,6 +128,7 @@ const webServer: ExpressWebServer = new ExpressWebServer(
 
 async function start(): Promise<void> {
 	// await appConfiguration.fetch(); // TODO: set up platform configuration.
+	await auditClient.init();
 	await aggregate.init(); // No need to handle exceptions.
 	webServer.start(); // No need to handle exceptions.
 }

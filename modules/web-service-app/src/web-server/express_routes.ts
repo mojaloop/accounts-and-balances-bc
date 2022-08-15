@@ -87,7 +87,7 @@ export class ExpressRoutes {
 
 	private async postAccount(req: express.Request, res: express.Response): Promise<void> {
 		try {
-			const accountId: string = await this.aggregate.createAccount(req.body);
+			const accountId: string = await this.aggregate.createAccount(req.body, null); // TODO: security context.
 			this.sendSuccessResponse(
 				res,
 				200,

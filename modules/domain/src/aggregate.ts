@@ -46,23 +46,27 @@ import {IAccountsRepo, IJournalEntriesRepo} from "./infrastructure_interfaces";
 import {Account} from "./entities/account";
 import {JournalEntry} from "./entities/journal_entry";
 import {IAccount, IJournalEntry} from "./types";
-
-// Validate type of strings.
+import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
+import {AuditSecurityContext} from "@mojaloop/auditing-bc-public-types-lib/dist/audit_types";
+import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
 
 export class Aggregate {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
 	private readonly accountsRepo: IAccountsRepo;
 	private readonly journalEntriesRepo: IJournalEntriesRepo;
+	private readonly auditClient: IAuditClient;
 
 	constructor(
 		logger: ILogger,
 		accountsRepo: IAccountsRepo,
-		journalEntriesRepo: IJournalEntriesRepo
+		journalEntriesRepo: IJournalEntriesRepo,
+		auditClient: IAuditClient
 	) {
 		this.logger = logger;
 		this.accountsRepo = accountsRepo;
 		this.journalEntriesRepo = journalEntriesRepo;
+		this.auditClient = auditClient;
 	}
 
 	// DONE.
@@ -82,8 +86,16 @@ export class Aggregate {
 		await this.journalEntriesRepo.destroy();
 	}
 
-	// TODO: why ignore the case in which uuid.v4() generate an already existing id?
-	async createAccount(account: IAccount): Promise<string> {
+	private getAuditSecurityContext(securityContext: CallSecurityContext | null): AuditSecurityContext { // TODO: CallSecurityContext | null?
+		return {
+			userId: securityContext?.username ?? null,
+			role: "", // TODO: get role.
+			appId: securityContext?.clientId ?? null
+		}
+	}
+
+	// TODO: why ignore the case in which uuid.v4() generates an already existing id?
+	async createAccount(account: IAccount, securityContext: CallSecurityContext | null): Promise<string> { // TODO: CallSecurityContext | null?
 		// Generate a random UUId, if needed.
 		if (account.id === undefined || account.id === null || account.id === "") {
 			account.id = uuid.v4();
@@ -98,6 +110,13 @@ export class Aggregate {
 			}
 			throw e;
 		}
+		// TODO: configure.
+		await this.auditClient.audit(
+			"ACCOUNT_CREATED",
+			true,
+			this.getAuditSecurityContext(securityContext),
+			[{key: "accountId", value: account.id}]
+		);
 		return account.id;
 	}
 
