@@ -30,7 +30,15 @@
 "use strict";
 
 import {
-	Aggregate, IAccountsRepo, IJournalEntriesRepo
+	AccountState,
+	AccountType,
+	Aggregate, CreditedAndDebitedAccountsAreTheSameError, CurrenciesDifferError,
+	IAccount,
+	IAccountsRepo,
+	IJournalEntriesRepo,
+	IJournalEntry, InsufficientBalanceError,
+	InvalidCreditBalanceError,
+	InvalidDebitBalanceError, InvalidJournalEntryAmountError, NoSuchCreditedAccountError, NoSuchDebitedAccountError
 } from "@mojaloop/accounts-and-balances-bc-domain";
 import {ConsoleLogger, ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {ExpressWebServer} from "../../src/web-server/express_web_server";
@@ -46,6 +54,8 @@ import {
 import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {TokenHelper} from "@mojaloop/security-bc-client-lib";
 import {AuditClientMock} from "./audit_client_mock";
+import {Account} from "@mojaloop/accounts-and-balances-bc-domain/dist/entities/account";
+import {JournalEntry} from "@mojaloop/accounts-and-balances-bc-domain/dist/entities/journal_entry";
 
 /* ********** Constants Begin ********** */
 
@@ -169,6 +179,57 @@ describe("accounts and balances web server - unit tests", () => {
 			}
 		).rejects.toThrow(UnableToCreateAccountError);
 	});
+	test("create account with empty string as id", async () => {
+		const accountId: string = "";
+		const account: IAccountDTO = {
+			id: accountId,
+			externalId: null,
+			state: "ACTIVE",
+			type: "POSITION",
+			currency: "EUR",
+			creditBalance: 100,
+			debitBalance: 25,
+			timestampLastJournalEntry: 0
+		}
+		const accountIdReceived: string = await accountsAndBalancesClient.createAccount(account); // TODO: securityContext.
+		expect(accountIdReceived).not.toEqual(accountId); // TODO: makes sense?
+	});
+	test("create account with invalid credit balance", async () => {
+		const accountId: string = Date.now().toString();
+		const account: IAccountDTO = {
+			id: accountId,
+			externalId: null,
+			state: "ACTIVE",
+			type: "POSITION",
+			currency: "EUR",
+			creditBalance: -100,
+			debitBalance: 25,
+			timestampLastJournalEntry: 0
+		}
+		await expect(
+			async () => {
+				await accountsAndBalancesClient.createAccount(account); // TODO: securityContext.
+			}
+		).rejects.toThrow(InvalidCreditBalanceError);
+	});
+	test("create account with invalid debit balance", async () => {
+		const accountId: string = Date.now().toString();
+		const account: IAccountDTO = {
+			id: accountId,
+			externalId: null,
+			state: "ACTIVE",
+			type: "POSITION",
+			currency: "EUR",
+			creditBalance: 100,
+			debitBalance: -25,
+			timestampLastJournalEntry: 0
+		}
+		await expect(
+			async () => {
+				await accountsAndBalancesClient.createAccount(account); // TODO: securityContext.
+			}
+		).rejects.toThrow(InvalidDebitBalanceError);
+	});
 
 	// Create journal entries.
 	test("create non-existent journal entries", async () => {
@@ -237,6 +298,143 @@ describe("accounts and balances web server - unit tests", () => {
 				await accountsAndBalancesClient.createJournalEntries([journalEntryA, journalEntryB]);
 			}
 		).rejects.toThrow(UnableToCreateJournalEntriesError);
+	});
+	test("create journal entry with empty string as id", async () => {
+		// Before creating a journal entry, the respective accounts need to be created.
+		const accounts: IAccountDTO[] = await create2Accounts();
+		const journalEntryId: string = "";
+		const journalEntry: IJournalEntryDTO = {
+			id: journalEntryId,
+			externalId: null,
+			externalCategory: null,
+			currency: "EUR",
+			amount: 5,
+			creditedAccountId: accounts[0].id,
+			debitedAccountId: accounts[1].id,
+			timestamp: 0
+		};
+		const journalEntryIdReceived: string[] = await accountsAndBalancesClient.createJournalEntries([journalEntry]);
+		expect(journalEntryIdReceived).not.toEqual(journalEntryId); // TODO: makes sense?
+	});
+	test("create journal entry with same credited and debited accounts", async () => {
+		// Before creating a journal entry, the respective accounts need to be created.
+		const accounts: IAccountDTO[] = await create2Accounts();
+		const journalEntryId: string = Date.now().toString();
+		const journalEntry: IJournalEntryDTO = {
+			id: journalEntryId,
+			externalId: null,
+			externalCategory: null,
+			currency: "EUR",
+			amount: 5,
+			creditedAccountId: accounts[0].id,
+			debitedAccountId: accounts[0].id,
+			timestamp: 0
+		};
+		await expect(
+			async () => {
+				await accountsAndBalancesClient.createJournalEntries([journalEntry]);
+			}
+		).rejects.toThrow(CreditedAndDebitedAccountsAreTheSameError);
+	});
+	test("create journal entry with non-existent credited account", async () => {
+		// Before creating a journal entry, the respective accounts need to be created.
+		const accounts: IAccountDTO[] = await create2Accounts();
+		const journalEntryId: string = Date.now().toString();
+		const journalEntry: IJournalEntryDTO = {
+			id: journalEntryId,
+			externalId: null,
+			externalCategory: null,
+			currency: "EUR",
+			amount: 5,
+			creditedAccountId: "some string",
+			debitedAccountId: accounts[1].id,
+			timestamp: 0
+		};
+		await expect(
+			async () => {
+				await accountsAndBalancesClient.createJournalEntries([journalEntry]);
+			}
+		).rejects.toThrow(NoSuchCreditedAccountError);
+	});
+	test("create journal entry with non-existent debited account", async () => {
+		// Before creating a journal entry, the respective accounts need to be created.
+		const accounts: IAccountDTO[] = await create2Accounts();
+		const journalEntryId: string = Date.now().toString();
+		const journalEntry: IJournalEntryDTO = {
+			id: journalEntryId,
+			externalId: null,
+			externalCategory: null,
+			currency: "EUR",
+			amount: 5,
+			creditedAccountId: accounts[0].id,
+			debitedAccountId: "some string",
+			timestamp: 0
+		};
+		await expect(
+			async () => {
+				await accountsAndBalancesClient.createJournalEntries([journalEntry]);
+			}
+		).rejects.toThrow(NoSuchDebitedAccountError);
+	});
+	test("create journal entry with different currency", async () => {
+		// Before creating a journal entry, the respective accounts need to be created.
+		const accounts: IAccountDTO[] = await create2Accounts(); // Accounts created with EUR.
+		const journalEntryId: string = Date.now().toString();
+		const journalEntry: IJournalEntryDTO = {
+			id: journalEntryId,
+			externalId: null,
+			externalCategory: null,
+			currency: "USD",
+			amount: 5,
+			creditedAccountId: accounts[0].id,
+			debitedAccountId: accounts[1].id,
+			timestamp: 0
+		};
+		await expect(
+			async () => {
+				await accountsAndBalancesClient.createJournalEntries([journalEntry]);
+			}
+		).rejects.toThrow(CurrenciesDifferError);
+	});
+	test("create journal entry with exceeding amount", async () => {
+		// Before creating a journal entry, the respective accounts need to be created.
+		const accounts: IAccountDTO[] = await create2Accounts(); // Accounts created with 100 credit balance each.
+		const journalEntryId: string = Date.now().toString();
+		const journalEntry: IJournalEntryDTO = {
+			id: journalEntryId,
+			externalId: null,
+			externalCategory: null,
+			currency: "EUR",
+			amount: 10_000,
+			creditedAccountId: accounts[0].id,
+			debitedAccountId: accounts[1].id,
+			timestamp: 0
+		};
+		await expect(
+			async () => {
+				await accountsAndBalancesClient.createJournalEntries([journalEntry]);
+			}
+		).rejects.toThrow(InsufficientBalanceError);
+	});
+	test("create journal entry with invalid amount", async () => {
+		// Before creating a journal entry, the respective accounts need to be created.
+		const accounts: IAccountDTO[] = await create2Accounts(); // Accounts created with 100 credit balance each.
+		const journalEntryId: string = Date.now().toString();
+		const journalEntry: IJournalEntryDTO = {
+			id: journalEntryId,
+			externalId: null,
+			externalCategory: null,
+			currency: "EUR",
+			amount: -5,
+			creditedAccountId: accounts[0].id,
+			debitedAccountId: accounts[1].id,
+			timestamp: 0
+		};
+		await expect(
+			async () => {
+				await accountsAndBalancesClient.createJournalEntries([journalEntry]);
+			}
+		).rejects.toThrow(InvalidJournalEntryAmountError);
 	});
 
 	// Get account by id.

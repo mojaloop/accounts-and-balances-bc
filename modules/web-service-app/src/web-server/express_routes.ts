@@ -362,19 +362,11 @@ export class ExpressRoutes {
 	}
 
 	private sendErrorResponse(res: express.Response, statusCode: number, message: string) {
-		const response = {
-			result: "ERROR",
-			data: {message: message}
-		}
-		res.status(statusCode).json(response);
+		res.status(statusCode).json({message: message});
 	}
 
 	private sendSuccessResponse(res: express.Response, statusCode: number, data: any) {
-		const response = {
-			result: "SUCCESS",
-			data: data,
-		}
-		res.status(statusCode).json(response);
+		res.status(statusCode).json(data);
 	}
 
 }

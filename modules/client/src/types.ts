@@ -50,15 +50,3 @@ export interface IJournalEntryDTO {
 	debitedAccountId: string;
 	timestamp: number;
 }
-
-// TODO: remove this type.
-export interface IResponse {
-	result: ResponseResult;
-	data: any;
-}
-
-// TODO: remove this type.
-export enum ResponseResult {
-	ERROR = "ERROR",
-	SUCCESS = "SUCCESS"
-}

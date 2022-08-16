@@ -39,7 +39,7 @@ import {
 	UnableToGetJournalEntriesError,
 	UnableToReachServerError
 } from "./errors";
-import {IAccountDTO, IJournalEntryDTO, IResponse} from "./types";
+import {IAccountDTO, IJournalEntryDTO} from "./types";
 
 export class AccountsAndBalancesClient {
 	// Properties received through the constructor.
@@ -60,41 +60,41 @@ export class AccountsAndBalancesClient {
 		});
 	}
 
-	// TODO: change axios error!!!
-
 	async createAccount(account: IAccountDTO): Promise<string> {
 		try {
 			const axiosResponse: AxiosResponse = await this.httpClient.post("/accounts", account);
-			// axiosResponse.data can only be an IResponse.
-			const serverSuccessResponse: IResponse = axiosResponse.data;
-			return serverSuccessResponse.data.accountId;
+			return axiosResponse.data.accountId;
 		} catch (e: unknown) {
-			const axiosError: AxiosError = e as AxiosError; // e can only be an AxiosError.
+			if (!axios.isAxiosError(e)) {
+				this.logger.error(e);
+				throw e;
+			}
+			const axiosError: AxiosError = e as AxiosError;
 			if (axiosError.response === undefined) {
 				this.logger.error(e);
 				throw new UnableToReachServerError();
 			}
-			// axiosError.response.data can only be an IResponse.
-			const serverErrorResponse: IResponse = axiosError.response.data as IResponse;
-			throw new UnableToCreateAccountError(serverErrorResponse.data.message);
+			const serverErrorResponse: any = axiosError.response.data;
+			throw new UnableToCreateAccountError(serverErrorResponse.message);
 		}
 	}
 
 	async createJournalEntries(journalEntries: IJournalEntryDTO[]): Promise<string[]> {
 		try {
 			const axiosResponse: AxiosResponse = await this.httpClient.post("/journalEntries", journalEntries);
-			// axiosResponse.data can only be an IResponse.
-			const serverSuccessResponse: IResponse = axiosResponse.data;
-			return serverSuccessResponse.data.idsJournalEntries;
+			return axiosResponse.data.idsJournalEntries;
 		} catch (e: unknown) {
-			const axiosError: AxiosError = e as AxiosError; // e can only be an AxiosError.
+			if (!axios.isAxiosError(e)) {
+				this.logger.error(e);
+				throw e;
+			}
+			const axiosError: AxiosError = e as AxiosError;
 			if (axiosError.response === undefined) {
 				this.logger.error(e);
 				throw new UnableToReachServerError();
 			}
-			// axiosError.response.data can only be an IResponse.
-			const serverErrorResponse: IResponse = axiosError.response.data as IResponse;
-			throw new UnableToCreateJournalEntriesError(serverErrorResponse.data.message);
+			const serverErrorResponse: any = axiosError.response.data;
+			throw new UnableToCreateJournalEntriesError(serverErrorResponse.message);
 		}
 	}
 
@@ -111,18 +111,19 @@ export class AccountsAndBalancesClient {
 			if (axiosResponse.status === 404) {
 				return null;
 			}
-			// axiosResponse.data can only be an IResponse.
-			const serverSuccessResponse: IResponse = axiosResponse.data;
-			return serverSuccessResponse.data.account;
+			return axiosResponse.data.account;
 		} catch (e: unknown) {
-			const axiosError: AxiosError = e as AxiosError; // e can only be an AxiosError.
+			if (!axios.isAxiosError(e)) {
+				this.logger.error(e);
+				throw e;
+			}
+			const axiosError: AxiosError = e as AxiosError;
 			if (axiosError.response === undefined) {
 				this.logger.error(e);
 				throw new UnableToReachServerError();
 			}
-			// axiosError.response.data can only be an IResponse.
-			const serverErrorResponse: IResponse = axiosError.response.data as IResponse;
-			throw new UnableToGetAccountError(serverErrorResponse.data.message);
+			const serverErrorResponse: any = axiosError.response.data;
+			throw new UnableToGetAccountError(serverErrorResponse.message);
 		}
 	}
 
@@ -139,18 +140,19 @@ export class AccountsAndBalancesClient {
 			if (axiosResponse.status === 404) {
 				return [];
 			}
-			// axiosResponse.data can only be an IResponse.
-			const serverSuccessResponse: IResponse = axiosResponse.data;
-			return serverSuccessResponse.data.accounts;
+			return axiosResponse.data.accounts;
 		} catch (e: unknown) {
-			const axiosError: AxiosError = e as AxiosError; // e can only be an AxiosError.
+			if (!axios.isAxiosError(e)) {
+				this.logger.error(e);
+				throw e;
+			}
+			const axiosError: AxiosError = e as AxiosError;
 			if (axiosError.response === undefined) {
 				this.logger.error(e);
 				throw new UnableToReachServerError();
 			}
-			// axiosError.response.data can only be an IResponse.
-			const serverErrorResponse: IResponse = axiosError.response.data as IResponse;
-			throw new UnableToGetAccountsError(serverErrorResponse.data.message);
+			const serverErrorResponse: any = axiosError.response.data;
+			throw new UnableToGetAccountsError(serverErrorResponse.message);
 		}
 	}
 
@@ -167,18 +169,19 @@ export class AccountsAndBalancesClient {
 			if (axiosResponse.status === 404) {
 				return [];
 			}
-			// axiosResponse.data can only be an IResponse.
-			const serverSuccessResponse: IResponse = axiosResponse.data;
-			return serverSuccessResponse.data.journalEntries;
+			return axiosResponse.data.journalEntries;
 		} catch (e: unknown) {
-			const axiosError: AxiosError = e as AxiosError; // e can only be an AxiosError.
+			if (!axios.isAxiosError(e)) {
+				this.logger.error(e);
+				throw e;
+			}
+			const axiosError: AxiosError = e as AxiosError;
 			if (axiosError.response === undefined) {
 				this.logger.error(e);
 				throw new UnableToReachServerError();
 			}
-			// axiosError.response.data can only be an IResponse.
-			const serverErrorResponse: IResponse = axiosError.response.data as IResponse;
-			throw new UnableToGetJournalEntriesError(serverErrorResponse.data.message);
+			const serverErrorResponse: any = axiosError.response.data;
+			throw new UnableToGetJournalEntriesError(serverErrorResponse.message);
 		}
 	}
 }
