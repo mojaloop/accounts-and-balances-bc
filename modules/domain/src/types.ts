@@ -51,7 +51,6 @@ export enum AccountType {
 	FEE = "FEE"
 }
 
-// TODO: names.
 export interface IJournalEntry {
 	id: string;
 	externalId: string | null;

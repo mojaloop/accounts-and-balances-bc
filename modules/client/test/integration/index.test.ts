@@ -29,18 +29,15 @@
 
 "use strict";
 
-// TODO: repeat code?
-
 import {ConsoleLogger, ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {AccountsAndBalancesClient} from "../../src";
 import {UnableToCreateAccountError, UnableToCreateJournalEntriesError} from "../../src/errors";
 import {IAccountDTO, IJournalEntryDTO} from "../../src/types";
 
-// TODO: here or inside the describe function?
 const ACCOUNTS_AND_BALANCES_URL: string = "http://localhost:1234";
 const HTTP_CLIENT_TIMEOUT_MS: number = 10_000;
 
-const logger: ILogger = new ConsoleLogger(); // TODO: which type of logger to use?
+const logger: ILogger = new ConsoleLogger();
 const accountsAndBalancesClient: AccountsAndBalancesClient = new AccountsAndBalancesClient(
 	logger,
 	ACCOUNTS_AND_BALANCES_URL,

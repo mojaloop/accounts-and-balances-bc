@@ -85,7 +85,7 @@ export class ExpressWebServer {
 				this.logger.info(`Base URL: ${this.BASE_URL}`);
 			});
 		} catch (e: unknown) {
-			this.logger.fatal(e); // TODO: fatal?
+			this.logger.fatal(e);
 			throw e;
 		}
 	}

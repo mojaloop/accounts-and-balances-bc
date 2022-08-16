@@ -70,7 +70,6 @@ export class Aggregate {
 		this.journalEntriesRepo = journalEntriesRepo;
 	}
 
-	// DONE.
 	async init(): Promise<void> {
 		try {
 			await this.auditingClient.init();
@@ -82,7 +81,6 @@ export class Aggregate {
 		}
 	}
 
-	// DONE.
 	async destroy(): Promise<void> {
 		await this.accountsRepo.destroy();
 		await this.journalEntriesRepo.destroy();
@@ -124,9 +122,9 @@ export class Aggregate {
 	}
 
 	async createJournalEntries(journalEntries: IJournalEntry[]): Promise<string[]> {
-		const idsJournalEntries: string[] = []; // TODO.
+		const idsJournalEntries: string[] = []; // TODO: verify.
 		for (const journalEntry of journalEntries) { // TODO: of?
-			idsJournalEntries.push(await this.createJournalEntry(journalEntry)); // TODO.
+			idsJournalEntries.push(await this.createJournalEntry(journalEntry)); // TODO: verify.
 		}
 		return idsJournalEntries;
 	}
@@ -139,7 +137,7 @@ export class Aggregate {
 		JournalEntry.validateJournalEntry(journalEntry);
 		// Check if the credited and debited accounts are the same. TODO: required?
 		if (journalEntry.creditedAccountId === journalEntry.debitedAccountId) {
-			throw new CreditedAndDebitedAccountsAreTheSameError(); // TODO.
+			throw new CreditedAndDebitedAccountsAreTheSameError(); // TODO: error name.
 		}
 		// Check if the credited and debited accounts exist.
 		// Instead of using the repo's accountExistsById and journalEntryExistsById functions, the accounts are fetched
@@ -163,11 +161,11 @@ export class Aggregate {
 		// Check if the currencies of the credited and debited accounts and the journal entry match.
 		if (creditedAccount.currency !== debitedAccount.currency
 			|| creditedAccount.currency !== journalEntry.currency) {
-			throw new CurrenciesDifferError(); // TODO.
+			throw new CurrenciesDifferError(); // TODO: error name.
 		}
 		// Check if the balance is sufficient.
-		if (this.calculateAccountBalance(creditedAccount) - journalEntry.amount < 0n) { // TODO.
-			throw new InsufficientBalanceError(); // TODO.
+		if (this.calculateAccountBalance(creditedAccount) - journalEntry.amount < 0n) { // TODO: verify.
+			throw new InsufficientBalanceError(); // TODO: error name.
 		}
 		// Store the journal entry.
 		try {
@@ -204,37 +202,33 @@ export class Aggregate {
 		return journalEntry.id;
 	}
 
-	// DONE.
 	async getAccountById(accountId: string): Promise<IAccount | null> {
 		try {
 			return await this.accountsRepo.getAccountById(accountId);
-		} catch (e: unknown) { // TODO.
+		} catch (e: unknown) {
 			this.logger.error(e);
 			throw e;
 		}
 	}
 
-	// DONE.
 	async getAccountsByExternalId(externalId: string): Promise<IAccount[]> {
 		try {
 			return await this.accountsRepo.getAccountsByExternalId(externalId);
-		} catch (e: unknown) { // TODO.
+		} catch (e: unknown) {
 			this.logger.error(e);
 			throw e;
 		}
 	}
 
-	// DONE.
 	async getJournalEntriesByAccountId(accountId: string): Promise<IJournalEntry[]> {
 		try {
 			return await this.journalEntriesRepo.getJournalEntriesByAccountId(accountId);
-		} catch (e: unknown) { // TODO.
+		} catch (e: unknown) {
 			this.logger.error(e);
 			throw e;
 		}
 	}
 
-	// DONE.
 	private calculateAccountBalance(account: Account): bigint {
 		return account.creditBalance - account.debitBalance;
 	}
