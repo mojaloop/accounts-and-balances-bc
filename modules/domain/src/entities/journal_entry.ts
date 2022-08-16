@@ -31,7 +31,7 @@
 
 import {IJournalEntry} from "../types";
 import {
-	InvalidJournalEntryAmountError, InvalidJournalEntryIdError
+	InvalidJournalEntryAmountError
 } from "../errors";
 
 export class JournalEntry implements IJournalEntry {
@@ -46,8 +46,8 @@ export class JournalEntry implements IJournalEntry {
 
 	constructor(
 		id: string,
-		externalId: string | null = null,
-		externalCategory: string | null = null,
+		externalId: string | null,
+		externalCategory: string | null,
 		currency: string,
 		amount: bigint,
 		creditedAccountId: string,
@@ -65,10 +65,6 @@ export class JournalEntry implements IJournalEntry {
 	}
 
 	static validateJournalEntry(journalEntry: JournalEntry): void {
-		// id.
-		if (journalEntry.id === "") {
-			throw new InvalidJournalEntryIdError();
-		}
 		// currency. TODO: validate currency.
 		// amount.
 		if (journalEntry.amount <= 0) {

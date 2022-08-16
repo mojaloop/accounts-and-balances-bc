@@ -29,62 +29,24 @@
 
 "use strict";
 
-import {
-	InvalidAccountStateError,
-	InvalidAccountTypeError,
-	InvalidCreditBalanceError,
-	InvalidDebitBalanceError
-} from "../errors";
+import {AuditEntryLabel, AuditSecurityContext, IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 
-import {IAccount, AccountState, AccountType} from "../types";
-
-export class Account implements IAccount {
-	id: string;
-	externalId: string | null;
-	state: AccountState;
-	type: AccountType;
-	currency: string; // https://en.wikipedia.org/wiki/ISO_4217
-	creditBalance: bigint;
-	debitBalance: bigint;
-	timestampLastJournalEntry: number;
-
-	constructor(
-		id: string,
-		externalId: string | null,
-		state: AccountState,
-		type: AccountType,
-		currency: string,
-		creditBalance: bigint,
-		debitBalance: bigint,
-		timestampLastJournalEntry: number
-	) {
-		this.id = id;
-		this.externalId = externalId;
-		this.state = state;
-		this.type = type;
-		this.currency = currency;
-		this.creditBalance = creditBalance;
-		this.debitBalance = debitBalance;
-		this.timestampLastJournalEntry = timestampLastJournalEntry;
+// TODO: should I log anything?
+export class AuditClientMock implements IAuditClient {
+	constructor() {
 	}
 
-	static validateAccount(account: Account): void {
-		// state.
-		if (!(account.state in AccountState)) {
-			throw new InvalidAccountStateError();
-		}
-		// type.
-		if (!(account.type in AccountType)) {
-			throw new InvalidAccountTypeError();
-		}
-		// currency. TODO: validate currency.
-		// creditBalance.
-		if (account.creditBalance < 0) {
-			throw new InvalidCreditBalanceError();
-		}
-		// debitBalance.
-		if (account.debitBalance < 0) {
-			throw new InvalidDebitBalanceError();
-		}
+	async init(): Promise<void> {
+	}
+
+	async destroy(): Promise<void> {
+	}
+
+	async audit(
+		actionType: string,
+		actionSuccessful: boolean,
+		securityContext?: AuditSecurityContext,
+		labels?: AuditEntryLabel[]
+	): Promise<void> {
 	}
 }

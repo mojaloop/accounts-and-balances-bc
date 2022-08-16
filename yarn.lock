@@ -991,10 +991,12 @@ __metadata:
   resolution: "@mojaloop/accounts-and-balances-bc-web-service-app@workspace:modules/web-service-app"
   dependencies:
     "@mojaloop/accounts-and-balances-bc-domain": "workspace:*"
+    "@mojaloop/auditing-bc-client-lib": ^0.0.6
     "@mojaloop/logging-bc-client-lib": ^0.0.10
     "@mojaloop/logging-bc-public-types-lib": ^0.0.3
     "@mojaloop/platform-configuration-bc-client-lib": ^0.0.8
     "@mojaloop/platform-configuration-bc-types-lib": ^0.0.5
+    "@mojaloop/security-bc-client-lib": ^0.0.4
     "@types/express": ^4.17.13
     "@types/node": ^17.0.41
     "@types/uuid": ^8.3.4
@@ -1027,7 +1029,20 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mojaloop/auditing-bc-public-types-lib@npm:^0.0.7":
+"@mojaloop/auditing-bc-client-lib@npm:^0.0.6":
+  version: 0.0.6
+  resolution: "@mojaloop/auditing-bc-client-lib@npm:0.0.6"
+  dependencies:
+    "@mojaloop/auditing-bc-public-types-lib": "*"
+    "@mojaloop/logging-bc-client-lib": ^0.0.10
+    "@mojaloop/logging-bc-public-types-lib": ^0.0.3
+    "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib": ^0.0.8
+    uuid: ^8.3.2
+  checksum: 43f398b9e696d535ed8a511b5d497cec69fc6a48d5d905da7514ccd3a0e328b82d99dc18bb05d5b8b3b6cdb45f44a95f3cf37f71eff66ffc0ceed60c43bed4e3
+  languageName: node
+  linkType: hard
+
+"@mojaloop/auditing-bc-public-types-lib@npm:*, @mojaloop/auditing-bc-public-types-lib@npm:^0.0.7":
   version: 0.0.7
   resolution: "@mojaloop/auditing-bc-public-types-lib@npm:0.0.7"
   checksum: 6bd30da472cae17723dfb532253838ae2ec91fc08e0e15b52244012141766fecd9b8f7a5bdd7e631043cb1f6c2ca9af4392296d669fd502b19e474cbdf251e42

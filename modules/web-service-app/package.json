@@ -36,10 +36,12 @@
   },
   "dependencies": {
     "@mojaloop/accounts-and-balances-bc-domain": "workspace:*",
+    "@mojaloop/auditing-bc-client-lib": "^0.0.6",
     "@mojaloop/logging-bc-client-lib": "^0.0.10",
     "@mojaloop/logging-bc-public-types-lib": "^0.0.3",
     "@mojaloop/platform-configuration-bc-client-lib": "^0.0.8",
     "@mojaloop/platform-configuration-bc-types-lib": "^0.0.5",
+    "@mojaloop/security-bc-client-lib": "^0.0.4",
     "express": "^4.18.1",
     "mongodb": "^4.7.0",
     "uuid": "^8.3.2"

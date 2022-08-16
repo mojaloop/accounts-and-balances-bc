@@ -37,7 +37,7 @@ import {
 	IAccountsRepo, IJournalEntriesRepo,
 } from "@mojaloop/accounts-and-balances-bc-domain";
 import {ConsoleLogger, ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {AccountsAndBalancesClientMock} from "./accounts_and_balances_client_mock";
+import {AccountsAndBalancesClientMock} from "../accounts_and_balances_client_mock";
 import {ExpressWebServer} from "../../src/web-server/express_web_server";
 import {MongoAccountsRepo} from "../../src/infrastructure/mongo_accounts_repo";
 import {MongoJournalEntriesRepo} from "../../src/infrastructure/mongo_journal_entries_repo";

@@ -34,13 +34,10 @@ import {
 	IJournalEntriesRepo,
 } from "@mojaloop/accounts-and-balances-bc-domain";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {MongoClient, Collection, DeleteResult} from "mongodb";
+import {MongoClient, Collection} from "mongodb";
 import {
 
 	JournalEntryAlreadyExistsError,
-	NoSuchJournalEntryError,
-	UnableToDeleteJournalEntriesError,
-	UnableToDeleteJournalEntryError,
 	UnableToGetJournalEntriesError,
 	UnableToGetJournalEntryError,
 	UnableToInitRepoError,
@@ -50,7 +47,7 @@ import {
 export class MongoJournalEntriesRepo implements IJournalEntriesRepo {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
-	private readonly REPO_URL: string;
+	private readonly DB_URL: string;
 	private readonly DB_NAME: string;
 	private readonly COLLECTION_NAME: string;
 	// Other properties.
@@ -59,16 +56,16 @@ export class MongoJournalEntriesRepo implements IJournalEntriesRepo {
 
 	constructor(
 		logger: ILogger,
-		REPO_URL: string,
+		DB_URL: string,
 		DB_NAME: string,
 		COLLECTION_NAME: string
 	) {
 		this.logger = logger;
-		this.REPO_URL = REPO_URL;
+		this.DB_URL = DB_URL;
 		this.DB_NAME = DB_NAME;
 		this.COLLECTION_NAME = COLLECTION_NAME;
 
-		this.mongoClient = new MongoClient(this.REPO_URL);
+		this.mongoClient = new MongoClient(this.DB_URL);
 	}
 
 	async init(): Promise<void> {
@@ -113,34 +110,6 @@ export class MongoJournalEntriesRepo implements IJournalEntriesRepo {
 		}
 	}
 
-	async getJournalEntryById(journalEntryId: string): Promise<IJournalEntry | null> {
-		try {
-			// findOne() doesn't throw if no item is found - null is returned.
-			const journalEntry: any = await this.journalEntries.findOne( // TODO: type.
-				{id: journalEntryId},
-				{projection: {_id: 0}} // Don't return the _id field. TODO: why is _id returned without this?
-			);
-			return journalEntry as unknown as IJournalEntry; // TODO: create schema.
-		} catch (e: unknown) {
-			throw new UnableToGetJournalEntryError();
-		}
-	}
-
-	async getAllJournalEntries(): Promise<IJournalEntry[]> {
-		try {
-			// find() doesn't throw if no items are found.
-			const journalEntries: any = // TODO: type.
-				await this.journalEntries
-				.find(
-					{}, // All documents.
-					{projection: {_id: 0}}) // Don't return the _id field.
-				.toArray();
-			return journalEntries as unknown as IJournalEntry[]; // TODO: create schema.
-		} catch (e: unknown) {
-			throw new UnableToGetJournalEntriesError();
-		}
-	}
-
 	async getJournalEntriesByAccountId(accountId: string): Promise<IJournalEntry[]> {
 		try {
 			// find() doesn't throw if no items are found.
@@ -153,30 +122,6 @@ export class MongoJournalEntriesRepo implements IJournalEntriesRepo {
 			return journalEntries as unknown as IJournalEntry[]; // TODO: create schema.
 		} catch (e: unknown) {
 			throw new UnableToGetJournalEntriesError();
-		}
-	}
-
-
-	async deleteJournalEntryById(journalEntryId: string): Promise<void> {
-		let deleteResult: DeleteResult;
-		try {
-			// deleteOne() doesn't throw if the item doesn't exist.
-			deleteResult = await this.journalEntries.deleteOne({id: journalEntryId});
-		} catch (e: unknown) {
-			throw new UnableToDeleteJournalEntryError();
-		}
-		// deleteResult.acknowledged is true whether the item exists or not.
-		if (deleteResult.deletedCount === 0) {
-			throw new NoSuchJournalEntryError();
-		}
-	}
-
-	async deleteAllJournalEntries(): Promise<void> {
-		try {
-			// deleteMany() doesn't throw if no items exist.
-			await this.journalEntries.deleteMany({}); // All documents.
-		} catch (e: unknown) {
-			throw new UnableToDeleteJournalEntriesError();
 		}
 	}
 }

@@ -33,6 +33,7 @@ import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {Aggregate} from "@mojaloop/accounts-and-balances-bc-domain";
 import {ExpressRoutes} from "./express_routes";
 import express from "express";
+import {TokenHelper} from "@mojaloop/security-bc-client-lib";
 
 export class ExpressWebServer {
 	// Properties received through the constructor.
@@ -50,6 +51,7 @@ export class ExpressWebServer {
 		HOST: string,
 		PORT_NO: number,
 		PATH_ROUTER: string,
+		tokenHelper: TokenHelper,
 		aggregate: Aggregate
 	) {
 		this.logger = logger;
@@ -61,6 +63,7 @@ export class ExpressWebServer {
 		this.app = express();
 		this.routes = new ExpressRoutes(
 			logger,
+			tokenHelper,
 			aggregate
 		);
 

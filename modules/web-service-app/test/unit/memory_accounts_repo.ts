@@ -34,13 +34,13 @@ import {
 	IAccountsRepo,
 	NoSuchAccountError,
 	AccountAlreadyExistsError
-} from "../../../src";
+} from "@mojaloop/accounts-and-balances-bc-domain";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 
 export class MemoryAccountsRepo implements IAccountsRepo {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
-	private readonly REPO_URL: string;
+	private readonly DB_URL: string;
 	private readonly DB_NAME: string;
 	private readonly COLLECTION_NAME: string;
 	// Other properties.
@@ -48,12 +48,12 @@ export class MemoryAccountsRepo implements IAccountsRepo {
 
 	constructor(
 		logger: ILogger,
-		REPO_URL: string,
+		DB_URL: string,
 		DB_NAME: string,
 		COLLECTION_NAME: string
 	) {
 		this.logger = logger;
-		this.REPO_URL = REPO_URL;
+		this.DB_URL = DB_URL;
 		this.DB_NAME = DB_NAME;
 		this.COLLECTION_NAME = COLLECTION_NAME;
 
@@ -79,10 +79,6 @@ export class MemoryAccountsRepo implements IAccountsRepo {
 
 	async getAccountById(accountId: string): Promise<IAccount | null> {
 		return this.accounts.get(accountId) ?? null;
-	}
-
-	async getAllAccounts(): Promise<IAccount[]> {
-		return [...this.accounts.values()];
 	}
 
 	async getAccountsByExternalId(externalId: string): Promise<IAccount[]> {
@@ -111,15 +107,5 @@ export class MemoryAccountsRepo implements IAccountsRepo {
 		}
 		account.debitBalance = debitBalance;
 		account.timestampLastJournalEntry = timeStampLastJournalEntry;
-	}
-
-	async deleteAccountById(accountId: string): Promise<void> {
-		if (!this.accounts.delete(accountId)) {
-			throw new NoSuchAccountError();
-		}
-	}
-
-	async deleteAllAccounts(): Promise<void> {
-		this.accounts.clear();
 	}
 }

@@ -29,72 +29,105 @@
 
 "use strict";
 
-// TODO: import index.ts?
 import {
-	AccountState,
-	AccountType, Aggregate, IAccountsRepo, IJournalEntriesRepo
+	Aggregate, IAccountsRepo, IJournalEntriesRepo
 } from "@mojaloop/accounts-and-balances-bc-domain";
 import {ConsoleLogger, ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {AccountsAndBalancesClientMock} from "../integration/accounts_and_balances_client_mock";
 import {ExpressWebServer} from "../../src/web-server/express_web_server";
-import {MemoryAccountsRepo} from "./mocks/memory_accounts_repo_mock";
-import {MemoryJournalEntriesRepo} from "./mocks/memory_journal_entries_repo_mock";
+import {MemoryAccountsRepo} from "./memory_accounts_repo";
+import {MemoryJournalEntriesRepo} from "./memory_journal_entries_repo";
+import {
+	AccountsAndBalancesClient,
+	IAccountDTO,
+	IJournalEntryDTO,
+	UnableToCreateAccountError,
+	UnableToCreateJournalEntriesError
+} from "@mojaloop/accounts-and-balances-bc-client";
+import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
+import {TokenHelper} from "@mojaloop/security-bc-client-lib";
+import {AuditClientMock} from "./audit_client_mock";
 
-// TODO: here or inside the describe function?
-// Web server.
-const WEB_SERVER_HOST: string =
-	process.env.ACCOUNTS_AND_BALANCES_WEB_SERVER_HOST ?? "localhost";
-const WEB_SERVER_PORT_NO: number =
-	parseInt(process.env.ACCOUNTS_AND_BALANCES_WEB_SERVER_PORT_NO ?? "") || 1234;
-const WEB_SERVER_PATH_ROUTER: string = "/";
-// Repo.
-const REPO_HOST: string =
-	process.env.ACCOUNTS_AND_BALANCES_REPO_HOST ?? "localhost";
-const REPO_PORT_NO: number =
-	parseInt(process.env.ACCOUNTS_AND_BALANCES_REPO_PORT_NO ?? "") || 27017;
-const REPO_URL: string = `mongodb://${REPO_HOST}:${REPO_PORT_NO}`;
+/* ********** Constants Begin ********** */
+
+// Token helper. TODO: names.
+const AUTH_Z_TOKEN_ISSUER_NAME: string =
+	process.env.ACCOUNTS_AND_BALANCES_AUTH_Z_TOKEN_ISSUER_NAME ?? "http://localhost:3201/";
+const AUTH_Z_TOKEN_AUDIENCE: string =
+	process.env.ACCOUNTS_AND_BALANCES_AUTH_Z_TOKEN_AUDIENCE ?? "mojaloop.vnext.default_audience";
+const AUTH_Z_SVC_JWKS_URL: string =
+	process.env.ACCOUNTS_AND_BALANCES_AUTH_Z_SVC_JWKS_URL ?? "http://localhost:3201/.well-known/jwks.json";
+
+// Data base.
+const DB_HOST: string = process.env.ACCOUNTS_AND_BALANCES_DB_HOST ?? "localhost";
+const DB_PORT_NO: number =
+	parseInt(process.env.ACCOUNTS_AND_BALANCES_DB_PORT_NO ?? "") || 27017;
+const DB_URL: string = `mongodb://${DB_HOST}:${DB_PORT_NO}`;
 const DB_NAME: string = "AccountsAndBalances";
 const ACCOUNTS_COLLECTION_NAME: string = "Accounts";
 const JOURNAL_ENTRIES_COLLECTION_NAME: string = "JournalEntries";
 
+// Web server.
+const WEB_SERVER_HOST: string = process.env.ACCOUNTS_AND_BALANCES_WEB_SERVER_HOST ?? "localhost";
+const WEB_SERVER_PORT_NO: number =
+	parseInt(process.env.ACCOUNTS_AND_BALANCES_WEB_SERVER_PORT_NO ?? "") || 1234;
+const WEB_SERVER_PATH_ROUTER: string = "/";
+
+// Accounts and Balances client.
 const ACCOUNTS_AND_BALANCES_URL: string = `http://${WEB_SERVER_HOST}:${WEB_SERVER_PORT_NO}`;
 const HTTP_CLIENT_TIMEOUT_MS: number = 10_000;
 
-const logger: ILogger = new ConsoleLogger(); // TODO: which type of logger to use?
-const accountsRepo: IAccountsRepo = new MemoryAccountsRepo(
-	logger,
-	REPO_URL,
-	DB_NAME,
-	ACCOUNTS_COLLECTION_NAME
-);
-const journalEntriesRepo: IJournalEntriesRepo = new MemoryJournalEntriesRepo(
-	logger,
-	REPO_URL,
-	DB_NAME,
-	JOURNAL_ENTRIES_COLLECTION_NAME
-);
-const aggregate: Aggregate = new Aggregate(
-	logger,
-	accountsRepo,
-	journalEntriesRepo
-);
-const webServer: ExpressWebServer = new ExpressWebServer(
-	logger,
-	WEB_SERVER_HOST,
-	WEB_SERVER_PORT_NO,
-	WEB_SERVER_PATH_ROUTER,
-	aggregate
-);
-webServer.start();
-const accountsAndBalancesClientMock: AccountsAndBalancesClientMock = new AccountsAndBalancesClientMock(
-	logger,
-	ACCOUNTS_AND_BALANCES_URL,
-	HTTP_CLIENT_TIMEOUT_MS
-);
+/* ********** Constants End ********** */
 
-describe("accounts and balances web server app - integration tests", () => {
+let aggregate: Aggregate;
+let accountsAndBalancesClient: AccountsAndBalancesClient;
+
+describe("accounts and balances web server - unit tests", () => {
 	beforeAll(async () => {
+		const logger: ILogger = new ConsoleLogger();
+
+		// TODO: tokenHelper mock.
+		const tokenHelper: TokenHelper = new TokenHelper( // TODO: no interface?
+			AUTH_Z_TOKEN_ISSUER_NAME,
+			AUTH_Z_SVC_JWKS_URL,
+			AUTH_Z_TOKEN_AUDIENCE,
+			logger
+		);
+		await tokenHelper.init();
+		const auditingClient: IAuditClient = new AuditClientMock();
+		const accountsRepo: IAccountsRepo = new MemoryAccountsRepo(
+			logger,
+			DB_URL,
+			DB_NAME,
+			ACCOUNTS_COLLECTION_NAME
+		);
+		const journalEntriesRepo: IJournalEntriesRepo = new MemoryJournalEntriesRepo(
+			logger,
+			DB_URL,
+			DB_NAME,
+			JOURNAL_ENTRIES_COLLECTION_NAME
+		);
+		aggregate = new Aggregate(
+			logger,
+			auditingClient,
+			accountsRepo,
+			journalEntriesRepo
+		);
 		await aggregate.init();
+		const webServer: ExpressWebServer = new ExpressWebServer(
+			logger,
+			WEB_SERVER_HOST,
+			WEB_SERVER_PORT_NO,
+			WEB_SERVER_PATH_ROUTER,
+			tokenHelper,
+			aggregate
+		);
+		webServer.start();
+
+		accountsAndBalancesClient = new AccountsAndBalancesClient(
+			logger,
+			ACCOUNTS_AND_BALANCES_URL,
+			HTTP_CLIENT_TIMEOUT_MS
+		);
 	});
 
 	afterAll(async () => {
@@ -103,290 +136,217 @@ describe("accounts and balances web server app - integration tests", () => {
 
 	// Create account.
 	test("create non-existent account", async () => {
-		const accountIdExpected: string = Date.now().toString();
-		const account = { // TODO.
-			id: accountIdExpected,
+		const accountId: string = Date.now().toString();
+		const account: IAccountDTO = {
+			id: accountId,
 			externalId: null,
-			state: AccountState.ACTIVE,
-			type: AccountType.POSITION,
+			state: "ACTIVE",
+			type: "POSITION",
 			currency: "EUR",
 			creditBalance: 100,
 			debitBalance: 25,
-			timeStampLastJournalEntry: 0
+			timestampLastJournalEntry: 0
 		}
-		const statusCodeResponse: number = await accountsAndBalancesClientMock.createAccount(account);
-		expect(statusCodeResponse).toBe(200);
+		const accountIdReceived: string = await accountsAndBalancesClient.createAccount(account); // TODO: securityContext.
+		expect(accountIdReceived).toEqual(accountId);
 	});
 	test("create existent account", async () => {
-		const accountIdExpected: string = Date.now().toString();
-		const account = { // TODO.
-			id: accountIdExpected,
+		const accountId: string = Date.now().toString();
+		const account: IAccountDTO = {
+			id: accountId,
 			externalId: null,
-			state: AccountState.ACTIVE,
-			type: AccountType.POSITION,
+			state: "ACTIVE",
+			type: "POSITION",
 			currency: "EUR",
 			creditBalance: 100,
 			debitBalance: 25,
-			timeStampLastJournalEntry: 0
+			timestampLastJournalEntry: 0
 		}
-		const statusCodeResponseCreateFirst: number = await accountsAndBalancesClientMock.createAccount(account);
-		expect(statusCodeResponseCreateFirst).toBe(200);
-		const statusCodeResponseCreateSecond: number = await accountsAndBalancesClientMock.createAccount(account);
-		expect(statusCodeResponseCreateSecond).toBe(400);
+		await accountsAndBalancesClient.createAccount(account); // TODO: securityContext.
+		await expect(
+			async () => {
+				await accountsAndBalancesClient.createAccount(account); // TODO: securityContext.
+			}
+		).rejects.toThrow(UnableToCreateAccountError);
 	});
 
 	// Create journal entries.
 	test("create non-existent journal entries", async () => {
-		// The accounts regarding the journal entries need to be created first.
-		// Account A.
-		const accountAIdExpected: string = Date.now().toString();
-		const accountA = { // TODO.
-			id: accountAIdExpected,
-			externalId: null,
-			state: AccountState.ACTIVE,
-			type: AccountType.POSITION,
-			currency: "EUR",
-			creditBalance: 100,
-			debitBalance: 25,
-			timeStampLastJournalEntry: 0
-		}
-		const statusCodeResponseCreateAccountA: number = await accountsAndBalancesClientMock.createAccount(accountA);
-		expect(statusCodeResponseCreateAccountA).toBe(200);
-		// Account B.
-		const accountBIdExpected: string = Date.now().toString();
-		const accountB = { // TODO.
-			id: accountBIdExpected,
-			externalId: null,
-			state: AccountState.ACTIVE,
-			type: AccountType.POSITION,
-			currency: "EUR",
-			creditBalance: 100,
-			debitBalance: 25,
-			timeStampLastJournalEntry: 0
-		}
-		const statusCodeResponseCreateAccountB: number = await accountsAndBalancesClientMock.createAccount(accountB);
-		expect(statusCodeResponseCreateAccountB).toBe(200);
+		// Before creating a journal entry, the respective accounts need to be created.
+		const accounts: IAccountDTO[] = await create2Accounts();
 		// Journal entry A.
-		const journalEntryAIdExpected: string = Date.now().toString();
-		const journalEntryA = { // TODO.
-			id: journalEntryAIdExpected,
+		const idJournalEntryA: string = Date.now().toString();
+		const journalEntryA: IJournalEntryDTO = {
+			id: idJournalEntryA,
 			externalId: null,
 			externalCategory: null,
 			currency: "EUR",
 			amount: 5,
-			creditedAccountId: accountAIdExpected,
-			debitedAccountId: accountBIdExpected,
-			timeStamp: 0
+			creditedAccountId: accounts[0].id,
+			debitedAccountId: accounts[1].id,
+			timestamp: 0
 		}
 		// Journal entry B.
-		const journalEntryBIdExpected: string = (Date.now() + 1).toString();
-		const journalEntryB = { // TODO.
-			id: journalEntryBIdExpected,
+		// If Date.now() is called again, the same number is returned (because not enough time passes between calls).
+		const idJournalEntryB: string = idJournalEntryA + 1;
+		const journalEntryB: IJournalEntryDTO = {
+			id: idJournalEntryB,
 			externalId: null,
 			externalCategory: null,
 			currency: "EUR",
 			amount: 5,
-			creditedAccountId: accountBIdExpected,
-			debitedAccountId: accountAIdExpected,
-			timeStamp: 0
+			creditedAccountId: accounts[1].id,
+			debitedAccountId: accounts[0].id,
+			timestamp: 0
 		}
-		const statusCodeResponseCreateJournalEntries: number =
-			await accountsAndBalancesClientMock.createJournalEntries([journalEntryA, journalEntryB]);
-		expect(statusCodeResponseCreateJournalEntries).toBe(200);
+		const idsJournalEntries: string[] =
+			await accountsAndBalancesClient.createJournalEntries([journalEntryA, journalEntryB]);
+		expect(idsJournalEntries).toEqual([idJournalEntryA, idJournalEntryB]);
 	});
 	test("create existent journal entries", async () => {
-		// The accounts regarding the journal entries need to be created first.
-		// Account A.
-		const accountAIdExpected: string = Date.now().toString();
-		const accountA = { // TODO.
-			id: accountAIdExpected,
-			externalId: null,
-			state: AccountState.ACTIVE,
-			type: AccountType.POSITION,
-			currency: "EUR",
-			creditBalance: 100,
-			debitBalance: 25,
-			timeStampLastJournalEntry: 0
-		}
-		const statusCodeResponseCreateAccountA: number = await accountsAndBalancesClientMock.createAccount(accountA);
-		expect(statusCodeResponseCreateAccountA).toBe(200);
-		// Account B.
-		const accountBIdExpected: string = Date.now().toString();
-		const accountB = { // TODO.
-			id: accountBIdExpected,
-			externalId: null,
-			state: AccountState.ACTIVE,
-			type: AccountType.POSITION,
-			currency: "EUR",
-			creditBalance: 100,
-			debitBalance: 25,
-			timeStampLastJournalEntry: 0
-		}
-		const statusCodeResponseCreateAccountB: number = await accountsAndBalancesClientMock.createAccount(accountB);
-		expect(statusCodeResponseCreateAccountB).toBe(200);
+		// Before creating a journal entry, the respective accounts need to be created.
+		const accounts: IAccountDTO[] = await create2Accounts();
 		// Journal entry A.
-		const journalEntryAIdExpected: string = Date.now().toString();
-		const journalEntryA = { // TODO.
-			id: journalEntryAIdExpected,
+		const idJournalEntryA: string = Date.now().toString();
+		const journalEntryA: IJournalEntryDTO = {
+			id: idJournalEntryA,
 			externalId: null,
 			externalCategory: null,
 			currency: "EUR",
 			amount: 5,
-			creditedAccountId: accountAIdExpected,
-			debitedAccountId: accountBIdExpected,
-			timeStamp: 0
+			creditedAccountId: accounts[0].id,
+			debitedAccountId: accounts[1].id,
+			timestamp: 0
 		}
 		// Journal entry B.
-		const journalEntryBIdExpected: string = (Date.now() + 1).toString();
-		const journalEntryB = { // TODO.
-			id: journalEntryBIdExpected,
+		// If Date.now() is called again, the same number is returned (because not enough time passes between calls).
+		const idJournalEntryB: string = idJournalEntryA + 1;
+		const journalEntryB: IJournalEntryDTO = {
+			id: idJournalEntryB,
 			externalId: null,
 			externalCategory: null,
 			currency: "EUR",
 			amount: 5,
-			creditedAccountId: accountBIdExpected,
-			debitedAccountId: accountAIdExpected,
-			timeStamp: 0
+			creditedAccountId: accounts[1].id,
+			debitedAccountId: accounts[0].id,
+			timestamp: 0
 		}
-		const statusCodeResponseCreateJournalEntriesFirst: number =
-			await accountsAndBalancesClientMock.createJournalEntries([journalEntryA, journalEntryB]);
-		expect(statusCodeResponseCreateJournalEntriesFirst).toBe(200);
-		const statusCodeResponseCreateJournalEntriesSecond: number =
-			await accountsAndBalancesClientMock.createJournalEntries([journalEntryA, journalEntryB]);
-		expect(statusCodeResponseCreateJournalEntriesSecond).toBe(400);
+		await accountsAndBalancesClient.createJournalEntries([journalEntryA, journalEntryB]);
+		await expect(
+			async () => {
+				await accountsAndBalancesClient.createJournalEntries([journalEntryA, journalEntryB]);
+			}
+		).rejects.toThrow(UnableToCreateJournalEntriesError);
 	});
 
 	// Get account by id.
 	test("get non-existent account by id", async () => {
 		const accountId: string = Date.now().toString();
-		const statusCodeResponse: number = await accountsAndBalancesClientMock.getAccountById(accountId);
-		expect(statusCodeResponse).toBe(404);
+		const account: IAccountDTO | null = await accountsAndBalancesClient.getAccountById(accountId);
+		expect(account).toBeNull();
 	});
 	test("get existent account by id", async () => {
-		const accountIdExpected: string = Date.now().toString();
-		const accountSent = { // TODO.
-			id: accountIdExpected,
+		const accountId: string = Date.now().toString();
+		const account: IAccountDTO = {
+			id: accountId,
 			externalId: null,
-			state: AccountState.ACTIVE,
-			type: AccountType.POSITION,
+			state: "ACTIVE",
+			type: "POSITION",
 			currency: "EUR",
 			creditBalance: 100,
 			debitBalance: 25,
-			timeStampLastJournalEntry: 0
-		}
-		const statusCodeResponseCreate: number = await accountsAndBalancesClientMock.createAccount(accountSent);
-		expect(statusCodeResponseCreate).toBe(200);
-		const statusCodeResponseGet: number = await accountsAndBalancesClientMock.getAccountById(accountIdExpected);
-		expect(statusCodeResponseGet).toBe(200);
+			timestampLastJournalEntry: 0
+		};
+		await accountsAndBalancesClient.createAccount(account); // TODO: securityContext.
+		const accountReceived: IAccountDTO | null = await accountsAndBalancesClient.getAccountById(accountId);
+		expect(accountReceived).toEqual(account);
 	});
 
 	// Get accounts by external id.
 	test("get non-existent accounts by external id", async () => {
 		const externalId: string = Date.now().toString();
-		const statusCodeResponse: number = await accountsAndBalancesClientMock.getAccountsByExternalId(externalId);
-		expect(statusCodeResponse).toBe(200);
+		const accounts: IAccountDTO[] = await accountsAndBalancesClient.getAccountsByExternalId(externalId);
+		expect(accounts).toEqual([]);
 	});
 	test("get existent accounts by external id", async () => {
 		const externalId: string = Date.now().toString();
-		// Account A.
-		const accountAIdExpected: string = Date.now().toString();
-		const accountA = { // TODO.
-			id: accountAIdExpected,
-			externalId: externalId,
-			state: AccountState.ACTIVE,
-			type: AccountType.POSITION,
-			currency: "EUR",
-			creditBalance: 100,
-			debitBalance: 25,
-			timeStampLastJournalEntry: 0
-		}
-		const statusCodeResponseCreateAccountA: number = await accountsAndBalancesClientMock.createAccount(accountA);
-		expect(statusCodeResponseCreateAccountA).toBe(200);
-		// Account B.
-		const accountBIdExpected: string = Date.now().toString();
-		const accountB = { // TODO.
-			id: accountBIdExpected,
-			externalId: externalId,
-			state: AccountState.ACTIVE,
-			type: AccountType.POSITION,
-			currency: "EUR",
-			creditBalance: 100,
-			debitBalance: 25,
-			timeStampLastJournalEntry: 0
-		}
-		const statusCodeResponseCreateAccountB: number = await accountsAndBalancesClientMock.createAccount(accountB);
-		expect(statusCodeResponseCreateAccountB).toBe(200);
-		const statusCodeResponseGetAccounts: number =
-			await accountsAndBalancesClientMock.getAccountsByExternalId(externalId);
-		expect(statusCodeResponseCreateAccountB).toBe(200);
+		const accounts: IAccountDTO[] = await create2Accounts(externalId, externalId);
+		const accountsReceived: IAccountDTO[] = await accountsAndBalancesClient.getAccountsByExternalId(externalId);
+		expect(accountsReceived).toEqual(accounts);
 	});
 
 	// Get journal entries by account id.
 	test("get non-existent journal entries by account id", async () => {
 		const accountId: string = Date.now().toString();
-		const statusCodeResponse: number = await accountsAndBalancesClientMock.getJournalEntriesByAccountId(accountId);
-		expect(statusCodeResponse).toBe(200);
+		const journalEntries: IJournalEntryDTO[] =
+			await accountsAndBalancesClient.getJournalEntriesByAccountId(accountId);
+		expect(journalEntries).toEqual([]);
 	});
 	test("get existent journal entries by account id", async () => {
-		const accountId: string = Date.now().toString();
-		// The accounts regarding the journal entries need to be created first.
-		// Account A.
-		const accountAIdExpected: string = accountId;
-		const accountA = { // TODO.
-			id: accountAIdExpected,
-			externalId: null,
-			state: AccountState.ACTIVE,
-			type: AccountType.POSITION,
-			currency: "EUR",
-			creditBalance: 100,
-			debitBalance: 25,
-			timeStampLastJournalEntry: 0
-		}
-		const statusCodeResponseCreateAccountA: number = await accountsAndBalancesClientMock.createAccount(accountA);
-		expect(statusCodeResponseCreateAccountA).toBe(200);
-		// Account B.
-		const accountBIdExpected: string = Date.now().toString();
-		const accountB = { // TODO.
-			id: accountBIdExpected,
-			externalId: null,
-			state: AccountState.ACTIVE,
-			type: AccountType.POSITION,
-			currency: "EUR",
-			creditBalance: 100,
-			debitBalance: 25,
-			timeStampLastJournalEntry: 0
-		}
-		const statusCodeResponseCreateAccountB: number = await accountsAndBalancesClientMock.createAccount(accountB);
-		expect(statusCodeResponseCreateAccountB).toBe(200);
+		// Before creating a journal entry, the respective accounts need to be created.
+		const accounts: IAccountDTO[] = await create2Accounts();
 		// Journal entry A.
-		const journalEntryAIdExpected: string = Date.now().toString();
-		const journalEntryA = { // TODO.
-			id: journalEntryAIdExpected,
+		const idJournalEntryA: string = Date.now().toString();
+		const journalEntryA: IJournalEntryDTO = {
+			id: idJournalEntryA,
 			externalId: null,
 			externalCategory: null,
 			currency: "EUR",
 			amount: 5,
-			creditedAccountId: accountAIdExpected,
-			debitedAccountId: accountBIdExpected,
-			timeStamp: 0
+			creditedAccountId: accounts[0].id,
+			debitedAccountId: accounts[1].id,
+			timestamp: 0
 		}
 		// Journal entry B.
-		const journalEntryBIdExpected: string = (Date.now() + 1).toString(); // +1 because otherwise the time is the same as the last one. TODO.
-		const journalEntryB = { // TODO.
-			id: journalEntryBIdExpected,
+		// If Date.now() is called again, the same number is returned (because not enough time passes between calls).
+		const idJournalEntryB: string = idJournalEntryA + 1;
+		const journalEntryB: IJournalEntryDTO = {
+			id: idJournalEntryB,
 			externalId: null,
 			externalCategory: null,
 			currency: "EUR",
 			amount: 5,
-			creditedAccountId: accountBIdExpected,
-			debitedAccountId: accountAIdExpected,
-			timeStamp: 0
+			creditedAccountId: accounts[1].id,
+			debitedAccountId: accounts[0].id,
+			timestamp: 0
 		}
-		const statusCodeResponseCreateJournalEntries: number =
-			await accountsAndBalancesClientMock.createJournalEntries([journalEntryA, journalEntryB]);
-		expect(statusCodeResponseCreateJournalEntries).toBe(200);
-		const statusCodeResponseGetJournalEntries: number =
-			await accountsAndBalancesClientMock.getJournalEntriesByAccountId(accountId);
-		expect(statusCodeResponseGetJournalEntries).toBe(200);
+		await accountsAndBalancesClient.createJournalEntries([journalEntryA, journalEntryB]);
+		const journalEntriesReceived: IJournalEntryDTO[] =
+			await accountsAndBalancesClient.getJournalEntriesByAccountId(accounts[0].id);
+		expect(journalEntriesReceived).toEqual([journalEntryA, journalEntryB]);
 	});
 });
+
+async function create2Accounts(
+	externalIdAccountA: string | null = null,
+	externalIdAccountB: string | null = null
+): Promise<IAccountDTO[]> {
+	// Account A.
+	const idAccountA: string = Date.now().toString();
+	const accountA: IAccountDTO = {
+		id: idAccountA,
+		externalId: externalIdAccountA,
+		state: "ACTIVE",
+		type: "POSITION",
+		currency: "EUR",
+		creditBalance: 100,
+		debitBalance: 25,
+		timestampLastJournalEntry: 0
+	};
+	await accountsAndBalancesClient.createAccount(accountA); // TODO: securityContext.
+	// Account B.
+	// If Date.now() is called again, the same number is returned (because not enough time passes between calls).
+	const idAccountB: string = idAccountA + 1;
+	const accountB: IAccountDTO = {
+		id: idAccountB,
+		externalId: externalIdAccountB,
+		state: "ACTIVE",
+		type: "POSITION",
+		currency: "EUR",
+		creditBalance: 100,
+		debitBalance: 25,
+		timestampLastJournalEntry: 0
+	};
+	await accountsAndBalancesClient.createAccount(accountB); // TODO: securityContext.
+	return [accountA, accountB];
+}

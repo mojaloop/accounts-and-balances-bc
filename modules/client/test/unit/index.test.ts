@@ -52,9 +52,9 @@ const accountsAndBalancesClient: AccountsAndBalancesClient = new AccountsAndBala
 describe("accounts and balances client - unit tests", () => {
 	// Create account.
 	test("create non-existent account", async () => {
-		const accountIdExpected: string = AccountsAndBalancesServiceMock.NON_EXISTENT_ACCOUNT_ID;
+		const accountId: string = AccountsAndBalancesServiceMock.NON_EXISTENT_ACCOUNT_ID;
 		const account: IAccountDTO = {
-			id: accountIdExpected,
+			id: accountId,
 			externalId: null,
 			state: "ACTIVE",
 			type: "POSITION",
@@ -64,12 +64,12 @@ describe("accounts and balances client - unit tests", () => {
 			timestampLastJournalEntry: 0
 		}
 		const accountIdReceived: string = await accountsAndBalancesClient.createAccount(account);
-		expect(accountIdReceived).toBe(accountIdExpected);
+		expect(accountIdReceived).toBe(accountId);
 	});
 	test("create existent account", async () => {
-		const accountIdExpected: string = AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID;
+		const accountId: string = AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID;
 		const account: IAccountDTO = {
-			id: accountIdExpected,
+			id: accountId,
 			externalId: null,
 			state: "ACTIVE",
 			type: "POSITION",
@@ -88,9 +88,9 @@ describe("accounts and balances client - unit tests", () => {
 	// Create journal entries.
 	test("create non-existent journal entries", async () => {
 		// Journal entry A.
-		const journalEntryAIdExpected: string = AccountsAndBalancesServiceMock.NON_EXISTENT_JOURNAL_ENTRY_ID;
+		const idJournalEntryA: string = AccountsAndBalancesServiceMock.NON_EXISTENT_JOURNAL_ENTRY_ID;
 		const journalEntryA: IJournalEntryDTO = {
-			id: journalEntryAIdExpected,
+			id: idJournalEntryA,
 			externalId: null,
 			externalCategory: null,
 			currency: "EUR",
@@ -100,9 +100,9 @@ describe("accounts and balances client - unit tests", () => {
 			timestamp: 0
 		}
 		// Journal entry B.
-		const journalEntryBIdExpected: string = AccountsAndBalancesServiceMock.NON_EXISTENT_JOURNAL_ENTRY_ID;
+		const idJournalEntryB: string = AccountsAndBalancesServiceMock.NON_EXISTENT_JOURNAL_ENTRY_ID;
 		const journalEntryB: IJournalEntryDTO = {
-			id: journalEntryBIdExpected,
+			id: idJournalEntryB,
 			externalId: null,
 			externalCategory: null,
 			currency: "EUR",
@@ -111,15 +111,15 @@ describe("accounts and balances client - unit tests", () => {
 			debitedAccountId: "a",
 			timestamp: 0
 		}
-		const idsJournalEntriesReceived: string[] =
+		const idsJournalEntries: string[] =
 			await accountsAndBalancesClient.createJournalEntries([journalEntryA, journalEntryB]);
-		expect(idsJournalEntriesReceived).toEqual([journalEntryAIdExpected, journalEntryBIdExpected]);
+		expect(idsJournalEntries).toEqual([idJournalEntryA, idJournalEntryB]);
 	});
 	test("create existent journal entries", async () => {
 		// Journal entry A.
-		const journalEntryAIdExpected: string = AccountsAndBalancesServiceMock.EXISTENT_JOURNAL_ENTRY_ID;
+		const idJournalEntryA: string = AccountsAndBalancesServiceMock.EXISTENT_JOURNAL_ENTRY_ID;
 		const journalEntryA: IJournalEntryDTO = {
-			id: journalEntryAIdExpected,
+			id: idJournalEntryA,
 			externalId: null,
 			externalCategory: null,
 			currency: "EUR",
@@ -129,9 +129,9 @@ describe("accounts and balances client - unit tests", () => {
 			timestamp: 0
 		}
 		// Journal entry B.
-		const journalEntryBIdExpected: string = AccountsAndBalancesServiceMock.EXISTENT_JOURNAL_ENTRY_ID;
+		const idJournalEntryB: string = AccountsAndBalancesServiceMock.EXISTENT_JOURNAL_ENTRY_ID;
 		const journalEntryB: IJournalEntryDTO = {
-			id: journalEntryBIdExpected,
+			id: idJournalEntryB,
 			externalId: null,
 			externalCategory: null,
 			currency: "EUR",

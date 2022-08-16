@@ -30,34 +30,33 @@
 "use strict";
 
 import {
-	IAccount,
-	IAccountsRepo,
-	NoSuchAccountError,
-	AccountAlreadyExistsError
+	IJournalEntriesRepo,
+	IJournalEntry,
+	JournalEntryAlreadyExistsError, NoSuchJournalEntryError
 } from "@mojaloop/accounts-and-balances-bc-domain";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 
-export class MemoryAccountsRepo implements IAccountsRepo {
+export class MemoryJournalEntriesRepo implements IJournalEntriesRepo {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
-	private readonly REPO_URL: string;
+	private readonly DB_URL: string;
 	private readonly DB_NAME: string;
 	private readonly COLLECTION_NAME: string;
 	// Other properties.
-	private readonly accounts: Map<string, IAccount>;
+	private readonly journalEntries: Map<string, IJournalEntry>;
 
 	constructor(
 		logger: ILogger,
-		REPO_URL: string,
+		DB_URL: string,
 		DB_NAME: string,
 		COLLECTION_NAME: string
 	) {
 		this.logger = logger;
-		this.REPO_URL = REPO_URL;
+		this.DB_URL = DB_URL;
 		this.DB_NAME = DB_NAME;
 		this.COLLECTION_NAME = COLLECTION_NAME;
 
-		this.accounts = new Map<string, IAccount>();
+		this.journalEntries = new Map<string, IJournalEntry>();
 	}
 
 	async init(): Promise<void> {
@@ -66,60 +65,43 @@ export class MemoryAccountsRepo implements IAccountsRepo {
 	async destroy(): Promise<void> {
 	}
 
-	async accountExistsById(accountId: string): Promise<boolean> {
-		return this.accounts.has(accountId);
+	async journalEntryExistsById(journalEntryId: string): Promise<boolean> {
+		return this.journalEntries.has(journalEntryId);
 	}
 
-	async storeNewAccount(account: IAccount): Promise<void> {
-		if (this.accounts.has(account.id)) {
-			throw new AccountAlreadyExistsError();
+	async storeNewJournalEntry(journalEntry: IJournalEntry): Promise<void> {
+		if (this.journalEntries.has(journalEntry.id)) {
+			throw new JournalEntryAlreadyExistsError();
 		}
-		this.accounts.set(account.id, account);
+		this.journalEntries.set(journalEntry.id, journalEntry);
 	}
 
-	async getAccountById(accountId: string): Promise<IAccount | null> {
-		return this.accounts.get(accountId) ?? null;
+	async getJournalEntryById(journalEntryId: string): Promise<IJournalEntry | null> {
+		return this.journalEntries.get(journalEntryId) ?? null;
 	}
 
-	async getAllAccounts(): Promise<IAccount[]> {
-		return [...this.accounts.values()];
+	async getAllJournalEntries(): Promise<IJournalEntry[]> {
+		return [...this.journalEntries.values()];
 	}
 
-	async getAccountsByExternalId(externalId: string): Promise<IAccount[]> {
-		const accounts: IAccount[] = [];
-		this.accounts.forEach(account => {
-			if (account.externalId === externalId) {
-				accounts.push(account);
+	async getJournalEntriesByAccountId(accountId: string): Promise<IJournalEntry[]> {
+		const journalEntries: IJournalEntry[] = [];
+		this.journalEntries.forEach(journalEntry => {
+			if (journalEntry.creditedAccountId === accountId
+				|| journalEntry.debitedAccountId === accountId) {
+				journalEntries.push(journalEntry);
 			}
 		})
-		return accounts;
+		return journalEntries;
 	}
 
-	async updateAccountCreditBalanceById(accountId: string, creditBalance: bigint, timeStampLastJournalEntry: number): Promise<void> {
-		const account: IAccount | undefined = this.accounts.get(accountId);
-		if (account === undefined) {
-			throw new NoSuchAccountError();
-		}
-		account.creditBalance = creditBalance;
-		account.timestampLastJournalEntry = timeStampLastJournalEntry;
-	}
-
-	async updateAccountDebitBalanceById(accountId: string, debitBalance: bigint, timeStampLastJournalEntry: number): Promise<void> {
-		const account: IAccount | undefined = this.accounts.get(accountId);
-		if (account === undefined) {
-			throw new NoSuchAccountError();
-		}
-		account.debitBalance = debitBalance;
-		account.timestampLastJournalEntry = timeStampLastJournalEntry;
-	}
-
-	async deleteAccountById(accountId: string): Promise<void> {
-		if (!this.accounts.delete(accountId)) {
-			throw new NoSuchAccountError();
+	async deleteJournalEntryById(journalEntryId: string): Promise<void> {
+		if (!this.journalEntries.delete(journalEntryId)) {
+			throw new NoSuchJournalEntryError();
 		}
 	}
 
-	async deleteAllAccounts(): Promise<void> {
-		this.accounts.clear();
+	async deleteAllJournalEntries(): Promise<void> {
+		this.journalEntries.clear();
 	}
 }

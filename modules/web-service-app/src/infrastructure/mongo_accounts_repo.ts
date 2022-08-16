@@ -30,14 +30,12 @@
 "use strict";
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {MongoClient, Collection, DeleteResult, UpdateResult} from "mongodb";
+import {MongoClient, Collection, UpdateResult} from "mongodb";
 import {
 	IAccountsRepo,
 	IAccount,
 	AccountAlreadyExistsError,
 	NoSuchAccountError,
-	UnableToDeleteAccountError,
-	UnableToDeleteAccountsError,
 	UnableToGetAccountError,
 	UnableToGetAccountsError,
 	UnableToInitRepoError,
@@ -48,7 +46,7 @@ import {
 export class MongoAccountsRepo implements IAccountsRepo{
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
-	private readonly REPO_URL: string;
+	private readonly DB_URL: string;
 	private readonly DB_NAME: string;
 	private readonly COLLECTION_NAME: string;
 	// Other properties.
@@ -57,16 +55,16 @@ export class MongoAccountsRepo implements IAccountsRepo{
 
 	constructor(
 		logger: ILogger,
-		REPO_URL: string,
+		DB_URL: string,
 		DB_NAME: string,
 		COLLECTION_NAME: string
 	) {
 		this.logger = logger;
-		this.REPO_URL = REPO_URL;
+		this.DB_URL = DB_URL;
 		this.DB_NAME = DB_NAME;
 		this.COLLECTION_NAME = COLLECTION_NAME;
 
-		this.mongoClient = new MongoClient(this.REPO_URL);
+		this.mongoClient = new MongoClient(this.DB_URL);
 	}
 
 	async init(): Promise<void> {
@@ -124,22 +122,6 @@ export class MongoAccountsRepo implements IAccountsRepo{
 		}
 	}
 
-
-	async getAllAccounts(): Promise<IAccount[]> {
-		try {
-			// find() doesn't throw if no items are found.
-			const accounts: any = // TODO: type.
-				await this.accounts
-				.find(
-					{}, // All documents.
-					{projection: {_id: 0}}) // Don't return the _id field.
-				.toArray();
-			return accounts as unknown as IAccount[]; // TODO: create schema.
-		} catch (e: unknown) {
-			throw new UnableToGetAccountsError();
-		}
-	}
-
 	async getAccountsByExternalId(externalId: string): Promise<IAccount[]> {
 		try {
 			// find() doesn't throw if no items are found.
@@ -192,28 +174,4 @@ export class MongoAccountsRepo implements IAccountsRepo{
 			throw new NoSuchAccountError();
 		}
 	}
-
-	async deleteAccountById(accountId: string): Promise<void> {
-		let deleteResult: DeleteResult;
-		try {
-			// deleteOne() doesn't throw if the item doesn't exist.
-			deleteResult = await this.accounts.deleteOne({id: accountId});
-		} catch (e: unknown) {
-			throw new UnableToDeleteAccountError();
-		}
-		// deleteResult.acknowledged is true whether the item exists or not.
-		if (deleteResult.deletedCount === 0) {
-			throw new NoSuchAccountError();
-		}
-	}
-
-	async deleteAllAccounts(): Promise<void> {
-		try {
-			// deleteMany() doesn't throw if no items exist.
-			await this.accounts.deleteMany({}); // All documents.
-		} catch (e: unknown) {
-			throw new UnableToDeleteAccountsError();
-		}
-	}
-
 }

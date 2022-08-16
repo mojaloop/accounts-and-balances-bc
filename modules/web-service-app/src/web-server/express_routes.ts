@@ -41,15 +41,24 @@ import {
 	InvalidDebitBalanceError,
 	InvalidJournalEntryAmountError,
 	JournalEntryAlreadyExistsError,
-	NoSuchAccountError,
-	NoSuchJournalEntryError,
 	IAccount,
 	IJournalEntry
 } from "@mojaloop/accounts-and-balances-bc-domain";
+import {TokenHelper, CallSecurityContext} from "@mojaloop/security-bc-client-lib";
+
+const BEARER_LENGTH: number = 2; // TODO: why 2?
+
+// Extend express request to include our security fields. TODO: clarify.
+declare module "express-serve-static-core" {
+	export interface Request {
+		securityContext: CallSecurityContext | null;
+	}
+}
 
 export class ExpressRoutes {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
+	private readonly tokenHelper: TokenHelper;
 	private readonly aggregate: Aggregate;
 	// Other properties.
 	private readonly _router: express.Router;
@@ -57,9 +66,11 @@ export class ExpressRoutes {
 
 	constructor(
 		logger: ILogger,
+		tokenHelper: TokenHelper,
 		aggregate: Aggregate
 	) {
 		this.logger = logger;
+		this.tokenHelper = tokenHelper;
 		this.aggregate = aggregate;
 
 		this._router = express.Router();
@@ -68,26 +79,97 @@ export class ExpressRoutes {
 	}
 
 	private setUp(): void {
+		// Inject authentication - all requests require a valid token. TODO: clarify.
+		this._router.use(this.authenticationMiddleware.bind(this));
 		// Posts.
 		this._router.post("/accounts", this.postAccount.bind(this));
 		this._router.post("/journalEntries", this.postJournalEntries.bind(this));
 		// Gets.
 		this._router.get("/accounts", this.accounts.bind(this)); // TODO: function name.
 		this._router.get("/journalEntries", this.journalEntries.bind(this)); // TODO: function name.
-		// Deletes.
-		this._router.delete("/accounts/:accountId", this.deleteAccountById.bind(this));
-		this._router.delete("/journalEntries/:journalEntryId", this.deleteJournalEntryById.bind(this));
-		this._router.delete("/accounts", this.deleteAllAccounts.bind(this));
-		this._router.delete("/journalEntries", this.deleteAllJournalEntries.bind(this));
 	}
 
 	get router(): express.Router {
 		return this._router;
 	}
 
+	// TODO: function name; express.NextFunction; clarify; why returns? logs vs error responses.
+	private async authenticationMiddleware(
+		req: express.Request,
+		res: express.Response,
+		next: express.NextFunction
+	): Promise<void> {
+		const authorizationHeader: string | undefined = req.headers["authorization"]; // TODO: type.
+		if (authorizationHeader === undefined) {
+			this.sendErrorResponse(
+				res,
+				403,
+				"" // TODO: message.
+			);
+			return;
+		}
+
+		const bearer: string[] = authorizationHeader.trim().split(" "); // TODO: name.
+		if (bearer.length != BEARER_LENGTH) {
+			this.sendErrorResponse(
+				res,
+				403,
+				"" // TODO: message.
+			);
+			return;
+		}
+
+		const bearerToken: string = bearer[1];
+		let verified: boolean;
+		try {
+			verified = await this.tokenHelper.verifyToken(bearerToken);
+		} catch (e: unknown) {
+			this.logger.error(e);
+			this.sendErrorResponse(
+				res,
+				403,
+				"" // TODO: message.
+			);
+			return;
+		}
+		if (!verified) {
+			this.sendErrorResponse(
+				res,
+				403,
+				"" // TODO: message.
+			);
+			return;
+		}
+
+		const decodedToken: any = this.tokenHelper.decodeToken(bearerToken); // TODO: type.
+		if (decodedToken.sub === undefined // TODO: undefined?
+			|| decodedToken.sub === null // TODO: null?
+			|| decodedToken.sub.indexOf("::") == -1) { // TODO: Put -1 in a constant.
+			this.sendErrorResponse(
+				res,
+				403,
+				"" // TODO: message.
+			);
+			return;
+		}
+
+		const subSplit = decodedToken.sub.split("::"); // TODO: type.
+		const subjectType = subSplit[0]; // TODO: type.
+		const subject = subSplit[1]; // TODO: type.
+
+		req.securityContext = {
+			accessToken: bearerToken,
+			clientId: subjectType.toUpperCase().startsWith("APP") ? subject : null,
+			username: subjectType.toUpperCase().startsWith("USER") ? subject : null,
+			rolesIds: decodedToken.roles
+		};
+
+		next();
+	}
+
 	private async postAccount(req: express.Request, res: express.Response): Promise<void> {
 		try {
-			const accountId: string = await this.aggregate.createAccount(req.body, null); // TODO: security context.
+			const accountId: string = await this.aggregate.createAccount(req.body, req.securityContext!); // TODO: !.
 			this.sendSuccessResponse(
 				res,
 				200,
@@ -173,10 +255,6 @@ export class ExpressRoutes {
 
 	private async accounts(req: express.Request, res: express.Response): Promise<void> {
 		// req.query is always defined - if no query was specified, req.query is an empty object.
-		if (Object.keys(req.query).length === 0) { // TODO: is this ok?
-			await this.getAllAccounts(req, res);
-			return;
-		}
 		if (req.query.id !== undefined) {
 			await this.getAccountById(req, res);
 			return;
@@ -194,14 +272,6 @@ export class ExpressRoutes {
 
 	private async journalEntries(req: express.Request, res: express.Response): Promise<void> {
 		// req.query is always defined - if no query was specified, req.query is an empty object.
-		if (Object.keys(req.query).length === 0) { // TODO: is this ok?
-			await this.getAllJournalEntries(req, res);
-			return;
-		}
-		if (req.query.id !== undefined) {
-			await this.getJournalEntryById(req, res);
-			return;
-		}
 		if (req.query.accountId !== undefined) {
 			await this.getJournalEntriesByAccountId(req, res);
 			return;
@@ -229,82 +299,6 @@ export class ExpressRoutes {
 				res,
 				200,
 				{account: account}
-			);
-		} catch (e: unknown) {
-			this.sendErrorResponse(
-				res,
-				500,
-				this.UNKNOWN_ERROR
-			);
-		}
-	}
-
-	private async getJournalEntryById(req: express.Request, res: express.Response): Promise<void> {
-		try {
-			// The properties of the req.query object are always strings. TODO: check.
-			const journalEntry: IJournalEntry | null = await this.aggregate.getJournalEntryById(req.query.id as string); // TODO: cast?
-			if (journalEntry === null) {
-				this.sendErrorResponse(
-					res,
-					404,
-					"no such journal entry"
-				);
-				return;
-			}
-			this.sendSuccessResponse(
-				res,
-				200,
-				{journalEntry: journalEntry}
-			);
-		} catch (e: unknown) {
-			this.sendErrorResponse(
-				res,
-				500,
-				this.UNKNOWN_ERROR
-			);
-		}
-	}
-
-	private async getAllAccounts(req: express.Request, res: express.Response): Promise<void> {
-		try {
-			const accounts: IAccount[] = await this.aggregate.getAllAccounts();
-			if (accounts === []) {
-				this.sendErrorResponse(
-					res,
-					404,
-					"no accounts"
-				);
-				return;
-			}
-			this.sendSuccessResponse(
-				res,
-				200,
-				{accounts: accounts}
-			);
-		} catch (e: unknown) {
-			this.sendErrorResponse(
-				res,
-				500,
-				this.UNKNOWN_ERROR
-			);
-		}
-	}
-
-	private async getAllJournalEntries(req: express.Request, res: express.Response): Promise<void> {
-		try {
-			const journalEntries: IJournalEntry[] = await this.aggregate.getAllJournalEntries();
-			if (journalEntries === []) {
-				this.sendErrorResponse(
-					res,
-					404,
-					"no journal entries"
-				);
-				return;
-			}
-			this.sendSuccessResponse(
-				res,
-				200,
-				{journalEntries: journalEntries}
 			);
 		} catch (e: unknown) {
 			this.sendErrorResponse(
@@ -357,92 +351,6 @@ export class ExpressRoutes {
 				res,
 				200,
 				{journalEntries: journalEntries}
-			);
-		} catch (e: unknown) {
-			this.sendErrorResponse(
-				res,
-				500,
-				this.UNKNOWN_ERROR
-			);
-		}
-	}
-
-	private async deleteAccountById(req: express.Request, res: express.Response): Promise<void> {
-		try {
-			await this.aggregate.deleteAccountById(req.params.accountId);
-			this.sendSuccessResponse(
-				res,
-				200,
-				{message: "account deleted"}
-			);
-		} catch (e: unknown) {
-			if (e instanceof NoSuchAccountError) {
-				this.sendErrorResponse(
-					res,
-					404,
-					"no such account"
-				);
-				return;
-			} else {
-				this.sendErrorResponse(
-					res,
-					500,
-					this.UNKNOWN_ERROR
-				);
-			}
-		}
-	}
-
-	private async deleteJournalEntryById(req: express.Request, res: express.Response): Promise<void> {
-		try {
-			await this.aggregate.deleteJournalEntryById(req.params.journalEntryId);
-			this.sendSuccessResponse(
-				res,
-				200,
-				{message: "journal entry deleted"}
-			);
-		} catch (e: unknown) {
-			if (e instanceof NoSuchJournalEntryError) {
-				this.sendErrorResponse(
-					res,
-					404,
-					"no such journal entry"
-				);
-				return;
-			} else {
-				this.sendErrorResponse(
-					res,
-					500,
-					this.UNKNOWN_ERROR
-				);
-			}
-		}
-	}
-
-	private async deleteAllAccounts(req: express.Request, res: express.Response): Promise<void> {
-		try {
-			await this.aggregate.deleteAllAccounts();
-			this.sendSuccessResponse(
-				res,
-				200,
-				{message: "accounts deleted"}
-			);
-		} catch (e: unknown) {
-			this.sendErrorResponse(
-				res,
-				500,
-				this.UNKNOWN_ERROR
-			);
-		}
-	}
-
-	private async deleteAllJournalEntries(req: express.Request, res: express.Response): Promise<void> {
-		try {
-			await this.aggregate.deleteAllJournalEntries();
-			this.sendSuccessResponse(
-				res,
-				200,
-				{message: "journal entries deleted"}
 			);
 		} catch (e: unknown) {
 			this.sendErrorResponse(

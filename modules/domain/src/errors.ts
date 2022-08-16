@@ -30,7 +30,6 @@
 "use strict";
 
 // Account.
-export class InvalidAccountIdError extends Error {}
 export class InvalidAccountStateError extends Error {}
 export class InvalidAccountTypeError extends Error {}
 export class InvalidCreditBalanceError extends Error {}
@@ -38,7 +37,6 @@ export class InvalidDebitBalanceError extends Error {}
 export class InvalidBalanceError extends Error {}
 
 // JournalEntry.
-export class InvalidJournalEntryIdError extends Error {}
 export class InvalidJournalEntryAmountError extends Error {}
 export class InsufficientBalanceError extends Error {}
 
@@ -57,16 +55,10 @@ export class UnableToStoreAccountError extends Error {}
 export class UnableToStoreJournalEntryError extends Error {}
 // Gets.
 export class UnableToGetAccountError extends Error {}
-export class UnableToGetJournalEntryError extends Error {}
 export class UnableToGetAccountsError extends Error {}
 export class UnableToGetJournalEntriesError extends Error {}
 // Updates.
 export class UnableToUpdateAccountError extends Error {}
-// Deletes.
-export class UnableToDeleteAccountError extends Error {}
-export class UnableToDeleteJournalEntryError extends Error {}
-export class UnableToDeleteAccountsError extends Error {}
-export class UnableToDeleteJournalEntriesError extends Error {}
 
 // Others.
 export class CurrenciesDifferError extends Error {}

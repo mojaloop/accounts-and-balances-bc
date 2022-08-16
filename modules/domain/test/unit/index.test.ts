@@ -29,58 +29,69 @@
 
 "use strict";
 
-// Logger.
 import {ConsoleLogger, ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {
 	AccountState,
 	AccountType,
 	AccountAlreadyExistsError,
+	NoSuchCreditedAccountError,
+	NoSuchDebitedAccountError,
+	CreditedAndDebitedAccountsAreTheSameError,
+	CurrenciesDifferError, InsufficientBalanceError,
+	InvalidDebitBalanceError,
 	IAccountsRepo,
 	IJournalEntriesRepo,
 	Aggregate,
 	JournalEntryAlreadyExistsError,
-	NoSuchAccountError,
-	NoSuchJournalEntryError,
 	IAccount,
-	IJournalEntry
+	IJournalEntry, InvalidCreditBalanceError, InvalidJournalEntryAmountError
 } from "../../src";
-import {MemoryAccountsRepo} from "./mocks/memory_accounts_repo_mock";
-import {MemoryJournalEntriesRepo} from "./mocks/memory_journal_entries_repo_mock";
+import {MemoryAccountsRepo} from "./memory_accounts_repo";
+import {MemoryJournalEntriesRepo} from "./memory_journal_entries_repo";
+import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
+import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
+import {AuditClientMock} from "./audit_client_mock";
+import {Account} from "../../src/entities/account";
+import {JournalEntry} from "../../src/entities/journal_entry";
 
-/* Constants. */
-// Repo.
-const REPO_HOST: string =
-	process.env.ACCOUNTS_AND_BALANCES_REPO_HOST ?? "localhost";
-const REPO_PORT_NO: number =
-	parseInt(process.env.ACCOUNTS_AND_BALANCES_REPO_PORT_NO ?? "") || 27017;
-const REPO_URL: string = `mongodb://${REPO_HOST}:${REPO_PORT_NO}`;
+const DB_HOST: string = process.env.ACCOUNTS_AND_BALANCES_DB_HOST ?? "localhost";
+const DB_PORT_NO: number =
+	parseInt(process.env.ACCOUNTS_AND_BALANCES_DB_PORT_NO ?? "") || 27017;
+const DB_URL: string = `mongodb://${DB_HOST}:${DB_PORT_NO}`;
 const DB_NAME: string = "AccountsAndBalances";
 const ACCOUNTS_COLLECTION_NAME: string = "Accounts";
 const JOURNAL_ENTRIES_COLLECTION_NAME: string = "JournalEntries";
 
-const logger: ILogger = new ConsoleLogger();
-// Infrastructure.
-const accountsRepo: IAccountsRepo = new MemoryAccountsRepo(
-	logger,
-	REPO_URL,
-	DB_NAME,
-	ACCOUNTS_COLLECTION_NAME
-);
-const journalEntriesRepo: IJournalEntriesRepo = new MemoryJournalEntriesRepo(
-	logger,
-	REPO_URL,
-	DB_NAME,
-	JOURNAL_ENTRIES_COLLECTION_NAME
-);
-// Domain.
-const aggregate: Aggregate = new Aggregate(
-	logger,
-	accountsRepo,
-	journalEntriesRepo
-);
+let aggregate: Aggregate;
+const securityContext: CallSecurityContext = {
+	username: "",
+	clientId: "",
+	rolesIds: [""],
+	accessToken: ""
+}
 
-describe("accounts and balances service - unit tests", () => {
+describe("accounts and balances domain - unit tests", () => {
 	beforeAll(async () => {
+		const logger: ILogger = new ConsoleLogger();
+		const auditingClient: IAuditClient = new AuditClientMock();
+		const accountsRepo: IAccountsRepo = new MemoryAccountsRepo(
+			logger,
+			DB_URL,
+			DB_NAME,
+			ACCOUNTS_COLLECTION_NAME
+		);
+		const journalEntriesRepo: IJournalEntriesRepo = new MemoryJournalEntriesRepo(
+			logger,
+			DB_URL,
+			DB_NAME,
+			JOURNAL_ENTRIES_COLLECTION_NAME
+		);
+		aggregate = new Aggregate(
+			logger,
+			auditingClient,
+			accountsRepo,
+			journalEntriesRepo
+		);
 		await aggregate.init();
 	});
 
@@ -90,39 +101,89 @@ describe("accounts and balances service - unit tests", () => {
 
 	// Create account.
 	test("create non-existent account", async () => {
-		const accountIdExpected: string = Date.now().toString();
-		const account: IAccount = {
-			id: accountIdExpected,
-			externalId: null,
-			state: AccountState.ACTIVE,
-			type: AccountType.POSITION,
-			currency: "EUR",
-			creditBalance: 100n,
-			debitBalance: 25n,
-			timestampLastJournalEntry: 0
-		};
-		const accountIdReceived: string = await aggregate.createAccount(account);
-		expect(accountIdReceived).toEqual(accountIdExpected);
+		const accountId: string = Date.now().toString();
+		const account: IAccount = new Account(
+			accountId,
+			null,
+			AccountState.ACTIVE,
+			AccountType.POSITION,
+			"EUR",
+			100n,
+			25n,
+			0
+		);
+		const accountIdReceived: string = await aggregate.createAccount(account, securityContext);
+		expect(accountIdReceived).toEqual(accountId);
 	});
 	test("create existent account", async () => {
-		const accountIdExpected: string = Date.now().toString();
-		const account: IAccount = {
-			id: accountIdExpected,
-			externalId: null,
-			state: AccountState.ACTIVE,
-			type: AccountType.POSITION,
-			currency: "EUR",
-			creditBalance: 100n,
-			debitBalance: 25n,
-			timestampLastJournalEntry: 0
-		};
-		const accountIdReceived: string = await aggregate.createAccount(account);
-		expect(accountIdReceived).toEqual(accountIdExpected);
+		const accountId: string = Date.now().toString();
+		const account: IAccount = new Account(
+			accountId,
+			null,
+			AccountState.ACTIVE,
+			AccountType.POSITION,
+			"EUR",
+			100n,
+			25n,
+			0
+		);
+		await aggregate.createAccount(account, securityContext);
 		await expect(
 			async () => {
-				await aggregate.createAccount(account);
+				await aggregate.createAccount(account, securityContext);
 			}
 		).rejects.toThrow(AccountAlreadyExistsError);
+	});
+	test("create account with empty string as id", async () => {
+		const accountId: string = "";
+		const account: IAccount = new Account(
+			accountId,
+			null,
+			AccountState.ACTIVE,
+			AccountType.POSITION,
+			"EUR",
+			100n,
+			25n,
+			0
+		);
+		const accountIdReceived: string = await aggregate.createAccount(account, securityContext);
+		expect(accountIdReceived).not.toEqual(accountId); // TODO: makes sense?
+	});
+	test("create account with invalid credit balance", async () => {
+		const accountId: string = Date.now().toString();
+		const account: IAccount = new Account(
+			accountId,
+			null,
+			AccountState.ACTIVE,
+			AccountType.POSITION,
+			"EUR",
+			-100n,
+			25n,
+			0
+		);
+		await expect(
+			async () => {
+				await aggregate.createAccount(account, securityContext);
+			}
+		).rejects.toThrow(InvalidCreditBalanceError);
+	});
+	test("create account with invalid debit balance", async () => {
+		const accountId: string = Date.now().toString();
+		const account: IAccount = new Account(
+			accountId,
+			null,
+			AccountState.ACTIVE,
+			AccountType.POSITION,
+			"EUR",
+			100n,
+			-25n,
+			0
+		);
+		await expect(
+			async () => {
+				await aggregate.createAccount(account, securityContext);
+			}
+		).rejects.toThrow(InvalidDebitBalanceError);
 	});
 
 	// Create journal entries.
@@ -130,68 +191,205 @@ describe("accounts and balances service - unit tests", () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: IAccount[] = await create2Accounts();
 		// Journal entry A.
-		const journalEntryAId: string = Date.now().toString();
-		const journalEntryA: IJournalEntry = {
-			id: journalEntryAId,
-			externalId: null,
-			externalCategory: null,
-			currency: "EUR",
-			amount: 5n,
-			creditedAccountId: accounts[0].id,
-			debitedAccountId: accounts[1].id,
-			timestamp: 0
-		}
+		const idJournalEntryA: string = Date.now().toString();
+		const journalEntryA: IJournalEntry = new JournalEntry(
+			idJournalEntryA,
+			null,
+			null,
+			"EUR",
+			5n,
+			accounts[0].id,
+			accounts[1].id,
+			0
+		);
 		// Journal entry B.
 		// If Date.now() is called again, the same number is returned (because not enough time passes between calls).
-		const journalEntryBId: string = journalEntryAId + 1;
-		const journalEntryB: IJournalEntry = {
-			id: journalEntryBId,
-			externalId: null,
-			externalCategory: null,
-			currency: "EUR",
-			amount: 5n,
-			creditedAccountId: accounts[1].id,
-			debitedAccountId: accounts[0].id,
-			timestamp: 0
-		}
-		const idsJournalEntries: string[] = await aggregate.createJournalEntries([journalEntryA, journalEntryB]);
-		expect(idsJournalEntries).toEqual([journalEntryAId, journalEntryBId]);
+		const idJournalEntryB: string = idJournalEntryA + 1;
+		const journalEntryB: IJournalEntry = new JournalEntry(
+			idJournalEntryB,
+			null,
+			null,
+			"EUR",
+			5n,
+			accounts[1].id,
+			accounts[0].id,
+			0
+		);
+		const idsJournalEntries: string[] =
+			await aggregate.createJournalEntries([journalEntryA, journalEntryB]);
+		expect(idsJournalEntries).toEqual([idJournalEntryA, idJournalEntryB]);
 	});
 	test("create existent journal entries", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: IAccount[] = await create2Accounts();
 		// Journal entry A.
-		const journalEntryAId: string = Date.now().toString();
-		const journalEntryA: IJournalEntry = {
-			id: journalEntryAId,
-			externalId: null,
-			externalCategory: null,
-			currency: "EUR",
-			amount: 5n,
-			creditedAccountId: accounts[0].id,
-			debitedAccountId: accounts[1].id,
-			timestamp: 0
-		}
+		const idJournalEntryA: string = Date.now().toString();
+		const journalEntryA: IJournalEntry = new JournalEntry(
+			idJournalEntryA,
+			null,
+			null,
+			"EUR",
+			5n,
+			accounts[0].id,
+			accounts[1].id,
+			0
+		);
 		// Journal entry B.
 		// If Date.now() is called again, the same number is returned (because not enough time passes between calls).
-		const journalEntryBId: string = journalEntryAId + 1;
-		const journalEntryB: IJournalEntry = {
-			id: journalEntryBId,
-			externalId: null,
-			externalCategory: null,
-			currency: "EUR",
-			amount: 5n,
-			creditedAccountId: accounts[1].id,
-			debitedAccountId: accounts[0].id,
-			timestamp: 0
-		}
-		const idsJournalEntries: string[] = await aggregate.createJournalEntries([journalEntryA, journalEntryB]);
-		expect(idsJournalEntries).toEqual([journalEntryAId, journalEntryBId]);
+		const idJournalEntryB: string = idJournalEntryA + 1;
+		const journalEntryB: IJournalEntry = new JournalEntry(
+			idJournalEntryB,
+			null,
+			null,
+			"EUR",
+			5n,
+			accounts[1].id,
+			accounts[0].id,
+			0
+		);
+		await aggregate.createJournalEntries([journalEntryA, journalEntryB]);
 		await expect(
 			async () => {
 				await aggregate.createJournalEntries([journalEntryA, journalEntryB]);
 			}
 		).rejects.toThrow(JournalEntryAlreadyExistsError);
+	});
+	test("create journal entry with empty string as id", async () => {
+		// Before creating a journal entry, the respective accounts need to be created.
+		const accounts: IAccount[] = await create2Accounts();
+		const journalEntryId: string = "";
+		const journalEntry: IJournalEntry = new JournalEntry(
+			journalEntryId,
+			null,
+			null,
+			"EUR",
+			5n,
+			accounts[0].id,
+			accounts[1].id,
+			0
+		);
+		const journalEntryIdReceived: string[] = await aggregate.createJournalEntries([journalEntry]);
+		expect(journalEntryIdReceived).not.toEqual(journalEntryId); // TODO: makes sense?
+	});
+	test("create journal entry with same credited and debited accounts", async () => {
+		// Before creating a journal entry, the respective accounts need to be created.
+		const accounts: IAccount[] = await create2Accounts();
+		const journalEntryId: string = Date.now().toString();
+		const journalEntry: IJournalEntry = new JournalEntry(
+			journalEntryId,
+			null,
+			null,
+			"EUR",
+			5n,
+			accounts[0].id,
+			accounts[0].id,
+			0
+		);
+		await expect(
+			async () => {
+				await aggregate.createJournalEntries([journalEntry]);
+			}
+		).rejects.toThrow(CreditedAndDebitedAccountsAreTheSameError);
+	});
+	test("create journal entry with non-existent credited account", async () => {
+		// Before creating a journal entry, the respective accounts need to be created.
+		const accounts: IAccount[] = await create2Accounts();
+		const journalEntryId: string = Date.now().toString();
+		const journalEntry: IJournalEntry = new JournalEntry(
+			journalEntryId,
+			null,
+			null,
+			"EUR",
+			5n,
+			"some string",
+			accounts[1].id,
+			0
+		);
+		await expect(
+			async () => {
+				await aggregate.createJournalEntries([journalEntry]);
+			}
+		).rejects.toThrow(NoSuchCreditedAccountError);
+	});
+	test("create journal entry with non-existent debited account", async () => {
+		// Before creating a journal entry, the respective accounts need to be created.
+		const accounts: IAccount[] = await create2Accounts();
+		const journalEntryId: string = Date.now().toString();
+		const journalEntry: IJournalEntry = new JournalEntry(
+			journalEntryId,
+			null,
+			null,
+			"EUR",
+			5n,
+			accounts[0].id,
+			"some string",
+			0
+		);
+		await expect(
+			async () => {
+				await aggregate.createJournalEntries([journalEntry]);
+			}
+		).rejects.toThrow(NoSuchDebitedAccountError);
+	});
+	test("create journal entry with different currency", async () => {
+		// Before creating a journal entry, the respective accounts need to be created.
+		const accounts: IAccount[] = await create2Accounts(); // Accounts created with EUR.
+		const journalEntryId: string = Date.now().toString();
+		const journalEntry: IJournalEntry = new JournalEntry(
+			journalEntryId,
+			null,
+			null,
+			"USD",
+			5n,
+			accounts[0].id,
+			accounts[1].id,
+			0
+		);
+		await expect(
+			async () => {
+				await aggregate.createJournalEntries([journalEntry]);
+			}
+		).rejects.toThrow(CurrenciesDifferError);
+	});
+	test("create journal entry with exceeding amount", async () => {
+		// Before creating a journal entry, the respective accounts need to be created.
+		const accounts: IAccount[] = await create2Accounts(); // Accounts created with 100 credit balance each.
+		const journalEntryId: string = Date.now().toString();
+		const journalEntry: IJournalEntry = new JournalEntry(
+			journalEntryId,
+			null,
+			null,
+			"EUR",
+			10_000n,
+			accounts[0].id,
+			accounts[1].id,
+			0
+		);
+		await expect(
+			async () => {
+				await aggregate.createJournalEntries([journalEntry]);
+			}
+		).rejects.toThrow(InsufficientBalanceError);
+	});
+	test("create journal entry with invalid amount", async () => {
+		// Before creating a journal entry, the respective accounts need to be created.
+		const accounts: IAccount[] = await create2Accounts(); // Accounts created with 100 credit balance each.
+		const journalEntryId: string = Date.now().toString();
+		const journalEntry: IJournalEntry = new JournalEntry(
+			journalEntryId,
+			null,
+			null,
+			"EUR",
+			-5n,
+			accounts[0].id,
+			accounts[1].id,
+			0
+		);
+		await expect(
+			async () => {
+				await aggregate.createJournalEntries([journalEntry]);
+			}
+		).rejects.toThrow(InvalidJournalEntryAmountError);
 	});
 
 	// Get account by id.
@@ -202,19 +400,19 @@ describe("accounts and balances service - unit tests", () => {
 	});
 	test("get existent account by id", async () => {
 		const accountId: string = Date.now().toString();
-		const accountCreated: IAccount = {
-			id: accountId,
-			externalId: null,
-			state: AccountState.ACTIVE,
-			type: AccountType.POSITION,
-			currency: "EUR",
-			creditBalance: 100n,
-			debitBalance: 25n,
-			timestampLastJournalEntry: 0
-		};
-		await aggregate.createAccount(accountCreated);
+		const account: IAccount = new Account(
+			accountId,
+			null,
+			AccountState.ACTIVE,
+			AccountType.POSITION,
+			"EUR",
+			100n,
+			25n,
+			0
+		);
+		await aggregate.createAccount(account, securityContext);
 		const accountReceived: IAccount | null = await aggregate.getAccountById(accountId);
-		expect(accountReceived).toEqual(accountCreated);
+		expect(accountReceived).toEqual(account);
 	});
 
 	// Get accounts by external id.
@@ -225,9 +423,9 @@ describe("accounts and balances service - unit tests", () => {
 	});
 	test("get existent accounts by external id", async () => {
 		const externalId: string = Date.now().toString();
-		const accountsCreated: IAccount[] = await create2Accounts(externalId, externalId);
+		const accounts: IAccount[] = await create2Accounts(externalId, externalId);
 		const accountsReceived: IAccount[] = await aggregate.getAccountsByExternalId(externalId);
-		expect(accountsReceived).toEqual(accountsCreated);
+		expect(accountsReceived).toEqual(accounts);
 	});
 
 	// Get journal entries by account id.
@@ -240,148 +438,66 @@ describe("accounts and balances service - unit tests", () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: IAccount[] = await create2Accounts();
 		// Journal entry A.
-		const journalEntryAId: string = Date.now().toString();
-		const journalEntryA: IJournalEntry = {
-			id: journalEntryAId,
-			externalId: null,
-			externalCategory: null,
-			currency: "EUR",
-			amount: 5n,
-			creditedAccountId: accounts[0].id,
-			debitedAccountId: accounts[1].id,
-			timestamp: 0
-		}
+		const idJournalEntryA: string = Date.now().toString();
+		const journalEntryA: IJournalEntry = new JournalEntry(
+			idJournalEntryA,
+			null,
+			null,
+			"EUR",
+			5n,
+			accounts[0].id,
+			accounts[1].id,
+			0
+		);
 		// Journal entry B.
 		// If Date.now() is called again, the same number is returned (because not enough time passes between calls).
-		const journalEntryBId: string = journalEntryAId + 1;
-		const journalEntryB: IJournalEntry = {
-			id: journalEntryBId,
-			externalId: null,
-			externalCategory: null,
-			currency: "EUR",
-			amount: 5n,
-			creditedAccountId: accounts[1].id,
-			debitedAccountId: accounts[0].id,
-			timestamp: 0
-		}
+		const idJournalEntryB: string = idJournalEntryA + 1;
+		const journalEntryB: IJournalEntry = new JournalEntry(
+			idJournalEntryB,
+			null,
+			null,
+			"EUR",
+			5n,
+			accounts[1].id,
+			accounts[0].id,
+			0
+		);
 		await aggregate.createJournalEntries([journalEntryA, journalEntryB]);
 		const journalEntriesReceived: IJournalEntry[] = await aggregate.getJournalEntriesByAccountId(accounts[0].id);
 		expect(journalEntriesReceived).toEqual([journalEntryA, journalEntryB]);
 	});
-
-	// The following are less important tests, because the functions in question are not accessible by the client. TODO.
-
-	// Delete account by id.
-	test("delete non-existent account by id", async () => {
-		const accountId: string = Date.now().toString();
-		await expect(
-			async () => {
-				await aggregate.deleteAccountById(accountId);
-			}
-		).rejects.toThrow(NoSuchAccountError);
-	});
-	test("delete existent account by id", async () => {
-		const accountId: string = Date.now().toString();
-		const account: IAccount = {
-			id: accountId,
-			externalId: null,
-			state: AccountState.ACTIVE,
-			type: AccountType.POSITION,
-			currency: "EUR",
-			creditBalance: 100n,
-			debitBalance: 25n,
-			timestampLastJournalEntry: 0
-		};
-		await aggregate.createAccount(account);
-		// TODO: just wait for the function to resolve or try to get the account after?
-		// TODO: wait for the function to resolve.
-		/*await expect(
-			async () => {
-				await aggregate.deleteAccountById(accountId);
-			}
-		).resolves;*/
-	});
-
-	// Delete journal entry by id.
-	test("delete non-existent journal entry by id", async () => {
-		const journalEntryId: string = Date.now().toString();
-		await expect(
-			async () => {
-				await aggregate.deleteJournalEntryById(journalEntryId);
-			}
-		).rejects.toThrow(NoSuchJournalEntryError);
-	});
-	test("delete existent journal entry by id", async () => {
-		// Before creating a journal entry, the respective accounts need to be created.
-		const accounts: IAccount[] = await create2Accounts();
-		const journalEntryId: string = Date.now().toString();
-		const journalEntry: IJournalEntry = {
-			id: journalEntryId,
-			externalId: null,
-			externalCategory: null,
-			currency: "EUR",
-			amount: 5n,
-			creditedAccountId: accounts[0].id,
-			debitedAccountId: accounts[1].id,
-			timestamp: 0
-		}
-		await aggregate.createJournalEntries([journalEntry]);
-		// TODO: just wait for the function to resolve or try to get the journal entry after?
-		// TODO: wait for the function to resolve.
-		/*await expect(
-			async () => {
-				await aggregate.deleteJournalEntryById(journalEntryId);
-			}
-		).resolves;*/
-	});
-
-	// Delete all accounts.
-	test("delete all accounts", async () => {
-		// TODO: create accounts before?
-		await aggregate.deleteAllAccounts();
-		const accounts: IAccount[] = await aggregate.getAllAccounts();
-		expect(accounts).toEqual([]); // TODO: do this or just wait for the function to resolve?
-	});
-
-	// Delete all journal entries.
-	test("delete all journal entries", async () => {
-		// TODO: create journal entries before?
-		await aggregate.deleteAllJournalEntries();
-		const journalEntries: IJournalEntry[] = await aggregate.getAllJournalEntries();
-		expect(journalEntries).toEqual([]); // TODO: do this or just wait for the function to resolve?
-	});
 });
 
 async function create2Accounts(
-	accountAExternalId: string | null = null,
-	accountBExternalId: string | null = null
+	externalIdAccountA: string | null = null,
+	externalIdAccountB: string | null = null
 ): Promise<IAccount[]> {
 	// Account A.
-	const accountAId: string = Date.now().toString();
-	const accountA: IAccount = {
-		id: accountAId,
-		externalId: accountAExternalId,
-		state: AccountState.ACTIVE,
-		type: AccountType.POSITION,
-		currency: "EUR",
-		creditBalance: 100n,
-		debitBalance: 25n,
-		timestampLastJournalEntry: 0
-	};
-	await aggregate.createAccount(accountA);
+	const idAccountA: string = Date.now().toString();
+	const accountA: IAccount = new Account(
+		idAccountA,
+		externalIdAccountA,
+		AccountState.ACTIVE,
+		AccountType.POSITION,
+		"EUR",
+		100n,
+		25n,
+		0
+	);
+	await aggregate.createAccount(accountA, securityContext);
 	// Account B.
 	// If Date.now() is called again, the same number is returned (because not enough time passes between calls).
-	const accountBId: string = accountAId + 1;
-	const accountB: IAccount = {
-		id: accountBId,
-		externalId: accountBExternalId,
-		state: AccountState.ACTIVE,
-		type: AccountType.POSITION,
-		currency: "EUR",
-		creditBalance: 100n,
-		debitBalance: 25n,
-		timestampLastJournalEntry: 0
-	};
-	await aggregate.createAccount(accountB);
+	const idAccountB: string = idAccountA + 1;
+	const accountB: IAccount = new Account(
+		idAccountB,
+		externalIdAccountB,
+		AccountState.ACTIVE,
+		AccountType.POSITION,
+		"EUR",
+		100n,
+		25n,
+		0
+	);
+	await aggregate.createAccount(accountB, securityContext);
 	return [accountA, accountB];
 }

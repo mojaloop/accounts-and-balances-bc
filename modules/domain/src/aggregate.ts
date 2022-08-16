@@ -37,41 +37,43 @@ import {
 	CurrenciesDifferError,
 	InsufficientBalanceError,
 	JournalEntryAlreadyExistsError,
-	NoSuchAccountError,
 	NoSuchCreditedAccountError,
-	NoSuchDebitedAccountError,
-	NoSuchJournalEntryError
+	NoSuchDebitedAccountError
 } from "./errors";
 import {IAccountsRepo, IJournalEntriesRepo} from "./infrastructure_interfaces";
 import {Account} from "./entities/account";
 import {JournalEntry} from "./entities/journal_entry";
 import {IAccount, IJournalEntry} from "./types";
-import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
-import {AuditSecurityContext} from "@mojaloop/auditing-bc-public-types-lib/dist/audit_types";
+import {IAuditClient, AuditSecurityContext} from "@mojaloop/auditing-bc-public-types-lib";
 import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
+
+enum AuditingActions {
+	ACCOUNT_CREATED = "ACCOUNT_CREATED"
+}
 
 export class Aggregate {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
+	private readonly auditingClient: IAuditClient;
 	private readonly accountsRepo: IAccountsRepo;
 	private readonly journalEntriesRepo: IJournalEntriesRepo;
-	private readonly auditClient: IAuditClient;
 
 	constructor(
 		logger: ILogger,
+		auditingClient: IAuditClient,
 		accountsRepo: IAccountsRepo,
-		journalEntriesRepo: IJournalEntriesRepo,
-		auditClient: IAuditClient
+		journalEntriesRepo: IJournalEntriesRepo
 	) {
 		this.logger = logger;
+		this.auditingClient = auditingClient;
 		this.accountsRepo = accountsRepo;
 		this.journalEntriesRepo = journalEntriesRepo;
-		this.auditClient = auditClient;
 	}
 
 	// DONE.
 	async init(): Promise<void> {
 		try {
+			await this.auditingClient.init();
 			await this.accountsRepo.init();
 			await this.journalEntriesRepo.init();
 		} catch (e: unknown) {
@@ -84,18 +86,19 @@ export class Aggregate {
 	async destroy(): Promise<void> {
 		await this.accountsRepo.destroy();
 		await this.journalEntriesRepo.destroy();
+		await this.auditingClient.destroy();
 	}
 
-	private getAuditSecurityContext(securityContext: CallSecurityContext | null): AuditSecurityContext { // TODO: CallSecurityContext | null?
+	private getAuditSecurityContext(securityContext: CallSecurityContext): AuditSecurityContext {
 		return {
-			userId: securityContext?.username ?? null,
+			userId: securityContext.username,
 			role: "", // TODO: get role.
-			appId: securityContext?.clientId ?? null
+			appId: securityContext.clientId
 		}
 	}
 
 	// TODO: why ignore the case in which uuid.v4() generates an already existing id?
-	async createAccount(account: IAccount, securityContext: CallSecurityContext | null): Promise<string> { // TODO: CallSecurityContext | null?
+	async createAccount(account: IAccount, securityContext: CallSecurityContext): Promise<string> {
 		// Generate a random UUId, if needed.
 		if (account.id === undefined || account.id === null || account.id === "") {
 			account.id = uuid.v4();
@@ -111,8 +114,8 @@ export class Aggregate {
 			throw e;
 		}
 		// TODO: configure.
-		await this.auditClient.audit(
-			"ACCOUNT_CREATED",
+		await this.auditingClient.audit(
+			AuditingActions.ACCOUNT_CREATED,
 			true,
 			this.getAuditSecurityContext(securityContext),
 			[{key: "accountId", value: account.id}]
@@ -212,36 +215,6 @@ export class Aggregate {
 	}
 
 	// DONE.
-	async getJournalEntryById(journalEntryId: string): Promise<IJournalEntry | null> {
-		try {
-			return await this.journalEntriesRepo.getJournalEntryById(journalEntryId);
-		} catch (e: unknown) { // TODO.
-			this.logger.error(e);
-			throw e;
-		}
-	}
-
-	// DONE.
-	async getAllAccounts(): Promise<IAccount[]> {
-		try {
-			return await this.accountsRepo.getAllAccounts();
-		} catch (e: unknown) { // TODO.
-			this.logger.error(e);
-			throw e;
-		}
-	}
-
-	// DONE.
-	async getAllJournalEntries(): Promise<IJournalEntry[]> {
-		try {
-			return await this.journalEntriesRepo.getAllJournalEntries();
-		} catch (e: unknown) { // TODO.
-			this.logger.error(e);
-			throw e;
-		}
-	}
-
-	// DONE.
 	async getAccountsByExternalId(externalId: string): Promise<IAccount[]> {
 		try {
 			return await this.accountsRepo.getAccountsByExternalId(externalId);
@@ -255,50 +228,6 @@ export class Aggregate {
 	async getJournalEntriesByAccountId(accountId: string): Promise<IJournalEntry[]> {
 		try {
 			return await this.journalEntriesRepo.getJournalEntriesByAccountId(accountId);
-		} catch (e: unknown) { // TODO.
-			this.logger.error(e);
-			throw e;
-		}
-	}
-
-	// DONE.
-	async deleteAccountById(accountId: string): Promise<void> {
-		try {
-			await this.accountsRepo.deleteAccountById(accountId);
-		} catch (e: unknown) { // TODO.
-			if (!(e instanceof NoSuchAccountError)) {
-				this.logger.error(e);
-			}
-			throw e;
-		}
-	}
-
-	// DONE.
-	async deleteJournalEntryById(journalEntryId: string): Promise<void> {
-		try {
-			await this.journalEntriesRepo.deleteJournalEntryById(journalEntryId);
-		} catch (e: unknown) { // TODO.
-			if (!(e instanceof NoSuchJournalEntryError)) {
-				this.logger.error(e);
-			}
-			throw e;
-		}
-	}
-
-	// DONE.
-	async deleteAllAccounts(): Promise<void> {
-		try {
-			await this.accountsRepo.deleteAllAccounts();
-		} catch (e: unknown) { // TODO.
-			this.logger.error(e);
-			throw e;
-		}
-	}
-
-	// DONE.
-	async deleteAllJournalEntries(): Promise<void> {
-		try {
-			await this.journalEntriesRepo.deleteAllJournalEntries();
 		} catch (e: unknown) { // TODO.
 			this.logger.error(e);
 			throw e;

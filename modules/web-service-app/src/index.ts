@@ -29,10 +29,9 @@
 
 "use strict";
 
-import {AppConfiguration, IConfigProvider, DefaultConfigProvider} from "@mojaloop/platform-configuration-bc-client-lib";
-import {ConfigParameterTypes} from "@mojaloop/platform-configuration-bc-types-lib";
-import {ILogger, LogLevel} from "@mojaloop/logging-bc-public-types-lib";
-import {DefaultLogger} from "@mojaloop/logging-bc-client-lib";
+
+import {LogLevel} from "@mojaloop/logging-bc-public-types-lib";
+import {KafkaLogger} from "@mojaloop/logging-bc-client-lib";
 import {Aggregate, IAccountsRepo, IJournalEntriesRepo} from "@mojaloop/accounts-and-balances-bc-domain";
 import {ExpressWebServer} from "./web-server/express_web_server";
 import {MongoJournalEntriesRepo} from "./infrastructure/mongo_journal_entries_repo";
@@ -42,94 +41,141 @@ import {
 	KafkaAuditClientDispatcher,
 	LocalAuditClientCryptoProvider
 } from "@mojaloop/auditing-bc-client-lib";
+import {MLKafkaProducerOptions} from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib";
+import {existsSync} from "fs"; // TODO: fs promises?
+import {IAuditClientCryptoProvider, IAuditClientDispatcher} from "@mojaloop/auditing-bc-client-lib";
+import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
+import {TokenHelper} from "@mojaloop/security-bc-client-lib";
 
+/* ********** Constants Begin ********** */
 
-/* Constants. */
-const APP_NAME: string = "Accounts and Balances Web Server";
-const APP_VERSION: string = "0.1.0";
-// Web server.
-const WEB_SERVER_HOST: string =
-	process.env.ACCOUNTS_AND_BALANCES_WEB_SERVER_HOST ?? "localhost";
-const WEB_SERVER_PORT_NO: number =
-	parseInt(process.env.ACCOUNTS_AND_BALANCES_WEB_SERVER_PORT_NO ?? "") || 1234;
-const WEB_SERVER_PATH_ROUTER: string = "/";
-// Repo.
-const REPO_HOST: string =
-	process.env.ACCOUNTS_AND_BALANCES_REPO_HOST ?? "localhost";
-const REPO_PORT_NO: number =
-	parseInt(process.env.ACCOUNTS_AND_BALANCES_REPO_PORT_NO ?? "") || 27017;
-const REPO_URL: string = `mongodb://${REPO_HOST}:${REPO_PORT_NO}`;
+// General.
+const BOUNDED_CONTEXT_NAME: string = "Accounts and Balances";
+const SERVICE_NAME: string = `${BOUNDED_CONTEXT_NAME} - Web Server`;
+const SERVICE_VERSION: string = "0.1.0";
+
+// Message broker.
+const MESSAGE_BROKER_HOST: string = process.env.ACCOUNTS_AND_BALANCES_MESSAGE_BROKER_HOST ?? "localhost";
+const MESSAGE_BROKER_PORT_NO: number =
+	parseInt(process.env.ACCOUNTS_AND_BALANCES_MESSAGE_BROKER_PORT_NO ?? "") || 9092;
+const MESSAGE_BROKER_URL: string = `${MESSAGE_BROKER_HOST}:${MESSAGE_BROKER_PORT_NO}`;
+
+// Logging.
+const LOGGING_LEVEL: LogLevel = LogLevel.DEBUG;
+const LOGGING_TOPIC: string = `${SERVICE_NAME} - Logging`;
+
+// Token helper. TODO: names.
+const AUTH_Z_TOKEN_ISSUER_NAME: string =
+	process.env.ACCOUNTS_AND_BALANCES_AUTH_Z_TOKEN_ISSUER_NAME ?? "http://localhost:3201/";
+const AUTH_Z_TOKEN_AUDIENCE: string =
+	process.env.ACCOUNTS_AND_BALANCES_AUTH_Z_TOKEN_AUDIENCE ?? "mojaloop.vnext.default_audience";
+const AUTH_Z_SVC_JWKS_URL: string =
+	process.env.ACCOUNTS_AND_BALANCES_AUTH_Z_SVC_JWKS_URL ?? "http://localhost:3201/.well-known/jwks.json";
+
+// Auditing.
+const AUDITING_CERT_FILE_PATH: string = process.env.AUDITING_CERT_FILE_PATH ?? "./auditing_cert"; // TODO: file name.
+const AUDITING_TOPIC: string = `${SERVICE_NAME} - Auditing`;
+
+// Data base.
+const DB_HOST: string = process.env.ACCOUNTS_AND_BALANCES_DB_HOST ?? "localhost";
+const DB_PORT_NO: number =
+	parseInt(process.env.ACCOUNTS_AND_BALANCES_DB_PORT_NO ?? "") || 27017;
+const DB_URL: string = `mongodb://${DB_HOST}:${DB_PORT_NO}`;
 const DB_NAME: string = "AccountsAndBalances";
 const ACCOUNTS_COLLECTION_NAME: string = "Accounts";
 const JOURNAL_ENTRIES_COLLECTION_NAME: string = "JournalEntries";
 
-// Platform configuration. TODO: set up.
-/*const appConfiguration = new AppConfiguration(
-	"", // TODO: what should this be?
-	"", // TODO: what should this be?
-	"", // TODO: what should this be?
-	0.1.0,
-	null // Standalone mode.
-);*/
+// Web server.
+const WEB_SERVER_HOST: string = process.env.ACCOUNTS_AND_BALANCES_WEB_SERVER_HOST ?? "localhost";
+const WEB_SERVER_PORT_NO: number =
+	parseInt(process.env.ACCOUNTS_AND_BALANCES_WEB_SERVER_PORT_NO ?? "") || 1234;
+const WEB_SERVER_PATH_ROUTER: string = "/";
 
-// Logger.
-const logger: ILogger = new DefaultLogger( // TODO: which type of logger to use?
-	"", // TODO: what should this be?
-	APP_NAME,
-	APP_VERSION,
-	LogLevel.INFO); // TODO: what should this be?
+/* ********** Constants End ********** */
 
-// Infrastructure.
-const accountsRepo: IAccountsRepo = new MongoAccountsRepo(
-	logger,
-	REPO_URL,
-	DB_NAME,
-	ACCOUNTS_COLLECTION_NAME
-);
-const journalEntriesRepo: IJournalEntriesRepo = new MongoJournalEntriesRepo(
-	logger,
-	REPO_URL,
-	DB_NAME,
-	JOURNAL_ENTRIES_COLLECTION_NAME
-);
-if (!existsSync(AUDIT_CERT_FILE_PATH)) {
-	if (PRODUCTION_MODE) {
-		process.exit(9);
+// Global variables.
+let logger: KafkaLogger; // TODO: ILogger?
+let aggregate: Aggregate;
+
+async function main(): Promise<void> {
+	// Message producer options.
+	const kafkaProducerOptions: MLKafkaProducerOptions = {
+		kafkaBrokerList: MESSAGE_BROKER_URL
+		// TODO: producerClientId?
 	}
-	// create e tmp file
-	LocalAuditClientCryptoProvider.createRsaPrivateKeyFileSync(AUDIT_CERT_FILE_PATH, 2048);
-}
-const cryptoProvider = new LocalAuditClientCryptoProvider(AUDIT_CERT_FILE_PATH);
-const auditDispatcher = new KafkaAuditClientDispatcher(kafkaProducerOptions, KAFKA_AUDITS_TOPIC, logger);
-const auditClient: IAuditClient = new AuditClient(
-	"", // TODO: what should this be?
-	APP_NAME,
-	APP_VERSION,
-	cryptoProvider,
-	auditDispatcher
-);
 
-// Domain.
-const aggregate: Aggregate = new Aggregate(
-	logger,
-	accountsRepo,
-	journalEntriesRepo,
-	auditClient
-);
+	// Logger.
+	logger = new KafkaLogger( // TODO: is this the logger to use?
+		BOUNDED_CONTEXT_NAME,
+		SERVICE_NAME,
+		SERVICE_VERSION,
+		kafkaProducerOptions,
+		LOGGING_TOPIC,
+		LOGGING_LEVEL
+	);
+	await logger.start(); // TODO: here or on the aggregate?
 
-// Application.
-const webServer: ExpressWebServer = new ExpressWebServer(
-	logger,
-	WEB_SERVER_HOST,
-	WEB_SERVER_PORT_NO,
-	WEB_SERVER_PATH_ROUTER,
-	aggregate
-);
+	// Token helper.
+	const tokenHelper: TokenHelper = new TokenHelper( // TODO: no interface?
+		AUTH_Z_TOKEN_ISSUER_NAME,
+		AUTH_Z_SVC_JWKS_URL,
+		AUTH_Z_TOKEN_AUDIENCE,
+		logger
+	);
+	await tokenHelper.init();
 
-async function start(): Promise<void> {
-	// await appConfiguration.fetch(); // TODO: set up platform configuration.
-	await auditClient.init();
+	// Auditing.
+	if (!existsSync(AUDITING_CERT_FILE_PATH)) { // TODO: clarify.
+		// TODO: clarify.
+		/*if (PRODUCTION_MODE) {
+			process.exit(9);
+		}*/
+		// Create e tmp file. TODO: clarify.
+		LocalAuditClientCryptoProvider.createRsaPrivateKeyFileSync(AUDITING_CERT_FILE_PATH, 2048); // TODO: Put this in a constant.
+	}
+	const cryptoProvider: IAuditClientCryptoProvider = new LocalAuditClientCryptoProvider(AUDITING_CERT_FILE_PATH); // TODO: type.
+	const auditDispatcher: IAuditClientDispatcher =
+		new KafkaAuditClientDispatcher(kafkaProducerOptions, AUDITING_TOPIC, logger); // TODO: type.
+	const auditingClient: IAuditClient = new AuditClient( // TODO: type.
+		BOUNDED_CONTEXT_NAME,
+		SERVICE_NAME,
+		SERVICE_VERSION,
+		cryptoProvider,
+		auditDispatcher
+	);
+
+	// Repos.
+	const accountsRepo: IAccountsRepo = new MongoAccountsRepo(
+		logger,
+		DB_URL,
+		DB_NAME,
+		ACCOUNTS_COLLECTION_NAME
+	);
+	const journalEntriesRepo: IJournalEntriesRepo = new MongoJournalEntriesRepo(
+		logger,
+		DB_URL,
+		DB_NAME,
+		JOURNAL_ENTRIES_COLLECTION_NAME
+	);
+
+	// Aggregate.
+	aggregate = new Aggregate(
+		logger,
+		auditingClient,
+		accountsRepo,
+		journalEntriesRepo
+	);
 	await aggregate.init(); // No need to handle exceptions.
+
+	// Web server.
+	const webServer: ExpressWebServer = new ExpressWebServer(
+		logger,
+		WEB_SERVER_HOST,
+		WEB_SERVER_PORT_NO,
+		WEB_SERVER_PATH_ROUTER,
+		tokenHelper,
+		aggregate
+	);
 	webServer.start(); // No need to handle exceptions.
 }
 
@@ -138,10 +184,11 @@ process.on("SIGTERM", handleIntAndTermSignals.bind(this));
 async function handleIntAndTermSignals(signal: NodeJS.Signals): Promise<void> {
 	logger.info(`${signal} received`);
 	await aggregate.destroy();
+	await logger.destroy(); // TODO: here or on the aggregate?
 	process.exit();
 }
 process.on("exit", () => {
 	logger.info(`exiting ${SERVICE_NAME}`);
 });
 
-start();
+main();
