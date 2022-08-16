@@ -32,24 +32,27 @@
 import {ConsoleLogger, ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {AccountsAndBalancesServiceMock} from "./accounts_and_balances_service_mock";
 import {AccountsAndBalancesClient} from "../../src";
-import {IAccountDTO, IJournalEntryDTO} from "../../src/types";
-import {UnableToCreateAccountError, UnableToCreateJournalEntriesError} from "../../src/errors";
+import {IAccountDTO, IJournalEntryDTO, UnableToCreateAccountError, UnableToCreateJournalEntriesError} from "../../src";
 
 const ACCOUNTS_AND_BALANCES_URL: string = "http://localhost:1234";
 const HTTP_CLIENT_TIMEOUT_MS: number = 10_000;
 
-const logger: ILogger = new ConsoleLogger();
-const accountsAndBalancesServiceMock: AccountsAndBalancesServiceMock = new AccountsAndBalancesServiceMock(
-	logger,
-	ACCOUNTS_AND_BALANCES_URL
-);
-const accountsAndBalancesClient: AccountsAndBalancesClient = new AccountsAndBalancesClient(
-	logger,
-	ACCOUNTS_AND_BALANCES_URL,
-	HTTP_CLIENT_TIMEOUT_MS
-);
+let accountsAndBalancesClient: AccountsAndBalancesClient;
 
 describe("accounts and balances client - unit tests", () => {
+	beforeAll(async () => {
+		const logger: ILogger = new ConsoleLogger();
+		const accountsAndBalancesServiceMock: AccountsAndBalancesServiceMock = new AccountsAndBalancesServiceMock(
+			logger,
+			ACCOUNTS_AND_BALANCES_URL
+		);
+		accountsAndBalancesClient = new AccountsAndBalancesClient(
+			logger,
+			ACCOUNTS_AND_BALANCES_URL,
+			HTTP_CLIENT_TIMEOUT_MS
+		);
+	});
+
 	// Create account.
 	test("create non-existent account", async () => {
 		const accountId: string = AccountsAndBalancesServiceMock.NON_EXISTENT_ACCOUNT_ID;
@@ -62,9 +65,9 @@ describe("accounts and balances client - unit tests", () => {
 			creditBalance: 100,
 			debitBalance: 25,
 			timestampLastJournalEntry: 0
-		}
+		};
 		const accountIdReceived: string = await accountsAndBalancesClient.createAccount(account);
-		expect(accountIdReceived).toBe(accountId);
+		expect(accountIdReceived).toEqual(accountId);
 	});
 	test("create existent account", async () => {
 		const accountId: string = AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID;
@@ -77,7 +80,7 @@ describe("accounts and balances client - unit tests", () => {
 			creditBalance: 100,
 			debitBalance: 25,
 			timestampLastJournalEntry: 0
-		}
+		};
 		await expect(
 			async () => {
 				await accountsAndBalancesClient.createAccount(account);
@@ -98,8 +101,10 @@ describe("accounts and balances client - unit tests", () => {
 			creditedAccountId: "a",
 			debitedAccountId: "b",
 			timestamp: 0
-		}
+		};
 		// Journal entry B.
+		// There's no problem in idJournalEntryA and idJournalEntryB being equal - the service mock compares them to
+		// EXISTENT_JOURNAL_ENTRY_ID, not to each other.
 		const idJournalEntryB: string = AccountsAndBalancesServiceMock.NON_EXISTENT_JOURNAL_ENTRY_ID;
 		const journalEntryB: IJournalEntryDTO = {
 			id: idJournalEntryB,
@@ -110,7 +115,7 @@ describe("accounts and balances client - unit tests", () => {
 			creditedAccountId: "b",
 			debitedAccountId: "a",
 			timestamp: 0
-		}
+		};
 		const idsJournalEntries: string[] =
 			await accountsAndBalancesClient.createJournalEntries([journalEntryA, journalEntryB]);
 		expect(idsJournalEntries).toEqual([idJournalEntryA, idJournalEntryB]);
@@ -127,7 +132,7 @@ describe("accounts and balances client - unit tests", () => {
 			creditedAccountId: "a",
 			debitedAccountId: "b",
 			timestamp: 0
-		}
+		};
 		// Journal entry B.
 		const idJournalEntryB: string = AccountsAndBalancesServiceMock.EXISTENT_JOURNAL_ENTRY_ID;
 		const journalEntryB: IJournalEntryDTO = {
@@ -139,7 +144,7 @@ describe("accounts and balances client - unit tests", () => {
 			creditedAccountId: "b",
 			debitedAccountId: "a",
 			timestamp: 0
-		}
+		};
 		await expect(
 			async () => {
 				await accountsAndBalancesClient.createJournalEntries([journalEntryA, journalEntryB]);
@@ -156,7 +161,7 @@ describe("accounts and balances client - unit tests", () => {
 	test("get existent account by id", async () => {
 		const account: IAccountDTO | null =
 			await accountsAndBalancesClient.getAccountById(AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID);
-		expect(account?.id).toBe(AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID);
+		expect(account?.id).toEqual(AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID);
 	});
 
 	// Get accounts by external id.

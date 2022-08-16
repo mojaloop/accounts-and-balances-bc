@@ -29,8 +29,7 @@
 
 "use strict";
 
-// TODO: import index.ts?
-import {
+/*import {
 	AccountState,
 	AccountType,
 	Aggregate,
@@ -391,4 +390,4 @@ describe("accounts and balances web server app - integration tests", () => {
 			await accountsAndBalancesClientMock.getJournalEntriesByAccountId(accountId);
 		expect(statusCodeResponseGetJournalEntries).toBe(200);
 	});
-});
+});*/

@@ -30,13 +30,10 @@
 "use strict";
 
 import {
-	AccountState,
-	AccountType,
 	Aggregate, CreditedAndDebitedAccountsAreTheSameError, CurrenciesDifferError,
-	IAccount,
 	IAccountsRepo,
 	IJournalEntriesRepo,
-	IJournalEntry, InsufficientBalanceError,
+	InsufficientBalanceError,
 	InvalidCreditBalanceError,
 	InvalidDebitBalanceError, InvalidJournalEntryAmountError, NoSuchCreditedAccountError, NoSuchDebitedAccountError
 } from "@mojaloop/accounts-and-balances-bc-domain";
@@ -54,8 +51,6 @@ import {
 import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {TokenHelper} from "@mojaloop/security-bc-client-lib";
 import {AuditClientMock} from "./audit_client_mock";
-import {Account} from "@mojaloop/accounts-and-balances-bc-domain/dist/entities/account";
-import {JournalEntry} from "@mojaloop/accounts-and-balances-bc-domain/dist/entities/journal_entry";
 
 /* ********** Constants Begin ********** */
 
@@ -156,7 +151,7 @@ describe("accounts and balances web server - unit tests", () => {
 			creditBalance: 100,
 			debitBalance: 25,
 			timestampLastJournalEntry: 0
-		}
+		};
 		const accountIdReceived: string = await accountsAndBalancesClient.createAccount(account); // TODO: securityContext.
 		expect(accountIdReceived).toEqual(accountId);
 	});
@@ -171,7 +166,7 @@ describe("accounts and balances web server - unit tests", () => {
 			creditBalance: 100,
 			debitBalance: 25,
 			timestampLastJournalEntry: 0
-		}
+		};
 		await accountsAndBalancesClient.createAccount(account); // TODO: securityContext.
 		await expect(
 			async () => {
@@ -190,7 +185,7 @@ describe("accounts and balances web server - unit tests", () => {
 			creditBalance: 100,
 			debitBalance: 25,
 			timestampLastJournalEntry: 0
-		}
+		};
 		const accountIdReceived: string = await accountsAndBalancesClient.createAccount(account); // TODO: securityContext.
 		expect(accountIdReceived).not.toEqual(accountId); // TODO: makes sense?
 	});
@@ -205,7 +200,7 @@ describe("accounts and balances web server - unit tests", () => {
 			creditBalance: -100,
 			debitBalance: 25,
 			timestampLastJournalEntry: 0
-		}
+		};
 		await expect(
 			async () => {
 				await accountsAndBalancesClient.createAccount(account); // TODO: securityContext.
@@ -223,7 +218,7 @@ describe("accounts and balances web server - unit tests", () => {
 			creditBalance: 100,
 			debitBalance: -25,
 			timestampLastJournalEntry: 0
-		}
+		};
 		await expect(
 			async () => {
 				await accountsAndBalancesClient.createAccount(account); // TODO: securityContext.
@@ -246,7 +241,7 @@ describe("accounts and balances web server - unit tests", () => {
 			creditedAccountId: accounts[0].id,
 			debitedAccountId: accounts[1].id,
 			timestamp: 0
-		}
+		};
 		// Journal entry B.
 		// If Date.now() is called again, the same number is returned (because not enough time passes between calls).
 		const idJournalEntryB: string = idJournalEntryA + 1;
@@ -259,7 +254,7 @@ describe("accounts and balances web server - unit tests", () => {
 			creditedAccountId: accounts[1].id,
 			debitedAccountId: accounts[0].id,
 			timestamp: 0
-		}
+		};
 		const idsJournalEntries: string[] =
 			await accountsAndBalancesClient.createJournalEntries([journalEntryA, journalEntryB]);
 		expect(idsJournalEntries).toEqual([idJournalEntryA, idJournalEntryB]);
@@ -278,7 +273,7 @@ describe("accounts and balances web server - unit tests", () => {
 			creditedAccountId: accounts[0].id,
 			debitedAccountId: accounts[1].id,
 			timestamp: 0
-		}
+		};
 		// Journal entry B.
 		// If Date.now() is called again, the same number is returned (because not enough time passes between calls).
 		const idJournalEntryB: string = idJournalEntryA + 1;
@@ -291,7 +286,7 @@ describe("accounts and balances web server - unit tests", () => {
 			creditedAccountId: accounts[1].id,
 			debitedAccountId: accounts[0].id,
 			timestamp: 0
-		}
+		};
 		await accountsAndBalancesClient.createJournalEntries([journalEntryA, journalEntryB]);
 		await expect(
 			async () => {
@@ -494,7 +489,7 @@ describe("accounts and balances web server - unit tests", () => {
 			creditedAccountId: accounts[0].id,
 			debitedAccountId: accounts[1].id,
 			timestamp: 0
-		}
+		};
 		// Journal entry B.
 		// If Date.now() is called again, the same number is returned (because not enough time passes between calls).
 		const idJournalEntryB: string = idJournalEntryA + 1;
@@ -507,7 +502,7 @@ describe("accounts and balances web server - unit tests", () => {
 			creditedAccountId: accounts[1].id,
 			debitedAccountId: accounts[0].id,
 			timestamp: 0
-		}
+		};
 		await accountsAndBalancesClient.createJournalEntries([journalEntryA, journalEntryB]);
 		const journalEntriesReceived: IJournalEntryDTO[] =
 			await accountsAndBalancesClient.getJournalEntriesByAccountId(accounts[0].id);

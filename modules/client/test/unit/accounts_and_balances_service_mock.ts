@@ -68,22 +68,12 @@ export class AccountsAndBalancesServiceMock {
 					if (requestBody.id === AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID) {
 						return [
 							400,
-							{
-								result: "ERROR",
-								data: {
-									message: "account already exists"
-								}
-							}
+							{message: "account already exists"}
 						];
 					}
 					return [
 						200,
-						{
-							result: "SUCCESS",
-							data: {
-								accountId: requestBody.id
-							}
-						}
+						{accountId: requestBody.id}
 					];
 				}
 			);
@@ -99,24 +89,14 @@ export class AccountsAndBalancesServiceMock {
 						if (journalEntry.id === AccountsAndBalancesServiceMock.EXISTENT_JOURNAL_ENTRY_ID) {
 							return [
 								400,
-								{
-									result: "ERROR",
-									data: {
-										message: "journal entry already exists"
-									}
-								}
+								{message: "journal entry already exists"}
 							];
 						}
 						idsJournalEntries.push(journalEntry.id);
 					}
 					return [
 						200,
-						{
-							result: "SUCCESS",
-							data: {
-								idsJournalEntries: idsJournalEntries
-							}
-						}
+						{idsJournalEntries: idsJournalEntries}
 					];
 				}
 			);
@@ -128,12 +108,7 @@ export class AccountsAndBalancesServiceMock {
 			.query({id: AccountsAndBalancesServiceMock.NON_EXISTENT_ACCOUNT_ID})
 			.reply(
 				404,
-				{
-					result: "ERROR",
-					data: {
-						message: "no such account"
-					}
-				}
+				{message: "no such account"}
 			);
 		// Get existent account by id.
 		nock(this.ACCOUNTS_AND_BALANCES_URL)
@@ -142,14 +117,7 @@ export class AccountsAndBalancesServiceMock {
 			.query({id: AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID})
 			.reply(
 				200,
-				{
-					result: "SUCCESS",
-					data: {
-						account: {
-							id: AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID
-						}
-					}
-				}
+				{account: {id: AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID}}
 			);
 
 		// Get non-existent accounts by external id.
@@ -158,13 +126,8 @@ export class AccountsAndBalancesServiceMock {
 			.get("/accounts")
 			.query({externalId: AccountsAndBalancesServiceMock.NON_EXISTENT_EXTERNAL_ID})
 			.reply(
-				200,
-				{
-					result: "SUCCESS",
-					data: {
-						accounts: []
-					}
-				}
+				404,
+				{message: "no accounts with the specified external id"}
 			);
 		// Get existent accounts by external id.
 		nock(this.ACCOUNTS_AND_BALANCES_URL)
@@ -174,17 +137,10 @@ export class AccountsAndBalancesServiceMock {
 			.reply(
 				200,
 				{
-					result: "SUCCESS",
-					data: {
-						accounts: [
-							{
-								id: AccountsAndBalancesServiceMock.ID_ACCOUNT_A
-							},
-							{
-								id: AccountsAndBalancesServiceMock.ID_ACCOUNT_B
-							}
-						]
-					}
+					accounts: [
+						{id: AccountsAndBalancesServiceMock.ID_ACCOUNT_A},
+						{id: AccountsAndBalancesServiceMock.ID_ACCOUNT_B}
+					]
 				}
 			);
 
@@ -194,13 +150,8 @@ export class AccountsAndBalancesServiceMock {
 			.get("/journalEntries")
 			.query({accountId: AccountsAndBalancesServiceMock.NON_EXISTENT_ACCOUNT_ID})
 			.reply(
-				200,
-				{
-					result: "SUCCESS",
-					data: {
-						journalEntries: []
-					}
-				}
+				404,
+				{message: "no journal entries with the specified account id"}
 			);
 		// Get existent journal entries by account id.
 		nock(this.ACCOUNTS_AND_BALANCES_URL)
@@ -210,17 +161,10 @@ export class AccountsAndBalancesServiceMock {
 			.reply(
 				200,
 				{
-					result: "SUCCESS",
-					data: {
-						journalEntries: [
-							{
-								id: AccountsAndBalancesServiceMock.ID_JOURNAL_ENTRY_A
-							},
-							{
-								id: AccountsAndBalancesServiceMock.ID_JOURNAL_ENTRY_B
-							}
-						]
-					}
+					journalEntries: [
+						{id: AccountsAndBalancesServiceMock.ID_JOURNAL_ENTRY_A},
+						{id: AccountsAndBalancesServiceMock.ID_JOURNAL_ENTRY_B}
+					]
 				}
 			);
 	}

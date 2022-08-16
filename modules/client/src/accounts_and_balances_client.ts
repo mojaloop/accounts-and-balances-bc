@@ -41,6 +41,7 @@ import {
 } from "./errors";
 import {IAccountDTO, IJournalEntryDTO} from "./types";
 
+// TODO: put error-handling code inside a function to avoid repetition? securityContext.
 export class AccountsAndBalancesClient {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
