@@ -39,11 +39,12 @@ import {MongoAccountsRepo} from "./infrastructure/mongo_accounts_repo";
 import {
 	AuditClient,
 	KafkaAuditClientDispatcher,
-	LocalAuditClientCryptoProvider
+	LocalAuditClientCryptoProvider,
+	IAuditClientCryptoProvider,
+	IAuditClientDispatcher
 } from "@mojaloop/auditing-bc-client-lib";
 import {MLKafkaProducerOptions} from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib";
 import {existsSync} from "fs"; // TODO: fs promises?
-import {IAuditClientCryptoProvider, IAuditClientDispatcher} from "@mojaloop/auditing-bc-client-lib";
 import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {TokenHelper} from "@mojaloop/security-bc-client-lib";
 
@@ -52,7 +53,7 @@ import {TokenHelper} from "@mojaloop/security-bc-client-lib";
 // General.
 const BOUNDED_CONTEXT_NAME: string = "Accounts and Balances";
 const SERVICE_NAME: string = `${BOUNDED_CONTEXT_NAME} - Web Server`;
-const SERVICE_VERSION: string = "0.1.0";
+const SERVICE_VERSION: string = "0.0.1";
 
 // Message broker.
 const MESSAGE_BROKER_HOST: string = process.env.ACCOUNTS_AND_BALANCES_MESSAGE_BROKER_HOST ?? "localhost";

@@ -36,7 +36,6 @@ import {
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {MongoClient, Collection} from "mongodb";
 import {
-
 	JournalEntryAlreadyExistsError,
 	UnableToGetJournalEntriesError,
 	UnableToGetJournalEntryError,

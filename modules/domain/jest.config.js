@@ -1,11 +1,11 @@
-'use strict'
+"use strict";
 
 module.exports = {
-  preset: 'ts-jest',
-  testEnvironment: 'node',
+  preset: "ts-jest",
+  testEnvironment: "node",
   collectCoverage: true,
-  collectCoverageFrom: ['./src/**/*.ts'],
-  coverageReporters: ['json', 'lcov'],
+  collectCoverageFrom: ["./src/**/*.ts"],
+  coverageReporters: ["json", "lcov"],
   clearMocks: true,
   coverageThreshold: {
     "global": {

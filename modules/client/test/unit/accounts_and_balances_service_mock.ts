@@ -67,12 +67,12 @@ export class AccountsAndBalancesServiceMock {
 				(_, requestBody: any) => {
 					if (requestBody.id === AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID) {
 						return [
-							400,
+							409,
 							{message: "account already exists"}
 						];
 					}
 					return [
-						200,
+						201,
 						{accountId: requestBody.id}
 					];
 				}
@@ -88,14 +88,14 @@ export class AccountsAndBalancesServiceMock {
 					for (const journalEntry of requestBody) {
 						if (journalEntry.id === AccountsAndBalancesServiceMock.EXISTENT_JOURNAL_ENTRY_ID) {
 							return [
-								400,
+								409,
 								{message: "journal entry already exists"}
 							];
 						}
 						idsJournalEntries.push(journalEntry.id);
 					}
 					return [
-						200,
+						201,
 						{idsJournalEntries: idsJournalEntries}
 					];
 				}

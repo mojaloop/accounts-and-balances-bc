@@ -111,7 +111,7 @@ export class Aggregate {
 			}
 			throw e;
 		}
-		// TODO: configure.
+		// TODO: configure; try-catch.
 		await this.auditingClient.audit(
 			AuditingActions.ACCOUNT_CREATED,
 			true,

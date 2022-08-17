@@ -36,7 +36,6 @@ import {
 	AccountAlreadyExistsError,
 	InvalidAccountStateError,
 	InvalidAccountTypeError,
-	InvalidBalanceError,
 	InvalidCreditBalanceError,
 	InvalidDebitBalanceError,
 	InvalidJournalEntryAmountError,
@@ -103,7 +102,7 @@ export class ExpressRoutes {
 		if (authorizationHeader === undefined) {
 			this.sendErrorResponse(
 				res,
-				403,
+				403, // TODO: status code.
 				"" // TODO: message.
 			);
 			return;
@@ -113,7 +112,7 @@ export class ExpressRoutes {
 		if (bearer.length != BEARER_LENGTH) {
 			this.sendErrorResponse(
 				res,
-				403,
+				403, // TODO: status code.
 				"" // TODO: message.
 			);
 			return;
@@ -127,7 +126,7 @@ export class ExpressRoutes {
 			this.logger.error(e);
 			this.sendErrorResponse(
 				res,
-				403,
+				403, // TODO: status code.
 				"" // TODO: message.
 			);
 			return;
@@ -135,7 +134,7 @@ export class ExpressRoutes {
 		if (!verified) {
 			this.sendErrorResponse(
 				res,
-				403,
+				403, // TODO: status code.
 				"" // TODO: message.
 			);
 			return;
@@ -147,7 +146,7 @@ export class ExpressRoutes {
 			|| decodedToken.sub.indexOf("::") == -1) { // TODO: Put -1 in a constant.
 			this.sendErrorResponse(
 				res,
-				403,
+				403, // TODO: status code.
 				"" // TODO: message.
 			);
 			return;
@@ -172,7 +171,7 @@ export class ExpressRoutes {
 			const accountId: string = await this.aggregate.createAccount(req.body, req.securityContext!); // TODO: !.
 			this.sendSuccessResponse(
 				res,
-				200,
+				201,
 				{accountId: accountId}
 			);
 		} catch (e: unknown) {
@@ -200,16 +199,10 @@ export class ExpressRoutes {
 					400,
 					"invalid debit balance"
 				);
-			} else if (e instanceof InvalidBalanceError) {
-				this.sendErrorResponse(
-					res,
-					400,
-					"invalid balance"
-				);
 			} else if (e instanceof AccountAlreadyExistsError) {
 				this.sendErrorResponse(
 					res,
-					400,
+					409,
 					"account already exists"
 				);
 			} else {
@@ -227,7 +220,7 @@ export class ExpressRoutes {
 			const idsJournalEntries: string[] = await this.aggregate.createJournalEntries(req.body);
 			this.sendSuccessResponse(
 				res,
-				200,
+				201,
 				{idsJournalEntries: idsJournalEntries}
 			);
 		} catch (e: unknown) {
@@ -240,7 +233,7 @@ export class ExpressRoutes {
 			} else if (e instanceof JournalEntryAlreadyExistsError) {
 				this.sendErrorResponse(
 					res,
-					400,
+					409,
 					"journal entry already exists"
 				);
 			} else {
@@ -265,7 +258,7 @@ export class ExpressRoutes {
 		}
 		this.sendErrorResponse( // TODO: should this be done?
 			res,
-			400,
+			400, // TODO: status code.
 			"invalid query"
 		);
 	}
@@ -278,7 +271,7 @@ export class ExpressRoutes {
 		}
 		this.sendErrorResponse( // TODO: should this be done?
 			res,
-			400,
+			400, // TODO: status code.
 			"invalid query"
 		);
 	}

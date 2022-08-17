@@ -34,34 +34,22 @@ export class InvalidAccountStateError extends Error {}
 export class InvalidAccountTypeError extends Error {}
 export class InvalidCreditBalanceError extends Error {}
 export class InvalidDebitBalanceError extends Error {}
-export class InvalidBalanceError extends Error {}
-
 // JournalEntry.
 export class InvalidJournalEntryAmountError extends Error {}
-export class InsufficientBalanceError extends Error {}
-
-// Repo.
-export class UnableToInitRepoError extends Error {}
-// Item already exists.
-export class AccountAlreadyExistsError extends Error {}
-export class JournalEntryAlreadyExistsError extends Error {}
-// No such item.
-export class NoSuchAccountError extends Error {}
+export class CreditedAndDebitedAccountsAreTheSameError extends Error {}
 export class NoSuchCreditedAccountError extends Error {}
 export class NoSuchDebitedAccountError extends Error {}
-export class NoSuchJournalEntryError extends Error {}
-// Stores.
+export class CurrenciesDifferError extends Error {}
+export class InsufficientBalanceError extends Error {}
+// Repos.
+export class UnableToInitRepoError extends Error {}
+export class AccountAlreadyExistsError extends Error {}
+export class JournalEntryAlreadyExistsError extends Error {}
+export class NoSuchAccountError extends Error {}
 export class UnableToStoreAccountError extends Error {}
 export class UnableToStoreJournalEntryError extends Error {}
-// Gets.
 export class UnableToGetAccountError extends Error {}
+export class UnableToGetJournalEntryError extends Error {}
 export class UnableToGetAccountsError extends Error {}
 export class UnableToGetJournalEntriesError extends Error {}
-// Updates.
 export class UnableToUpdateAccountError extends Error {}
-
-// Others.
-export class CurrenciesDifferError extends Error {}
-
-// TODO.
-export class CreditedAndDebitedAccountsAreTheSameError extends Error {}

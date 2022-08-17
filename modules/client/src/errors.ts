@@ -29,8 +29,6 @@
 
 "use strict";
 
-export class UnableToReachServerError extends Error{}
-
 export class UnableToCreateAccountError extends Error{}
 export class UnableToGetAccountError extends Error{}
 export class UnableToGetAccountsError extends Error{}

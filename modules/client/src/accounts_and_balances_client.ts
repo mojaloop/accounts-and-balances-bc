@@ -36,8 +36,7 @@ import {
 	UnableToCreateJournalEntriesError,
 	UnableToGetAccountError,
 	UnableToGetAccountsError,
-	UnableToGetJournalEntriesError,
-	UnableToReachServerError
+	UnableToGetJournalEntriesError
 } from "./errors";
 import {IAccountDTO, IJournalEntryDTO} from "./types";
 
@@ -47,6 +46,7 @@ export class AccountsAndBalancesClient {
 	private readonly logger: ILogger;
 	// Other properties.
 	private readonly httpClient: AxiosInstance;
+	private readonly UNABLE_TO_REACH_SERVER_ERROR: string = "unable to reach server error";
 
 	constructor(
 		logger: ILogger,
@@ -66,17 +66,14 @@ export class AccountsAndBalancesClient {
 			const axiosResponse: AxiosResponse = await this.httpClient.post("/accounts", account);
 			return axiosResponse.data.accountId;
 		} catch (e: unknown) {
-			if (!axios.isAxiosError(e)) {
-				this.logger.error(e);
-				throw e;
+			if (axios.isAxiosError(e)) {
+				const axiosError: AxiosError = e as AxiosError;
+				if (axiosError.response !== undefined) {
+					throw new UnableToCreateAccountError((axiosError.response.data as any).message);
+				}
+				throw new UnableToCreateAccountError(this.UNABLE_TO_REACH_SERVER_ERROR);
 			}
-			const axiosError: AxiosError = e as AxiosError;
-			if (axiosError.response === undefined) {
-				this.logger.error(e);
-				throw new UnableToReachServerError();
-			}
-			const serverErrorResponse: any = axiosError.response.data;
-			throw new UnableToCreateAccountError(serverErrorResponse.message);
+			throw new UnableToCreateAccountError((e as any)?.message);
 		}
 	}
 
@@ -85,17 +82,14 @@ export class AccountsAndBalancesClient {
 			const axiosResponse: AxiosResponse = await this.httpClient.post("/journalEntries", journalEntries);
 			return axiosResponse.data.idsJournalEntries;
 		} catch (e: unknown) {
-			if (!axios.isAxiosError(e)) {
-				this.logger.error(e);
-				throw e;
+			if (axios.isAxiosError(e)) {
+				const axiosError: AxiosError = e as AxiosError;
+				if (axiosError.response !== undefined) {
+					throw new UnableToCreateJournalEntriesError((axiosError.response.data as any).message);
+				}
+				throw new UnableToCreateJournalEntriesError(this.UNABLE_TO_REACH_SERVER_ERROR);
 			}
-			const axiosError: AxiosError = e as AxiosError;
-			if (axiosError.response === undefined) {
-				this.logger.error(e);
-				throw new UnableToReachServerError();
-			}
-			const serverErrorResponse: any = axiosError.response.data;
-			throw new UnableToCreateJournalEntriesError(serverErrorResponse.message);
+			throw new UnableToCreateJournalEntriesError((e as any)?.message);
 		}
 	}
 
@@ -114,17 +108,14 @@ export class AccountsAndBalancesClient {
 			}
 			return axiosResponse.data.account;
 		} catch (e: unknown) {
-			if (!axios.isAxiosError(e)) {
-				this.logger.error(e);
-				throw e;
+			if (axios.isAxiosError(e)) {
+				const axiosError: AxiosError = e as AxiosError;
+				if (axiosError.response !== undefined) {
+					throw new UnableToGetAccountError((axiosError.response.data as any).message);
+				}
+				throw new UnableToGetAccountError(this.UNABLE_TO_REACH_SERVER_ERROR);
 			}
-			const axiosError: AxiosError = e as AxiosError;
-			if (axiosError.response === undefined) {
-				this.logger.error(e);
-				throw new UnableToReachServerError();
-			}
-			const serverErrorResponse: any = axiosError.response.data;
-			throw new UnableToGetAccountError(serverErrorResponse.message);
+			throw new UnableToGetAccountError((e as any)?.message);
 		}
 	}
 
@@ -143,17 +134,14 @@ export class AccountsAndBalancesClient {
 			}
 			return axiosResponse.data.accounts;
 		} catch (e: unknown) {
-			if (!axios.isAxiosError(e)) {
-				this.logger.error(e);
-				throw e;
+			if (axios.isAxiosError(e)) {
+				const axiosError: AxiosError = e as AxiosError;
+				if (axiosError.response !== undefined) {
+					throw new UnableToGetAccountsError((axiosError.response.data as any).message);
+				}
+				throw new UnableToGetAccountsError(this.UNABLE_TO_REACH_SERVER_ERROR);
 			}
-			const axiosError: AxiosError = e as AxiosError;
-			if (axiosError.response === undefined) {
-				this.logger.error(e);
-				throw new UnableToReachServerError();
-			}
-			const serverErrorResponse: any = axiosError.response.data;
-			throw new UnableToGetAccountsError(serverErrorResponse.message);
+			throw new UnableToGetAccountsError((e as any)?.message);
 		}
 	}
 
@@ -172,17 +160,14 @@ export class AccountsAndBalancesClient {
 			}
 			return axiosResponse.data.journalEntries;
 		} catch (e: unknown) {
-			if (!axios.isAxiosError(e)) {
-				this.logger.error(e);
-				throw e;
+			if (axios.isAxiosError(e)) {
+				const axiosError: AxiosError = e as AxiosError;
+				if (axiosError.response !== undefined) {
+					throw new UnableToGetJournalEntriesError((axiosError.response.data as any).message);
+				}
+				throw new UnableToGetJournalEntriesError(this.UNABLE_TO_REACH_SERVER_ERROR);
 			}
-			const axiosError: AxiosError = e as AxiosError;
-			if (axiosError.response === undefined) {
-				this.logger.error(e);
-				throw new UnableToReachServerError();
-			}
-			const serverErrorResponse: any = axiosError.response.data;
-			throw new UnableToGetJournalEntriesError(serverErrorResponse.message);
+			throw new UnableToGetJournalEntriesError((e as any)?.message);
 		}
 	}
 }

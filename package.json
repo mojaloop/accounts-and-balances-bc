@@ -1,7 +1,7 @@
 {
   "name": "@mojaloop/accounts-and-balances-bc",
   "version": "0.0.1",
-  "description": "Accounts and balances bounded context.",
+  "description": "Accounts and Balances Bounded Context",
   "license": "Apache-2.0",
   "homepage": "https://github.com/mojaloop/accounts-and-balances-bc",
   "bugs": {
@@ -12,34 +12,24 @@
     "Pedro Sousa Barreto <pedrob@crosslaketech.com>"
   ],
   "scripts": {
-    "start": "yarn workspaces foreach --parallel -v run start",
-    "start:web-service-app": "yarn workspace @mojaloop/accounts-and-balances-bc-web-service-app run start",
-    "build": "yarn workspaces foreach -v run build",
-    "watch": "yarn workspaces foreach --parallel -v run watch",
-    "clean": "yarn run clean:dist",
-    "clean:npm": "yarn workspaces foreach --parallel -v run clean:npm",
-    "clean:dist": "yarn workspaces foreach --parallel -v run clean:dist",
-    "lint": "yarn workspaces foreach -v run lint",
-    "lint:fix": "yarn workspaces foreach -v run lint:fix",
-    "test:unit": "yarn workspaces foreach -v run test:unit",
-    "test:integration": "yarn workspaces foreach --parallel -v run test:integration",
-    "test:coverage": "yarn workspaces foreach --parallel -v run test:coverage",
-    "test:coverage-check": "yarn workspaces foreach --parallel -v run test:coverage-check",
-    "publish:client-lib": "yarn workspace @mojaloop/accounts-and-balances-bc-client run publish",
-    "publish:private-types-lib": "yarn workspace @mojaloop/accounts-and-balances-bc-private-types run publish"
+    "clean": "yarn workspaces foreach -v --parallel run clean",
+    "clean:dist": "yarn workspaces foreach -v --parallel run clean:dist",
+    "clean:node-modules": "yarn workspaces foreach -v --parallel run clean:node-modules",
+    "clean:dist-and-node-modules": "yarn workspaces foreach -v --parallel run clean:dist-and-node-modules",
+    "build": "yarn workspaces foreach -v --parallel run build",
+    "test:unit": "yarn workspaces foreach -v --parallel run test:unit",
+    "publish": "yarn workspaces foreach -v --parallel run publish"
   },
   "devDependencies": {
-    "@types/jest": "^27.0.3",
-    "@types/node": "^16.11.9",
-    "@types/node-cache": "^4.2.5",
-    "@typescript-eslint/eslint-plugin": "^5.22.0",
-    "@typescript-eslint/parser": "^5.22.0",
-    "eslint": "^8.14.0",
-    "husky": "^8.0.0",
-    "jest": "^27.3.1",
-    "npm-check-updates": "^12.5.11",
-    "ts-jest": "^27.0.7",
-    "typescript": "^4.6.4"
+    "@types/jest": "^28.1.7",
+    "@typescript-eslint/eslint-plugin": "^5.33.1",
+    "@typescript-eslint/parser": "^5.33.1",
+    "eslint": "^8.22.0",
+    "husky": "^8.0.1",
+    "jest": "^28.1.3",
+    "npm-check-updates": "^16.0.5",
+    "ts-jest": "^28.0.8",
+    "typescript": "^4.7.4"
   },
   "workspaces": [
     "modules/*"

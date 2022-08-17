@@ -1,1 +1,1 @@
-# Accounts and Balances Web Server
+# Accounts and Balances BC - Web Service Application
