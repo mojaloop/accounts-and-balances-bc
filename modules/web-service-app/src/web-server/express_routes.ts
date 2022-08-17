@@ -34,8 +34,6 @@ import express from "express";
 import {
 	Aggregate,
 	AccountAlreadyExistsError,
-	InvalidAccountStateError,
-	InvalidAccountTypeError,
 	InvalidCreditBalanceError,
 	InvalidDebitBalanceError,
 	InvalidJournalEntryAmountError,
@@ -179,19 +177,7 @@ export class ExpressRoutes {
 				{accountId: accountId}
 			);
 		} catch (e: unknown) {
-			if (e instanceof InvalidAccountStateError) {
-				this.sendErrorResponse(
-					res,
-					400,
-					"invalid account state"
-				);
-			} else if (e instanceof InvalidAccountTypeError) {
-				this.sendErrorResponse(
-					res,
-					400,
-					"invalid account type"
-				);
-			} else if (e instanceof InvalidCreditBalanceError) {
+			if (e instanceof InvalidCreditBalanceError) {
 				this.sendErrorResponse(
 					res,
 					400,

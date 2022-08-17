@@ -32,7 +32,6 @@
 import axios, {AxiosError, AxiosInstance, AxiosResponse} from "axios";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 
-// TODO: what's the problem of using a mock?
 export class AccountsAndBalancesClientMock {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
@@ -54,8 +53,8 @@ export class AccountsAndBalancesClientMock {
 
 	async createAccount(account: any): Promise<number> {
 		try {
-			const res: AxiosResponse = await this.httpClient.post("/accounts", account);
-			return res.status;
+			const axiosResponse: AxiosResponse = await this.httpClient.post("/accounts", account);
+			return axiosResponse.status;
 		} catch (e: unknown) {
 			this.logger.debug(e);
 			return (e as AxiosError).response?.status ?? -1;
@@ -64,8 +63,8 @@ export class AccountsAndBalancesClientMock {
 
 	async createJournalEntries(journalEntries: any[]): Promise<number> {
 		try {
-			const res: AxiosResponse = await this.httpClient.post("/journalEntries", journalEntries);
-			return res.status;
+			const axiosResponse: AxiosResponse = await this.httpClient.post("/journalEntries", journalEntries);
+			return axiosResponse.status;
 		} catch (e: unknown) {
 			this.logger.debug(e);
 			return (e as AxiosError).response?.status ?? -1;
@@ -74,8 +73,8 @@ export class AccountsAndBalancesClientMock {
 
 	async getAccountById(accountId: string): Promise<number> {
 		try {
-			const res: AxiosResponse = await this.httpClient.get(`/accounts?id=${accountId}`);
-			return res.status;
+			const axiosResponse: AxiosResponse = await this.httpClient.get(`/accounts?id=${accountId}`);
+			return axiosResponse.status;
 		} catch (e: unknown) {
 			this.logger.debug(e);
 			return (e as AxiosError).response?.status ?? -1;
@@ -84,8 +83,8 @@ export class AccountsAndBalancesClientMock {
 
 	async getAccountsByExternalId(externalId: string): Promise<number> {
 		try {
-			const res: AxiosResponse = await this.httpClient.get(`/accounts?externalId=${externalId}`);
-			return res.status;
+			const axiosResponse: AxiosResponse = await this.httpClient.get(`/accounts?externalId=${externalId}`);
+			return axiosResponse.status;
 		} catch (e: unknown) {
 			this.logger.debug(e);
 			return (e as AxiosError).response?.status ?? -1;
@@ -94,8 +93,8 @@ export class AccountsAndBalancesClientMock {
 
 	async getJournalEntriesByAccountId(accountId: string): Promise<number> {
 		try {
-			const res: AxiosResponse = await this.httpClient.get(`/journalEntries?accountId=${accountId}`);
-			return res.status;
+			const axiosResponse: AxiosResponse = await this.httpClient.get(`/journalEntries?accountId=${accountId}`);
+			return axiosResponse.status;
 		} catch (e: unknown) {
 			this.logger.debug(e);
 			return (e as AxiosError).response?.status ?? -1;

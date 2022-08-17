@@ -30,8 +30,6 @@
 "use strict";
 
 import {
-	InvalidAccountStateError,
-	InvalidAccountTypeError,
 	InvalidCreditBalanceError,
 	InvalidDebitBalanceError
 } from "../errors";
@@ -69,14 +67,6 @@ export class Account implements IAccount {
 	}
 
 	static validateAccount(account: Account): void {
-		// state.
-		if (!(account.state in AccountState)) {
-			throw new InvalidAccountStateError();
-		}
-		// type.
-		if (!(account.type in AccountType)) {
-			throw new InvalidAccountTypeError();
-		}
 		// currency. TODO: validate currency.
 		// creditBalance.
 		if (account.creditBalance < 0) {
