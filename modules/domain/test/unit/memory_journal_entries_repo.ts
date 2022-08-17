@@ -32,7 +32,7 @@
 import {
 	IJournalEntriesRepo,
 	IJournalEntry,
-	JournalEntryAlreadyExistsError, NoSuchJournalEntryError
+	JournalEntryAlreadyExistsError
 } from "../../src";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 
@@ -76,14 +76,6 @@ export class MemoryJournalEntriesRepo implements IJournalEntriesRepo {
 		this.journalEntries.set(journalEntry.id, journalEntry);
 	}
 
-	async getJournalEntryById(journalEntryId: string): Promise<IJournalEntry | null> {
-		return this.journalEntries.get(journalEntryId) ?? null;
-	}
-
-	async getAllJournalEntries(): Promise<IJournalEntry[]> {
-		return [...this.journalEntries.values()];
-	}
-
 	async getJournalEntriesByAccountId(accountId: string): Promise<IJournalEntry[]> {
 		const journalEntries: IJournalEntry[] = [];
 		this.journalEntries.forEach(journalEntry => {
@@ -93,15 +85,5 @@ export class MemoryJournalEntriesRepo implements IJournalEntriesRepo {
 			}
 		})
 		return journalEntries;
-	}
-
-	async deleteJournalEntryById(journalEntryId: string): Promise<void> {
-		if (!this.journalEntries.delete(journalEntryId)) {
-			throw new NoSuchJournalEntryError();
-		}
-	}
-
-	async deleteAllJournalEntries(): Promise<void> {
-		this.journalEntries.clear();
 	}
 }
