@@ -41,7 +41,11 @@ import {
 	InvalidJournalEntryAmountError,
 	JournalEntryAlreadyExistsError,
 	IAccount,
-	IJournalEntry
+	IJournalEntry,
+	CreditedAndDebitedAccountsAreTheSameError,
+	NoSuchCreditedAccountError,
+	NoSuchDebitedAccountError,
+	CurrenciesDifferError, InsufficientBalanceError
 } from "@mojaloop/accounts-and-balances-bc-domain";
 import {TokenHelper, CallSecurityContext} from "@mojaloop/security-bc-client-lib";
 
@@ -229,6 +233,36 @@ export class ExpressRoutes {
 					res,
 					400,
 					"invalid journal entry amount"
+				);
+			} else if (e instanceof CreditedAndDebitedAccountsAreTheSameError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"credited and debited accounts are the same"
+				);
+			} else if (e instanceof NoSuchCreditedAccountError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"no such credited account"
+				);
+			} else if (e instanceof NoSuchDebitedAccountError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"no such debited account"
+				);
+			} else if (e instanceof CurrenciesDifferError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"currencies differ"
+				);
+			} else if (e instanceof InsufficientBalanceError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"insufficient balance"
 				);
 			} else if (e instanceof JournalEntryAlreadyExistsError) {
 				this.sendErrorResponse(
