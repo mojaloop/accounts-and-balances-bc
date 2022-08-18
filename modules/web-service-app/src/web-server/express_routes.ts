@@ -143,9 +143,9 @@ export class ExpressRoutes {
 		}
 
 		const decodedToken: any = this.tokenHelper.decodeToken(bearerToken); // TODO: type.
-		if (decodedToken.sub === undefined // TODO: undefined?
-			|| decodedToken.sub === null // TODO: null?
-			|| decodedToken.sub.indexOf("::") == -1) { // TODO: Put -1 in a constant.
+		if (decodedToken === undefined // TODO: undefined?
+			|| decodedToken === null // TODO: null?
+			|| decodedToken.sub.indexOf("::") === -1) {
 			this.sendErrorResponse(
 				res,
 				403, // TODO: status code.
@@ -159,10 +159,10 @@ export class ExpressRoutes {
 		const subject = subSplit[1]; // TODO: type.
 
 		req.securityContext = {
-			accessToken: bearerToken,
-			clientId: subjectType.toUpperCase().startsWith("APP") ? subject : null,
-			username: subjectType.toUpperCase().startsWith("USER") ? subject : null,
-			rolesIds: decodedToken.roles
+			username: subjectType.toUpperCase().startsWith("USER") ? subject : null, // TODO: null?
+			clientId: subjectType.toUpperCase().startsWith("APP") ? subject : null, // TODO: null?
+			rolesIds: decodedToken.roles,
+			accessToken: bearerToken
 		};
 
 		next();
