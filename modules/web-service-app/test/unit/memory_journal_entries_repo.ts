@@ -32,7 +32,11 @@
 import {
 	IJournalEntriesRepo,
 	IJournalEntry,
-	JournalEntryAlreadyExistsError
+	JournalEntryAlreadyExistsError,
+	UnableToInitRepoError,
+	UnableToGetJournalEntriesError,
+	UnableToGetJournalEntryError,
+	UnableToStoreJournalEntryError
 } from "@mojaloop/accounts-and-balances-bc-domain";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 
@@ -43,6 +47,7 @@ export class MemoryJournalEntriesRepo implements IJournalEntriesRepo {
 	private readonly DB_NAME: string;
 	private readonly COLLECTION_NAME: string;
 	// Other properties.
+	public unexpectedFailure: boolean = false; // TODO: should this be done?
 	private readonly journalEntries: Map<string, IJournalEntry>;
 
 	constructor(
@@ -60,30 +65,42 @@ export class MemoryJournalEntriesRepo implements IJournalEntriesRepo {
 	}
 
 	async init(): Promise<void> {
+		if (this.unexpectedFailure) {
+			throw new UnableToInitRepoError();
+		}
 	}
 
 	async destroy(): Promise<void> {
 	}
 
 	async journalEntryExistsById(journalEntryId: string): Promise<boolean> {
+		if (this.unexpectedFailure) {
+			throw new UnableToGetJournalEntryError();
+		}
 		return this.journalEntries.has(journalEntryId);
 	}
 
 	async storeNewJournalEntry(journalEntry: IJournalEntry): Promise<void> {
-		if (this.journalEntries.has(journalEntry.id)) {
+		if (this.unexpectedFailure) {
+			throw new UnableToStoreJournalEntryError();
+		}
+		if (await this.journalEntryExistsById(journalEntry.id)) {
 			throw new JournalEntryAlreadyExistsError();
 		}
 		this.journalEntries.set(journalEntry.id, journalEntry);
 	}
 
 	async getJournalEntriesByAccountId(accountId: string): Promise<IJournalEntry[]> {
+		if (this.unexpectedFailure) {
+			throw new UnableToGetJournalEntriesError();
+		}
 		const journalEntries: IJournalEntry[] = [];
 		this.journalEntries.forEach(journalEntry => {
 			if (journalEntry.creditedAccountId === accountId
 				|| journalEntry.debitedAccountId === accountId) {
 				journalEntries.push(journalEntry);
 			}
-		})
+		});
 		return journalEntries;
 	}
 }

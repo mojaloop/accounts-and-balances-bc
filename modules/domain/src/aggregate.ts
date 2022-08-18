@@ -87,16 +87,16 @@ export class Aggregate {
 		await this.auditingClient.destroy();
 	}
 
-	private getAuditSecurityContext(securityContext: CallSecurityContext): AuditSecurityContext {
+	/*private getAuditSecurityContext(securityContext: CallSecurityContext): AuditSecurityContext {
 		return {
 			userId: securityContext.username,
 			role: "", // TODO: get role.
 			appId: securityContext.clientId
 		}
-	}
+	}*/
 
 	// TODO: why ignore the case in which uuid.v4() generates an already existing id?
-	async createAccount(account: IAccount, securityContext: CallSecurityContext): Promise<string> {
+	async createAccount(account: IAccount/*, securityContext: CallSecurityContext*/): Promise<string> {
 		// Generate a random UUId, if needed.
 		if (account.id === undefined || account.id === null || account.id === "") {
 			account.id = uuid.v4();
@@ -112,12 +112,12 @@ export class Aggregate {
 			throw e;
 		}
 		// TODO: configure; try-catch.
-		await this.auditingClient.audit(
+		/*await this.auditingClient.audit(
 			AuditingActions.ACCOUNT_CREATED,
 			true,
 			this.getAuditSecurityContext(securityContext),
 			[{key: "accountId", value: account.id}]
-		);
+		);*/
 		return account.id;
 	}
 

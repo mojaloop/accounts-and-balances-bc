@@ -32,8 +32,13 @@
 import {
 	IAccount,
 	IAccountsRepo,
+	UnableToInitRepoError,
 	NoSuchAccountError,
-	AccountAlreadyExistsError
+	AccountAlreadyExistsError,
+	UnableToStoreAccountError,
+	UnableToGetAccountError,
+	UnableToUpdateAccountError,
+	UnableToGetAccountsError
 } from "../../src";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 
@@ -44,6 +49,7 @@ export class MemoryAccountsRepo implements IAccountsRepo {
 	private readonly DB_NAME: string;
 	private readonly COLLECTION_NAME: string;
 	// Other properties.
+	public unexpectedFailure: boolean = false; // TODO: should this be done?
 	private readonly accounts: Map<string, IAccount>;
 
 	constructor(
@@ -61,37 +67,59 @@ export class MemoryAccountsRepo implements IAccountsRepo {
 	}
 
 	async init(): Promise<void> {
+		if (this.unexpectedFailure) {
+			throw new UnableToInitRepoError();
+		}
 	}
 
 	async destroy(): Promise<void> {
 	}
 
 	async accountExistsById(accountId: string): Promise<boolean> {
+		if (this.unexpectedFailure) {
+			throw new UnableToGetAccountError();
+		}
 		return this.accounts.has(accountId);
 	}
 
 	async storeNewAccount(account: IAccount): Promise<void> {
-		if (this.accounts.has(account.id)) {
+		if (this.unexpectedFailure) {
+			throw new UnableToStoreAccountError();
+		}
+		if (await this.accountExistsById(account.id)) {
 			throw new AccountAlreadyExistsError();
 		}
 		this.accounts.set(account.id, account);
 	}
 
 	async getAccountById(accountId: string): Promise<IAccount | null> {
+		if (this.unexpectedFailure) {
+			throw new UnableToGetAccountError();
+		}
 		return this.accounts.get(accountId) ?? null;
 	}
 
 	async getAccountsByExternalId(externalId: string): Promise<IAccount[]> {
+		if (this.unexpectedFailure) {
+			throw new UnableToGetAccountsError();
+		}
 		const accounts: IAccount[] = [];
 		this.accounts.forEach(account => {
 			if (account.externalId === externalId) {
 				accounts.push(account);
 			}
-		})
+		});
 		return accounts;
 	}
 
-	async updateAccountCreditBalanceById(accountId: string, creditBalance: bigint, timeStampLastJournalEntry: number): Promise<void> {
+	async updateAccountCreditBalanceById(
+		accountId: string,
+		creditBalance: bigint,
+		timeStampLastJournalEntry: number
+	): Promise<void> {
+		if (this.unexpectedFailure) {
+			throw new UnableToUpdateAccountError();
+		}
 		const account: IAccount | undefined = this.accounts.get(accountId);
 		if (account === undefined) {
 			throw new NoSuchAccountError();
@@ -100,7 +128,14 @@ export class MemoryAccountsRepo implements IAccountsRepo {
 		account.timestampLastJournalEntry = timeStampLastJournalEntry;
 	}
 
-	async updateAccountDebitBalanceById(accountId: string, debitBalance: bigint, timeStampLastJournalEntry: number): Promise<void> {
+	async updateAccountDebitBalanceById(
+		accountId: string,
+		debitBalance: bigint,
+		timeStampLastJournalEntry: number
+	): Promise<void> {
+		if (this.unexpectedFailure) {
+			throw new UnableToUpdateAccountError();
+		}
 		const account: IAccount | undefined = this.accounts.get(accountId);
 		if (account === undefined) {
 			throw new NoSuchAccountError();

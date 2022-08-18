@@ -50,16 +50,16 @@ import {TokenHelper, CallSecurityContext} from "@mojaloop/security-bc-client-lib
 const BEARER_LENGTH: number = 2; // TODO: why 2?
 
 // Extend express request to include our security fields. TODO: clarify.
-declare module "express-serve-static-core" {
+/*declare module "express-serve-static-core" {
 	export interface Request {
 		securityContext: CallSecurityContext | null;
 	}
-}
+}*/
 
 export class ExpressRoutes {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
-	private readonly tokenHelper: TokenHelper;
+	// private readonly tokenHelper: TokenHelper;
 	private readonly aggregate: Aggregate;
 	// Other properties.
 	private readonly _router: express.Router;
@@ -67,11 +67,11 @@ export class ExpressRoutes {
 
 	constructor(
 		logger: ILogger,
-		tokenHelper: TokenHelper,
+		// tokenHelper: TokenHelper,
 		aggregate: Aggregate
 	) {
 		this.logger = logger;
-		this.tokenHelper = tokenHelper;
+		// this.tokenHelper = tokenHelper;
 		this.aggregate = aggregate;
 
 		this._router = express.Router();
@@ -81,7 +81,7 @@ export class ExpressRoutes {
 
 	private setUp(): void {
 		// Inject authentication - all requests require a valid token. TODO: clarify.
-		this._router.use(this.authenticationMiddleware.bind(this));
+		// this._router.use(this.authenticationMiddleware.bind(this));
 		// Posts.
 		this._router.post("/accounts", this.postAccount.bind(this));
 		this._router.post("/journalEntries", this.postJournalEntries.bind(this));
@@ -95,7 +95,7 @@ export class ExpressRoutes {
 	}
 
 	// TODO: function name; express.NextFunction; clarify; why returns? logs vs error responses.
-	private async authenticationMiddleware(
+	/*private async authenticationMiddleware(
 		req: express.Request,
 		res: express.Response,
 		next: express.NextFunction
@@ -166,11 +166,11 @@ export class ExpressRoutes {
 		};
 
 		next();
-	}
+	}*/
 
 	private async postAccount(req: express.Request, res: express.Response): Promise<void> {
 		try {
-			const accountId: string = await this.aggregate.createAccount(req.body, req.securityContext!); // TODO: !.
+			const accountId: string = await this.aggregate.createAccount(req.body/*, req.securityContext!*/); // TODO: !.
 			this.sendSuccessResponse(
 				res,
 				201,
@@ -326,7 +326,7 @@ export class ExpressRoutes {
 		try {
 			// The properties of the req.query object are always strings. TODO: check.
 			const accounts: IAccount[] = await this.aggregate.getAccountsByExternalId(req.query.externalId as string); // TODO: cast?
-			if (accounts === []) {
+			if (accounts.length === 0) {
 				this.sendErrorResponse(
 					res,
 					404,
@@ -352,7 +352,7 @@ export class ExpressRoutes {
 		try {
 			// The properties of the req.query object are always strings. TODO: check.
 			const journalEntries: IJournalEntry[] = await this.aggregate.getJournalEntriesByAccountId(req.query.accountId as string); // TODO: cast?
-			if (journalEntries === []) {
+			if (journalEntries.length === 0) {
 				this.sendErrorResponse(
 					res,
 					404,

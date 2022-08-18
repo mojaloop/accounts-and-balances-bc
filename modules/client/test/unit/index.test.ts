@@ -32,17 +32,26 @@
 import {ConsoleLogger, ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {AccountsAndBalancesServiceMock} from "./accounts_and_balances_service_mock";
 import {AccountsAndBalancesClient} from "../../src";
-import {IAccountDTO, IJournalEntryDTO, UnableToCreateAccountError, UnableToCreateJournalEntriesError} from "../../src";
+import {
+	IAccountDTO,
+	IJournalEntryDTO,
+	UnableToCreateAccountError,
+	UnableToCreateJournalEntriesError,
+	UnableToGetAccountError,
+	UnableToGetAccountsError,
+	UnableToGetJournalEntriesError
+} from "../../src";
 
 const ACCOUNTS_AND_BALANCES_URL: string = "http://localhost:1234";
 const HTTP_CLIENT_TIMEOUT_MS: number = 10_000;
 
+let accountsAndBalancesServiceMock: AccountsAndBalancesServiceMock;
 let accountsAndBalancesClient: AccountsAndBalancesClient;
 
 describe("accounts and balances client - unit tests", () => {
 	beforeAll(async () => {
 		const logger: ILogger = new ConsoleLogger();
-		const accountsAndBalancesServiceMock: AccountsAndBalancesServiceMock = new AccountsAndBalancesServiceMock(
+		accountsAndBalancesServiceMock = new AccountsAndBalancesServiceMock(
 			logger,
 			ACCOUNTS_AND_BALANCES_URL
 		);
@@ -86,6 +95,26 @@ describe("accounts and balances client - unit tests", () => {
 				await accountsAndBalancesClient.createAccount(account);
 			}
 		).rejects.toThrow(UnableToCreateAccountError);
+	});
+	test("create account with unreachable server", async () => {
+		const accountId: string = AccountsAndBalancesServiceMock.NON_EXISTENT_ACCOUNT_ID;
+		const account: IAccountDTO = {
+			id: accountId,
+			externalId: null,
+			state: "ACTIVE",
+			type: "POSITION",
+			currency: "EUR",
+			creditBalance: 100,
+			debitBalance: 25,
+			timestampLastJournalEntry: 0
+		};
+		accountsAndBalancesServiceMock.disable();
+		await expect(
+			async () => {
+				await accountsAndBalancesClient.createAccount(account);
+			}
+		).rejects.toThrow(UnableToCreateAccountError);
+		accountsAndBalancesServiceMock.enable();
 	});
 
 	// Create journal entries.
@@ -134,7 +163,7 @@ describe("accounts and balances client - unit tests", () => {
 			timestamp: 0
 		};
 		// Journal entry B.
-		const idJournalEntryB: string = AccountsAndBalancesServiceMock.EXISTENT_JOURNAL_ENTRY_ID;
+		const idJournalEntryB: string = AccountsAndBalancesServiceMock.NON_EXISTENT_JOURNAL_ENTRY_ID;
 		const journalEntryB: IJournalEntryDTO = {
 			id: idJournalEntryB,
 			externalId: null,
@@ -151,6 +180,26 @@ describe("accounts and balances client - unit tests", () => {
 			}
 		).rejects.toThrow(UnableToCreateJournalEntriesError);
 	});
+	test("create journal entry with unreachable server", async () => {
+		const journalEntryId: string = AccountsAndBalancesServiceMock.EXISTENT_JOURNAL_ENTRY_ID;
+		const journalEntry: IJournalEntryDTO = {
+			id: journalEntryId,
+			externalId: null,
+			externalCategory: null,
+			currency: "EUR",
+			amount: 5,
+			creditedAccountId: "a",
+			debitedAccountId: "b",
+			timestamp: 0
+		};
+		accountsAndBalancesServiceMock.disable();
+		await expect(
+			async () => {
+				await accountsAndBalancesClient.createJournalEntries([journalEntry]);
+			}
+		).rejects.toThrow(UnableToCreateJournalEntriesError);
+		accountsAndBalancesServiceMock.enable();
+	});
 
 	// Get account by id.
 	test("get non-existent account by id", async () => {
@@ -162,6 +211,22 @@ describe("accounts and balances client - unit tests", () => {
 		const account: IAccountDTO | null =
 			await accountsAndBalancesClient.getAccountById(AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID);
 		expect(account?.id).toEqual(AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID);
+	});
+	test("get account with unreachable server", async () => {
+		accountsAndBalancesServiceMock.disable();
+		await expect(
+			async () => {
+				await accountsAndBalancesClient.getAccountById(AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID);
+			}
+		).rejects.toThrow(UnableToGetAccountError);
+		accountsAndBalancesServiceMock.enable();
+	});
+	test("get account with internal server error", async () => {
+		await expect(
+			async () => {
+				await accountsAndBalancesClient.getAccountById(AccountsAndBalancesServiceMock.ID_INTERNAL_SERVER_ERROR);
+			}
+		).rejects.toThrow(UnableToGetAccountError);
 	});
 
 	// Get accounts by external id.
@@ -178,6 +243,24 @@ describe("accounts and balances client - unit tests", () => {
 			{id: AccountsAndBalancesServiceMock.ID_ACCOUNT_B}
 		]);
 	});
+	test("get accounts with unreachable server", async () => {
+		accountsAndBalancesServiceMock.disable();
+		await expect(
+			async () => {
+				await accountsAndBalancesClient
+					.getAccountsByExternalId(AccountsAndBalancesServiceMock.EXISTENT_EXTERNAL_ID);
+			}
+		).rejects.toThrow(UnableToGetAccountsError);
+		accountsAndBalancesServiceMock.enable();
+	});
+	test("get accounts with internal server error", async () => {
+		await expect(
+			async () => {
+				await accountsAndBalancesClient
+					.getAccountsByExternalId(AccountsAndBalancesServiceMock.ID_INTERNAL_SERVER_ERROR);
+			}
+		).rejects.toThrow(UnableToGetAccountsError);
+	});
 
 	// Get journal entries by account id.
 	test("get non-existent journal entries by account id", async () => {
@@ -192,5 +275,23 @@ describe("accounts and balances client - unit tests", () => {
 			{id: AccountsAndBalancesServiceMock.ID_JOURNAL_ENTRY_A},
 			{id: AccountsAndBalancesServiceMock.ID_JOURNAL_ENTRY_B}
 		]);
+	});
+	test("get journal entries with unreachable server", async () => {
+		accountsAndBalancesServiceMock.disable();
+		await expect(
+			async () => {
+				await accountsAndBalancesClient
+					.getJournalEntriesByAccountId(AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID);
+			}
+		).rejects.toThrow(UnableToGetJournalEntriesError);
+		accountsAndBalancesServiceMock.enable();
+	});
+	test("get journal entries with internal server error", async () => {
+		await expect(
+			async () => {
+				await accountsAndBalancesClient
+					.getJournalEntriesByAccountId(AccountsAndBalancesServiceMock.ID_INTERNAL_SERVER_ERROR);
+			}
+		).rejects.toThrow(UnableToGetJournalEntriesError);
 	});
 });

@@ -117,13 +117,13 @@ async function main(): Promise<void> {
 	await logger.start(); // TODO: here or on the aggregate?
 
 	// Token helper.
-	const tokenHelper: TokenHelper = new TokenHelper( // TODO: no interface?
+	/*const tokenHelper: TokenHelper = new TokenHelper( // TODO: no interface?
 		AUTH_Z_TOKEN_ISSUER_NAME,
 		AUTH_Z_SVC_JWKS_URL,
 		AUTH_Z_TOKEN_AUDIENCE,
 		logger
 	);
-	await tokenHelper.init();
+	await tokenHelper.init();*/
 
 	// Auditing.
 	if (!existsSync(AUDITING_CERT_FILE_PATH)) { // TODO: clarify.
@@ -174,7 +174,7 @@ async function main(): Promise<void> {
 		WEB_SERVER_HOST,
 		WEB_SERVER_PORT_NO,
 		WEB_SERVER_PATH_ROUTER,
-		tokenHelper,
+		// tokenHelper,
 		aggregate
 	);
 	webServer.start(); // No need to handle exceptions.

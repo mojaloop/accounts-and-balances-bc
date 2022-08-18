@@ -43,6 +43,7 @@ export class AccountsAndBalancesServiceMock {
 	public static readonly EXISTENT_JOURNAL_ENTRY_ID: string = "d";
 	public static readonly NON_EXISTENT_EXTERNAL_ID: string = "e";
 	public static readonly EXISTENT_EXTERNAL_ID: string = "f";
+	public static readonly ID_INTERNAL_SERVER_ERROR: string = "g";
 	public static readonly ID_ACCOUNT_A: string = "account_a";
 	public static readonly ID_ACCOUNT_B: string = "account_b";
 	public static readonly ID_JOURNAL_ENTRY_A: string = "journal_entry_a";
@@ -58,7 +59,7 @@ export class AccountsAndBalancesServiceMock {
 		this.setUp();
 	}
 
-	setUp(): void {
+	private setUp(): void {
 		// Create account.
 		nock(this.ACCOUNTS_AND_BALANCES_URL)
 			.persist()
@@ -119,6 +120,15 @@ export class AccountsAndBalancesServiceMock {
 				200,
 				{account: {id: AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID}}
 			);
+		// Get account with internal server error.
+		nock(this.ACCOUNTS_AND_BALANCES_URL)
+			.persist()
+			.get("/accounts")
+			.query({id: AccountsAndBalancesServiceMock.ID_INTERNAL_SERVER_ERROR})
+			.reply(
+				500,
+				{message: "unknown error"}
+			);
 
 		// Get non-existent accounts by external id.
 		nock(this.ACCOUNTS_AND_BALANCES_URL)
@@ -142,6 +152,15 @@ export class AccountsAndBalancesServiceMock {
 						{id: AccountsAndBalancesServiceMock.ID_ACCOUNT_B}
 					]
 				}
+			);
+		// Get accounts with internal server error.
+		nock(this.ACCOUNTS_AND_BALANCES_URL)
+			.persist()
+			.get("/accounts")
+			.query({externalId: AccountsAndBalancesServiceMock.ID_INTERNAL_SERVER_ERROR})
+			.reply(
+				500,
+				{message: "unknown error"}
 			);
 
 		// Get non-existent journal entries by account id.
@@ -167,5 +186,22 @@ export class AccountsAndBalancesServiceMock {
 					]
 				}
 			);
+		// Get journal entries with internal server error.
+		nock(this.ACCOUNTS_AND_BALANCES_URL)
+			.persist()
+			.get("/journalEntries")
+			.query({accountId: AccountsAndBalancesServiceMock.ID_INTERNAL_SERVER_ERROR})
+			.reply(
+				500,
+				{message: "unknown error"}
+			);
+	}
+
+	public disable(): void {
+		nock.restore();
+	}
+
+	public enable(): void {
+		nock.activate();
 	}
 }

@@ -32,7 +32,7 @@
 import axios, {AxiosError, AxiosInstance, AxiosResponse} from "axios";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 
-export class AccountsAndBalancesClientMock {
+export class AuxiliaryClient {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
 	// Other properties.

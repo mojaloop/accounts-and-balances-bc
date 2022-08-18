@@ -31,7 +31,7 @@
 
 import {AuditEntryLabel, AuditSecurityContext, IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 
-// TODO: should I log anything?
+// TODO: should anything by logged?
 export class AuditClientMock implements IAuditClient {
 	constructor() {
 	}

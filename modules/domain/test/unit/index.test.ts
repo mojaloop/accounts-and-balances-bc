@@ -62,6 +62,8 @@ const DB_NAME: string = "AccountsAndBalances";
 const ACCOUNTS_COLLECTION_NAME: string = "Accounts";
 const JOURNAL_ENTRIES_COLLECTION_NAME: string = "JournalEntries";
 
+let accountsRepo: IAccountsRepo;
+let journalEntriesRepo: IJournalEntriesRepo;
 let aggregate: Aggregate;
 const securityContext: CallSecurityContext = {
 	username: "",
@@ -74,13 +76,13 @@ describe("accounts and balances domain - unit tests", () => {
 	beforeAll(async () => {
 		const logger: ILogger = new ConsoleLogger();
 		const auditingClient: IAuditClient = new AuditClientMock();
-		const accountsRepo: IAccountsRepo = new MemoryAccountsRepo(
+		accountsRepo = new MemoryAccountsRepo(
 			logger,
 			DB_URL,
 			DB_NAME,
 			ACCOUNTS_COLLECTION_NAME
 		);
-		const journalEntriesRepo: IJournalEntriesRepo = new MemoryJournalEntriesRepo(
+		journalEntriesRepo = new MemoryJournalEntriesRepo(
 			logger,
 			DB_URL,
 			DB_NAME,
@@ -112,7 +114,7 @@ describe("accounts and balances domain - unit tests", () => {
 			25n,
 			0
 		);
-		const accountIdReceived: string = await aggregate.createAccount(account, securityContext);
+		const accountIdReceived: string = await aggregate.createAccount(account/*, securityContext*/);
 		expect(accountIdReceived).toEqual(accountId);
 	});
 	test("create existent account", async () => {
@@ -127,10 +129,10 @@ describe("accounts and balances domain - unit tests", () => {
 			25n,
 			0
 		);
-		await aggregate.createAccount(account, securityContext);
+		await aggregate.createAccount(account/*, securityContext*/);
 		await expect(
 			async () => {
-				await aggregate.createAccount(account, securityContext);
+				await aggregate.createAccount(account/*, securityContext*/);
 			}
 		).rejects.toThrow(AccountAlreadyExistsError);
 	});
@@ -146,7 +148,7 @@ describe("accounts and balances domain - unit tests", () => {
 			25n,
 			0
 		);
-		const accountIdReceived: string = await aggregate.createAccount(account, securityContext);
+		const accountIdReceived: string = await aggregate.createAccount(account/*, securityContext*/);
 		expect(accountIdReceived).not.toEqual(accountId); // TODO: makes sense?
 	});
 	test("create account with invalid credit balance", async () => {
@@ -163,7 +165,7 @@ describe("accounts and balances domain - unit tests", () => {
 		);
 		await expect(
 			async () => {
-				await aggregate.createAccount(account, securityContext);
+				await aggregate.createAccount(account/*, securityContext*/);
 			}
 		).rejects.toThrow(InvalidCreditBalanceError);
 	});
@@ -181,9 +183,29 @@ describe("accounts and balances domain - unit tests", () => {
 		);
 		await expect(
 			async () => {
-				await aggregate.createAccount(account, securityContext);
+				await aggregate.createAccount(account/*, securityContext*/);
 			}
 		).rejects.toThrow(InvalidDebitBalanceError);
+	});
+	test("create account with unexpected accounts repo failure", async () => {
+		const accountId: string = Date.now().toString();
+		const account: IAccount = new Account(
+			accountId,
+			null,
+			AccountState.ACTIVE,
+			AccountType.POSITION,
+			"EUR",
+			100n,
+			25n,
+			0
+		);
+		(accountsRepo as MemoryAccountsRepo).unexpectedFailure = true; // TODO: should this be done?
+		await expect(
+			async () => {
+				await aggregate.createAccount(account/*, securityContext*/);
+			}
+		).rejects.toThrow(); // TODO: check for specific repo error?
+		(accountsRepo as MemoryAccountsRepo).unexpectedFailure = false; // TODO: should this be done?
 	});
 
 	// Create journal entries.
@@ -391,6 +413,50 @@ describe("accounts and balances domain - unit tests", () => {
 			}
 		).rejects.toThrow(InvalidJournalEntryAmountError);
 	});
+	test("create journal entry with unexpected journal entries repo failure", async () => {
+		// Before creating a journal entry, the respective accounts need to be created.
+		const accounts: IAccount[] = await create2Accounts();
+		const journalEntryId: string = Date.now().toString();
+		const journalEntry: IJournalEntry = new JournalEntry(
+			journalEntryId,
+			null,
+			null,
+			"EUR",
+			5n,
+			accounts[0].id,
+			accounts[1].id,
+			0
+		);
+		(journalEntriesRepo as MemoryJournalEntriesRepo).unexpectedFailure = true; // TODO: should this be done?
+		await expect(
+			async () => {
+				await aggregate.createJournalEntries([journalEntry]);
+			}
+		).rejects.toThrow(); // TODO: check for specific repo error?
+		(journalEntriesRepo as MemoryJournalEntriesRepo).unexpectedFailure = false; // TODO: should this be done?
+	});
+	test("create journal entry with unexpected accounts repo failure", async () => {
+		// Before creating a journal entry, the respective accounts need to be created.
+		const accounts: IAccount[] = await create2Accounts();
+		const journalEntryId: string = Date.now().toString();
+		const journalEntry: IJournalEntry = new JournalEntry(
+			journalEntryId,
+			null,
+			null,
+			"EUR",
+			5n,
+			accounts[0].id,
+			accounts[1].id,
+			0
+		);
+		(accountsRepo as MemoryAccountsRepo).unexpectedFailure = true; // TODO: should this be done?
+		await expect(
+			async () => {
+				await aggregate.createJournalEntries([journalEntry]);
+			}
+		).rejects.toThrow(); // TODO: check for specific repo error?
+		(accountsRepo as MemoryAccountsRepo).unexpectedFailure = false; // TODO: should this be done?
+	});
 
 	// Get account by id.
 	test("get non-existent account by id", async () => {
@@ -410,7 +476,7 @@ describe("accounts and balances domain - unit tests", () => {
 			25n,
 			0
 		);
-		await aggregate.createAccount(account, securityContext);
+		await aggregate.createAccount(account/*, securityContext*/);
 		const accountReceived: IAccount | null = await aggregate.getAccountById(accountId);
 		expect(accountReceived).toEqual(account);
 	});
@@ -484,7 +550,7 @@ async function create2Accounts(
 		25n,
 		0
 	);
-	await aggregate.createAccount(accountA, securityContext);
+	await aggregate.createAccount(accountA/*, securityContext*/);
 	// Account B.
 	// If Date.now() is called again, the same number is returned (because not enough time passes between calls).
 	const idAccountB: string = idAccountA + 1;
@@ -498,6 +564,6 @@ async function create2Accounts(
 		25n,
 		0
 	);
-	await aggregate.createAccount(accountB, securityContext);
+	await aggregate.createAccount(accountB/*, securityContext*/);
 	return [accountA, accountB];
 }

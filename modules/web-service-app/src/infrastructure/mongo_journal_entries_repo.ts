@@ -71,7 +71,7 @@ export class MongoJournalEntriesRepo implements IJournalEntriesRepo {
 		try {
 			await this.mongoClient.connect(); // Throws if the repo is unreachable.
 		} catch (e: unknown) {
-			throw new UnableToInitRepoError();
+			throw new UnableToInitRepoError((e as any)?.message);
 		}
 		// The following doesn't throw if the repo is unreachable, nor if the db or collection don't exist.
 		this.journalEntries = this.mongoClient.db(this.DB_NAME).collection(this.COLLECTION_NAME);
@@ -87,7 +87,7 @@ export class MongoJournalEntriesRepo implements IJournalEntriesRepo {
 			const journalEntry: any = await this.journalEntries.findOne({id: journalEntryId}); // TODO: type.
 			return journalEntry !== null;
 		} catch (e: unknown) {
-			throw new UnableToGetJournalEntryError();
+			throw new UnableToGetJournalEntryError((e as any)?.message);
 		}
 	}
 
@@ -96,7 +96,7 @@ export class MongoJournalEntriesRepo implements IJournalEntriesRepo {
 		try {
 			journalEntryExists = await this.journalEntryExistsById(journalEntry.id);
 		} catch (e: unknown) {
-			throw new UnableToStoreJournalEntryError();
+			throw new UnableToStoreJournalEntryError((e as any)?.message);
 		}
 		if (journalEntryExists) {
 			throw new JournalEntryAlreadyExistsError();
@@ -105,7 +105,7 @@ export class MongoJournalEntriesRepo implements IJournalEntriesRepo {
 			// insertOne() allows for duplicates.
 			await this.journalEntries.insertOne(journalEntry);
 		} catch (e: unknown) {
-			throw new UnableToStoreJournalEntryError();
+			throw new UnableToStoreJournalEntryError((e as any)?.message);
 		}
 	}
 
@@ -120,7 +120,7 @@ export class MongoJournalEntriesRepo implements IJournalEntriesRepo {
 				.toArray();
 			return journalEntries as unknown as IJournalEntry[]; // TODO: create schema.
 		} catch (e: unknown) {
-			throw new UnableToGetJournalEntriesError();
+			throw new UnableToGetJournalEntriesError((e as any)?.message);
 		}
 	}
 }

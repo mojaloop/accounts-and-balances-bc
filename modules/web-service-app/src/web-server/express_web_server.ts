@@ -51,7 +51,7 @@ export class ExpressWebServer {
 		HOST: string,
 		PORT_NO: number,
 		PATH_ROUTER: string,
-		tokenHelper: TokenHelper,
+		// tokenHelper: TokenHelper,
 		aggregate: Aggregate
 	) {
 		this.logger = logger;
@@ -63,7 +63,7 @@ export class ExpressWebServer {
 		this.app = express();
 		this.routes = new ExpressRoutes(
 			logger,
-			tokenHelper,
+			// tokenHelper,
 			aggregate
 		);
 

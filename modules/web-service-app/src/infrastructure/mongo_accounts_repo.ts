@@ -71,7 +71,7 @@ export class MongoAccountsRepo implements IAccountsRepo{
 		try {
 			await this.mongoClient.connect(); // Throws if the repo is unreachable.
 		} catch (e: unknown) {
-			throw new UnableToInitRepoError();
+			throw new UnableToInitRepoError((e as any)?.message);
 		}
 		// The following doesn't throw if the repo is unreachable, nor if the db or collection don't exist.
 		this.accounts = this.mongoClient.db(this.DB_NAME).collection(this.COLLECTION_NAME);
@@ -87,7 +87,7 @@ export class MongoAccountsRepo implements IAccountsRepo{
 			const account: any = await this.accounts.findOne({id: accountId}); // TODO: type.
 			return account !== null;
 		} catch (e: unknown) {
-			throw new UnableToGetAccountError();
+			throw new UnableToGetAccountError((e as any)?.message);
 		}
 	}
 
@@ -96,7 +96,7 @@ export class MongoAccountsRepo implements IAccountsRepo{
 		try {
 			accountExists = await this.accountExistsById(account.id);
 		} catch (e: unknown) {
-			throw new UnableToStoreAccountError();
+			throw new UnableToStoreAccountError((e as any)?.message);
 		}
 		if (accountExists) {
 			throw new AccountAlreadyExistsError();
@@ -105,7 +105,7 @@ export class MongoAccountsRepo implements IAccountsRepo{
 			// insertOne() allows for duplicates.
 			await this.accounts.insertOne(account);
 		} catch (e: unknown) {
-			throw new UnableToStoreAccountError();
+			throw new UnableToStoreAccountError((e as any)?.message);
 		}
 	}
 
@@ -118,7 +118,7 @@ export class MongoAccountsRepo implements IAccountsRepo{
 			);
 			return account as unknown as IAccount; // TODO: create schema.
 		} catch (e: unknown) {
-			throw new UnableToGetAccountError();
+			throw new UnableToGetAccountError((e as any)?.message);
 		}
 	}
 
@@ -133,7 +133,7 @@ export class MongoAccountsRepo implements IAccountsRepo{
 				.toArray();
 			return accounts as unknown as IAccount[]; // TODO: create schema.
 		} catch (e: unknown) {
-			throw new UnableToGetAccountsError();
+			throw new UnableToGetAccountsError((e as any)?.message);
 		}
 	}
 
@@ -149,7 +149,7 @@ export class MongoAccountsRepo implements IAccountsRepo{
 				{$set: {creditBalance: creditBalance, timeStampLastJournalEntry: timeStampLastJournalEntry}}
 			);
 		} catch (e: unknown) {
-			throw new UnableToUpdateAccountError();
+			throw new UnableToUpdateAccountError((e as any)?.message);
 		}
 		if (updateResult.modifiedCount === 0) {
 			throw new NoSuchAccountError();
@@ -168,7 +168,7 @@ export class MongoAccountsRepo implements IAccountsRepo{
 				{$set: {debitBalance: debitBalance, timeStampLastJournalEntry: timeStampLastJournalEntry}}
 			);
 		} catch (e: unknown) {
-			throw new UnableToUpdateAccountError();
+			throw new UnableToUpdateAccountError((e as any)?.message);
 		}
 		if (updateResult.modifiedCount === 0) {
 			throw new NoSuchAccountError();
