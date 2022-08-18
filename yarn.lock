@@ -804,6 +804,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@mojaloop/accounts-and-balances-bc-integration-tests@workspace:modules/integration-tests":
+  version: 0.0.0-use.local
+  resolution: "@mojaloop/accounts-and-balances-bc-integration-tests@workspace:modules/integration-tests"
+  dependencies:
+    "@mojaloop/auditing-bc-public-types-lib": ^0.0.7
+    "@mojaloop/logging-bc-public-types-lib": ^0.0.3
+    "@types/uuid": ^8.3.4
+  languageName: unknown
+  linkType: soft
+
 "@mojaloop/accounts-and-balances-bc-web-service-app@workspace:modules/web-service-app":
   version: 0.0.0-use.local
   resolution: "@mojaloop/accounts-and-balances-bc-web-service-app@workspace:modules/web-service-app"

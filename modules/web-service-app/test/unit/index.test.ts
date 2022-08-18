@@ -42,8 +42,6 @@ import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {TokenHelper} from "@mojaloop/security-bc-client-lib";
 import {AuditClientMock} from "./audit_client_mock";
 import {AuxiliaryClient} from "./auxiliary_client";
-import {Account} from "@mojaloop/accounts-and-balances-bc-domain/dist/entities/account";
-import {JournalEntry} from "@mojaloop/accounts-and-balances-bc-domain/dist/entities/journal_entry";
 
 /* ********** Constants Begin ********** */
 
@@ -60,9 +58,9 @@ const DB_HOST: string = process.env.ACCOUNTS_AND_BALANCES_DB_HOST ?? "localhost"
 const DB_PORT_NO: number =
 	parseInt(process.env.ACCOUNTS_AND_BALANCES_DB_PORT_NO ?? "") || 27017;
 const DB_URL: string = `mongodb://${DB_HOST}:${DB_PORT_NO}`;
-const DB_NAME: string = "AccountsAndBalances";
-const ACCOUNTS_COLLECTION_NAME: string = "Accounts";
-const JOURNAL_ENTRIES_COLLECTION_NAME: string = "JournalEntries";
+const DB_NAME: string = "accounts-and-balances";
+const ACCOUNTS_COLLECTION_NAME: string = "accounts";
+const JOURNAL_ENTRIES_COLLECTION_NAME: string = "journal-entries";
 
 // Web server.
 const WEB_SERVER_HOST: string = process.env.ACCOUNTS_AND_BALANCES_WEB_SERVER_HOST ?? "localhost";

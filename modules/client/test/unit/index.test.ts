@@ -42,7 +42,7 @@ import {
 	UnableToGetJournalEntriesError
 } from "../../src";
 
-const ACCOUNTS_AND_BALANCES_URL: string = "http://localhost:1234";
+const ACCOUNTS_AND_BALANCES_URL: string = "http://localhost:5678";
 const HTTP_CLIENT_TIMEOUT_MS: number = 10_000;
 
 let accountsAndBalancesServiceMock: AccountsAndBalancesServiceMock;

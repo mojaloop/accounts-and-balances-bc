@@ -1,0 +1,32 @@
+{
+  "name": "@mojaloop/accounts-and-balances-bc-integration-tests",
+  "version": "0.0.1",
+  "description": "Accounts and Balances BC - Integration Tests",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/mojaloop/accounts-and-balances-bc/tree/main/modules/integration-tests",
+  "bugs": {
+    "url": "https://github.com/mojaloop/accounts-and-balances-bc/issues#readme"
+  },
+  "contributors": [
+    "Gonçalo Garcia <goncalogarcia99@gmail.com>",
+    "Pedro Sousa Barreto <pedrob@crosslaketech.com>"
+  ],
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "/dist"
+  ],
+  "scripts": {
+    "clean": "yarn clean:dist",
+    "clean:dist": "rm -rf dist",
+    "clean:node-modules": "rm -rf node_modules",
+    "clean:dist-and-node-modules": "rm -rf dist node_modules",
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "@mojaloop/auditing-bc-public-types-lib": "^0.0.7",
+    "@mojaloop/logging-bc-public-types-lib": "^0.0.3",
+    "@types/uuid": "^8.3.4"
+  }
+}

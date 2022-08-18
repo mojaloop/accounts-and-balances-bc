@@ -58,9 +58,9 @@ const DB_HOST: string = process.env.ACCOUNTS_AND_BALANCES_DB_HOST ?? "localhost"
 const DB_PORT_NO: number =
 	parseInt(process.env.ACCOUNTS_AND_BALANCES_DB_PORT_NO ?? "") || 27017;
 const DB_URL: string = `mongodb://${DB_HOST}:${DB_PORT_NO}`;
-const DB_NAME: string = "AccountsAndBalances";
-const ACCOUNTS_COLLECTION_NAME: string = "Accounts";
-const JOURNAL_ENTRIES_COLLECTION_NAME: string = "JournalEntries";
+const DB_NAME: string = "accounts-and-balances";
+const ACCOUNTS_COLLECTION_NAME: string = "accounts";
+const JOURNAL_ENTRIES_COLLECTION_NAME: string = "journal-entries";
 
 let accountsRepo: IAccountsRepo;
 let journalEntriesRepo: IJournalEntriesRepo;

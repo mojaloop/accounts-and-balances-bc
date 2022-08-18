@@ -46,7 +46,7 @@ export class AccountsAndBalancesClient {
 	private readonly logger: ILogger;
 	// Other properties.
 	private readonly httpClient: AxiosInstance;
-	private readonly UNABLE_TO_REACH_SERVER_ERROR: string = "unable to reach server error";
+	private readonly UNABLE_TO_REACH_SERVER_ERROR_MESSAGE: string = "unable to reach server";
 
 	constructor(
 		logger: ILogger,
@@ -71,7 +71,7 @@ export class AccountsAndBalancesClient {
 				if (axiosError.response !== undefined) {
 					throw new UnableToCreateAccountError((axiosError.response.data as any).message);
 				}
-				throw new UnableToCreateAccountError(this.UNABLE_TO_REACH_SERVER_ERROR);
+				throw new UnableToCreateAccountError(this.UNABLE_TO_REACH_SERVER_ERROR_MESSAGE);
 			}
 			throw new UnableToCreateAccountError((e as any)?.message);
 		}
@@ -87,7 +87,7 @@ export class AccountsAndBalancesClient {
 				if (axiosError.response !== undefined) {
 					throw new UnableToCreateJournalEntriesError((axiosError.response.data as any).message);
 				}
-				throw new UnableToCreateJournalEntriesError(this.UNABLE_TO_REACH_SERVER_ERROR);
+				throw new UnableToCreateJournalEntriesError(this.UNABLE_TO_REACH_SERVER_ERROR_MESSAGE);
 			}
 			throw new UnableToCreateJournalEntriesError((e as any)?.message);
 		}
@@ -113,7 +113,7 @@ export class AccountsAndBalancesClient {
 				if (axiosError.response !== undefined) {
 					throw new UnableToGetAccountError((axiosError.response.data as any).message);
 				}
-				throw new UnableToGetAccountError(this.UNABLE_TO_REACH_SERVER_ERROR);
+				throw new UnableToGetAccountError(this.UNABLE_TO_REACH_SERVER_ERROR_MESSAGE);
 			}
 			throw new UnableToGetAccountError((e as any)?.message);
 		}
@@ -139,7 +139,7 @@ export class AccountsAndBalancesClient {
 				if (axiosError.response !== undefined) {
 					throw new UnableToGetAccountsError((axiosError.response.data as any).message);
 				}
-				throw new UnableToGetAccountsError(this.UNABLE_TO_REACH_SERVER_ERROR);
+				throw new UnableToGetAccountsError(this.UNABLE_TO_REACH_SERVER_ERROR_MESSAGE);
 			}
 			throw new UnableToGetAccountsError((e as any)?.message);
 		}
@@ -165,7 +165,7 @@ export class AccountsAndBalancesClient {
 				if (axiosError.response !== undefined) {
 					throw new UnableToGetJournalEntriesError((axiosError.response.data as any).message);
 				}
-				throw new UnableToGetJournalEntriesError(this.UNABLE_TO_REACH_SERVER_ERROR);
+				throw new UnableToGetJournalEntriesError(this.UNABLE_TO_REACH_SERVER_ERROR_MESSAGE);
 			}
 			throw new UnableToGetJournalEntriesError((e as any)?.message);
 		}

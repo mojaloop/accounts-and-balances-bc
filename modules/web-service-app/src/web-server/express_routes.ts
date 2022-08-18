@@ -63,7 +63,7 @@ export class ExpressRoutes {
 	private readonly aggregate: Aggregate;
 	// Other properties.
 	private readonly _router: express.Router;
-	private readonly UNKNOWN_ERROR: string = "unknown error";
+	private readonly UNKNOWN_ERROR_MESSAGE: string = "unknown error";
 
 	constructor(
 		logger: ILogger,
@@ -199,7 +199,7 @@ export class ExpressRoutes {
 				this.sendErrorResponse(
 					res,
 					500,
-					this.UNKNOWN_ERROR
+					this.UNKNOWN_ERROR_MESSAGE
 				);
 			}
 		}
@@ -260,7 +260,7 @@ export class ExpressRoutes {
 				this.sendErrorResponse(
 					res,
 					500,
-					this.UNKNOWN_ERROR
+					this.UNKNOWN_ERROR_MESSAGE
 				);
 			}
 		}
@@ -317,7 +317,7 @@ export class ExpressRoutes {
 			this.sendErrorResponse(
 				res,
 				500,
-				this.UNKNOWN_ERROR
+				this.UNKNOWN_ERROR_MESSAGE
 			);
 		}
 	}
@@ -343,7 +343,7 @@ export class ExpressRoutes {
 			this.sendErrorResponse(
 				res,
 				500,
-				this.UNKNOWN_ERROR
+				this.UNKNOWN_ERROR_MESSAGE
 			);
 		}
 	}
@@ -369,7 +369,7 @@ export class ExpressRoutes {
 			this.sendErrorResponse(
 				res,
 				500,
-				this.UNKNOWN_ERROR
+				this.UNKNOWN_ERROR_MESSAGE
 			);
 		}
 	}

@@ -51,8 +51,8 @@ import {TokenHelper} from "@mojaloop/security-bc-client-lib";
 /* ********** Constants Begin ********** */
 
 // General.
-const BOUNDED_CONTEXT_NAME: string = "Accounts and Balances";
-const SERVICE_NAME: string = `${BOUNDED_CONTEXT_NAME} - Web Server`;
+const BOUNDED_CONTEXT_NAME: string = "accounts-and-balances-bc";
+const SERVICE_NAME: string = "web-server-svc";
 const SERVICE_VERSION: string = "0.0.1";
 
 // Message broker.
@@ -62,8 +62,8 @@ const MESSAGE_BROKER_PORT_NO: number =
 const MESSAGE_BROKER_URL: string = `${MESSAGE_BROKER_HOST}:${MESSAGE_BROKER_PORT_NO}`;
 
 // Logging.
-const LOGGING_LEVEL: LogLevel = LogLevel.DEBUG;
-const LOGGING_TOPIC: string = `${SERVICE_NAME} - Logging`;
+const LOGGING_LEVEL: LogLevel = LogLevel.ERROR;
+const LOGGING_TOPIC: string = `${BOUNDED_CONTEXT_NAME}_${SERVICE_NAME}_logging`;
 
 // Token helper. TODO: names.
 const AUTH_Z_TOKEN_ISSUER_NAME: string =
@@ -82,9 +82,9 @@ const DB_HOST: string = process.env.ACCOUNTS_AND_BALANCES_DB_HOST ?? "localhost"
 const DB_PORT_NO: number =
 	parseInt(process.env.ACCOUNTS_AND_BALANCES_DB_PORT_NO ?? "") || 27017;
 const DB_URL: string = `mongodb://${DB_HOST}:${DB_PORT_NO}`;
-const DB_NAME: string = "AccountsAndBalances";
-const ACCOUNTS_COLLECTION_NAME: string = "Accounts";
-const JOURNAL_ENTRIES_COLLECTION_NAME: string = "JournalEntries";
+const DB_NAME: string = "accounts-and-balances";
+const ACCOUNTS_COLLECTION_NAME: string = "accounts";
+const JOURNAL_ENTRIES_COLLECTION_NAME: string = "journal-entries";
 
 // Web server.
 const WEB_SERVER_HOST: string = process.env.ACCOUNTS_AND_BALANCES_WEB_SERVER_HOST ?? "localhost";
