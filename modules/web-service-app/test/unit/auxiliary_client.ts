@@ -51,9 +51,17 @@ export class AuxiliaryClient {
 		});
 	}
 
-	async createAccount(account: any): Promise<number> {
+	async createAccount(account: any, bearerToken: string): Promise<number> { // TODO: bearer token name.
 		try {
-			const axiosResponse: AxiosResponse = await this.httpClient.post("/accounts", account);
+			const axiosResponse: AxiosResponse = await this.httpClient.post(
+				"/accounts",
+				account,
+				{
+					headers: {
+						"Authorization": `Basic ${bearerToken}` // TODO: Basic?
+					}
+				}
+			);
 			return axiosResponse.status;
 		} catch (e: unknown) {
 			return (e as AxiosError).response?.status ?? -1;

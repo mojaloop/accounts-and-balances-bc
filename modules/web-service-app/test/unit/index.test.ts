@@ -42,16 +42,17 @@ import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {TokenHelper} from "@mojaloop/security-bc-client-lib";
 import {AuditClientMock} from "./audit_client_mock";
 import {AuxiliaryClient} from "./auxiliary_client";
+import {TokenHelperServiceMock} from "./token_helper_service_mock";
 
 /* ********** Constants Begin ********** */
 
-// Token helper. TODO: names.
-const AUTH_Z_TOKEN_ISSUER_NAME: string =
-	process.env.ACCOUNTS_AND_BALANCES_AUTH_Z_TOKEN_ISSUER_NAME ?? "http://localhost:3201/";
-const AUTH_Z_TOKEN_AUDIENCE: string =
-	process.env.ACCOUNTS_AND_BALANCES_AUTH_Z_TOKEN_AUDIENCE ?? "mojaloop.vnext.default_audience";
-const AUTH_Z_SVC_JWKS_URL: string =
-	process.env.ACCOUNTS_AND_BALANCES_AUTH_Z_SVC_JWKS_URL ?? "http://localhost:3201/.well-known/jwks.json";
+// Token helper. TODO: names and values.
+const TOKEN_HELPER_ISSUER_NAME: string =
+	process.env.ACCOUNTS_AND_BALANCES_TOKEN_HELPER_ISSUER_NAME ?? "vNext Security BC - Authorization Svc";
+const TOKEN_HELPER_JWKS_URL: string =
+	process.env.ACCOUNTS_AND_BALANCES_TOKEN_HELPER_JWKS_URL ?? "http://localhost:3000/.well-known/jwks.json";
+const TOKEN_HELPER_AUDIENCE: string =
+	process.env.ACCOUNTS_AND_BALANCES_TOKEN_HELPER_AUDIENCE ?? "mojaloop.vnext.default_audience";
 
 // Data base.
 const DB_HOST: string = process.env.ACCOUNTS_AND_BALANCES_DB_HOST ?? "localhost";
@@ -74,6 +75,7 @@ const HTTP_CLIENT_TIMEOUT_MS: number = 10_000;
 
 /* ********** Constants End ********** */
 
+let tokenHelperServiceMock: TokenHelperServiceMock;
 let accountsRepo: IAccountsRepo;
 let journalEntriesRepo: IJournalEntriesRepo;
 let aggregate: Aggregate;
@@ -83,14 +85,19 @@ describe("accounts and balances web server - unit tests", () => {
 	beforeAll(async () => {
 		const logger: ILogger = new ConsoleLogger();
 
-		// TODO: tokenHelper mock.
-		/*const tokenHelper: TokenHelper = new TokenHelper( // TODO: no interface?
-			AUTH_Z_TOKEN_ISSUER_NAME,
-			AUTH_Z_SVC_JWKS_URL,
-			AUTH_Z_TOKEN_AUDIENCE,
+		tokenHelperServiceMock = new TokenHelperServiceMock(
+			TOKEN_HELPER_ISSUER_NAME,
+			TOKEN_HELPER_JWKS_URL,
+			TOKEN_HELPER_AUDIENCE,
 			logger
 		);
-		await tokenHelper.init();*/
+		const tokenHelper: TokenHelper = new TokenHelper( // TODO: no interface?
+			TOKEN_HELPER_ISSUER_NAME,
+			TOKEN_HELPER_JWKS_URL,
+			TOKEN_HELPER_AUDIENCE,
+			logger
+		);
+		await tokenHelper.init(); // TODO: verify.
 		const auditingClient: IAuditClient = new AuditClientMock();
 		accountsRepo = new MemoryAccountsRepo(
 			logger,
@@ -116,7 +123,7 @@ describe("accounts and balances web server - unit tests", () => {
 			WEB_SERVER_HOST,
 			WEB_SERVER_PORT_NO,
 			WEB_SERVER_PATH_ROUTER,
-			// tokenHelper,
+			tokenHelper,
 			aggregate
 		);
 		webServer.start();
@@ -145,7 +152,8 @@ describe("accounts and balances web server - unit tests", () => {
 			debitBalance: 25,
 			timestampLastJournalEntry: 0
 		};
-		const statusCodeResponse: number = await auxiliaryClient.createAccount(account); // TODO: securityContext.
+		const statusCodeResponse: number =
+			await auxiliaryClient.createAccount(account, TokenHelperServiceMock.VALID_TOKEN);
 		expect(statusCodeResponse).toEqual(201);
 	});
 	test("create existent account", async () => {
@@ -160,8 +168,9 @@ describe("accounts and balances web server - unit tests", () => {
 			debitBalance: 25,
 			timestampLastJournalEntry: 0
 		};
-		await auxiliaryClient.createAccount(account); // TODO: securityContext.
-		const statusCodeResponse: number = await auxiliaryClient.createAccount(account); // TODO: securityContext.
+		await auxiliaryClient.createAccount(account, TokenHelperServiceMock.VALID_TOKEN);
+		const statusCodeResponse: number =
+			await auxiliaryClient.createAccount(account, TokenHelperServiceMock.VALID_TOKEN);
 		expect(statusCodeResponse).toEqual(409);
 	});
 	test("create account with empty string as id", async () => {
@@ -176,7 +185,8 @@ describe("accounts and balances web server - unit tests", () => {
 			debitBalance: 25,
 			timestampLastJournalEntry: 0
 		};
-		const statusCodeResponse: number = await auxiliaryClient.createAccount(account); // TODO: securityContext.
+		const statusCodeResponse: number =
+			await auxiliaryClient.createAccount(account, TokenHelperServiceMock.VALID_TOKEN);
 		expect(statusCodeResponse).toEqual(201);
 	});
 	test("create account with invalid credit balance", async () => {
@@ -191,7 +201,8 @@ describe("accounts and balances web server - unit tests", () => {
 			debitBalance: 25,
 			timestampLastJournalEntry: 0
 		};
-		const statusCodeResponse: number = await auxiliaryClient.createAccount(account); // TODO: securityContext.
+		const statusCodeResponse: number =
+			await auxiliaryClient.createAccount(account, TokenHelperServiceMock.VALID_TOKEN);
 		expect(statusCodeResponse).toEqual(400);
 	});
 	test("create account with invalid debit balance", async () => {
@@ -206,7 +217,8 @@ describe("accounts and balances web server - unit tests", () => {
 			debitBalance: -25,
 			timestampLastJournalEntry: 0
 		};
-		const statusCodeResponse: number = await auxiliaryClient.createAccount(account); // TODO: securityContext.
+		const statusCodeResponse: number =
+			await auxiliaryClient.createAccount(account, TokenHelperServiceMock.VALID_TOKEN);
 		expect(statusCodeResponse).toEqual(400);
 	});
 	test("create account with unexpected accounts repo failure", async () => {
@@ -222,7 +234,8 @@ describe("accounts and balances web server - unit tests", () => {
 			timestampLastJournalEntry: 0
 		};
 		(accountsRepo as MemoryAccountsRepo).unexpectedFailure = true; // TODO: should this be done?
-		const statusCodeResponse: number = await auxiliaryClient.createAccount(account); // TODO: securityContext.
+		const statusCodeResponse: number =
+			await auxiliaryClient.createAccount(account, TokenHelperServiceMock.VALID_TOKEN);
 		expect(statusCodeResponse).toEqual(500);
 		(accountsRepo as MemoryAccountsRepo).unexpectedFailure = false; // TODO: should this be done?
 	});
@@ -467,7 +480,7 @@ describe("accounts and balances web server - unit tests", () => {
 			debitBalance: 25,
 			timestampLastJournalEntry: 0
 		};
-		await auxiliaryClient.createAccount(account); // TODO: securityContext.
+		await auxiliaryClient.createAccount(account, TokenHelperServiceMock.VALID_TOKEN);
 		const statusCodeResponse: number = await auxiliaryClient.getAccountById(accountId);
 		expect(statusCodeResponse).toEqual(200);
 	});
@@ -542,7 +555,7 @@ async function create2Accounts(
 		debitBalance: 25,
 		timestampLastJournalEntry: 0
 	};
-	await auxiliaryClient.createAccount(accountA); // TODO: securityContext.
+	await auxiliaryClient.createAccount(accountA, TokenHelperServiceMock.VALID_TOKEN);
 	// Account B.
 	// If Date.now() is called again, the same number is returned (because not enough time passes between calls).
 	const idAccountB: string = idAccountA + 1;
@@ -556,6 +569,6 @@ async function create2Accounts(
 		debitBalance: 25,
 		timestampLastJournalEntry: 0
 	};
-	await auxiliaryClient.createAccount(accountB); // TODO: securityContext.
+	await auxiliaryClient.createAccount(accountB, TokenHelperServiceMock.VALID_TOKEN);
 	return [accountA, accountB];
 }
