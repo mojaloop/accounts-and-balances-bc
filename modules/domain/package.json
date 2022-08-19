@@ -18,12 +18,12 @@
     "/dist"
   ],
   "scripts": {
-    "clean": "yarn clean:dist",
     "clean:dist": "rm -rf dist",
     "clean:node-modules": "rm -rf node_modules",
     "clean:dist-and-node-modules": "rm -rf dist node_modules",
+    "clean": "yarn clean:dist",
     "build": "tsc",
-    "test:unit": "jest --passWithNoTests --testMatch '**/test/unit/**/*.test.ts'"
+    "test:unit": "jest --testMatch '**/test/unit/**/*.test.ts'"
   },
   "devDependencies": {
     "@mojaloop/auditing-bc-public-types-lib": "^0.0.7",

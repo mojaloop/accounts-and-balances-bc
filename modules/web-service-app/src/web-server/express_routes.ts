@@ -81,7 +81,7 @@ export class ExpressRoutes {
 
 	private setUp(): void {
 		// Inject authentication - all requests require a valid token. TODO: clarify.
-		this._router.post("/accounts", this.authenticationMiddleware.bind(this));
+		// this._router.post("/accounts", this.authenticationMiddleware.bind(this)); // TODO: for all routes?
 		// Posts.
 		this._router.post("/accounts", this.postAccount.bind(this));
 		this._router.post("/journalEntries", this.postJournalEntries.bind(this));

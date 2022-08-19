@@ -97,6 +97,7 @@ const WEB_SERVER_PATH_ROUTER: string = "/";
 // Global variables.
 let logger: KafkaLogger; // TODO: ILogger?
 let aggregate: Aggregate;
+let webServer: ExpressWebServer;
 
 async function main(): Promise<void> {
 	// Message producer options.
@@ -169,7 +170,7 @@ async function main(): Promise<void> {
 	await aggregate.init(); // No need to handle exceptions.
 
 	// Web server.
-	const webServer: ExpressWebServer = new ExpressWebServer(
+	webServer = new ExpressWebServer(
 		logger,
 		WEB_SERVER_HOST,
 		WEB_SERVER_PORT_NO,
@@ -177,7 +178,7 @@ async function main(): Promise<void> {
 		tokenHelper,
 		aggregate
 	);
-	webServer.start(); // No need to handle exceptions.
+	webServer.init(); // No need to handle exceptions.
 }
 
 process.on("SIGINT", handleIntAndTermSignals.bind(this)); // Ctrl + c.
@@ -186,7 +187,8 @@ async function handleIntAndTermSignals(signal: NodeJS.Signals): Promise<void> {
 	logger.info(`${signal} received`);
 	await aggregate.destroy();
 	await logger.destroy(); // TODO: here or on the aggregate?
-	process.exit();
+	webServer.destroy();
+	// process.exit(); // TODO: required?
 }
 process.on("exit", () => {
 	logger.info(`exiting ${SERVICE_NAME}`);

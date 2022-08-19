@@ -34,6 +34,7 @@ import {Aggregate} from "@mojaloop/accounts-and-balances-bc-domain";
 import {ExpressRoutes} from "./express_routes";
 import express from "express";
 import {TokenHelper} from "@mojaloop/security-bc-client-lib";
+import http from "http";
 
 export class ExpressWebServer {
 	// Properties received through the constructor.
@@ -45,6 +46,7 @@ export class ExpressWebServer {
 	private readonly BASE_URL: string;
 	private readonly app: express.Express;
 	private readonly routes: ExpressRoutes;
+	private webServer: http.Server; // TODO: type.
 
 	constructor(
 		logger: ILogger,
@@ -76,9 +78,10 @@ export class ExpressWebServer {
 		this.app.use(this.PATH_ROUTER, this.routes.router);
 	}
 
-	start(): void {
+	// TODO: name; async?
+	public init(): void {
 		try {
-			this.app.listen(this.PORT_NO, () => {
+			this.webServer = this.app.listen(this.PORT_NO, () => {
 				this.logger.info("Server on.");
 				this.logger.info(`Host: ${this.HOST}`);
 				this.logger.info(`Port: ${this.PORT_NO}`);
@@ -88,5 +91,10 @@ export class ExpressWebServer {
 			this.logger.fatal(e);
 			throw e;
 		}
+	}
+
+	// TODO: name; async?
+	public destroy(): void {
+		this.webServer.close();
 	}
 }

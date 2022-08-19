@@ -53,6 +53,7 @@ import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
 import {AuditClientMock} from "./audit_client_mock";
 import {Account} from "../../src/entities/account";
 import {JournalEntry} from "../../src/entities/journal_entry";
+import * as uuid from "uuid";
 
 const DB_HOST: string = process.env.ACCOUNTS_AND_BALANCES_DB_HOST ?? "localhost";
 const DB_PORT_NO: number =
@@ -103,7 +104,7 @@ describe("accounts and balances domain - unit tests", () => {
 
 	// Create account.
 	test("create non-existent account", async () => {
-		const accountId: string = Date.now().toString();
+		const accountId: string = uuid.v4();
 		const account: IAccount = new Account(
 			accountId,
 			null,
@@ -118,7 +119,7 @@ describe("accounts and balances domain - unit tests", () => {
 		expect(accountIdReceived).toEqual(accountId);
 	});
 	test("create existent account", async () => {
-		const accountId: string = Date.now().toString();
+		const accountId: string = uuid.v4();
 		const account: IAccount = new Account(
 			accountId,
 			null,
@@ -152,7 +153,7 @@ describe("accounts and balances domain - unit tests", () => {
 		expect(accountIdReceived).not.toEqual(accountId); // TODO: makes sense?
 	});
 	test("create account with invalid credit balance", async () => {
-		const accountId: string = Date.now().toString();
+		const accountId: string = uuid.v4();
 		const account: IAccount = new Account(
 			accountId,
 			null,
@@ -170,7 +171,7 @@ describe("accounts and balances domain - unit tests", () => {
 		).rejects.toThrow(InvalidCreditBalanceError);
 	});
 	test("create account with invalid debit balance", async () => {
-		const accountId: string = Date.now().toString();
+		const accountId: string = uuid.v4();
 		const account: IAccount = new Account(
 			accountId,
 			null,
@@ -188,7 +189,7 @@ describe("accounts and balances domain - unit tests", () => {
 		).rejects.toThrow(InvalidDebitBalanceError);
 	});
 	test("create account with unexpected accounts repo failure", async () => {
-		const accountId: string = Date.now().toString();
+		const accountId: string = uuid.v4();
 		const account: IAccount = new Account(
 			accountId,
 			null,
@@ -213,7 +214,7 @@ describe("accounts and balances domain - unit tests", () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: IAccount[] = await create2Accounts();
 		// Journal entry A.
-		const idJournalEntryA: string = Date.now().toString();
+		const idJournalEntryA: string = uuid.v4();
 		const journalEntryA: IJournalEntry = new JournalEntry(
 			idJournalEntryA,
 			null,
@@ -225,7 +226,6 @@ describe("accounts and balances domain - unit tests", () => {
 			0
 		);
 		// Journal entry B.
-		// If Date.now() is called again, the same number is returned (because not enough time passes between calls).
 		const idJournalEntryB: string = idJournalEntryA + 1;
 		const journalEntryB: IJournalEntry = new JournalEntry(
 			idJournalEntryB,
@@ -245,7 +245,7 @@ describe("accounts and balances domain - unit tests", () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: IAccount[] = await create2Accounts();
 		// Journal entry A.
-		const idJournalEntryA: string = Date.now().toString();
+		const idJournalEntryA: string = uuid.v4();
 		const journalEntryA: IJournalEntry = new JournalEntry(
 			idJournalEntryA,
 			null,
@@ -257,7 +257,6 @@ describe("accounts and balances domain - unit tests", () => {
 			0
 		);
 		// Journal entry B.
-		// If Date.now() is called again, the same number is returned (because not enough time passes between calls).
 		const idJournalEntryB: string = idJournalEntryA + 1;
 		const journalEntryB: IJournalEntry = new JournalEntry(
 			idJournalEntryB,
@@ -296,7 +295,7 @@ describe("accounts and balances domain - unit tests", () => {
 	test("create journal entry with same credited and debited accounts", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: IAccount[] = await create2Accounts();
-		const journalEntryId: string = Date.now().toString();
+		const journalEntryId: string = uuid.v4();
 		const journalEntry: IJournalEntry = new JournalEntry(
 			journalEntryId,
 			null,
@@ -316,7 +315,7 @@ describe("accounts and balances domain - unit tests", () => {
 	test("create journal entry with non-existent credited account", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: IAccount[] = await create2Accounts();
-		const journalEntryId: string = Date.now().toString();
+		const journalEntryId: string = uuid.v4();
 		const journalEntry: IJournalEntry = new JournalEntry(
 			journalEntryId,
 			null,
@@ -336,7 +335,7 @@ describe("accounts and balances domain - unit tests", () => {
 	test("create journal entry with non-existent debited account", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: IAccount[] = await create2Accounts();
-		const journalEntryId: string = Date.now().toString();
+		const journalEntryId: string = uuid.v4();
 		const journalEntry: IJournalEntry = new JournalEntry(
 			journalEntryId,
 			null,
@@ -356,7 +355,7 @@ describe("accounts and balances domain - unit tests", () => {
 	test("create journal entry with different currency", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: IAccount[] = await create2Accounts(); // Accounts created with EUR.
-		const journalEntryId: string = Date.now().toString();
+		const journalEntryId: string = uuid.v4();
 		const journalEntry: IJournalEntry = new JournalEntry(
 			journalEntryId,
 			null,
@@ -376,7 +375,7 @@ describe("accounts and balances domain - unit tests", () => {
 	test("create journal entry with exceeding amount", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: IAccount[] = await create2Accounts(); // Accounts created with 100 credit balance each.
-		const journalEntryId: string = Date.now().toString();
+		const journalEntryId: string = uuid.v4();
 		const journalEntry: IJournalEntry = new JournalEntry(
 			journalEntryId,
 			null,
@@ -396,7 +395,7 @@ describe("accounts and balances domain - unit tests", () => {
 	test("create journal entry with invalid amount", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: IAccount[] = await create2Accounts(); // Accounts created with 100 credit balance each.
-		const journalEntryId: string = Date.now().toString();
+		const journalEntryId: string = uuid.v4();
 		const journalEntry: IJournalEntry = new JournalEntry(
 			journalEntryId,
 			null,
@@ -416,7 +415,7 @@ describe("accounts and balances domain - unit tests", () => {
 	test("create journal entry with unexpected journal entries repo failure", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: IAccount[] = await create2Accounts();
-		const journalEntryId: string = Date.now().toString();
+		const journalEntryId: string = uuid.v4();
 		const journalEntry: IJournalEntry = new JournalEntry(
 			journalEntryId,
 			null,
@@ -438,7 +437,7 @@ describe("accounts and balances domain - unit tests", () => {
 	test("create journal entry with unexpected accounts repo failure", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: IAccount[] = await create2Accounts();
-		const journalEntryId: string = Date.now().toString();
+		const journalEntryId: string = uuid.v4();
 		const journalEntry: IJournalEntry = new JournalEntry(
 			journalEntryId,
 			null,
@@ -460,12 +459,12 @@ describe("accounts and balances domain - unit tests", () => {
 
 	// Get account by id.
 	test("get non-existent account by id", async () => {
-		const accountId: string = Date.now().toString();
+		const accountId: string = uuid.v4();
 		const account: IAccount | null = await aggregate.getAccountById(accountId);
 		expect(account).toBeNull();
 	});
 	test("get existent account by id", async () => {
-		const accountId: string = Date.now().toString();
+		const accountId: string = uuid.v4();
 		const account: IAccount = new Account(
 			accountId,
 			null,
@@ -480,23 +479,43 @@ describe("accounts and balances domain - unit tests", () => {
 		const accountReceived: IAccount | null = await aggregate.getAccountById(accountId);
 		expect(accountReceived).toEqual(account);
 	});
+	test("get account with unexpected accounts repo failure", async () => {
+		const accountId: string = uuid.v4();
+		(accountsRepo as MemoryAccountsRepo).unexpectedFailure = true; // TODO: should this be done?
+		await expect(
+			async () => {
+				await aggregate.getAccountById(accountId);
+			}
+		).rejects.toThrow(); // TODO: check for specific repo error?
+		(accountsRepo as MemoryAccountsRepo).unexpectedFailure = false; // TODO: should this be done?
+	});
 
 	// Get accounts by external id.
 	test("get non-existent accounts by external id", async () => {
-		const externalId: string = Date.now().toString();
+		const externalId: string = uuid.v4();
 		const accounts: IAccount[] = await aggregate.getAccountsByExternalId(externalId);
 		expect(accounts).toEqual([]);
 	});
 	test("get existent accounts by external id", async () => {
-		const externalId: string = Date.now().toString();
+		const externalId: string = uuid.v4();
 		const accounts: IAccount[] = await create2Accounts(externalId, externalId);
 		const accountsReceived: IAccount[] = await aggregate.getAccountsByExternalId(externalId);
 		expect(accountsReceived).toEqual(accounts);
 	});
+	test("get accounts with unexpected accounts repo failure", async () => {
+		const externalId: string = uuid.v4();
+		(accountsRepo as MemoryAccountsRepo).unexpectedFailure = true; // TODO: should this be done?
+		await expect(
+			async () => {
+				await aggregate.getAccountsByExternalId(externalId);
+			}
+		).rejects.toThrow(); // TODO: check for specific repo error?
+		(accountsRepo as MemoryAccountsRepo).unexpectedFailure = false; // TODO: should this be done?
+	});
 
 	// Get journal entries by account id.
 	test("get non-existent journal entries by account id", async () => {
-		const accountId: string = Date.now().toString();
+		const accountId: string = uuid.v4();
 		const journalEntries: IJournalEntry[] = await aggregate.getJournalEntriesByAccountId(accountId);
 		expect(journalEntries).toEqual([]);
 	});
@@ -504,7 +523,7 @@ describe("accounts and balances domain - unit tests", () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: IAccount[] = await create2Accounts();
 		// Journal entry A.
-		const idJournalEntryA: string = Date.now().toString();
+		const idJournalEntryA: string = uuid.v4();
 		const journalEntryA: IJournalEntry = new JournalEntry(
 			idJournalEntryA,
 			null,
@@ -516,7 +535,6 @@ describe("accounts and balances domain - unit tests", () => {
 			0
 		);
 		// Journal entry B.
-		// If Date.now() is called again, the same number is returned (because not enough time passes between calls).
 		const idJournalEntryB: string = idJournalEntryA + 1;
 		const journalEntryB: IJournalEntry = new JournalEntry(
 			idJournalEntryB,
@@ -532,6 +550,16 @@ describe("accounts and balances domain - unit tests", () => {
 		const journalEntriesReceived: IJournalEntry[] = await aggregate.getJournalEntriesByAccountId(accounts[0].id);
 		expect(journalEntriesReceived).toEqual([journalEntryA, journalEntryB]);
 	});
+	test("get journal entries with unexpected journal entries repo failure", async () => {
+		const accountId: string = uuid.v4();
+		(journalEntriesRepo as MemoryJournalEntriesRepo).unexpectedFailure = true; // TODO: should this be done?
+		await expect(
+			async () => {
+				await aggregate.getJournalEntriesByAccountId(accountId);
+			}
+		).rejects.toThrow(); // TODO: check for specific repo error?
+		(journalEntriesRepo as MemoryJournalEntriesRepo).unexpectedFailure = false; // TODO: should this be done?
+	});
 });
 
 async function create2Accounts(
@@ -539,7 +567,7 @@ async function create2Accounts(
 	externalIdAccountB: string | null = null
 ): Promise<IAccount[]> {
 	// Account A.
-	const idAccountA: string = Date.now().toString();
+	const idAccountA: string = uuid.v4();
 	const accountA: IAccount = new Account(
 		idAccountA,
 		externalIdAccountA,
@@ -552,8 +580,7 @@ async function create2Accounts(
 	);
 	await aggregate.createAccount(accountA, securityContext);
 	// Account B.
-	// If Date.now() is called again, the same number is returned (because not enough time passes between calls).
-	const idAccountB: string = idAccountA + 1;
+	const idAccountB: string = uuid.v4();
 	const accountB: IAccount = new Account(
 		idAccountB,
 		externalIdAccountB,

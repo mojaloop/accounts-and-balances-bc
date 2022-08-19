@@ -18,12 +18,12 @@
     "/dist"
   ],
   "scripts": {
-    "clean": "yarn clean:dist",
     "clean:dist": "rm -rf dist",
     "clean:node-modules": "rm -rf node_modules",
     "clean:dist-and-node-modules": "rm -rf dist node_modules",
+    "clean": "yarn clean:dist",
     "build": "tsc",
-    "test:unit": "jest --passWithNoTests --testMatch '**/test/unit/**/*.test.ts'",
+    "test:unit": "jest --testMatch '**/test/unit/**/*.test.ts'",
     "start": "yarn service",
     "service": "tsc && node dist/index.js"
   },
@@ -31,7 +31,9 @@
     "@mojaloop/auditing-bc-public-types-lib": "^0.0.7",
     "@mojaloop/logging-bc-public-types-lib": "^0.0.3",
     "@types/express": "^4.17.13",
-    "@types/node": "^18.7.6"
+    "@types/node": "^18.7.6",
+    "@types/uuid": "^8.3.4",
+    "uuid": "^8.3.2"
   },
   "dependencies": {
     "@mojaloop/accounts-and-balances-bc-domain": "workspace:*",
