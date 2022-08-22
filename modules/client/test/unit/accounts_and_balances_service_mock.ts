@@ -48,6 +48,7 @@ export class AccountsAndBalancesServiceMock {
 	public static readonly ID_ACCOUNT_B: string = "account_b";
 	public static readonly ID_JOURNAL_ENTRY_A: string = "journal_entry_a";
 	public static readonly ID_JOURNAL_ENTRY_B: string = "journal_entry_b";
+	public static readonly VALID_TOKEN: string = "";
 
 	constructor(
 		logger: ILogger,

@@ -71,6 +71,7 @@ const HTTP_CLIENT_TIMEOUT_MS: number = 10_000;
 
 let logger: KafkaLogger;
 let accountsAndBalancesClient: AccountsAndBalancesClient;
+const VALID_TOKEN: string = "";
 
 describe("accounts and balances - integration tests", () => {
 	beforeAll(async () => {
@@ -111,7 +112,7 @@ describe("accounts and balances - integration tests", () => {
 			debitBalance: 25,
 			timestampLastJournalEntry: 0
 		};
-		const accountIdReceived: string = await accountsAndBalancesClient.createAccount(account);
+		const accountIdReceived: string = await accountsAndBalancesClient.createAccount(account, VALID_TOKEN);
 		expect(accountIdReceived).toEqual(accountId);
 	});
 	test("create existent account", async () => {
@@ -126,10 +127,10 @@ describe("accounts and balances - integration tests", () => {
 			debitBalance: 25,
 			timestampLastJournalEntry: 0
 		};
-		await accountsAndBalancesClient.createAccount(account);
+		await accountsAndBalancesClient.createAccount(account, VALID_TOKEN);
 		await expect(
 			async () => {
-				await accountsAndBalancesClient.createAccount(account);
+				await accountsAndBalancesClient.createAccount(account, VALID_TOKEN);
 			}
 		).rejects.toThrow(UnableToCreateAccountError);
 	});
@@ -145,7 +146,7 @@ describe("accounts and balances - integration tests", () => {
 			debitBalance: 25,
 			timestampLastJournalEntry: 0
 		};
-		const accountIdReceived: string = await accountsAndBalancesClient.createAccount(account);
+		const accountIdReceived: string = await accountsAndBalancesClient.createAccount(account, VALID_TOKEN);
 		expect(accountIdReceived).not.toEqual(accountId); // TODO: makes sense?
 	});
 	test("create account with invalid credit balance", async () => {
@@ -162,7 +163,7 @@ describe("accounts and balances - integration tests", () => {
 		};
 		await expect(
 			async () => {
-				await accountsAndBalancesClient.createAccount(account);
+				await accountsAndBalancesClient.createAccount(account, VALID_TOKEN);
 			}
 		).rejects.toThrow(UnableToCreateAccountError);
 	});
@@ -180,7 +181,7 @@ describe("accounts and balances - integration tests", () => {
 		};
 		await expect(
 			async () => {
-				await accountsAndBalancesClient.createAccount(account);
+				await accountsAndBalancesClient.createAccount(account, VALID_TOKEN);
 			}
 		).rejects.toThrow(UnableToCreateAccountError);
 	});
@@ -200,7 +201,7 @@ describe("accounts and balances - integration tests", () => {
 		// disable();
 		await expect(
 			async () => {
-				await accountsAndBalancesClient.createAccount(account);
+				await accountsAndBalancesClient.createAccount(account, VALID_TOKEN);
 			}
 		).rejects.toThrow(UnableToCreateAccountError);
 		// enable();
@@ -235,7 +236,7 @@ describe("accounts and balances - integration tests", () => {
 			timestamp: 0
 		};
 		const idsJournalEntries: string[] =
-			await accountsAndBalancesClient.createJournalEntries([journalEntryA, journalEntryB]);
+			await accountsAndBalancesClient.createJournalEntries([journalEntryA, journalEntryB], VALID_TOKEN);
 		expect(idsJournalEntries).toEqual([idJournalEntryA, idJournalEntryB]);
 	});
 	test("create existent journal entries", async () => {
@@ -265,10 +266,10 @@ describe("accounts and balances - integration tests", () => {
 			debitedAccountId: accounts[0].id,
 			timestamp: 0
 		};
-		await accountsAndBalancesClient.createJournalEntries([journalEntryA, journalEntryB]);
+		await accountsAndBalancesClient.createJournalEntries([journalEntryA, journalEntryB], VALID_TOKEN);
 		await expect(
 			async () => {
-				await accountsAndBalancesClient.createJournalEntries([journalEntryA, journalEntryB]);
+				await accountsAndBalancesClient.createJournalEntries([journalEntryA, journalEntryB], VALID_TOKEN);
 			}
 		).rejects.toThrow(UnableToCreateJournalEntriesError);
 	});
@@ -286,7 +287,8 @@ describe("accounts and balances - integration tests", () => {
 			debitedAccountId: accounts[1].id,
 			timestamp: 0
 		};
-		const journalEntryIdReceived: string[] = await accountsAndBalancesClient.createJournalEntries([journalEntry]);
+		const journalEntryIdReceived: string[] =
+			await accountsAndBalancesClient.createJournalEntries([journalEntry], VALID_TOKEN);
 		expect(journalEntryIdReceived).not.toEqual(journalEntryId); // TODO: makes sense?
 	});
 	test("create journal entry with same credited and debited accounts", async () => {
@@ -305,7 +307,7 @@ describe("accounts and balances - integration tests", () => {
 		};
 		await expect(
 			async () => {
-				await accountsAndBalancesClient.createJournalEntries([journalEntry]);
+				await accountsAndBalancesClient.createJournalEntries([journalEntry], VALID_TOKEN);
 			}
 		).rejects.toThrow(UnableToCreateJournalEntriesError);
 	});
@@ -325,7 +327,7 @@ describe("accounts and balances - integration tests", () => {
 		};
 		await expect(
 			async () => {
-				await accountsAndBalancesClient.createJournalEntries([journalEntry]);
+				await accountsAndBalancesClient.createJournalEntries([journalEntry], VALID_TOKEN);
 			}
 		).rejects.toThrow(UnableToCreateJournalEntriesError);
 	});
@@ -345,7 +347,7 @@ describe("accounts and balances - integration tests", () => {
 		};
 		await expect(
 			async () => {
-				await accountsAndBalancesClient.createJournalEntries([journalEntry]);
+				await accountsAndBalancesClient.createJournalEntries([journalEntry], VALID_TOKEN);
 			}
 		).rejects.toThrow(UnableToCreateJournalEntriesError);
 	});
@@ -365,7 +367,7 @@ describe("accounts and balances - integration tests", () => {
 		};
 		await expect(
 			async () => {
-				await accountsAndBalancesClient.createJournalEntries([journalEntry]);
+				await accountsAndBalancesClient.createJournalEntries([journalEntry], VALID_TOKEN);
 			}
 		).rejects.toThrow(UnableToCreateJournalEntriesError);
 	});
@@ -385,7 +387,7 @@ describe("accounts and balances - integration tests", () => {
 		};
 		await expect(
 			async () => {
-				await accountsAndBalancesClient.createJournalEntries([journalEntry]);
+				await accountsAndBalancesClient.createJournalEntries([journalEntry], VALID_TOKEN);
 			}
 		).rejects.toThrow(UnableToCreateJournalEntriesError);
 	});
@@ -405,7 +407,7 @@ describe("accounts and balances - integration tests", () => {
 		};
 		await expect(
 			async () => {
-				await accountsAndBalancesClient.createJournalEntries([journalEntry]);
+				await accountsAndBalancesClient.createJournalEntries([journalEntry], VALID_TOKEN);
 			}
 		).rejects.toThrow(UnableToCreateJournalEntriesError);
 	});
@@ -425,7 +427,7 @@ describe("accounts and balances - integration tests", () => {
 		// disable();
 		await expect(
 			async () => {
-				await accountsAndBalancesClient.createJournalEntries([journalEntry]);
+				await accountsAndBalancesClient.createJournalEntries([journalEntry], VALID_TOKEN);
 			}
 		).rejects.toThrow(UnableToCreateJournalEntriesError);
 		// enable();
@@ -434,7 +436,7 @@ describe("accounts and balances - integration tests", () => {
 	// Get account by id.
 	test("get non-existent account by id", async () => {
 		const accountId: string = uuid.v4();
-		const account: IAccountDTO | null = await accountsAndBalancesClient.getAccountById(accountId);
+		const account: IAccountDTO | null = await accountsAndBalancesClient.getAccountById(accountId, VALID_TOKEN);
 		expect(account).toBeNull();
 	});
 	test("get existent account by id", async () => {
@@ -449,21 +451,23 @@ describe("accounts and balances - integration tests", () => {
 			debitBalance: 25,
 			timestampLastJournalEntry: 0
 		};
-		await accountsAndBalancesClient.createAccount(account); // TODO: securityContext.
-		const accountReceived: IAccountDTO | null = await accountsAndBalancesClient.getAccountById(accountId);
+		await accountsAndBalancesClient.createAccount(account, VALID_TOKEN);
+		const accountReceived: IAccountDTO | null =
+			await accountsAndBalancesClient.getAccountById(accountId, VALID_TOKEN);
 		expect(accountReceived).toEqual(account);
 	});
 
 	// Get accounts by external id.
 	test("get non-existent accounts by external id", async () => {
 		const externalId: string = uuid.v4();
-		const accounts: IAccountDTO[] = await accountsAndBalancesClient.getAccountsByExternalId(externalId);
+		const accounts: IAccountDTO[] = await accountsAndBalancesClient.getAccountsByExternalId(externalId, VALID_TOKEN);
 		expect(accounts).toEqual([]);
 	});
 	test("get existent accounts by external id", async () => {
 		const externalId: string = uuid.v4();
 		const accounts: any[] = await create2Accounts(externalId, externalId);
-		const accountsReceived: IAccountDTO[] = await accountsAndBalancesClient.getAccountsByExternalId(externalId);
+		const accountsReceived: IAccountDTO[] =
+			await accountsAndBalancesClient.getAccountsByExternalId(externalId, VALID_TOKEN);
 		expect(accountsReceived).toEqual(accounts);
 	});
 
@@ -471,7 +475,7 @@ describe("accounts and balances - integration tests", () => {
 	test("get non-existent journal entries by account id", async () => {
 		const accountId: string = uuid.v4();
 		const journalEntries: IJournalEntryDTO[] =
-			await accountsAndBalancesClient.getJournalEntriesByAccountId(accountId);
+			await accountsAndBalancesClient.getJournalEntriesByAccountId(accountId, VALID_TOKEN);
 		expect(journalEntries).toEqual([]);
 	});
 	test("get existent journal entries by account id", async () => {
@@ -501,9 +505,9 @@ describe("accounts and balances - integration tests", () => {
 			debitedAccountId: accounts[0].id,
 			timestamp: 0
 		};
-		await accountsAndBalancesClient.createJournalEntries([journalEntryA, journalEntryB]);
+		await accountsAndBalancesClient.createJournalEntries([journalEntryA, journalEntryB], VALID_TOKEN);
 		const journalEntriesReceived: IJournalEntryDTO[] =
-			await accountsAndBalancesClient.getJournalEntriesByAccountId(accounts[0].id);
+			await accountsAndBalancesClient.getJournalEntriesByAccountId(accounts[0].id, VALID_TOKEN);
 		expect(journalEntriesReceived).toEqual([journalEntryA, journalEntryB]);
 	});
 });
@@ -524,7 +528,7 @@ async function create2Accounts(
 		debitBalance: 25,
 		timestampLastJournalEntry: 0
 	};
-	await accountsAndBalancesClient.createAccount(accountA); // TODO: securityContext.
+	await accountsAndBalancesClient.createAccount(accountA, VALID_TOKEN);
 	// Account B.
 	const idAccountB: string = idAccountA + 1;
 	const accountB: IAccountDTO = {
@@ -537,6 +541,6 @@ async function create2Accounts(
 		debitBalance: 25,
 		timestampLastJournalEntry: 0
 	};
-	await accountsAndBalancesClient.createAccount(accountB); // TODO: securityContext.
+	await accountsAndBalancesClient.createAccount(accountB, VALID_TOKEN);
 	return [accountA, accountB];
 }

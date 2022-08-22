@@ -75,7 +75,7 @@ const AUTH_Z_SVC_JWKS_URL: string =
 
 // Auditing.
 const AUDITING_CERT_FILE_PATH: string = process.env.AUDITING_CERT_FILE_PATH ?? "./auditing_cert"; // TODO: file name.
-const AUDITING_TOPIC: string = `${SERVICE_NAME} - Auditing`;
+const AUDITING_TOPIC: string = `${BOUNDED_CONTEXT_NAME}_${SERVICE_NAME}_auditing`;
 
 // Data base.
 const DB_HOST: string = process.env.ACCOUNTS_AND_BALANCES_DB_HOST ?? "localhost";

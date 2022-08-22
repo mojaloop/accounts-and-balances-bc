@@ -83,8 +83,6 @@ let aggregate: Aggregate;
 let webServer: ExpressWebServer;
 let auxiliaryClient: AuxiliaryClient;
 
-let server: any;
-
 describe("accounts and balances web server - unit tests", () => {
 	beforeAll(async () => {
 		const logger: ILogger = new ConsoleLogger();

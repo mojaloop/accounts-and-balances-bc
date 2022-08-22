@@ -61,9 +61,17 @@ export class AccountsAndBalancesClient {
 		});
 	}
 
-	async createAccount(account: IAccountDTO): Promise<string> {
+	async createAccount(account: IAccountDTO, bearerToken: string): Promise<string> { // TODO: bearer token name.
 		try {
-			const axiosResponse: AxiosResponse = await this.httpClient.post("/accounts", account);
+			const axiosResponse: AxiosResponse = await this.httpClient.post(
+				"/accounts",
+				account,
+				{
+					headers: {
+						"Authorization": `Bearer ${bearerToken}`
+					}
+				}
+			);
 			return axiosResponse.data.accountId;
 		} catch (e: unknown) {
 			if (axios.isAxiosError(e)) {
@@ -77,9 +85,17 @@ export class AccountsAndBalancesClient {
 		}
 	}
 
-	async createJournalEntries(journalEntries: IJournalEntryDTO[]): Promise<string[]> {
+	async createJournalEntries(journalEntries: IJournalEntryDTO[], bearerToken: string): Promise<string[]> {
 		try {
-			const axiosResponse: AxiosResponse = await this.httpClient.post("/journalEntries", journalEntries);
+			const axiosResponse: AxiosResponse = await this.httpClient.post(
+				"/journalEntries",
+				journalEntries,
+				{
+					headers: {
+						"Authorization": `Bearer ${bearerToken}`
+					}
+				}
+			);
 			return axiosResponse.data.idsJournalEntries;
 		} catch (e: unknown) {
 			if (axios.isAxiosError(e)) {
@@ -93,11 +109,14 @@ export class AccountsAndBalancesClient {
 		}
 	}
 
-	async getAccountById(accountId: string): Promise<IAccountDTO | null> {
+	async getAccountById(accountId: string, bearerToken: string): Promise<IAccountDTO | null> {
 		try {
 			const axiosResponse: AxiosResponse = await this.httpClient.get(
 				`/accounts?id=${accountId}`,
 				{
+					headers: {
+						"Authorization": `Bearer ${bearerToken}`
+					},
 					validateStatus: (statusCode: number) => {
 						return statusCode === 200 || statusCode === 404; // Resolve only 200s and 404s.
 					}
@@ -119,11 +138,14 @@ export class AccountsAndBalancesClient {
 		}
 	}
 
-	async getAccountsByExternalId(externalId: string): Promise<IAccountDTO[]> {
+	async getAccountsByExternalId(externalId: string, bearerToken: string): Promise<IAccountDTO[]> {
 		try {
 			const axiosResponse: AxiosResponse = await this.httpClient.get(
 				`/accounts?externalId=${externalId}`,
 				{
+					headers: {
+						"Authorization": `Bearer ${bearerToken}`
+					},
 					validateStatus: (statusCode: number) => {
 						return statusCode === 200 || statusCode === 404; // Resolve only 200s and 404s.
 					}
@@ -145,11 +167,14 @@ export class AccountsAndBalancesClient {
 		}
 	}
 
-	async getJournalEntriesByAccountId(accountId: string): Promise<IJournalEntryDTO[]> {
+	async getJournalEntriesByAccountId(accountId: string, bearerToken: string): Promise<IJournalEntryDTO[]> {
 		try {
 			const axiosResponse: AxiosResponse = await this.httpClient.get(
 				`/journalEntries?accountId=${accountId}`,
 				{
+					headers: {
+						"Authorization": `Bearer ${bearerToken}`
+					},
 					validateStatus: (statusCode: number) => {
 						return statusCode === 200 || statusCode === 404; // Resolve only 200s and 404s.
 					}
