@@ -58,7 +58,7 @@ export class AuxiliaryClient {
 				account,
 				{
 					headers: {
-						"Authorization": `Basic ${bearerToken}` // TODO: Basic?
+						"Authorization": `Bearer ${bearerToken}`
 					}
 				}
 			);
@@ -68,36 +68,65 @@ export class AuxiliaryClient {
 		}
 	}
 
-	async createJournalEntries(journalEntries: any[]): Promise<number> {
+	async createJournalEntries(journalEntries: any[], bearerToken: string): Promise<number> {
 		try {
-			const axiosResponse: AxiosResponse = await this.httpClient.post("/journalEntries", journalEntries);
+			const axiosResponse: AxiosResponse = await this.httpClient.post(
+				"/journalEntries",
+				journalEntries,
+				{
+					headers: {
+						"Authorization": `Bearer ${bearerToken}`
+					}
+				}
+			);
 			return axiosResponse.status;
 		} catch (e: unknown) {
 			return (e as AxiosError).response?.status ?? -1;
 		}
 	}
 
-	async getAccountById(accountId: string): Promise<number> {
+	async getAccountById(accountId: string, bearerToken: string): Promise<number> {
 		try {
-			const axiosResponse: AxiosResponse = await this.httpClient.get(`/accounts?id=${accountId}`);
+			const axiosResponse: AxiosResponse = await this.httpClient.get(
+				`/accounts?id=${accountId}`,
+				{
+					headers: {
+						"Authorization": `Bearer ${bearerToken}`
+					}
+				}
+			);
 			return axiosResponse.status;
 		} catch (e: unknown) {
 			return (e as AxiosError).response?.status ?? -1;
 		}
 	}
 
-	async getAccountsByExternalId(externalId: string): Promise<number> {
+	async getAccountsByExternalId(externalId: string, bearerToken: string): Promise<number> {
 		try {
-			const axiosResponse: AxiosResponse = await this.httpClient.get(`/accounts?externalId=${externalId}`);
+			const axiosResponse: AxiosResponse = await this.httpClient.get(
+				`/accounts?externalId=${externalId}`,
+				{
+					headers: {
+						"Authorization": `Bearer ${bearerToken}`
+					}
+				}
+			);
 			return axiosResponse.status;
 		} catch (e: unknown) {
 			return (e as AxiosError).response?.status ?? -1;
 		}
 	}
 
-	async getJournalEntriesByAccountId(accountId: string): Promise<number> {
+	async getJournalEntriesByAccountId(accountId: string, bearerToken: string): Promise<number> {
 		try {
-			const axiosResponse: AxiosResponse = await this.httpClient.get(`/journalEntries?accountId=${accountId}`);
+			const axiosResponse: AxiosResponse = await this.httpClient.get(
+				`/journalEntries?accountId=${accountId}`,
+				{
+					headers: {
+						"Authorization": `Bearer ${bearerToken}`
+					}
+				}
+			);
 			return axiosResponse.status;
 		} catch (e: unknown) {
 			return (e as AxiosError).response?.status ?? -1;

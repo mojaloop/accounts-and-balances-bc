@@ -96,7 +96,7 @@ export class Aggregate {
 	}
 
 	// TODO: why ignore the case in which uuid.v4() generates an already existing id?
-	async createAccount(account: IAccount, securityContext?: CallSecurityContext): Promise<string> { // TODO: remove undefined type.
+	async createAccount(account: IAccount, securityContext: CallSecurityContext): Promise<string> {
 		// Generate a random UUId, if needed.
 		if (account.id === undefined || account.id === null || account.id === "") {
 			account.id = uuid.v4();
@@ -112,18 +112,16 @@ export class Aggregate {
 			throw e;
 		}
 		// TODO: configure; try-catch.
-		if (securityContext !== undefined) { // TODO: remove this verification.
-			await this.auditingClient.audit(
-				AuditingActions.ACCOUNT_CREATED,
-				true,
-				this.getAuditSecurityContext(securityContext),
-				[{key: "accountId", value: account.id}]
-			);
-		}
+		await this.auditingClient.audit(
+			AuditingActions.ACCOUNT_CREATED,
+			true,
+			this.getAuditSecurityContext(securityContext),
+			[{key: "accountId", value: account.id}]
+		);
 		return account.id;
 	}
 
-	async createJournalEntries(journalEntries: IJournalEntry[]): Promise<string[]> {
+	async createJournalEntries(journalEntries: IJournalEntry[], securityContext: CallSecurityContext): Promise<string[]> {
 		const idsJournalEntries: string[] = []; // TODO: verify.
 		for (const journalEntry of journalEntries) { // TODO: of?
 			idsJournalEntries.push(await this.createJournalEntry(journalEntry)); // TODO: verify.
@@ -204,7 +202,7 @@ export class Aggregate {
 		return journalEntry.id;
 	}
 
-	async getAccountById(accountId: string): Promise<IAccount | null> {
+	async getAccountById(accountId: string, securityContext: CallSecurityContext): Promise<IAccount | null> {
 		try {
 			return await this.accountsRepo.getAccountById(accountId);
 		} catch (e: unknown) {
@@ -213,7 +211,7 @@ export class Aggregate {
 		}
 	}
 
-	async getAccountsByExternalId(externalId: string): Promise<IAccount[]> {
+	async getAccountsByExternalId(externalId: string, securityContext: CallSecurityContext): Promise<IAccount[]> {
 		try {
 			return await this.accountsRepo.getAccountsByExternalId(externalId);
 		} catch (e: unknown) {
@@ -222,7 +220,7 @@ export class Aggregate {
 		}
 	}
 
-	async getJournalEntriesByAccountId(accountId: string): Promise<IJournalEntry[]> {
+	async getJournalEntriesByAccountId(accountId: string, securityContext: CallSecurityContext): Promise<IJournalEntry[]> {
 		try {
 			return await this.journalEntriesRepo.getJournalEntriesByAccountId(accountId);
 		} catch (e: unknown) {

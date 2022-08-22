@@ -238,7 +238,7 @@ describe("accounts and balances domain - unit tests", () => {
 			0
 		);
 		const idsJournalEntries: string[] =
-			await aggregate.createJournalEntries([journalEntryA, journalEntryB]);
+			await aggregate.createJournalEntries([journalEntryA, journalEntryB], securityContext);
 		expect(idsJournalEntries).toEqual([idJournalEntryA, idJournalEntryB]);
 	});
 	test("create existent journal entries", async () => {
@@ -268,10 +268,10 @@ describe("accounts and balances domain - unit tests", () => {
 			accounts[0].id,
 			0
 		);
-		await aggregate.createJournalEntries([journalEntryA, journalEntryB]);
+		await aggregate.createJournalEntries([journalEntryA, journalEntryB], securityContext);
 		await expect(
 			async () => {
-				await aggregate.createJournalEntries([journalEntryA, journalEntryB]);
+				await aggregate.createJournalEntries([journalEntryA, journalEntryB], securityContext);
 			}
 		).rejects.toThrow(JournalEntryAlreadyExistsError);
 	});
@@ -289,7 +289,7 @@ describe("accounts and balances domain - unit tests", () => {
 			accounts[1].id,
 			0
 		);
-		const journalEntryIdReceived: string[] = await aggregate.createJournalEntries([journalEntry]);
+		const journalEntryIdReceived: string[] = await aggregate.createJournalEntries([journalEntry], securityContext);
 		expect(journalEntryIdReceived).not.toEqual(journalEntryId); // TODO: makes sense?
 	});
 	test("create journal entry with same credited and debited accounts", async () => {
@@ -308,7 +308,7 @@ describe("accounts and balances domain - unit tests", () => {
 		);
 		await expect(
 			async () => {
-				await aggregate.createJournalEntries([journalEntry]);
+				await aggregate.createJournalEntries([journalEntry], securityContext);
 			}
 		).rejects.toThrow(CreditedAndDebitedAccountsAreTheSameError);
 	});
@@ -328,7 +328,7 @@ describe("accounts and balances domain - unit tests", () => {
 		);
 		await expect(
 			async () => {
-				await aggregate.createJournalEntries([journalEntry]);
+				await aggregate.createJournalEntries([journalEntry], securityContext);
 			}
 		).rejects.toThrow(NoSuchCreditedAccountError);
 	});
@@ -348,7 +348,7 @@ describe("accounts and balances domain - unit tests", () => {
 		);
 		await expect(
 			async () => {
-				await aggregate.createJournalEntries([journalEntry]);
+				await aggregate.createJournalEntries([journalEntry], securityContext);
 			}
 		).rejects.toThrow(NoSuchDebitedAccountError);
 	});
@@ -368,7 +368,7 @@ describe("accounts and balances domain - unit tests", () => {
 		);
 		await expect(
 			async () => {
-				await aggregate.createJournalEntries([journalEntry]);
+				await aggregate.createJournalEntries([journalEntry], securityContext);
 			}
 		).rejects.toThrow(CurrenciesDifferError);
 	});
@@ -388,7 +388,7 @@ describe("accounts and balances domain - unit tests", () => {
 		);
 		await expect(
 			async () => {
-				await aggregate.createJournalEntries([journalEntry]);
+				await aggregate.createJournalEntries([journalEntry], securityContext);
 			}
 		).rejects.toThrow(InsufficientBalanceError);
 	});
@@ -408,7 +408,7 @@ describe("accounts and balances domain - unit tests", () => {
 		);
 		await expect(
 			async () => {
-				await aggregate.createJournalEntries([journalEntry]);
+				await aggregate.createJournalEntries([journalEntry], securityContext);
 			}
 		).rejects.toThrow(InvalidJournalEntryAmountError);
 	});
@@ -429,7 +429,7 @@ describe("accounts and balances domain - unit tests", () => {
 		(journalEntriesRepo as MemoryJournalEntriesRepo).unexpectedFailure = true; // TODO: should this be done?
 		await expect(
 			async () => {
-				await aggregate.createJournalEntries([journalEntry]);
+				await aggregate.createJournalEntries([journalEntry], securityContext);
 			}
 		).rejects.toThrow(); // TODO: check for specific repo error?
 		(journalEntriesRepo as MemoryJournalEntriesRepo).unexpectedFailure = false; // TODO: should this be done?
@@ -451,7 +451,7 @@ describe("accounts and balances domain - unit tests", () => {
 		(accountsRepo as MemoryAccountsRepo).unexpectedFailure = true; // TODO: should this be done?
 		await expect(
 			async () => {
-				await aggregate.createJournalEntries([journalEntry]);
+				await aggregate.createJournalEntries([journalEntry], securityContext);
 			}
 		).rejects.toThrow(); // TODO: check for specific repo error?
 		(accountsRepo as MemoryAccountsRepo).unexpectedFailure = false; // TODO: should this be done?
@@ -460,7 +460,7 @@ describe("accounts and balances domain - unit tests", () => {
 	// Get account by id.
 	test("get non-existent account by id", async () => {
 		const accountId: string = uuid.v4();
-		const account: IAccount | null = await aggregate.getAccountById(accountId);
+		const account: IAccount | null = await aggregate.getAccountById(accountId, securityContext);
 		expect(account).toBeNull();
 	});
 	test("get existent account by id", async () => {
@@ -476,7 +476,7 @@ describe("accounts and balances domain - unit tests", () => {
 			0
 		);
 		await aggregate.createAccount(account, securityContext);
-		const accountReceived: IAccount | null = await aggregate.getAccountById(accountId);
+		const accountReceived: IAccount | null = await aggregate.getAccountById(accountId, securityContext);
 		expect(accountReceived).toEqual(account);
 	});
 	test("get account with unexpected accounts repo failure", async () => {
@@ -484,7 +484,7 @@ describe("accounts and balances domain - unit tests", () => {
 		(accountsRepo as MemoryAccountsRepo).unexpectedFailure = true; // TODO: should this be done?
 		await expect(
 			async () => {
-				await aggregate.getAccountById(accountId);
+				await aggregate.getAccountById(accountId, securityContext);
 			}
 		).rejects.toThrow(); // TODO: check for specific repo error?
 		(accountsRepo as MemoryAccountsRepo).unexpectedFailure = false; // TODO: should this be done?
@@ -493,13 +493,13 @@ describe("accounts and balances domain - unit tests", () => {
 	// Get accounts by external id.
 	test("get non-existent accounts by external id", async () => {
 		const externalId: string = uuid.v4();
-		const accounts: IAccount[] = await aggregate.getAccountsByExternalId(externalId);
+		const accounts: IAccount[] = await aggregate.getAccountsByExternalId(externalId, securityContext);
 		expect(accounts).toEqual([]);
 	});
 	test("get existent accounts by external id", async () => {
 		const externalId: string = uuid.v4();
 		const accounts: IAccount[] = await create2Accounts(externalId, externalId);
-		const accountsReceived: IAccount[] = await aggregate.getAccountsByExternalId(externalId);
+		const accountsReceived: IAccount[] = await aggregate.getAccountsByExternalId(externalId, securityContext);
 		expect(accountsReceived).toEqual(accounts);
 	});
 	test("get accounts with unexpected accounts repo failure", async () => {
@@ -507,7 +507,7 @@ describe("accounts and balances domain - unit tests", () => {
 		(accountsRepo as MemoryAccountsRepo).unexpectedFailure = true; // TODO: should this be done?
 		await expect(
 			async () => {
-				await aggregate.getAccountsByExternalId(externalId);
+				await aggregate.getAccountsByExternalId(externalId, securityContext);
 			}
 		).rejects.toThrow(); // TODO: check for specific repo error?
 		(accountsRepo as MemoryAccountsRepo).unexpectedFailure = false; // TODO: should this be done?
@@ -516,7 +516,7 @@ describe("accounts and balances domain - unit tests", () => {
 	// Get journal entries by account id.
 	test("get non-existent journal entries by account id", async () => {
 		const accountId: string = uuid.v4();
-		const journalEntries: IJournalEntry[] = await aggregate.getJournalEntriesByAccountId(accountId);
+		const journalEntries: IJournalEntry[] = await aggregate.getJournalEntriesByAccountId(accountId, securityContext);
 		expect(journalEntries).toEqual([]);
 	});
 	test("get existent journal entries by account id", async () => {
@@ -546,8 +546,9 @@ describe("accounts and balances domain - unit tests", () => {
 			accounts[0].id,
 			0
 		);
-		await aggregate.createJournalEntries([journalEntryA, journalEntryB]);
-		const journalEntriesReceived: IJournalEntry[] = await aggregate.getJournalEntriesByAccountId(accounts[0].id);
+		await aggregate.createJournalEntries([journalEntryA, journalEntryB], securityContext);
+		const journalEntriesReceived: IJournalEntry[] =
+			await aggregate.getJournalEntriesByAccountId(accounts[0].id, securityContext);
 		expect(journalEntriesReceived).toEqual([journalEntryA, journalEntryB]);
 	});
 	test("get journal entries with unexpected journal entries repo failure", async () => {
@@ -555,7 +556,7 @@ describe("accounts and balances domain - unit tests", () => {
 		(journalEntriesRepo as MemoryJournalEntriesRepo).unexpectedFailure = true; // TODO: should this be done?
 		await expect(
 			async () => {
-				await aggregate.getJournalEntriesByAccountId(accountId);
+				await aggregate.getJournalEntriesByAccountId(accountId, securityContext);
 			}
 		).rejects.toThrow(); // TODO: check for specific repo error?
 		(journalEntriesRepo as MemoryJournalEntriesRepo).unexpectedFailure = false; // TODO: should this be done?

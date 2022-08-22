@@ -99,7 +99,7 @@ let logger: KafkaLogger; // TODO: ILogger?
 let aggregate: Aggregate;
 let webServer: ExpressWebServer;
 
-async function main(): Promise<void> {
+export async function main(): Promise<void> {
 	// Message producer options.
 	const kafkaProducerOptions: MLKafkaProducerOptions = {
 		kafkaBrokerList: MESSAGE_BROKER_URL
@@ -124,7 +124,7 @@ async function main(): Promise<void> {
 		AUTH_Z_TOKEN_AUDIENCE,
 		logger
 	);
-	// await tokenHelper.init(); // TODO: verify.
+	await tokenHelper.init(); // TODO: verify.
 
 	// Auditing.
 	if (!existsSync(AUDITING_CERT_FILE_PATH)) { // TODO: clarify.
@@ -188,10 +188,14 @@ async function handleIntAndTermSignals(signal: NodeJS.Signals): Promise<void> {
 	await aggregate.destroy();
 	await logger.destroy(); // TODO: here or on the aggregate?
 	webServer.destroy();
-	// process.exit(); // TODO: required?
+	process.exit(); // TODO: required?
 }
 process.on("exit", () => {
 	logger.info(`exiting ${SERVICE_NAME}`);
 });
+
+export function stopServer() {
+	webServer.destroy();
+}
 
 main();

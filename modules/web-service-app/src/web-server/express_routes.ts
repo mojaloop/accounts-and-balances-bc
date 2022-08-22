@@ -81,7 +81,7 @@ export class ExpressRoutes {
 
 	private setUp(): void {
 		// Inject authentication - all requests require a valid token. TODO: clarify.
-		// this._router.post("/accounts", this.authenticationMiddleware.bind(this)); // TODO: for all routes?
+		this._router.use(this.authenticate.bind(this)); // All requests require authentication.
 		// Posts.
 		this._router.post("/accounts", this.postAccount.bind(this));
 		this._router.post("/journalEntries", this.postJournalEntries.bind(this));
@@ -94,8 +94,8 @@ export class ExpressRoutes {
 		return this._router;
 	}
 
-	// TODO: function name; express.NextFunction; clarify; why returns? logs vs error responses.
-	private async authenticationMiddleware(
+	// TODO: name; express.NextFunction; clarify; why returns? logs vs error responses.
+	private async authenticate(
 		req: express.Request,
 		res: express.Response,
 		next: express.NextFunction
@@ -110,7 +110,7 @@ export class ExpressRoutes {
 			return;
 		}
 
-		const bearer: string[] = authorizationHeader.trim().split(" "); // TODO: name.
+		/*const bearer: string[] = authorizationHeader.trim().split(" "); // TODO: name.
 		if (bearer.length != BEARER_LENGTH) {
 			this.sendErrorResponse(
 				res,
@@ -163,14 +163,21 @@ export class ExpressRoutes {
 			clientId: subjectType.toUpperCase().startsWith("APP") ? subject : null, // TODO: null?
 			rolesIds: decodedToken.roles,
 			accessToken: bearerToken
-		};
+		};*/
+
+		req.securityContext = {
+			username: "",
+			clientId: "",
+			rolesIds: [""],
+			accessToken: ""
+		}
 
 		next();
 	}
 
 	private async postAccount(req: express.Request, res: express.Response): Promise<void> {
 		try {
-			const accountId: string = await this.aggregate.createAccount(req.body/*, req.securityContext!*/); // TODO: !.
+			const accountId: string = await this.aggregate.createAccount(req.body, req.securityContext!); // TODO: !.
 			this.sendSuccessResponse(
 				res,
 				201,
@@ -207,7 +214,8 @@ export class ExpressRoutes {
 
 	private async postJournalEntries(req: express.Request, res: express.Response): Promise<void> {
 		try {
-			const idsJournalEntries: string[] = await this.aggregate.createJournalEntries(req.body);
+			const idsJournalEntries: string[] =
+				await this.aggregate.createJournalEntries(req.body, req.securityContext!); // TODO: !.
 			this.sendSuccessResponse(
 				res,
 				201,
@@ -299,7 +307,8 @@ export class ExpressRoutes {
 	private async getAccountById(req: express.Request, res: express.Response): Promise<void> {
 		try {
 			// The properties of the req.query object are always strings. TODO: check.
-			const account: IAccount | null = await this.aggregate.getAccountById(req.query.id as string); // TODO: cast?
+			const account: IAccount | null =
+				await this.aggregate.getAccountById(req.query.id as string, req.securityContext!); // TODO: cast? !.
 			if (account === null) {
 				this.sendErrorResponse(
 					res,
@@ -325,7 +334,8 @@ export class ExpressRoutes {
 	private async getAccountsByExternalId(req: express.Request, res: express.Response): Promise<void> {
 		try {
 			// The properties of the req.query object are always strings. TODO: check.
-			const accounts: IAccount[] = await this.aggregate.getAccountsByExternalId(req.query.externalId as string); // TODO: cast?
+			const accounts: IAccount[] =
+				await this.aggregate.getAccountsByExternalId(req.query.externalId as string, req.securityContext!); // TODO: cast? !.
 			if (accounts.length === 0) {
 				this.sendErrorResponse(
 					res,
@@ -351,7 +361,8 @@ export class ExpressRoutes {
 	private async getJournalEntriesByAccountId(req: express.Request, res: express.Response): Promise<void> {
 		try {
 			// The properties of the req.query object are always strings. TODO: check.
-			const journalEntries: IJournalEntry[] = await this.aggregate.getJournalEntriesByAccountId(req.query.accountId as string); // TODO: cast?
+			const journalEntries: IJournalEntry[] =
+				await this.aggregate.getJournalEntriesByAccountId(req.query.accountId as string, req.securityContext!); // TODO: cast? !.
 			if (journalEntries.length === 0) {
 				this.sendErrorResponse(
 					res,
