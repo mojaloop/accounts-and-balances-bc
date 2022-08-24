@@ -16,6 +16,7 @@
     "clean:dist": "yarn workspaces foreach -v --parallel run clean:dist",
     "clean:node-modules": "yarn workspaces foreach -v --parallel run clean:node-modules",
     "clean:dist-and-node-modules": "yarn workspaces foreach -v --parallel run clean:dist-and-node-modules",
+    "lint": "yarn workspaces foreach -v --parallel run lint",
     "build:domain": "yarn workspace @mojaloop/accounts-and-balances-bc-domain run build",
     "build:client": "yarn workspace @mojaloop/accounts-and-balances-bc-client run build",
     "build:web-service-app": "yarn workspace @mojaloop/accounts-and-balances-bc-web-service-app run build",

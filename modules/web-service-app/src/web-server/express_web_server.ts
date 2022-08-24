@@ -50,16 +50,16 @@ export class ExpressWebServer {
 
 	constructor(
 		logger: ILogger,
-		HOST: string,
-		PORT_NO: number,
-		PATH_ROUTER: string,
+		host: string,
+		portNo: number,
+		pathRouter: string,
 		tokenHelper: TokenHelper,
 		aggregate: Aggregate
 	) {
 		this.logger = logger;
-		this.HOST = HOST;
-		this.PORT_NO = PORT_NO;
-		this.PATH_ROUTER = PATH_ROUTER;
+		this.HOST = host;
+		this.PORT_NO = portNo;
+		this.PATH_ROUTER = pathRouter;
 
 		this.BASE_URL = `http://${this.HOST}:${this.PORT_NO}`;
 		this.app = express();
@@ -82,7 +82,7 @@ export class ExpressWebServer {
 	public init(): void {
 		try {
 			this.webServer = this.app.listen(this.PORT_NO, () => {
-				this.logger.info("Server on.");
+				this.logger.info("Server on 🚀");
 				this.logger.info(`Host: ${this.HOST}`);
 				this.logger.info(`Port: ${this.PORT_NO}`);
 				this.logger.info(`Base URL: ${this.BASE_URL}`);

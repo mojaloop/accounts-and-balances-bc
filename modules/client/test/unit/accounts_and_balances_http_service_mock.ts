@@ -32,10 +32,10 @@
 import nock from "nock";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 
-export class AccountsAndBalancesServiceMock {
+export class AccountsAndBalancesHttpServiceMock {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
-	private readonly ACCOUNTS_AND_BALANCES_URL: string;
+	private readonly BASE_URL: string;
 	// Other properties.
 	public static readonly NON_EXISTENT_ACCOUNT_ID: string = "a";
 	public static readonly EXISTENT_ACCOUNT_ID: string = "b";
@@ -48,26 +48,26 @@ export class AccountsAndBalancesServiceMock {
 	public static readonly ID_ACCOUNT_B: string = "account_b";
 	public static readonly ID_JOURNAL_ENTRY_A: string = "journal_entry_a";
 	public static readonly ID_JOURNAL_ENTRY_B: string = "journal_entry_b";
-	public static readonly VALID_TOKEN: string = "";
+	public static readonly VALID_ACCESS_TOKEN: string = "";
 
 	constructor(
 		logger: ILogger,
-		ACCOUNTS_AND_BALANCES_URL: string
+		baseUrl: string
 	) {
 		this.logger = logger;
-		this.ACCOUNTS_AND_BALANCES_URL = ACCOUNTS_AND_BALANCES_URL;
+		this.BASE_URL = baseUrl;
 
 		this.setUp();
 	}
 
 	private setUp(): void {
 		// Create account.
-		nock(this.ACCOUNTS_AND_BALANCES_URL)
+		nock(this.BASE_URL)
 			.persist()
 			.post("/accounts")
 			.reply(
 				(_, requestBody: any) => {
-					if (requestBody.id === AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID) {
+					if (requestBody.id === AccountsAndBalancesHttpServiceMock.EXISTENT_ACCOUNT_ID) {
 						return [
 							409,
 							{message: "account already exists"}
@@ -81,14 +81,14 @@ export class AccountsAndBalancesServiceMock {
 			);
 
 		// Create journal entries.
-		nock(this.ACCOUNTS_AND_BALANCES_URL)
+		nock(this.BASE_URL)
 			.persist()
 			.post("/journalEntries")
 			.reply(
 				(_, requestBody: any) => {
 					const idsJournalEntries: string[] = [];
 					for (const journalEntry of requestBody) {
-						if (journalEntry.id === AccountsAndBalancesServiceMock.EXISTENT_JOURNAL_ENTRY_ID) {
+						if (journalEntry.id === AccountsAndBalancesHttpServiceMock.EXISTENT_JOURNAL_ENTRY_ID) {
 							return [
 								409,
 								{message: "journal entry already exists"}
@@ -104,94 +104,94 @@ export class AccountsAndBalancesServiceMock {
 			);
 
 		// Get non-existent account by id.
-		nock(this.ACCOUNTS_AND_BALANCES_URL)
+		nock(this.BASE_URL)
 			.persist()
 			.get("/accounts")
-			.query({id: AccountsAndBalancesServiceMock.NON_EXISTENT_ACCOUNT_ID})
+			.query({id: AccountsAndBalancesHttpServiceMock.NON_EXISTENT_ACCOUNT_ID})
 			.reply(
 				404,
 				{message: "no such account"}
 			);
 		// Get existent account by id.
-		nock(this.ACCOUNTS_AND_BALANCES_URL)
+		nock(this.BASE_URL)
 			.persist()
 			.get("/accounts")
-			.query({id: AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID})
+			.query({id: AccountsAndBalancesHttpServiceMock.EXISTENT_ACCOUNT_ID})
 			.reply(
 				200,
-				{account: {id: AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID}}
+				{account: {id: AccountsAndBalancesHttpServiceMock.EXISTENT_ACCOUNT_ID}}
 			);
 		// Get account with internal server error.
-		nock(this.ACCOUNTS_AND_BALANCES_URL)
+		nock(this.BASE_URL)
 			.persist()
 			.get("/accounts")
-			.query({id: AccountsAndBalancesServiceMock.ID_INTERNAL_SERVER_ERROR})
+			.query({id: AccountsAndBalancesHttpServiceMock.ID_INTERNAL_SERVER_ERROR})
 			.reply(
 				500,
 				{message: "unknown error"}
 			);
 
 		// Get non-existent accounts by external id.
-		nock(this.ACCOUNTS_AND_BALANCES_URL)
+		nock(this.BASE_URL)
 			.persist()
 			.get("/accounts")
-			.query({externalId: AccountsAndBalancesServiceMock.NON_EXISTENT_EXTERNAL_ID})
+			.query({externalId: AccountsAndBalancesHttpServiceMock.NON_EXISTENT_EXTERNAL_ID})
 			.reply(
 				404,
 				{message: "no accounts with the specified external id"}
 			);
 		// Get existent accounts by external id.
-		nock(this.ACCOUNTS_AND_BALANCES_URL)
+		nock(this.BASE_URL)
 			.persist()
 			.get("/accounts")
-			.query({externalId: AccountsAndBalancesServiceMock.EXISTENT_EXTERNAL_ID})
+			.query({externalId: AccountsAndBalancesHttpServiceMock.EXISTENT_EXTERNAL_ID})
 			.reply(
 				200,
 				{
 					accounts: [
-						{id: AccountsAndBalancesServiceMock.ID_ACCOUNT_A},
-						{id: AccountsAndBalancesServiceMock.ID_ACCOUNT_B}
+						{id: AccountsAndBalancesHttpServiceMock.ID_ACCOUNT_A},
+						{id: AccountsAndBalancesHttpServiceMock.ID_ACCOUNT_B}
 					]
 				}
 			);
 		// Get accounts with internal server error.
-		nock(this.ACCOUNTS_AND_BALANCES_URL)
+		nock(this.BASE_URL)
 			.persist()
 			.get("/accounts")
-			.query({externalId: AccountsAndBalancesServiceMock.ID_INTERNAL_SERVER_ERROR})
+			.query({externalId: AccountsAndBalancesHttpServiceMock.ID_INTERNAL_SERVER_ERROR})
 			.reply(
 				500,
 				{message: "unknown error"}
 			);
 
 		// Get non-existent journal entries by account id.
-		nock(this.ACCOUNTS_AND_BALANCES_URL)
+		nock(this.BASE_URL)
 			.persist()
 			.get("/journalEntries")
-			.query({accountId: AccountsAndBalancesServiceMock.NON_EXISTENT_ACCOUNT_ID})
+			.query({accountId: AccountsAndBalancesHttpServiceMock.NON_EXISTENT_ACCOUNT_ID})
 			.reply(
 				404,
 				{message: "no journal entries with the specified account id"}
 			);
 		// Get existent journal entries by account id.
-		nock(this.ACCOUNTS_AND_BALANCES_URL)
+		nock(this.BASE_URL)
 			.persist()
 			.get("/journalEntries")
-			.query({accountId: AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID})
+			.query({accountId: AccountsAndBalancesHttpServiceMock.EXISTENT_ACCOUNT_ID})
 			.reply(
 				200,
 				{
 					journalEntries: [
-						{id: AccountsAndBalancesServiceMock.ID_JOURNAL_ENTRY_A},
-						{id: AccountsAndBalancesServiceMock.ID_JOURNAL_ENTRY_B}
+						{id: AccountsAndBalancesHttpServiceMock.ID_JOURNAL_ENTRY_A},
+						{id: AccountsAndBalancesHttpServiceMock.ID_JOURNAL_ENTRY_B}
 					]
 				}
 			);
 		// Get journal entries with internal server error.
-		nock(this.ACCOUNTS_AND_BALANCES_URL)
+		nock(this.BASE_URL)
 			.persist()
 			.get("/journalEntries")
-			.query({accountId: AccountsAndBalancesServiceMock.ID_INTERNAL_SERVER_ERROR})
+			.query({accountId: AccountsAndBalancesHttpServiceMock.ID_INTERNAL_SERVER_ERROR})
 			.reply(
 				500,
 				{message: "unknown error"}

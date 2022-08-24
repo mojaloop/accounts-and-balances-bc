@@ -22,12 +22,14 @@
     "clean:node-modules": "rm -rf node_modules",
     "clean:dist-and-node-modules": "rm -rf dist node_modules",
     "clean": "yarn clean:dist",
+    "lint": "npx eslint ./src",
     "build": "tsc",
     "test:unit": "jest --testMatch '**/test/unit/**/*.test.ts'"
   },
   "devDependencies": {
     "@mojaloop/auditing-bc-public-types-lib": "^0.0.7",
     "@mojaloop/logging-bc-public-types-lib": "^0.0.3",
+    "@mojaloop/security-bc-public-types-lib": "^0.0.5",
     "@types/uuid": "^8.3.4"
   },
   "dependencies": {

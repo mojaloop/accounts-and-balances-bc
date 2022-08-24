@@ -38,7 +38,8 @@ import {
 	InsufficientBalanceError,
 	JournalEntryAlreadyExistsError,
 	NoSuchCreditedAccountError,
-	NoSuchDebitedAccountError
+	NoSuchDebitedAccountError,
+	UnauthorizedError
 } from "./errors";
 import {IAccountsRepo, IJournalEntriesRepo} from "./infrastructure_interfaces";
 import {Account} from "./entities/account";
@@ -46,6 +47,8 @@ import {JournalEntry} from "./entities/journal_entry";
 import {IAccount, IJournalEntry} from "./types";
 import {IAuditClient, AuditSecurityContext} from "@mojaloop/auditing-bc-public-types-lib";
 import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
+import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
+import {Privileges} from "./privileges";
 
 enum AuditingActions {
 	ACCOUNT_CREATED = "ACCOUNT_CREATED"
@@ -54,17 +57,20 @@ enum AuditingActions {
 export class Aggregate {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
+	private readonly authorizationClient: IAuthorizationClient;
 	private readonly auditingClient: IAuditClient;
 	private readonly accountsRepo: IAccountsRepo;
 	private readonly journalEntriesRepo: IJournalEntriesRepo;
 
 	constructor(
 		logger: ILogger,
+		authorizationClient: IAuthorizationClient,
 		auditingClient: IAuditClient,
 		accountsRepo: IAccountsRepo,
 		journalEntriesRepo: IJournalEntriesRepo
 	) {
 		this.logger = logger;
+		this.authorizationClient = authorizationClient;
 		this.auditingClient = auditingClient;
 		this.accountsRepo = accountsRepo;
 		this.journalEntriesRepo = journalEntriesRepo;
@@ -87,16 +93,26 @@ export class Aggregate {
 		await this.auditingClient.destroy();
 	}
 
+	private enforcePrivilege(securityContext: CallSecurityContext, privilegeId: string): void {
+		for (const roleId of securityContext.rolesIds) { // TODO: of?
+			if (this.authorizationClient.roleHasPrivilege(roleId, privilegeId)) {
+				return;
+			}
+			throw new UnauthorizedError(); // TODO: change error name.
+		}
+	}
+
 	private getAuditSecurityContext(securityContext: CallSecurityContext): AuditSecurityContext {
 		return {
 			userId: securityContext.username,
+			appId: securityContext.clientId,
 			role: "", // TODO: get role.
-			appId: securityContext.clientId
 		}
 	}
 
 	// TODO: why ignore the case in which uuid.v4() generates an already existing id?
 	async createAccount(account: IAccount, securityContext: CallSecurityContext): Promise<string> {
+		this.enforcePrivilege(securityContext, Privileges.CREATE_ACCOUNT);
 		// Generate a random UUId, if needed.
 		if (account.id === undefined || account.id === null || account.id === "") {
 			account.id = uuid.v4();
@@ -122,6 +138,7 @@ export class Aggregate {
 	}
 
 	async createJournalEntries(journalEntries: IJournalEntry[], securityContext: CallSecurityContext): Promise<string[]> {
+		this.enforcePrivilege(securityContext, Privileges.CREATE_JOURNAL_ENTRY);
 		const idsJournalEntries: string[] = []; // TODO: verify.
 		for (const journalEntry of journalEntries) { // TODO: of?
 			idsJournalEntries.push(await this.createJournalEntry(journalEntry)); // TODO: verify.
@@ -203,6 +220,7 @@ export class Aggregate {
 	}
 
 	async getAccountById(accountId: string, securityContext: CallSecurityContext): Promise<IAccount | null> {
+		this.enforcePrivilege(securityContext, Privileges.VIEW_ACCOUNT);
 		try {
 			return await this.accountsRepo.getAccountById(accountId);
 		} catch (e: unknown) {
@@ -212,6 +230,7 @@ export class Aggregate {
 	}
 
 	async getAccountsByExternalId(externalId: string, securityContext: CallSecurityContext): Promise<IAccount[]> {
+		this.enforcePrivilege(securityContext, Privileges.VIEW_ACCOUNT);
 		try {
 			return await this.accountsRepo.getAccountsByExternalId(externalId);
 		} catch (e: unknown) {
@@ -220,7 +239,11 @@ export class Aggregate {
 		}
 	}
 
-	async getJournalEntriesByAccountId(accountId: string, securityContext: CallSecurityContext): Promise<IJournalEntry[]> {
+	async getJournalEntriesByAccountId(
+		accountId: string,
+		securityContext: CallSecurityContext)
+	: Promise<IJournalEntry[]> {
+		this.enforcePrivilege(securityContext, Privileges.VIEW_JOURNAL_ENTRY);
 		try {
 			return await this.journalEntriesRepo.getJournalEntriesByAccountId(accountId);
 		} catch (e: unknown) {

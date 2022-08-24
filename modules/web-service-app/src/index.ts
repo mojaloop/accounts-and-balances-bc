@@ -38,21 +38,23 @@ import {MongoJournalEntriesRepo} from "./infrastructure/mongo_journal_entries_re
 import {MongoAccountsRepo} from "./infrastructure/mongo_accounts_repo";
 import {
 	AuditClient,
-	KafkaAuditClientDispatcher,
-	LocalAuditClientCryptoProvider,
 	IAuditClientCryptoProvider,
-	IAuditClientDispatcher
+	IAuditClientDispatcher,
+	KafkaAuditClientDispatcher,
+	LocalAuditClientCryptoProvider
 } from "@mojaloop/auditing-bc-client-lib";
 import {MLKafkaProducerOptions} from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib";
 import {existsSync} from "fs"; // TODO: fs promises?
 import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
-import {TokenHelper} from "@mojaloop/security-bc-client-lib";
+import {AuthorizationClient, TokenHelper} from "@mojaloop/security-bc-client-lib";
+import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
+import {Privileges} from "@mojaloop/accounts-and-balances-bc-domain/dist/privileges";
 
 /* ********** Constants Begin ********** */
 
 // General.
 const BOUNDED_CONTEXT_NAME: string = "accounts-and-balances-bc";
-const SERVICE_NAME: string = "web-server-svc";
+const SERVICE_NAME: string = "http-svc";
 const SERVICE_VERSION: string = "0.0.1";
 
 // Message broker.
@@ -62,19 +64,27 @@ const MESSAGE_BROKER_PORT_NO: number =
 const MESSAGE_BROKER_URL: string = `${MESSAGE_BROKER_HOST}:${MESSAGE_BROKER_PORT_NO}`;
 
 // Logging.
-const LOGGING_LEVEL: LogLevel = LogLevel.ERROR;
+const LOGGING_LEVEL: LogLevel = LogLevel.INFO;
 const LOGGING_TOPIC: string = `${BOUNDED_CONTEXT_NAME}_${SERVICE_NAME}_logging`;
 
 // Token helper. TODO: names and values.
-const AUTH_Z_TOKEN_ISSUER_NAME: string =
-	process.env.ACCOUNTS_AND_BALANCES_AUTH_Z_TOKEN_ISSUER_NAME ?? "http://localhost:3201/";
-const AUTH_Z_TOKEN_AUDIENCE: string =
-	process.env.ACCOUNTS_AND_BALANCES_AUTH_Z_TOKEN_AUDIENCE ?? "mojaloop.vnext.default_audience";
-const AUTH_Z_SVC_JWKS_URL: string =
-	process.env.ACCOUNTS_AND_BALANCES_AUTH_Z_SVC_JWKS_URL ?? "http://localhost:3201/.well-known/jwks.json";
+const TOKEN_HELPER_ISSUER_NAME: string =
+	process.env.ACCOUNTS_AND_BALANCES_TOKEN_HELPER_ISSUER_NAME ?? "http://localhost:3201/";
+const TOKEN_HELPER_JWKS_URL: string =
+	process.env.ACCOUNTS_AND_BALANCES_TOKEN_HELPER_JWKS_URL ?? "http://localhost:3201/.well-known/jwks.json";
+const TOKEN_HELPER_AUDIENCE: string =
+	process.env.ACCOUNTS_AND_BALANCES_TOKEN_HELPER_AUDIENCE ?? "mojaloop.vnext.default_audience";
+
+// Authentication.
+const AUTHENTICATION_SERVICE_HOST: string = "localhost";
+const AUTHENTICATION_SERVICE_PORT_NO: number = 3201;
+const BASE_URL_AUTHENTICATION_SERVICE: string
+	= process.env.ACCOUNTS_AND_BALANCES_TOKEN_HELPER_AUDIENCE
+	?? `http://${AUTHENTICATION_SERVICE_HOST}:${AUTHENTICATION_SERVICE_PORT_NO}`;
 
 // Auditing.
-const AUDITING_CERT_FILE_PATH: string = process.env.AUDITING_CERT_FILE_PATH ?? "./auditing_cert"; // TODO: file name.
+const AUDITING_CERT_FILE_PATH: string =
+	process.env.ACCOUNTS_AND_BALANCES_AUDITING_CERT_FILE_PATH ?? "./auditing_cert"; // TODO: file name.
 const AUDITING_TOPIC: string = `${BOUNDED_CONTEXT_NAME}_${SERVICE_NAME}_auditing`;
 
 // Data base.
@@ -99,7 +109,7 @@ let logger: KafkaLogger; // TODO: ILogger?
 let aggregate: Aggregate;
 let webServer: ExpressWebServer;
 
-export async function main(): Promise<void> {
+async function main(): Promise<void> {
 	// Message producer options.
 	const kafkaProducerOptions: MLKafkaProducerOptions = {
 		kafkaBrokerList: MESSAGE_BROKER_URL
@@ -119,12 +129,24 @@ export async function main(): Promise<void> {
 
 	// Token helper.
 	const tokenHelper: TokenHelper = new TokenHelper( // TODO: no interface?
-		AUTH_Z_TOKEN_ISSUER_NAME,
-		AUTH_Z_SVC_JWKS_URL,
-		AUTH_Z_TOKEN_AUDIENCE,
+		TOKEN_HELPER_ISSUER_NAME,
+		TOKEN_HELPER_JWKS_URL,
+		TOKEN_HELPER_AUDIENCE,
 		logger
 	);
 	await tokenHelper.init(); // TODO: verify.
+
+	// Authorization.
+	const authorizationClient: AuthorizationClient = new AuthorizationClient( // TODO: type (IAuthorizationClient).
+		BOUNDED_CONTEXT_NAME,
+		SERVICE_NAME,
+		SERVICE_VERSION,
+		BASE_URL_AUTHENTICATION_SERVICE,
+		logger
+	);
+	addPrivileges(authorizationClient);
+	await authorizationClient.bootstrap(true);
+	await authorizationClient.fetch();
 
 	// Auditing.
 	if (!existsSync(AUDITING_CERT_FILE_PATH)) { // TODO: clarify.
@@ -163,6 +185,7 @@ export async function main(): Promise<void> {
 	// Aggregate.
 	aggregate = new Aggregate(
 		logger,
+		authorizationClient,
 		auditingClient,
 		accountsRepo,
 		journalEntriesRepo
@@ -179,6 +202,29 @@ export async function main(): Promise<void> {
 		aggregate
 	);
 	webServer.init(); // No need to handle exceptions.
+}
+
+function addPrivileges(authorizationClient: AuthorizationClient): void {
+	authorizationClient.addPrivilege(
+		Privileges.CREATE_ACCOUNT,
+		"CREATE_ACCOUNT",
+		"allows for the creation of accounts" // TODO: verify.
+	);
+	authorizationClient.addPrivilege(
+		Privileges.CREATE_JOURNAL_ENTRY,
+		"CREATE_JOURNAL_ENTRY",
+		"allows for the creation of journal entries" // TODO: verify.
+	);
+	authorizationClient.addPrivilege(
+		Privileges.VIEW_ACCOUNT,
+		"VIEW_ACCOUNT",
+		"allows for the retrieval of accounts" // TODO: verify.
+	);
+	authorizationClient.addPrivilege(
+		Privileges.VIEW_JOURNAL_ENTRY,
+		"VIEW_JOURNAL_ENTRY",
+		"allows for the retrieval of journal entries" // TODO: verify.
+	);
 }
 
 process.on("SIGINT", handleIntAndTermSignals.bind(this)); // Ctrl + c.

@@ -55,14 +55,14 @@ export class MongoJournalEntriesRepo implements IJournalEntriesRepo {
 
 	constructor(
 		logger: ILogger,
-		DB_URL: string,
-		DB_NAME: string,
-		COLLECTION_NAME: string
+		dbUrl: string,
+		dbName: string,
+		collectionName: string
 	) {
 		this.logger = logger;
-		this.DB_URL = DB_URL;
-		this.DB_NAME = DB_NAME;
-		this.COLLECTION_NAME = COLLECTION_NAME;
+		this.DB_URL = dbUrl;
+		this.DB_NAME = dbName;
+		this.COLLECTION_NAME = collectionName;
 
 		this.mongoClient = new MongoClient(this.DB_URL);
 	}

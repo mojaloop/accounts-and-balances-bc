@@ -32,7 +32,7 @@
 import axios, {AxiosError, AxiosInstance, AxiosResponse} from "axios";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 
-export class AuxiliaryClient {
+export class AuxiliaryAccountsAndBalancesHttpClient {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
 	// Other properties.
@@ -40,93 +40,62 @@ export class AuxiliaryClient {
 
 	constructor(
 		logger: ILogger,
-		ACCOUNTS_AND_BALANCES_URL: string,
-		HTTP_CLIENT_TIMEOUT_MS: number
+		baseUrlHttpService: string,
+		accessToken: string,
+		timeoutMs: number
 	) {
 		this.logger = logger;
 
 		this.httpClient = axios.create({
-			baseURL: ACCOUNTS_AND_BALANCES_URL,
-			timeout: HTTP_CLIENT_TIMEOUT_MS
+			baseURL: baseUrlHttpService,
+			headers: {"Authorization": `Bearer ${accessToken}`},
+			timeout: timeoutMs
 		});
 	}
 
-	async createAccount(account: any, bearerToken: string): Promise<number> { // TODO: bearer token name.
+	setAccessToken(accessToken: string): void {
+		this.httpClient.defaults.headers.common = {"Authorization": `Bearer ${accessToken}`}; // TODO: verify.
+	}
+
+	async createAccount(account: any): Promise<number> {
 		try {
-			const axiosResponse: AxiosResponse = await this.httpClient.post(
-				"/accounts",
-				account,
-				{
-					headers: {
-						"Authorization": `Bearer ${bearerToken}`
-					}
-				}
-			);
+			const axiosResponse: AxiosResponse = await this.httpClient.post("/accounts", account);
 			return axiosResponse.status;
 		} catch (e: unknown) {
 			return (e as AxiosError).response?.status ?? -1;
 		}
 	}
 
-	async createJournalEntries(journalEntries: any[], bearerToken: string): Promise<number> {
+	async createJournalEntries(journalEntries: any[]): Promise<number> {
 		try {
-			const axiosResponse: AxiosResponse = await this.httpClient.post(
-				"/journalEntries",
-				journalEntries,
-				{
-					headers: {
-						"Authorization": `Bearer ${bearerToken}`
-					}
-				}
-			);
+			const axiosResponse: AxiosResponse = await this.httpClient.post("/journalEntries", journalEntries);
 			return axiosResponse.status;
 		} catch (e: unknown) {
 			return (e as AxiosError).response?.status ?? -1;
 		}
 	}
 
-	async getAccountById(accountId: string, bearerToken: string): Promise<number> {
+	async getAccountById(accountId: string): Promise<number> {
 		try {
-			const axiosResponse: AxiosResponse = await this.httpClient.get(
-				`/accounts?id=${accountId}`,
-				{
-					headers: {
-						"Authorization": `Bearer ${bearerToken}`
-					}
-				}
-			);
+			const axiosResponse: AxiosResponse = await this.httpClient.get(`/accounts?id=${accountId}`);
 			return axiosResponse.status;
 		} catch (e: unknown) {
 			return (e as AxiosError).response?.status ?? -1;
 		}
 	}
 
-	async getAccountsByExternalId(externalId: string, bearerToken: string): Promise<number> {
+	async getAccountsByExternalId(externalId: string): Promise<number> {
 		try {
-			const axiosResponse: AxiosResponse = await this.httpClient.get(
-				`/accounts?externalId=${externalId}`,
-				{
-					headers: {
-						"Authorization": `Bearer ${bearerToken}`
-					}
-				}
-			);
+			const axiosResponse: AxiosResponse = await this.httpClient.get(`/accounts?externalId=${externalId}`);
 			return axiosResponse.status;
 		} catch (e: unknown) {
 			return (e as AxiosError).response?.status ?? -1;
 		}
 	}
 
-	async getJournalEntriesByAccountId(accountId: string, bearerToken: string): Promise<number> {
+	async getJournalEntriesByAccountId(accountId: string): Promise<number> {
 		try {
-			const axiosResponse: AxiosResponse = await this.httpClient.get(
-				`/journalEntries?accountId=${accountId}`,
-				{
-					headers: {
-						"Authorization": `Bearer ${bearerToken}`
-					}
-				}
-			);
+			const axiosResponse: AxiosResponse = await this.httpClient.get(`/journalEntries?accountId=${accountId}`);
 			return axiosResponse.status;
 		} catch (e: unknown) {
 			return (e as AxiosError).response?.status ?? -1;

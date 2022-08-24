@@ -29,27 +29,9 @@
 
 "use strict";
 
-// Account.
-export class InvalidCreditBalanceError extends Error {}
-export class InvalidDebitBalanceError extends Error {}
-// JournalEntry.
-export class InvalidJournalEntryAmountError extends Error {}
-export class CreditedAndDebitedAccountsAreTheSameError extends Error {}
-export class NoSuchCreditedAccountError extends Error {}
-export class NoSuchDebitedAccountError extends Error {}
-export class CurrenciesDifferError extends Error {}
-export class InsufficientBalanceError extends Error {}
-// Repos.
-export class UnableToInitRepoError extends Error {}
-export class AccountAlreadyExistsError extends Error {}
-export class JournalEntryAlreadyExistsError extends Error {}
-export class NoSuchAccountError extends Error {}
-export class UnableToStoreAccountError extends Error {}
-export class UnableToStoreJournalEntryError extends Error {}
-export class UnableToGetAccountError extends Error {}
-export class UnableToGetJournalEntryError extends Error {}
-export class UnableToGetAccountsError extends Error {}
-export class UnableToGetJournalEntriesError extends Error {}
-export class UnableToUpdateAccountError extends Error {}
-// Others.
-export class UnauthorizedError extends Error {}
+export enum Privileges {
+	CREATE_ACCOUNT = "CREATE_ACCOUNT",
+	CREATE_JOURNAL_ENTRY = "CREATE_JOURNAL_ENTRY",
+	VIEW_ACCOUNT = "VIEW_ACCOUNT",
+	VIEW_JOURNAL_ENTRY = "VIEW_JOURNAL_ENTRY"
+}

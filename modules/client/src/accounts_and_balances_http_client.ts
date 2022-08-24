@@ -40,8 +40,8 @@ import {
 } from "./errors";
 import {IAccountDTO, IJournalEntryDTO} from "./types";
 
-// TODO: put error-handling code inside a function to avoid repetition? securityContext.
-export class AccountsAndBalancesClient {
+// TODO: put error-handling code inside a function to avoid repetition?
+export class AccountsAndBalancesHttpClient {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
 	// Other properties.
@@ -50,28 +50,26 @@ export class AccountsAndBalancesClient {
 
 	constructor(
 		logger: ILogger,
-		ACCOUNTS_AND_BALANCES_URL: string,
-		HTTP_CLIENT_TIMEOUT_MS: number
+		baseUrlHttpService: string,
+		accessToken: string,
+		timeoutMs: number
 	) {
 		this.logger = logger;
 
 		this.httpClient = axios.create({
-			baseURL: ACCOUNTS_AND_BALANCES_URL,
-			timeout: HTTP_CLIENT_TIMEOUT_MS
+			baseURL: baseUrlHttpService,
+			headers: {"Authorization": `Bearer ${accessToken}`},
+			timeout: timeoutMs
 		});
 	}
+	
+	setAccessToken(accessToken: string): void {
+		this.httpClient.defaults.headers.common = {"Authorization": `Bearer ${accessToken}`}; // TODO: verify.
+	}
 
-	async createAccount(account: IAccountDTO, bearerToken: string): Promise<string> { // TODO: bearer token name.
+	async createAccount(account: IAccountDTO): Promise<string> {
 		try {
-			const axiosResponse: AxiosResponse = await this.httpClient.post(
-				"/accounts",
-				account,
-				{
-					headers: {
-						"Authorization": `Bearer ${bearerToken}`
-					}
-				}
-			);
+			const axiosResponse: AxiosResponse = await this.httpClient.post("/accounts", account);
 			return axiosResponse.data.accountId;
 		} catch (e: unknown) {
 			if (axios.isAxiosError(e)) {
@@ -85,17 +83,9 @@ export class AccountsAndBalancesClient {
 		}
 	}
 
-	async createJournalEntries(journalEntries: IJournalEntryDTO[], bearerToken: string): Promise<string[]> {
+	async createJournalEntries(journalEntries: IJournalEntryDTO[]): Promise<string[]> {
 		try {
-			const axiosResponse: AxiosResponse = await this.httpClient.post(
-				"/journalEntries",
-				journalEntries,
-				{
-					headers: {
-						"Authorization": `Bearer ${bearerToken}`
-					}
-				}
-			);
+			const axiosResponse: AxiosResponse = await this.httpClient.post("/journalEntries", journalEntries);
 			return axiosResponse.data.idsJournalEntries;
 		} catch (e: unknown) {
 			if (axios.isAxiosError(e)) {
@@ -109,14 +99,11 @@ export class AccountsAndBalancesClient {
 		}
 	}
 
-	async getAccountById(accountId: string, bearerToken: string): Promise<IAccountDTO | null> {
+	async getAccountById(accountId: string): Promise<IAccountDTO | null> {
 		try {
 			const axiosResponse: AxiosResponse = await this.httpClient.get(
 				`/accounts?id=${accountId}`,
 				{
-					headers: {
-						"Authorization": `Bearer ${bearerToken}`
-					},
 					validateStatus: (statusCode: number) => {
 						return statusCode === 200 || statusCode === 404; // Resolve only 200s and 404s.
 					}
@@ -138,14 +125,11 @@ export class AccountsAndBalancesClient {
 		}
 	}
 
-	async getAccountsByExternalId(externalId: string, bearerToken: string): Promise<IAccountDTO[]> {
+	async getAccountsByExternalId(externalId: string): Promise<IAccountDTO[]> {
 		try {
 			const axiosResponse: AxiosResponse = await this.httpClient.get(
 				`/accounts?externalId=${externalId}`,
 				{
-					headers: {
-						"Authorization": `Bearer ${bearerToken}`
-					},
 					validateStatus: (statusCode: number) => {
 						return statusCode === 200 || statusCode === 404; // Resolve only 200s and 404s.
 					}
@@ -167,14 +151,11 @@ export class AccountsAndBalancesClient {
 		}
 	}
 
-	async getJournalEntriesByAccountId(accountId: string, bearerToken: string): Promise<IJournalEntryDTO[]> {
+	async getJournalEntriesByAccountId(accountId: string): Promise<IJournalEntryDTO[]> {
 		try {
 			const axiosResponse: AxiosResponse = await this.httpClient.get(
 				`/journalEntries?accountId=${accountId}`,
 				{
-					headers: {
-						"Authorization": `Bearer ${bearerToken}`
-					},
 					validateStatus: (statusCode: number) => {
 						return statusCode === 200 || statusCode === 404; // Resolve only 200s and 404s.
 					}

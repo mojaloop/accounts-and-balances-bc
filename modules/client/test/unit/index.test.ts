@@ -30,8 +30,8 @@
 "use strict";
 
 import {ConsoleLogger, ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {AccountsAndBalancesServiceMock} from "./accounts_and_balances_service_mock";
-import {AccountsAndBalancesClient} from "../../src";
+import {AccountsAndBalancesHttpServiceMock} from "./accounts_and_balances_http_service_mock";
+import {AccountsAndBalancesHttpClient} from "../../src";
 import {
 	IAccountDTO,
 	IJournalEntryDTO,
@@ -42,29 +42,30 @@ import {
 	UnableToGetJournalEntriesError
 } from "../../src";
 
-const ACCOUNTS_AND_BALANCES_URL: string = "http://localhost:5678";
-const HTTP_CLIENT_TIMEOUT_MS: number = 10_000;
+const BASE_URL_ACCOUNTS_AND_BALANCES_HTTP_SERVICE: string = "http://localhost:1234";
+const TIMEOUT_MS_ACCOUNTS_AND_BALANCES_HTTP_CLIENT: number = 10_000;
 
-let accountsAndBalancesServiceMock: AccountsAndBalancesServiceMock;
-let accountsAndBalancesClient: AccountsAndBalancesClient;
+let accountsAndBalancesHttpServiceMock: AccountsAndBalancesHttpServiceMock;
+let accountsAndBalancesHttpClient: AccountsAndBalancesHttpClient;
 
 describe("accounts and balances client - unit tests", () => {
 	beforeAll(async () => {
 		const logger: ILogger = new ConsoleLogger();
-		accountsAndBalancesServiceMock = new AccountsAndBalancesServiceMock(
+		accountsAndBalancesHttpServiceMock = new AccountsAndBalancesHttpServiceMock(
 			logger,
-			ACCOUNTS_AND_BALANCES_URL
+			BASE_URL_ACCOUNTS_AND_BALANCES_HTTP_SERVICE
 		);
-		accountsAndBalancesClient = new AccountsAndBalancesClient(
+		accountsAndBalancesHttpClient = new AccountsAndBalancesHttpClient(
 			logger,
-			ACCOUNTS_AND_BALANCES_URL,
-			HTTP_CLIENT_TIMEOUT_MS
+			BASE_URL_ACCOUNTS_AND_BALANCES_HTTP_SERVICE,
+			AccountsAndBalancesHttpServiceMock.VALID_ACCESS_TOKEN,
+			TIMEOUT_MS_ACCOUNTS_AND_BALANCES_HTTP_CLIENT
 		);
 	});
 
 	// Create account.
 	test("create non-existent account", async () => {
-		const accountId: string = AccountsAndBalancesServiceMock.NON_EXISTENT_ACCOUNT_ID;
+		const accountId: string = AccountsAndBalancesHttpServiceMock.NON_EXISTENT_ACCOUNT_ID;
 		const account: IAccountDTO = {
 			id: accountId,
 			externalId: null,
@@ -76,11 +77,11 @@ describe("accounts and balances client - unit tests", () => {
 			timestampLastJournalEntry: 0
 		};
 		const accountIdReceived: string =
-			await accountsAndBalancesClient.createAccount(account, AccountsAndBalancesServiceMock.VALID_TOKEN);
+			await accountsAndBalancesHttpClient.createAccount(account);
 		expect(accountIdReceived).toEqual(accountId);
 	});
 	test("create existent account", async () => {
-		const accountId: string = AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID;
+		const accountId: string = AccountsAndBalancesHttpServiceMock.EXISTENT_ACCOUNT_ID;
 		const account: IAccountDTO = {
 			id: accountId,
 			externalId: null,
@@ -93,12 +94,12 @@ describe("accounts and balances client - unit tests", () => {
 		};
 		await expect(
 			async () => {
-				await accountsAndBalancesClient.createAccount(account, AccountsAndBalancesServiceMock.VALID_TOKEN);
+				await accountsAndBalancesHttpClient.createAccount(account);
 			}
 		).rejects.toThrow(UnableToCreateAccountError);
 	});
 	test("create account with unreachable server", async () => {
-		const accountId: string = AccountsAndBalancesServiceMock.NON_EXISTENT_ACCOUNT_ID;
+		const accountId: string = AccountsAndBalancesHttpServiceMock.NON_EXISTENT_ACCOUNT_ID;
 		const account: IAccountDTO = {
 			id: accountId,
 			externalId: null,
@@ -109,19 +110,19 @@ describe("accounts and balances client - unit tests", () => {
 			debitBalance: 25,
 			timestampLastJournalEntry: 0
 		};
-		accountsAndBalancesServiceMock.disable();
+		accountsAndBalancesHttpServiceMock.disable();
 		await expect(
 			async () => {
-				await accountsAndBalancesClient.createAccount(account, AccountsAndBalancesServiceMock.VALID_TOKEN);
+				await accountsAndBalancesHttpClient.createAccount(account);
 			}
 		).rejects.toThrow(UnableToCreateAccountError);
-		accountsAndBalancesServiceMock.enable();
+		accountsAndBalancesHttpServiceMock.enable();
 	});
 
 	// Create journal entries.
 	test("create non-existent journal entries", async () => {
 		// Journal entry A.
-		const idJournalEntryA: string = AccountsAndBalancesServiceMock.NON_EXISTENT_JOURNAL_ENTRY_ID;
+		const idJournalEntryA: string = AccountsAndBalancesHttpServiceMock.NON_EXISTENT_JOURNAL_ENTRY_ID;
 		const journalEntryA: IJournalEntryDTO = {
 			id: idJournalEntryA,
 			externalId: null,
@@ -135,7 +136,7 @@ describe("accounts and balances client - unit tests", () => {
 		// Journal entry B.
 		// There's no problem in idJournalEntryA and idJournalEntryB being equal - the service mock compares them to
 		// EXISTENT_JOURNAL_ENTRY_ID, not to each other.
-		const idJournalEntryB: string = AccountsAndBalancesServiceMock.NON_EXISTENT_JOURNAL_ENTRY_ID;
+		const idJournalEntryB: string = AccountsAndBalancesHttpServiceMock.NON_EXISTENT_JOURNAL_ENTRY_ID;
 		const journalEntryB: IJournalEntryDTO = {
 			id: idJournalEntryB,
 			externalId: null,
@@ -146,15 +147,13 @@ describe("accounts and balances client - unit tests", () => {
 			debitedAccountId: "a",
 			timestamp: 0
 		};
-		const idsJournalEntries: string[] = await accountsAndBalancesClient.createJournalEntries(
-			[journalEntryA, journalEntryB],
-			AccountsAndBalancesServiceMock.VALID_TOKEN
-		);
+		const idsJournalEntries: string[] =
+			await accountsAndBalancesHttpClient.createJournalEntries([journalEntryA, journalEntryB]);
 		expect(idsJournalEntries).toEqual([idJournalEntryA, idJournalEntryB]);
 	});
 	test("create existent journal entries", async () => {
 		// Journal entry A.
-		const idJournalEntryA: string = AccountsAndBalancesServiceMock.EXISTENT_JOURNAL_ENTRY_ID;
+		const idJournalEntryA: string = AccountsAndBalancesHttpServiceMock.EXISTENT_JOURNAL_ENTRY_ID;
 		const journalEntryA: IJournalEntryDTO = {
 			id: idJournalEntryA,
 			externalId: null,
@@ -166,7 +165,7 @@ describe("accounts and balances client - unit tests", () => {
 			timestamp: 0
 		};
 		// Journal entry B.
-		const idJournalEntryB: string = AccountsAndBalancesServiceMock.NON_EXISTENT_JOURNAL_ENTRY_ID;
+		const idJournalEntryB: string = AccountsAndBalancesHttpServiceMock.NON_EXISTENT_JOURNAL_ENTRY_ID;
 		const journalEntryB: IJournalEntryDTO = {
 			id: idJournalEntryB,
 			externalId: null,
@@ -179,15 +178,12 @@ describe("accounts and balances client - unit tests", () => {
 		};
 		await expect(
 			async () => {
-				await accountsAndBalancesClient.createJournalEntries(
-					[journalEntryA, journalEntryB],
-					AccountsAndBalancesServiceMock.VALID_TOKEN
-				);
+				await accountsAndBalancesHttpClient.createJournalEntries([journalEntryA, journalEntryB]);
 			}
 		).rejects.toThrow(UnableToCreateJournalEntriesError);
 	});
 	test("create journal entry with unreachable server", async () => {
-		const journalEntryId: string = AccountsAndBalancesServiceMock.EXISTENT_JOURNAL_ENTRY_ID;
+		const journalEntryId: string = AccountsAndBalancesHttpServiceMock.EXISTENT_JOURNAL_ENTRY_ID;
 		const journalEntry: IJournalEntryDTO = {
 			id: journalEntryId,
 			externalId: null,
@@ -198,51 +194,43 @@ describe("accounts and balances client - unit tests", () => {
 			debitedAccountId: "b",
 			timestamp: 0
 		};
-		accountsAndBalancesServiceMock.disable();
+		accountsAndBalancesHttpServiceMock.disable();
 		await expect(
 			async () => {
-				await accountsAndBalancesClient.createJournalEntries(
-					[journalEntry],
-					AccountsAndBalancesServiceMock.VALID_TOKEN
-				);
+				await accountsAndBalancesHttpClient.createJournalEntries([journalEntry]);
 			}
 		).rejects.toThrow(UnableToCreateJournalEntriesError);
-		accountsAndBalancesServiceMock.enable();
+		accountsAndBalancesHttpServiceMock.enable();
 	});
 
 	// Get account by id.
 	test("get non-existent account by id", async () => {
-		const account: IAccountDTO | null = await accountsAndBalancesClient.getAccountById(
-			AccountsAndBalancesServiceMock.NON_EXISTENT_ACCOUNT_ID,
-			AccountsAndBalancesServiceMock.VALID_TOKEN
+		const account: IAccountDTO | null = await accountsAndBalancesHttpClient.getAccountById(
+			AccountsAndBalancesHttpServiceMock.NON_EXISTENT_ACCOUNT_ID
 		);
 		expect(account).toBeNull();
 	});
 	test("get existent account by id", async () => {
-		const account: IAccountDTO | null = await accountsAndBalancesClient.getAccountById(
-			AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID,
-			AccountsAndBalancesServiceMock.VALID_TOKEN
-		);
-		expect(account?.id).toEqual(AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID);
+		const account: IAccountDTO | null =
+			await accountsAndBalancesHttpClient.getAccountById(AccountsAndBalancesHttpServiceMock.EXISTENT_ACCOUNT_ID);
+		expect(account?.id).toEqual(AccountsAndBalancesHttpServiceMock.EXISTENT_ACCOUNT_ID);
 	});
 	test("get account with unreachable server", async () => {
-		accountsAndBalancesServiceMock.disable();
+		accountsAndBalancesHttpServiceMock.disable();
 		await expect(
 			async () => {
-				await accountsAndBalancesClient.getAccountById(
-					AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID,
-					AccountsAndBalancesServiceMock.VALID_TOKEN
+				await accountsAndBalancesHttpClient.getAccountById(
+					AccountsAndBalancesHttpServiceMock.EXISTENT_ACCOUNT_ID
 				);
 			}
 		).rejects.toThrow(UnableToGetAccountError);
-		accountsAndBalancesServiceMock.enable();
+		accountsAndBalancesHttpServiceMock.enable();
 	});
 	test("get account with internal server error", async () => {
 		await expect(
 			async () => {
-				await accountsAndBalancesClient.getAccountById(
-					AccountsAndBalancesServiceMock.ID_INTERNAL_SERVER_ERROR,
-					AccountsAndBalancesServiceMock.VALID_TOKEN
+				await accountsAndBalancesHttpClient.getAccountById(
+					AccountsAndBalancesHttpServiceMock.ID_INTERNAL_SERVER_ERROR
 				);
 			}
 		).rejects.toThrow(UnableToGetAccountError);
@@ -250,40 +238,36 @@ describe("accounts and balances client - unit tests", () => {
 
 	// Get accounts by external id.
 	test("get non-existent accounts by external id", async () => {
-		const accounts: IAccountDTO[] = await accountsAndBalancesClient.getAccountsByExternalId(
-			AccountsAndBalancesServiceMock.NON_EXISTENT_EXTERNAL_ID,
-			AccountsAndBalancesServiceMock.VALID_TOKEN
+		const accounts: IAccountDTO[] =await accountsAndBalancesHttpClient.getAccountsByExternalId(
+			AccountsAndBalancesHttpServiceMock.NON_EXISTENT_EXTERNAL_ID
 		);
 		expect(accounts).toEqual([]);
 	});
 	test("get existent accounts by external id", async () => {
-		const accounts: IAccountDTO[] = await accountsAndBalancesClient.getAccountsByExternalId(
-			AccountsAndBalancesServiceMock.EXISTENT_EXTERNAL_ID,
-			AccountsAndBalancesServiceMock.VALID_TOKEN
+		const accounts: IAccountDTO[] = await accountsAndBalancesHttpClient.getAccountsByExternalId(
+			AccountsAndBalancesHttpServiceMock.EXISTENT_EXTERNAL_ID
 		);
 		expect(accounts).toEqual([
-			{id: AccountsAndBalancesServiceMock.ID_ACCOUNT_A},
-			{id: AccountsAndBalancesServiceMock.ID_ACCOUNT_B}
+			{id: AccountsAndBalancesHttpServiceMock.ID_ACCOUNT_A},
+			{id: AccountsAndBalancesHttpServiceMock.ID_ACCOUNT_B}
 		]);
 	});
 	test("get accounts with unreachable server", async () => {
-		accountsAndBalancesServiceMock.disable();
+		accountsAndBalancesHttpServiceMock.disable();
 		await expect(
 			async () => {
-				await accountsAndBalancesClient.getAccountsByExternalId(
-					AccountsAndBalancesServiceMock.EXISTENT_EXTERNAL_ID,
-					AccountsAndBalancesServiceMock.VALID_TOKEN
+				await accountsAndBalancesHttpClient.getAccountsByExternalId(
+					AccountsAndBalancesHttpServiceMock.EXISTENT_EXTERNAL_ID
 				);
 			}
 		).rejects.toThrow(UnableToGetAccountsError);
-		accountsAndBalancesServiceMock.enable();
+		accountsAndBalancesHttpServiceMock.enable();
 	});
 	test("get accounts with internal server error", async () => {
 		await expect(
 			async () => {
-				await accountsAndBalancesClient.getAccountsByExternalId(
-					AccountsAndBalancesServiceMock.ID_INTERNAL_SERVER_ERROR,
-					AccountsAndBalancesServiceMock.VALID_TOKEN
+				await accountsAndBalancesHttpClient.getAccountsByExternalId(
+					AccountsAndBalancesHttpServiceMock.ID_INTERNAL_SERVER_ERROR
 				);
 			}
 		).rejects.toThrow(UnableToGetAccountsError);
@@ -291,40 +275,36 @@ describe("accounts and balances client - unit tests", () => {
 
 	// Get journal entries by account id.
 	test("get non-existent journal entries by account id", async () => {
-		const journalEntries: IJournalEntryDTO[] = await accountsAndBalancesClient.getJournalEntriesByAccountId(
-			AccountsAndBalancesServiceMock.NON_EXISTENT_ACCOUNT_ID,
-			AccountsAndBalancesServiceMock.VALID_TOKEN
+		const journalEntries: IJournalEntryDTO[] = await accountsAndBalancesHttpClient.getJournalEntriesByAccountId(
+			AccountsAndBalancesHttpServiceMock.NON_EXISTENT_ACCOUNT_ID
 		);
 		expect(journalEntries).toEqual([]);
 	});
 	test("get existent journal entries by account id", async () => {
-		const journalEntries: IJournalEntryDTO[] = await accountsAndBalancesClient.getJournalEntriesByAccountId(
-			AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID,
-			AccountsAndBalancesServiceMock.VALID_TOKEN
+		const journalEntries: IJournalEntryDTO[] = await accountsAndBalancesHttpClient.getJournalEntriesByAccountId(
+			AccountsAndBalancesHttpServiceMock.EXISTENT_ACCOUNT_ID
 		);
 		expect(journalEntries).toEqual([
-			{id: AccountsAndBalancesServiceMock.ID_JOURNAL_ENTRY_A},
-			{id: AccountsAndBalancesServiceMock.ID_JOURNAL_ENTRY_B}
+			{id: AccountsAndBalancesHttpServiceMock.ID_JOURNAL_ENTRY_A},
+			{id: AccountsAndBalancesHttpServiceMock.ID_JOURNAL_ENTRY_B}
 		]);
 	});
 	test("get journal entries with unreachable server", async () => {
-		accountsAndBalancesServiceMock.disable();
+		accountsAndBalancesHttpServiceMock.disable();
 		await expect(
 			async () => {
-				await accountsAndBalancesClient.getJournalEntriesByAccountId(
-					AccountsAndBalancesServiceMock.EXISTENT_ACCOUNT_ID,
-					AccountsAndBalancesServiceMock.VALID_TOKEN
+				await accountsAndBalancesHttpClient.getJournalEntriesByAccountId(
+					AccountsAndBalancesHttpServiceMock.EXISTENT_ACCOUNT_ID
 				);
 			}
 		).rejects.toThrow(UnableToGetJournalEntriesError);
-		accountsAndBalancesServiceMock.enable();
+		accountsAndBalancesHttpServiceMock.enable();
 	});
 	test("get journal entries with internal server error", async () => {
 		await expect(
 			async () => {
-				await accountsAndBalancesClient.getJournalEntriesByAccountId(
-					AccountsAndBalancesServiceMock.ID_INTERNAL_SERVER_ERROR,
-					AccountsAndBalancesServiceMock.VALID_TOKEN
+				await accountsAndBalancesHttpClient.getJournalEntriesByAccountId(
+					AccountsAndBalancesHttpServiceMock.ID_INTERNAL_SERVER_ERROR
 				);
 			}
 		).rejects.toThrow(UnableToGetJournalEntriesError);

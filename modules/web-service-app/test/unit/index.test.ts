@@ -41,66 +41,54 @@ import {MemoryJournalEntriesRepo} from "./memory_journal_entries_repo";
 import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {TokenHelper} from "@mojaloop/security-bc-client-lib";
 import {AuditClientMock} from "./audit_client_mock";
-import {AuxiliaryClient} from "./auxiliary_client";
-import {TokenHelperServiceMock} from "./token_helper_service_mock";
+import {AuxiliaryAccountsAndBalancesHttpClient} from "./auxiliary_accounts_and_balances_http_client";
+import {AuthenticationServiceMock} from "./authentication_service_mock";
 import * as uuid from "uuid";
+import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
+import {AuthorizationClientMock} from "./authorization_client_mock";
 
 /* ********** Constants Begin ********** */
 
-// Token helper. TODO: names and values.
-const TOKEN_HELPER_ISSUER_NAME: string =
-	process.env.ACCOUNTS_AND_BALANCES_TOKEN_HELPER_ISSUER_NAME ?? "vNext Security BC - Authorization Svc";
-const TOKEN_HELPER_JWKS_URL: string =
-	process.env.ACCOUNTS_AND_BALANCES_TOKEN_HELPER_JWKS_URL ?? "http://localhost:3000/.well-known/jwks.json";
-const TOKEN_HELPER_AUDIENCE: string =
-	process.env.ACCOUNTS_AND_BALANCES_TOKEN_HELPER_AUDIENCE ?? "mojaloop.vnext.default_audience";
-
 // Data base.
-const DB_HOST: string = process.env.ACCOUNTS_AND_BALANCES_DB_HOST ?? "localhost";
-const DB_PORT_NO: number =
-	parseInt(process.env.ACCOUNTS_AND_BALANCES_DB_PORT_NO ?? "") || 27017;
+const DB_HOST: string = "localhost";
+const DB_PORT_NO: number = 27017;
 const DB_URL: string = `mongodb://${DB_HOST}:${DB_PORT_NO}`;
 const DB_NAME: string = "accounts-and-balances";
 const ACCOUNTS_COLLECTION_NAME: string = "accounts";
 const JOURNAL_ENTRIES_COLLECTION_NAME: string = "journal-entries";
 
 // Web server.
-const WEB_SERVER_HOST: string = process.env.ACCOUNTS_AND_BALANCES_WEB_SERVER_HOST ?? "localhost";
-const WEB_SERVER_PORT_NO: number =
-	parseInt(process.env.ACCOUNTS_AND_BALANCES_WEB_SERVER_PORT_NO ?? "") || 1234;
+const WEB_SERVER_HOST: string = "localhost";
+const WEB_SERVER_PORT_NO: number = 1234;
 const WEB_SERVER_PATH_ROUTER: string = "/";
 
 // Accounts and Balances client.
-const ACCOUNTS_AND_BALANCES_URL: string = `http://${WEB_SERVER_HOST}:${WEB_SERVER_PORT_NO}`;
-const HTTP_CLIENT_TIMEOUT_MS: number = 10_000;
+const BASE_URL_ACCOUNTS_AND_BALANCES_HTTP_SERVICE: string = `http://${WEB_SERVER_HOST}:${WEB_SERVER_PORT_NO}`;
+const TIMEOUT_MS_ACCOUNTS_AND_BALANCES_HTTP_CLIENT: number = 10_000;
 
 /* ********** Constants End ********** */
 
-let tokenHelperServiceMock: TokenHelperServiceMock;
+let authenticationServiceMock: AuthenticationServiceMock;
 let accountsRepo: IAccountsRepo;
 let journalEntriesRepo: IJournalEntriesRepo;
 let aggregate: Aggregate;
 let webServer: ExpressWebServer;
-let auxiliaryClient: AuxiliaryClient;
+let auxiliaryAccountsAndBalancesHttpClient: AuxiliaryAccountsAndBalancesHttpClient;
 
 describe("accounts and balances web server - unit tests", () => {
 	beforeAll(async () => {
 		const logger: ILogger = new ConsoleLogger();
 
-		tokenHelperServiceMock = new TokenHelperServiceMock(
-			TOKEN_HELPER_ISSUER_NAME,
-			TOKEN_HELPER_JWKS_URL,
-			TOKEN_HELPER_AUDIENCE,
-			logger
-		);
+		authenticationServiceMock = new AuthenticationServiceMock(logger);
 		const tokenHelper: TokenHelper = new TokenHelper( // TODO: no interface?
-			TOKEN_HELPER_ISSUER_NAME,
-			TOKEN_HELPER_JWKS_URL,
-			TOKEN_HELPER_AUDIENCE,
+			AuthenticationServiceMock.ISSUER_NAME,
+			AuthenticationServiceMock.JWKS_URL,
+			AuthenticationServiceMock.AUDIENCE,
 			logger
 		);
 		await tokenHelper.init(); // TODO: verify.
-		const auditingClient: IAuditClient = new AuditClientMock();
+		const authorizationClient: IAuthorizationClient = new AuthorizationClientMock(logger);
+		const auditingClient: IAuditClient = new AuditClientMock(logger);
 		accountsRepo = new MemoryAccountsRepo(
 			logger,
 			DB_URL,
@@ -115,6 +103,7 @@ describe("accounts and balances web server - unit tests", () => {
 		);
 		aggregate = new Aggregate(
 			logger,
+			authorizationClient,
 			auditingClient,
 			accountsRepo,
 			journalEntriesRepo
@@ -130,10 +119,11 @@ describe("accounts and balances web server - unit tests", () => {
 		);
 		webServer.init();
 
-		auxiliaryClient = new AuxiliaryClient(
+		auxiliaryAccountsAndBalancesHttpClient = new AuxiliaryAccountsAndBalancesHttpClient(
 			logger,
-			ACCOUNTS_AND_BALANCES_URL,
-			HTTP_CLIENT_TIMEOUT_MS
+			BASE_URL_ACCOUNTS_AND_BALANCES_HTTP_SERVICE,
+			AuthenticationServiceMock.VALID_ACCESS_TOKEN,
+			TIMEOUT_MS_ACCOUNTS_AND_BALANCES_HTTP_CLIENT
 		);
 	});
 
@@ -156,7 +146,7 @@ describe("accounts and balances web server - unit tests", () => {
 			timestampLastJournalEntry: 0
 		};
 		const statusCodeResponse: number =
-			await auxiliaryClient.createAccount(account, TokenHelperServiceMock.VALID_TOKEN);
+			await auxiliaryAccountsAndBalancesHttpClient.createAccount(account);
 		expect(statusCodeResponse).toEqual(201);
 	});
 	test("create existent account", async () => {
@@ -171,9 +161,9 @@ describe("accounts and balances web server - unit tests", () => {
 			debitBalance: 25,
 			timestampLastJournalEntry: 0
 		};
-		await auxiliaryClient.createAccount(account, TokenHelperServiceMock.VALID_TOKEN);
+		await auxiliaryAccountsAndBalancesHttpClient.createAccount(account);
 		const statusCodeResponse: number =
-			await auxiliaryClient.createAccount(account, TokenHelperServiceMock.VALID_TOKEN);
+			await auxiliaryAccountsAndBalancesHttpClient.createAccount(account);
 		expect(statusCodeResponse).toEqual(409);
 	});
 	test("create account with empty string as id", async () => {
@@ -189,7 +179,7 @@ describe("accounts and balances web server - unit tests", () => {
 			timestampLastJournalEntry: 0
 		};
 		const statusCodeResponse: number =
-			await auxiliaryClient.createAccount(account, TokenHelperServiceMock.VALID_TOKEN);
+			await auxiliaryAccountsAndBalancesHttpClient.createAccount(account);
 		expect(statusCodeResponse).toEqual(201);
 	});
 	test("create account with invalid credit balance", async () => {
@@ -205,7 +195,7 @@ describe("accounts and balances web server - unit tests", () => {
 			timestampLastJournalEntry: 0
 		};
 		const statusCodeResponse: number =
-			await auxiliaryClient.createAccount(account, TokenHelperServiceMock.VALID_TOKEN);
+			await auxiliaryAccountsAndBalancesHttpClient.createAccount(account);
 		expect(statusCodeResponse).toEqual(400);
 	});
 	test("create account with invalid debit balance", async () => {
@@ -221,7 +211,7 @@ describe("accounts and balances web server - unit tests", () => {
 			timestampLastJournalEntry: 0
 		};
 		const statusCodeResponse: number =
-			await auxiliaryClient.createAccount(account, TokenHelperServiceMock.VALID_TOKEN);
+			await auxiliaryAccountsAndBalancesHttpClient.createAccount(account);
 		expect(statusCodeResponse).toEqual(400);
 	});
 	test("create account with unexpected accounts repo failure", async () => {
@@ -238,7 +228,7 @@ describe("accounts and balances web server - unit tests", () => {
 		};
 		(accountsRepo as MemoryAccountsRepo).unexpectedFailure = true; // TODO: should this be done?
 		const statusCodeResponse: number =
-			await auxiliaryClient.createAccount(account, TokenHelperServiceMock.VALID_TOKEN);
+			await auxiliaryAccountsAndBalancesHttpClient.createAccount(account);
 		expect(statusCodeResponse).toEqual(500);
 		(accountsRepo as MemoryAccountsRepo).unexpectedFailure = false; // TODO: should this be done?
 	});
@@ -271,9 +261,8 @@ describe("accounts and balances web server - unit tests", () => {
 			debitedAccountId: accounts[0].id,
 			timestamp: 0
 		};
-		const statusCodeResponse: number = await auxiliaryClient.createJournalEntries(
-			[journalEntryA, journalEntryB],
-			TokenHelperServiceMock.VALID_TOKEN
+		const statusCodeResponse: number = await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries(
+			[journalEntryA, journalEntryB]
 		);
 		expect(statusCodeResponse).toEqual(201);
 	});
@@ -304,13 +293,9 @@ describe("accounts and balances web server - unit tests", () => {
 			debitedAccountId: accounts[0].id,
 			timestamp: 0
 		};
-		await auxiliaryClient.createJournalEntries(
-			[journalEntryA, journalEntryB],
-			TokenHelperServiceMock.VALID_TOKEN
-		);
-		const statusCodeResponse: number = await auxiliaryClient.createJournalEntries(
-			[journalEntryA, journalEntryB],
-			TokenHelperServiceMock.VALID_TOKEN
+		await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntryA, journalEntryB]);
+		const statusCodeResponse: number = await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries(
+			[journalEntryA, journalEntryB]
 		);
 		expect(statusCodeResponse).toEqual(409);
 	});
@@ -328,10 +313,8 @@ describe("accounts and balances web server - unit tests", () => {
 			debitedAccountId: accounts[1].id,
 			timestamp: 0
 		};
-		const statusCodeResponse: number = await auxiliaryClient.createJournalEntries(
-			[journalEntry],
-			TokenHelperServiceMock.VALID_TOKEN
-		);
+		const statusCodeResponse: number =
+			await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntry]);
 		expect(statusCodeResponse).toEqual(201);
 	});
 	test("create journal entry with same credited and debited accounts", async () => {
@@ -348,10 +331,8 @@ describe("accounts and balances web server - unit tests", () => {
 			debitedAccountId: accounts[0].id,
 			timestamp: 0
 		};
-		const statusCodeResponse: number = await auxiliaryClient.createJournalEntries(
-			[journalEntry],
-			TokenHelperServiceMock.VALID_TOKEN
-		);
+		const statusCodeResponse: number =
+			await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntry]);
 		expect(statusCodeResponse).toEqual(400);
 	});
 	test("create journal entry with non-existent credited account", async () => {
@@ -368,10 +349,8 @@ describe("accounts and balances web server - unit tests", () => {
 			debitedAccountId: accounts[1].id,
 			timestamp: 0
 		};
-		const statusCodeResponse: number = await auxiliaryClient.createJournalEntries(
-			[journalEntry],
-			TokenHelperServiceMock.VALID_TOKEN
-		);
+		const statusCodeResponse: number =
+			await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntry]);
 		expect(statusCodeResponse).toEqual(400);
 	});
 	test("create journal entry with non-existent debited account", async () => {
@@ -388,10 +367,8 @@ describe("accounts and balances web server - unit tests", () => {
 			debitedAccountId: "some string",
 			timestamp: 0
 		};
-		const statusCodeResponse: number = await auxiliaryClient.createJournalEntries(
-			[journalEntry],
-			TokenHelperServiceMock.VALID_TOKEN
-		);
+		const statusCodeResponse: number =
+			await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntry]);
 		expect(statusCodeResponse).toEqual(400);
 	});
 	test("create journal entry with different currency", async () => {
@@ -408,10 +385,8 @@ describe("accounts and balances web server - unit tests", () => {
 			debitedAccountId: accounts[1].id,
 			timestamp: 0
 		};
-		const statusCodeResponse: number = await auxiliaryClient.createJournalEntries(
-			[journalEntry],
-			TokenHelperServiceMock.VALID_TOKEN
-		);
+		const statusCodeResponse: number =
+			await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntry]);
 		expect(statusCodeResponse).toEqual(400);
 	});
 	test("create journal entry with exceeding amount", async () => {
@@ -428,10 +403,8 @@ describe("accounts and balances web server - unit tests", () => {
 			debitedAccountId: accounts[1].id,
 			timestamp: 0
 		};
-		const statusCodeResponse: number = await auxiliaryClient.createJournalEntries(
-			[journalEntry],
-			TokenHelperServiceMock.VALID_TOKEN
-		);
+		const statusCodeResponse: number =
+			await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntry]);
 		expect(statusCodeResponse).toEqual(400);
 	});
 	test("create journal entry with invalid amount", async () => {
@@ -448,10 +421,8 @@ describe("accounts and balances web server - unit tests", () => {
 			debitedAccountId: accounts[1].id,
 			timestamp: 0
 		};
-		const statusCodeResponse: number = await auxiliaryClient.createJournalEntries(
-			[journalEntry],
-			TokenHelperServiceMock.VALID_TOKEN
-		);
+		const statusCodeResponse: number =
+			await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntry]);
 		expect(statusCodeResponse).toEqual(400);
 	});
 	test("create journal entry with unexpected journal entries repo failure", async () => {
@@ -469,10 +440,8 @@ describe("accounts and balances web server - unit tests", () => {
 			timestamp: 0
 		};
 		(journalEntriesRepo as MemoryJournalEntriesRepo).unexpectedFailure = true; // TODO: should this be done?
-		const statusCodeResponse: number = await auxiliaryClient.createJournalEntries(
-			[journalEntry],
-			TokenHelperServiceMock.VALID_TOKEN
-		);
+		const statusCodeResponse: number =
+			await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntry]);
 		expect(statusCodeResponse).toEqual(500);
 		(journalEntriesRepo as MemoryJournalEntriesRepo).unexpectedFailure = false; // TODO: should this be done?
 	});
@@ -491,10 +460,8 @@ describe("accounts and balances web server - unit tests", () => {
 			timestamp: 0
 		};
 		(accountsRepo as MemoryAccountsRepo).unexpectedFailure = true; // TODO: should this be done?
-		const statusCodeResponse: number = await auxiliaryClient.createJournalEntries(
-			[journalEntry],
-			TokenHelperServiceMock.VALID_TOKEN
-		);
+		const statusCodeResponse: number =
+			await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntry]);
 		expect(statusCodeResponse).toEqual(500);
 		(accountsRepo as MemoryAccountsRepo).unexpectedFailure = false; // TODO: should this be done?
 	});
@@ -503,7 +470,7 @@ describe("accounts and balances web server - unit tests", () => {
 	test("get non-existent account by id", async () => {
 		const accountId: string = uuid.v4();
 		const statusCodeResponse: number =
-			await auxiliaryClient.getAccountById(accountId, TokenHelperServiceMock.VALID_TOKEN);
+			await auxiliaryAccountsAndBalancesHttpClient.getAccountById(accountId);
 		expect(statusCodeResponse).toEqual(404);
 	});
 	test("get existent account by id", async () => {
@@ -518,9 +485,9 @@ describe("accounts and balances web server - unit tests", () => {
 			debitBalance: 25,
 			timestampLastJournalEntry: 0
 		};
-		await auxiliaryClient.createAccount(account, TokenHelperServiceMock.VALID_TOKEN);
+		await auxiliaryAccountsAndBalancesHttpClient.createAccount(account);
 		const statusCodeResponse: number =
-			await auxiliaryClient.getAccountById(accountId, TokenHelperServiceMock.VALID_TOKEN);
+			await auxiliaryAccountsAndBalancesHttpClient.getAccountById(accountId);
 		expect(statusCodeResponse).toEqual(200);
 	});
 
@@ -528,14 +495,14 @@ describe("accounts and balances web server - unit tests", () => {
 	test("get non-existent accounts by external id", async () => {
 		const externalId: string = uuid.v4();
 		const statusCodeResponse: number =
-			await auxiliaryClient.getAccountsByExternalId(externalId, TokenHelperServiceMock.VALID_TOKEN);
+			await auxiliaryAccountsAndBalancesHttpClient.getAccountsByExternalId(externalId);
 		expect(statusCodeResponse).toEqual(404);
 	});
 	test("get existent accounts by external id", async () => {
 		const externalId: string = uuid.v4();
-		const accounts: any[] = await create2Accounts(externalId, externalId);
+		await create2Accounts(externalId, externalId);
 		const statusCodeResponse: number =
-			await auxiliaryClient.getAccountsByExternalId(externalId, TokenHelperServiceMock.VALID_TOKEN);
+			await auxiliaryAccountsAndBalancesHttpClient.getAccountsByExternalId(externalId);
 		expect(statusCodeResponse).toEqual(200);
 	});
 
@@ -543,7 +510,7 @@ describe("accounts and balances web server - unit tests", () => {
 	test("get non-existent journal entries by account id", async () => {
 		const accountId: string = uuid.v4();
 		const statusCodeResponse: number =
-			await auxiliaryClient.getJournalEntriesByAccountId(accountId, TokenHelperServiceMock.VALID_TOKEN);
+			await auxiliaryAccountsAndBalancesHttpClient.getJournalEntriesByAccountId(accountId);
 		expect(statusCodeResponse).toEqual(404);
 	});
 	test("get existent journal entries by account id", async () => {
@@ -573,12 +540,9 @@ describe("accounts and balances web server - unit tests", () => {
 			debitedAccountId: accounts[0].id,
 			timestamp: 0
 		};
-		await auxiliaryClient.createJournalEntries(
-			[journalEntryA, journalEntryB],
-			TokenHelperServiceMock.VALID_TOKEN
-		);
+		await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntryA, journalEntryB]);
 		const statusCodeResponse: number =
-			await auxiliaryClient.getJournalEntriesByAccountId(accounts[0].id, TokenHelperServiceMock.VALID_TOKEN);
+			await auxiliaryAccountsAndBalancesHttpClient.getJournalEntriesByAccountId(accounts[0].id);
 		expect(statusCodeResponse).toEqual(200);
 	});
 });
@@ -599,7 +563,7 @@ async function create2Accounts(
 		debitBalance: 25,
 		timestampLastJournalEntry: 0
 	};
-	await auxiliaryClient.createAccount(accountA, TokenHelperServiceMock.VALID_TOKEN);
+	await auxiliaryAccountsAndBalancesHttpClient.createAccount(accountA);
 	// Account B.
 	const idAccountB: string = idAccountA + 1;
 	const accountB = {
@@ -612,6 +576,6 @@ async function create2Accounts(
 		debitBalance: 25,
 		timestampLastJournalEntry: 0
 	};
-	await auxiliaryClient.createAccount(accountB, TokenHelperServiceMock.VALID_TOKEN);
+	await auxiliaryAccountsAndBalancesHttpClient.createAccount(accountB);
 	return [accountA, accountB];
 }

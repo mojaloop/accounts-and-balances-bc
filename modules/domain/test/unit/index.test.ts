@@ -54,10 +54,11 @@ import {AuditClientMock} from "./audit_client_mock";
 import {Account} from "../../src/entities/account";
 import {JournalEntry} from "../../src/entities/journal_entry";
 import * as uuid from "uuid";
+import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
+import {AuthorizationClientMock} from "./authorization_client_mock";
 
-const DB_HOST: string = process.env.ACCOUNTS_AND_BALANCES_DB_HOST ?? "localhost";
-const DB_PORT_NO: number =
-	parseInt(process.env.ACCOUNTS_AND_BALANCES_DB_PORT_NO ?? "") || 27017;
+const DB_HOST: string = "localhost";
+const DB_PORT_NO: number = 27017;
 const DB_URL: string = `mongodb://${DB_HOST}:${DB_PORT_NO}`;
 const DB_NAME: string = "accounts-and-balances";
 const ACCOUNTS_COLLECTION_NAME: string = "accounts";
@@ -76,7 +77,8 @@ const securityContext: CallSecurityContext = { // TODO: verify.
 describe("accounts and balances domain - unit tests", () => {
 	beforeAll(async () => {
 		const logger: ILogger = new ConsoleLogger();
-		const auditingClient: IAuditClient = new AuditClientMock();
+		const authorizationClient: IAuthorizationClient = new AuthorizationClientMock(logger);
+		const auditingClient: IAuditClient = new AuditClientMock(logger);
 		accountsRepo = new MemoryAccountsRepo(
 			logger,
 			DB_URL,
@@ -91,6 +93,7 @@ describe("accounts and balances domain - unit tests", () => {
 		);
 		aggregate = new Aggregate(
 			logger,
+			authorizationClient,
 			auditingClient,
 			accountsRepo,
 			journalEntriesRepo

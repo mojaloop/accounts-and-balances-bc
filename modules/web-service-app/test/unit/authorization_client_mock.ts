@@ -29,27 +29,27 @@
 
 "use strict";
 
-// Account.
-export class InvalidCreditBalanceError extends Error {}
-export class InvalidDebitBalanceError extends Error {}
-// JournalEntry.
-export class InvalidJournalEntryAmountError extends Error {}
-export class CreditedAndDebitedAccountsAreTheSameError extends Error {}
-export class NoSuchCreditedAccountError extends Error {}
-export class NoSuchDebitedAccountError extends Error {}
-export class CurrenciesDifferError extends Error {}
-export class InsufficientBalanceError extends Error {}
-// Repos.
-export class UnableToInitRepoError extends Error {}
-export class AccountAlreadyExistsError extends Error {}
-export class JournalEntryAlreadyExistsError extends Error {}
-export class NoSuchAccountError extends Error {}
-export class UnableToStoreAccountError extends Error {}
-export class UnableToStoreJournalEntryError extends Error {}
-export class UnableToGetAccountError extends Error {}
-export class UnableToGetJournalEntryError extends Error {}
-export class UnableToGetAccountsError extends Error {}
-export class UnableToGetJournalEntriesError extends Error {}
-export class UnableToUpdateAccountError extends Error {}
-// Others.
-export class UnauthorizedError extends Error {}
+import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
+import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
+
+// TODO: should anything by logged?
+export class AuthorizationClientMock implements IAuthorizationClient {
+	// Properties received through the constructor.
+	private readonly logger: ILogger;
+
+	constructor(
+		logger: ILogger
+	) {
+		this.logger = logger;
+	}
+
+	async init(): Promise<void> {
+	}
+
+	async destroy(): Promise<void> {
+	}
+
+	roleHasPrivilege(roleId: string, privilegeId: string): boolean {
+		return true; // TODO: verify.
+	}
+}

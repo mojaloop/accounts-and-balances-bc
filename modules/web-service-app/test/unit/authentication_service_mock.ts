@@ -32,49 +32,39 @@
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import nock from "nock";
 
-export class TokenHelperServiceMock {
+export class AuthenticationServiceMock {
 	// Properties received through the constructor.
-	private readonly ISSUER_NAME: string;
-	private readonly JWKS_URL: string;
-	private readonly AUDIENCE: string;
 	private readonly logger: ILogger;
 	// Other properties.
-	// This token lasts for 100 years - if the keys are ok, it should verify.
-	public static readonly VALID_TOKEN: string = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6Inp1MGR4WXErTllrWHpPWmZsak5hU1F3MEVXMVQ1KzJ1ZHByQy9Vekt4aGc9In0.eyJ0ZXN0T2JqIjoicGVkcm8xIiwiaWF0IjoxNjQ3NDUyMDM5LCJleHAiOjQ4MDEwNTIwMzksImF1ZCI6InZOZXh0IHBsYXRmb3JtIiwiaXNzIjoidk5leHQgU2VjdXJpdHkgQkMgLSBBdXRob3JpemF0aW9uIFN2YyIsInN1YiI6InVzZXIiLCJqdGkiOiJ6dTBkeFlxK05Za1h6T1pmbGpOYVNRdzBFVzFUNSsydWRwckMvVXpLeGhnPSJ9.d_BXmofxhYr_WbxAte8RgbCQEZcMKiUeEeOLJRR2QaFjg7Wbz_QlgpZzRphFZWQYACIXrrpw4C7xg1NxA4fvokw6DrI41MTzOVd2dk79Le1hK1JotPMpscFiUCOED8Vurv_s-AnxoeHWv5RdB00-nlSB1HkFmArT3TOAVdsOMaiTGhBjI0phhcVo0UuY6f9qYpUcS-rYVW7zf0pAWDhYg_rfX6-ntHxpc6wuq8fQDJs-I-nRzdlS1yrBp9cWN5cDC9qAxXLC4f8ZVl5PSZl-V07MBivPk1zUXm1j62e5tF2MIVyoRSKf2h90J2hAdR-4MAb9wP5_HOhUw12w4YQyAQ";
+	public static readonly ISSUER_NAME: string = "http://localhost:3201/"; // test-issuer-name
+	public static readonly JWKS_URL: string = "http://localhost:3201/.well-known/jwks.json"; // test-jwks-url
+	public static readonly AUDIENCE: string = "mojaloop.vnext.default_audience"; // test-audience
+	public static readonly VALID_ACCESS_TOKEN: string = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InNSMHVoT2hpM05VbmJlMTF5SDZtOUZtcFpNN2JiRVl2czdpbGNfanN1MHMifQ.eyJ0eXAiOiJCZWFyZXIiLCJhenAiOiJzZWN1cml0eS1iYy11aSIsInJvbGVzIjpbXSwiaWF0IjoxNjYxMzM4MDUxLCJleHAiOjE2NjEzNDE2NTEsImF1ZCI6Im1vamFsb29wLnZuZXh0LmRlZmF1bHRfYXVkaWVuY2UiLCJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjMyMDEvIiwic3ViIjoidXNlcjo6dXNlciIsImp0aSI6IjA0NWQwOTc0LWZkMDUtNGZhYS1iNzRkLTIzZGEwNjhhMjNlMSJ9.hYXBLADnY8DeSzyXMKvQyByAy8pjeV_x35f4eedpTR68w2Igessqmb4JNYCftU0K8bvrhIeZKxzUPdWUHDxFYJLJPlK_fvlbk7_3Utou5sPa9ubH-SH87ITNevbeJXA6PnvlgE0eqDFaCs4YQ2EELW3b1uuFoEif2zFIsq32PFcjcMSEj5shNMDTpctyhwP4-1i7SRaxbclOXXRpYw0nIp-QenJ7IJOnCAOAolH4yxoHdf7y7BkXNlbn4XYQv6GOmEABIgqu3ftUI1Gg25YRyVgy-HROT3LlYbnly8mZ6kE595WngrMEp_RXYN9hQnqoWKzd0FXzKlsSVgIqBzpdbQ";
 
 	constructor(
-		issuerName: string,
-		jwksUrl: string,
-		audience: string,
 		logger: ILogger
 	) {
-		this.ISSUER_NAME = issuerName;
-		this.JWKS_URL = jwksUrl;
-		this.AUDIENCE = audience;
 		this.logger = logger;
 
 		this.setUp();
 	}
 
 	private setUp(): void {
-		const jwksUrl = new URL(this.JWKS_URL); // TODO: verify.
+		const jwksUrl = new URL(AuthenticationServiceMock.JWKS_URL); // TODO: verify.
 		nock(jwksUrl.origin)
 		.persist()
 		.get(jwksUrl.pathname)
 		.reply(
 			200,
 			{
-				"keys": [{
-					"alg": "RS256",
-					"e": "AQAB",
-					"kid": "zu0dxYq+NYkXzOZfljNaSQw0EW1T5+2udprC/UzKxhg=",
-					"kty": "RSA",
-					"n": "ALvyNb619slh5kS/YkvRUEiYdru8Jlf7js+eNFe/L6OgOmxsYyqZYMRnZUYSrRQpBNardxOC/+uw1Nh3V1vyH6cj5SF" +
-						"Ivj/nS9EYY0p8QxRt+9Sfjd4qtPWVxmfVuYslVPW/RYtJ2oR5DhY1x0+pqh54mJkqTqPFB6rXd/vq/z5NehInefBsLi4DG" +
-						"+VTJg/j3b8Ree7OiysnTRePUyZQKH0OOzRIVtQvLTiYe964uOdhqQb/J+pQGawdClqzjd1s78O2Vm+CLgnNpJbYmbOvAtl" +
-						"ERK1Gn8rEGHO5VgwyDeIrBzld/yVVyGQ85WSI7JzUwlBr5NA9qaEyINCo6/4apGk=",
-					"use": "sig"
-				}]
+				"keys": [
+					{
+						"kty": "RSA",
+						"kid": "sR0uhOhi3NUnbe11yH6m9FmpZM7bbEYvs7ilc_jsu0s",
+						"n": "u_I1vrX2yWHmRL9iS9FQSJh2u7wmV_uOz540V78vo6A6bGxjKplgxGdlRhKtFCkE1qt3E4L_67DU2HdXW_IfpyPlIUi-P-dL0RhjSnxDFG371J-N3iq09ZXGZ9W5iyVU9b9Fi0nahHkOFjXHT6mqHniYmSpOo8UHqtd3--r_Pk16Eid58GwuLgMb5VMmD-PdvxF57s6LKydNF49TJlAofQ47NEhW1C8tOJh73ri452GpBv8n6lAZrB0KWrON3Wzvw7ZWb4IuCc2kltiZs68C2URErUafysQYc7lWDDIN4isHOV3_JVXIZDzlZIjsnNTCUGvk0D2poTIg0Kjr_hqkaQ",
+						"e": "AQAB"
+					}
+				]
 			}
 		);
 	}

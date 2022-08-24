@@ -43,7 +43,7 @@ import {
 	CreditedAndDebitedAccountsAreTheSameError,
 	NoSuchCreditedAccountError,
 	NoSuchDebitedAccountError,
-	CurrenciesDifferError, InsufficientBalanceError
+	CurrenciesDifferError, InsufficientBalanceError, UnauthorizedError
 } from "@mojaloop/accounts-and-balances-bc-domain";
 import {TokenHelper, CallSecurityContext} from "@mojaloop/security-bc-client-lib";
 
@@ -94,7 +94,7 @@ export class ExpressRoutes {
 		return this._router;
 	}
 
-	// TODO: name; express.NextFunction; clarify; why returns? logs vs error responses.
+	// TODO: name; express.NextFunction; clarify; why returns? logs vs error responses. all status codes 403?
 	private async authenticate(
 		req: express.Request,
 		res: express.Response,
@@ -104,18 +104,18 @@ export class ExpressRoutes {
 		if (authorizationHeader === undefined) {
 			this.sendErrorResponse(
 				res,
-				403, // TODO: status code.
-				"" // TODO: message.
+				403,
+				"unauthorized" // TODO: verify.
 			);
 			return;
 		}
 
-		/*const bearer: string[] = authorizationHeader.trim().split(" "); // TODO: name.
+		const bearer: string[] = authorizationHeader.trim().split(" "); // TODO: name.
 		if (bearer.length != BEARER_LENGTH) {
 			this.sendErrorResponse(
 				res,
-				403, // TODO: status code.
-				"" // TODO: message.
+				403,
+				"unauthorized" // TODO: verify.
 			);
 			return;
 		}
@@ -128,16 +128,16 @@ export class ExpressRoutes {
 			this.logger.error(e);
 			this.sendErrorResponse(
 				res,
-				403, // TODO: status code.
-				"" // TODO: message.
+				403,
+				"unauthorized" // TODO: verify.
 			);
 			return;
 		}
 		if (!verified) {
 			this.sendErrorResponse(
 				res,
-				403, // TODO: status code.
-				"" // TODO: message.
+				403,
+				"unauthorized" // TODO: verify.
 			);
 			return;
 		}
@@ -148,8 +148,8 @@ export class ExpressRoutes {
 			|| decodedToken.sub.indexOf("::") === -1) {
 			this.sendErrorResponse(
 				res,
-				403, // TODO: status code.
-				"" // TODO: message.
+				403,
+				"unauthorized" // TODO: verify.
 			);
 			return;
 		}
@@ -163,14 +163,14 @@ export class ExpressRoutes {
 			clientId: subjectType.toUpperCase().startsWith("APP") ? subject : null, // TODO: null?
 			rolesIds: decodedToken.roles,
 			accessToken: bearerToken
-		};*/
+		};
 
-		req.securityContext = {
+		/*req.securityContext = {
 			username: "",
 			clientId: "",
 			rolesIds: [""],
 			accessToken: ""
-		}
+		}*/
 
 		next();
 	}
@@ -201,6 +201,12 @@ export class ExpressRoutes {
 					res,
 					409,
 					"account already exists"
+				);
+			} else if (e instanceof UnauthorizedError) {
+				this.sendErrorResponse(
+					res,
+					403,
+					"unauthorized" // TODO: verify.
 				);
 			} else {
 				this.sendErrorResponse(
@@ -264,6 +270,12 @@ export class ExpressRoutes {
 					409,
 					"journal entry already exists"
 				);
+			} else if (e instanceof UnauthorizedError) {
+				this.sendErrorResponse(
+					res,
+					403,
+					"unauthorized" // TODO: verify.
+				);
 			} else {
 				this.sendErrorResponse(
 					res,
@@ -323,11 +335,19 @@ export class ExpressRoutes {
 				{account: account}
 			);
 		} catch (e: unknown) {
-			this.sendErrorResponse(
-				res,
-				500,
-				this.UNKNOWN_ERROR_MESSAGE
-			);
+			if (e instanceof UnauthorizedError) {
+				this.sendErrorResponse(
+					res,
+					403,
+					"unauthorized" // TODO: verify.
+				);
+			} else {
+				this.sendErrorResponse(
+					res,
+					500,
+					this.UNKNOWN_ERROR_MESSAGE
+				);
+			}
 		}
 	}
 
@@ -350,11 +370,19 @@ export class ExpressRoutes {
 				{accounts: accounts}
 			);
 		} catch (e: unknown) {
-			this.sendErrorResponse(
-				res,
-				500,
-				this.UNKNOWN_ERROR_MESSAGE
-			);
+			if (e instanceof UnauthorizedError) {
+				this.sendErrorResponse(
+					res,
+					403,
+					"unauthorized" // TODO: verify.
+				);
+			} else {
+				this.sendErrorResponse(
+					res,
+					500,
+					this.UNKNOWN_ERROR_MESSAGE
+				);
+			}
 		}
 	}
 
@@ -377,11 +405,19 @@ export class ExpressRoutes {
 				{journalEntries: journalEntries}
 			);
 		} catch (e: unknown) {
-			this.sendErrorResponse(
-				res,
-				500,
-				this.UNKNOWN_ERROR_MESSAGE
-			);
+			if (e instanceof UnauthorizedError) {
+				this.sendErrorResponse(
+					res,
+					403,
+					"unauthorized" // TODO: verify.
+				);
+			} else {
+				this.sendErrorResponse(
+					res,
+					500,
+					this.UNKNOWN_ERROR_MESSAGE
+				);
+			}
 		}
 	}
 

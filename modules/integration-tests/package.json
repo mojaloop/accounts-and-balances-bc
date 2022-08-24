@@ -22,6 +22,7 @@
     "clean:node-modules": "rm -rf node_modules",
     "clean:dist-and-node-modules": "rm -rf dist node_modules",
     "clean": "yarn clean:dist",
+    "lint": "npx eslint ./src",
     "build": "tsc",
     "test:integration": "jest --testMatch '**/src/**/*.test.ts'"
   },
