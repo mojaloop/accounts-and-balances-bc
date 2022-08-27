@@ -27,19 +27,21 @@ npm install @mojaloop/accounts-and-balancs-bc-client-lib
 
 import {ILogger, ConsoleLogger} from "@mojaloop/logging-bc-public-types-lib";
 import {
-    AccountsAndBalancesClient,
+    AccountsAndBalancesHttpClient,
     IAccountDTO,
     IJournalEntryDTO
 } from "@mojaloop/accounts-and-balancs-bc-client-lib";
 
-const ACCOUNTS_AND_BALANCES_URL: string = "http://localhost:1234";
-const HTTP_CLIENT_TIMEOUT_MS: number = 10_000;
+const BASE_URL_ACCOUNTS_AND_BALANCES_HTTP_SERVICE: string = "http://localhost:1234";
+const ACCESS_TOKEN: string = "";
+const TIMEOUT_MS_ACCOUNTS_AND_BALANCES_HTTP_CLIENT: number = 10_000;
 
 const logger: ILogger = new ConsoleLogger();
-const accountsAndBalancesClient: AccountsAndBalancesClient = new AccountsAndBalancesClient(
+const accountsAndBalancesHttpClient: AccountsAndBalancesHttpClient = new AccountsAndBalancesHttpClient(
     logger,
-    ACCOUNTS_AND_BALANCES_URL,
-    HTTP_CLIENT_TIMEOUT_MS
+    BASE_URL_ACCOUNTS_AND_BALANCES_HTTP_SERVICE,
+    ACCESS_TOKEN,
+    TIMEOUT_MS_ACCOUNTS_AND_BALANCES_HTTP_CLIENT
 );
 ```
 
@@ -56,7 +58,7 @@ const account: IAccountDTO = {
 	timestampLastJournalEntry: 0
 }
 try {
-    const accountIdReceived: string = await accountsAndBalancesClient.createAccount(account);
+    const accountIdReceived: string = await accountsAndBalancesHttpClient.createAccount(account);
 } catch (e: unknown) {
     logger.error(e);
 }
@@ -113,7 +115,7 @@ const journalEntryB: IJournalEntryDTO = {
 }
 try {
     const idsJournalEntriesReceived: string[] =
-	    await accountsAndBalancesClient.createJournalEntries([journalEntryA, journalEntryB]);
+	    await accountsAndBalancesHttpClient.createJournalEntries([journalEntryA, journalEntryB]);
 } catch (e: unknown) {
     logger.error(e);
 }
@@ -123,7 +125,7 @@ try {
 ```
 const accountId: string = "a";
 try {
-    const account: IAccountDTO | null = await accountsAndBalancesClient.getAccountById(accountId);
+    const account: IAccountDTO | null = await accountsAndBalancesHttpClient.getAccountById(accountId);
 } catch (e: unknown) {
     logger.error(e);
 }
@@ -133,7 +135,7 @@ try {
 ```
 const externalId: string = Date.now().toString();
 try {
-    const accounts: IAccountDTO[] = await accountsAndBalancesClient.getAccountsByExternalId(externalId);
+    const accounts: IAccountDTO[] = await accountsAndBalancesHttpClient.getAccountsByExternalId(externalId);
 } catch (e: unknown) {
     logger.error(e);
 }
@@ -143,7 +145,7 @@ try {
 ```
 const accountId: string = Date.now().toString();
 try {
-    const journalEntries: IJournalEntryDTO[] = await accountsAndBalancesClient.getJournalEntriesByAccountId(accountId);
+    const journalEntries: IJournalEntryDTO[] = await accountsAndBalancesHttpClient.getJournalEntriesByAccountId(accountId);
 } catch (e: unknown) {
     logger.error(e);
 }
