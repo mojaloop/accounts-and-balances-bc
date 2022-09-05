@@ -12,20 +12,17 @@
     "Pedro Sousa Barreto <pedrob@crosslaketech.com>"
   ],
   "scripts": {
-    "clean": "yarn workspaces foreach -v --parallel run clean",
-    "clean:dist": "yarn workspaces foreach -v --parallel run clean:dist",
-    "clean:node-modules": "yarn workspaces foreach -v --parallel run clean:node-modules",
-    "clean:dist-and-node-modules": "yarn workspaces foreach -v --parallel run clean:dist-and-node-modules",
-    "lint": "yarn workspaces foreach -v --parallel run lint",
-    "build:domain": "yarn workspace @mojaloop/accounts-and-balances-bc-domain run build",
-    "build:client": "yarn workspace @mojaloop/accounts-and-balances-bc-client run build",
-    "build:web-service-app": "yarn workspace @mojaloop/accounts-and-balances-bc-web-service-app run build",
-    "build:integration-tests": "yarn workspace @mojaloop/accounts-and-balances-bc-integration-tests run build",
-    "build": "yarn build:domain && yarn build:client && yarn build:web-service-app && yarn build:integration-tests",
-    "clean-and-build": "yarn clean && yarn build",
-    "test:unit": "yarn workspaces foreach -v run test:unit",
-    "test:integration": "yarn workspace @mojaloop/accounts-and-balances-bc-integration-tests run test:integration",
-    "publish": "yarn workspaces foreach -v --parallel run publish"
+    "prepare": "husky install",
+    "clean": "npm -ws -p run clean",
+    "clean:dist": "npm -ws -p run clean:dist",
+    "clean:node-modules": "rm -rf node_modules && npm -ws -p run clean:node-modules",
+    "clean:dist-and-node-modules": "rm -rf node_modules && npm -ws -p run clean:dist-and-node-modules",
+    "dep:check": "npm -ws -p run dep:check",
+    "lint": "npm -ws -p run lint",
+    "build": "npm -ws -p run build",
+    "clean-and-build": "npm run clean && npm run build",
+    "test:unit": "npm -ws -p run test:unit",
+    "publish": "npm -ws -p run publish"
   },
   "devDependencies": {
     "@types/jest": "^28.1.7",
@@ -39,10 +36,8 @@
     "typescript": "^4.7.4"
   },
   "workspaces": [
-    "modules/*"
-  ],
-  "packageManager": "yarn@3.2.1",
-  "engines": {
-    "yarn": "3.2.1"
-  }
+    "packages/infrastructure-lib",
+    "packages/domain-lib",
+    "packages/*"
+  ]
 }
