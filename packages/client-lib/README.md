@@ -1,6 +1,6 @@
-# Mojaloop vNext Accounts and Balances Client Library
+# Accounts and Balances Client Library
 
-[![Git Commit](https://img.shields.io/github/last-commit/mojaloop/accounts-and-balances-bc.svg?style=flat)](https://github.com/mojaloop/accounts-and-balances-bc/commits/master)
+[![Git Commit](https://img.shields.io/github/last-commit/mojaloop/accounts-and-balances-bc.svg?style=flat)](https://github.com/mojaloop/accounts-and-balances-bc/commits/main)
 [![Git Releases](https://img.shields.io/github/release/mojaloop/accounts-and-balances-bc.svg?style=flat)](https://github.com/mojaloop/accounts-and-balances-bc/releases)
 [![Npm Version](https://img.shields.io/npm/v/@mojaloop/accounts-and-balances-bc-client-lib.svg?style=flat)](https://www.npmjs.com/package/@mojaloop/accounts-and-balances-bc-client-lib)
 [![NPM Vulnerabilities](https://img.shields.io/snyk/vulnerabilities/npm/@mojaloop/accounts-and-balances-bc-client-lib.svg?style=flat)](https://www.npmjs.com/package/@mojaloop/accounts-and-balances-bc-client-lib)
@@ -76,7 +76,7 @@ const accountA: IAccountDTO = {
 	debitBalance: 25,
 	timestampLastJournalEntry: 0
 };
-await aggregate.createAccount(accountA);
+await accountsAndBalancesHttpClient.createAccount(accountA);
 // Account B.
 const accountB: IAccountDTO = {
 	id: "b",
@@ -88,7 +88,7 @@ const accountB: IAccountDTO = {
 	debitBalance: 25,
 	timestampLastJournalEntry: 0
 };
-await aggregate.createAccount(accountB);
+await accountsAndBalancesHttpClient.createAccount(accountB);
 // Journal entry A.
 const journalEntryA: IJournalEntryDTO = {
 	id: "a",
@@ -112,8 +112,7 @@ const journalEntryB: IJournalEntryDTO = {
 	timestamp: 0
 }
 try {
-    const idsJournalEntriesReceived: string[] =
-	    await accountsAndBalancesHttpClient.createJournalEntries([journalEntryA, journalEntryB]);
+    const idsJournalEntriesReceived: string[] = await accountsAndBalancesHttpClient.createJournalEntries([journalEntryA, journalEntryB]);
 } catch (e: unknown) {
     logger.error(e);
 }
@@ -143,8 +142,7 @@ try {
 ```
 const accountId: string = Date.now().toString();
 try {
-    const journalEntries: IJournalEntryDTO[] =
-        await accountsAndBalancesHttpClient.getJournalEntriesByAccountId(accountId);
+    const journalEntries: IJournalEntryDTO[] = await accountsAndBalancesHttpClient.getJournalEntriesByAccountId(accountId);
 } catch (e: unknown) {
     logger.error(e);
 }

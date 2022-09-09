@@ -29,27 +29,34 @@
 
 "use strict";
 
-import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
-import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-
-// TODO: should anything by logged?
-export class AuthorizationClientMock implements IAuthorizationClient {
-	// Properties received through the constructor.
-	private readonly logger: ILogger;
-
-	constructor(
-		logger: ILogger
-	) {
-		this.logger = logger;
+export class Routes {
+	createAccount(
+		call: ServerUnaryCall<>,
+		callback: sendUnaryData<>
+	): X {
 	}
 
-	async init(): Promise<void> {
+	createJournalEntries(
+		call: ServerUnaryCall<>,
+		callback: sendUnaryData<>
+	): X {
 	}
 
-	async destroy(): Promise<void> {
+	getAccountById(
+		call: ServerUnaryCall<>,
+		callback: sendUnaryData<>
+	): X {
 	}
 
-	roleHasPrivilege(roleId: string, privilegeId: string): boolean {
-		return true; // TODO: verify.
+	getAccountsByExternalId(
+		call: ServerUnaryCall<>,
+		callback: sendUnaryData<>
+	): X {
+	}
+
+	getJournalEntriesByAccountId(
+		call: ServerUnaryCall<>,
+		callback: sendUnaryData<>
+	): X {
 	}
 }

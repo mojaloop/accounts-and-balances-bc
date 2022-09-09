@@ -48,13 +48,15 @@ export class AuxiliaryAccountsAndBalancesHttpClient {
 
 		this.httpClient = axios.create({
 			baseURL: baseUrlHttpService,
-			headers: {"Authorization": `Bearer ${accessToken}`},
 			timeout: timeoutMs
 		});
+		// "headers: {"Authorization": `Bearer ${accessToken}`}" could be passed to axios.create(), but that way, due
+		// to a bug, it wouldn't be possible to change the access token later.
+		this.setAccessToken(accessToken);
 	}
 
 	setAccessToken(accessToken: string): void {
-		this.httpClient.defaults.headers.common = {"Authorization": `Bearer ${accessToken}`}; // TODO: verify.
+		this.httpClient.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
 	}
 
 	async createAccount(account: any): Promise<number> {

@@ -37,18 +37,18 @@ export class AccountsAndBalancesHttpServiceMock {
 	private readonly logger: ILogger;
 	private readonly BASE_URL: string;
 	// Other properties.
-	public static readonly NON_EXISTENT_ACCOUNT_ID: string = "a";
-	public static readonly EXISTENT_ACCOUNT_ID: string = "b";
-	public static readonly NON_EXISTENT_JOURNAL_ENTRY_ID: string = "c";
-	public static readonly EXISTENT_JOURNAL_ENTRY_ID: string = "d";
-	public static readonly NON_EXISTENT_EXTERNAL_ID: string = "e";
-	public static readonly EXISTENT_EXTERNAL_ID: string = "f";
-	public static readonly ID_INTERNAL_SERVER_ERROR: string = "g";
-	public static readonly ID_ACCOUNT_A: string = "account_a";
-	public static readonly ID_ACCOUNT_B: string = "account_b";
-	public static readonly ID_JOURNAL_ENTRY_A: string = "journal_entry_a";
-	public static readonly ID_JOURNAL_ENTRY_B: string = "journal_entry_b";
-	public static readonly VALID_ACCESS_TOKEN: string = "";
+	static readonly NON_EXISTENT_ACCOUNT_ID: string = "a";
+	static readonly EXISTENT_ACCOUNT_ID: string = "b";
+	static readonly NON_EXISTENT_JOURNAL_ENTRY_ID: string = "c";
+	static readonly EXISTENT_JOURNAL_ENTRY_ID: string = "d";
+	static readonly NON_EXISTENT_EXTERNAL_ID: string = "e";
+	static readonly EXISTENT_EXTERNAL_ID: string = "f";
+	static readonly ID_INTERNAL_SERVER_ERROR: string = "g";
+	static readonly ID_ACCOUNT_A: string = "account_a";
+	static readonly ID_ACCOUNT_B: string = "account_b";
+	static readonly ID_JOURNAL_ENTRY_A: string = "journal_entry_a";
+	static readonly ID_JOURNAL_ENTRY_B: string = "journal_entry_b";
+	static readonly VALID_ACCESS_TOKEN: string = "";
 
 	constructor(
 		logger: ILogger,
@@ -198,11 +198,11 @@ export class AccountsAndBalancesHttpServiceMock {
 			);
 	}
 
-	public disable(): void {
+	disable(): void {
 		nock.restore();
 	}
 
-	public enable(): void {
+	enable(): void {
 		nock.activate();
 	}
 }

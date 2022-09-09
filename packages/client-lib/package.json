@@ -17,21 +17,23 @@
     "/dist"
   ],
   "scripts": {
-    "clean:dist": "rm -rf dist",
-    "clean:node-modules": "rm -rf node_modules",
-    "clean:dist-and-node-modules": "rm -rf dist node_modules",
-    "clean": "npm run clean:dist",
+    "clean:dist": "rm -fr dist",
+    "clean:npm": "rm -fr node_modules",
+    "clean:package-lock": "rm -f package-lock.json",
+    "clean:coverage": "rm -fr coverage",
+    "clean:all": "npm run clean:dist && npm run clean:npm && npm run clean:package-lock && npm run clean:coverage",
     "dep:check": "ncu -e 2",
-    "lint": "eslint ./src",
+    "dep:upgrade": "ncu -u",
+    "lint": "eslint src",
     "build": "tsc",
     "test:unit": "jest",
-    "publish": "npm run clean && npm run build && npm version patch && npm publish --tag latest --access public"
+    "publish": "npm version patch && npm publish --tag latest --access public"
   },
   "devDependencies": {
-    "@mojaloop/logging-bc-public-types-lib": "^0.0.3",
     "nock": "^13.2.9"
   },
   "dependencies": {
+    "@mojaloop/logging-bc-public-types-lib": "^0.1.10",
     "axios": "^0.27.2"
   }
 }

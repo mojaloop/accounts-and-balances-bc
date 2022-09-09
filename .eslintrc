@@ -10,8 +10,9 @@
 	"semi": [
 	  "warn"
 	],
-	"@typescript-eslint/no-inferrable-types": ["off"], // TODO.
-	"@typescript-eslint/no-explicit-any": ["off"] // TODO.
+	"@typescript-eslint/no-inferrable-types": [
+	  "warn"
+	]
   },
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
@@ -25,7 +26,7 @@
   ],
   "overrides": [
 	{
-	  "files": [ // TODO.
+	  "files": [
 		"**/*.test.ts",
 		"test/**/*.ts"
 	  ],

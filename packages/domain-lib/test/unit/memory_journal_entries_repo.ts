@@ -37,7 +37,7 @@ import {
 	UnableToGetJournalEntriesError,
 	UnableToGetJournalEntryError,
 	UnableToStoreJournalEntryError
-} from "@mojaloop/accounts-and-balances-bc-domain-lib";
+} from "../../src";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 
 export class MemoryJournalEntriesRepo implements IJournalEntriesRepo {
@@ -47,7 +47,7 @@ export class MemoryJournalEntriesRepo implements IJournalEntriesRepo {
 	private readonly DB_NAME: string;
 	private readonly COLLECTION_NAME: string;
 	// Other properties.
-	public unexpectedFailure: boolean = false; // TODO: should this be done?
+	unexpectedFailure: boolean = false; // TODO: should this be done?
 	private readonly journalEntries: Map<string, IJournalEntry>;
 
 	constructor(

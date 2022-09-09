@@ -45,14 +45,14 @@ import {
 	JournalEntryAlreadyExistsError,
 	IAccount,
 	IJournalEntry, InvalidCreditBalanceError, InvalidJournalEntryAmountError
-} from "../src";
+} from "../../src";
 import {MemoryAccountsRepo} from "./memory_accounts_repo";
 import {MemoryJournalEntriesRepo} from "./memory_journal_entries_repo";
 import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
 import {AuditClientMock} from "./audit_client_mock";
-import {Account} from "../src/entities/account";
-import {JournalEntry} from "../src/entities/journal_entry";
+import {Account} from "../../src/entities/account";
+import {JournalEntry} from "../../src/entities/journal_entry";
 import * as uuid from "uuid";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
 import {AuthorizationClientMock} from "./authorization_client_mock";
@@ -98,11 +98,9 @@ describe("accounts and balances domain library - unit tests", () => {
 			accountsRepo,
 			journalEntriesRepo
 		);
-		await aggregate.init();
 	});
 
 	afterAll(async () => {
-		await aggregate.destroy();
 	});
 
 	// Create account.

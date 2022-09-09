@@ -1,9 +1,9 @@
 {
-  "name": "@mojaloop/accounts-and-balances-bc-infrastructure-lib",
+  "name": "@mojaloop/accounts-and-balances-bc-grpc-svc",
   "version": "0.0.1",
-  "description": "Accounts and Balances BC - Infrastructure Library",
+  "description": "Accounts and Balances BC - gRPC Service",
   "license": "Apache-2.0",
-  "homepage": "https://github.com/mojaloop/accounts-and-balances-bc/tree/main/packages/infrastructure-lib",
+  "homepage": "https://github.com/mojaloop/accounts-and-balances-bc/tree/main/packages/grpc-svc",
   "bugs": {
     "url": "https://github.com/mojaloop/accounts-and-balances-bc/issues#readme"
   },
@@ -27,13 +27,12 @@
     "dep:upgrade": "ncu -u",
     "lint": "eslint src",
     "build": "tsc",
-    "test:unit": "echo \"infrastructure-lib doesn't have unit tests - it's only tested on the integration tests\""
+    "test:unit": "jest",
+    "start": "node dist/index.js"
   },
   "devDependencies": {
   },
   "dependencies": {
-    "@mojaloop/accounts-and-balances-bc-domain-lib": "*",
-    "@mojaloop/logging-bc-public-types-lib": "^0.1.10",
-    "mongodb": "^4.9.1"
+    "@grpc/grpc-js": "^1.6.12"
   }
 }

@@ -39,7 +39,7 @@ import {
 	UnableToGetAccountError,
 	UnableToUpdateAccountError,
 	UnableToGetAccountsError
-} from "../src";
+} from "@mojaloop/accounts-and-balances-bc-domain-lib";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 
 export class MemoryAccountsRepo implements IAccountsRepo {
@@ -49,7 +49,7 @@ export class MemoryAccountsRepo implements IAccountsRepo {
 	private readonly DB_NAME: string;
 	private readonly COLLECTION_NAME: string;
 	// Other properties.
-	public unexpectedFailure: boolean = false; // TODO: should this be done?
+	private unexpectedFailure: boolean; // TODO: should this be done?
 	private readonly accounts: Map<string, IAccount>;
 
 	constructor(
@@ -63,6 +63,7 @@ export class MemoryAccountsRepo implements IAccountsRepo {
 		this.DB_NAME = dbName;
 		this.COLLECTION_NAME = collectionName;
 
+		this.unexpectedFailure = false;
 		this.accounts = new Map<string, IAccount>();
 	}
 
@@ -104,11 +105,11 @@ export class MemoryAccountsRepo implements IAccountsRepo {
 			throw new UnableToGetAccountsError();
 		}
 		const accounts: IAccount[] = [];
-		this.accounts.forEach(account => {
+		for (const account of this.accounts.values()) {
 			if (account.externalId === externalId) {
 				accounts.push(account);
 			}
-		});
+		}
 		return accounts;
 	}
 
@@ -142,5 +143,9 @@ export class MemoryAccountsRepo implements IAccountsRepo {
 		}
 		account.debitBalance = debitBalance;
 		account.timestampLastJournalEntry = timeStampLastJournalEntry;
+	}
+
+	setUnexpectedFailure(unexpectedFailure: boolean) {
+		this.unexpectedFailure = unexpectedFailure;
 	}
 }

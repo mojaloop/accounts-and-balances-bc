@@ -19,21 +19,12 @@
  their names indented and be marked with a '-'. Email address can be added
  optionally within square brackets <email>.
 
- * Gates Foundation
- - Name Surname <name.surname@gatesfoundation.com>
-
- - Gonçalo Garcia <goncalogarcia99@gmail.com>
-
  * Crosslake
  - Pedro Sousa Barreto <pedrob@crosslaketech.com>
+
+ * Gonçalo Garcia <goncalogarcia99@gmail.com>
 
  --------------
  ******/
 
 "use strict";
-
-export * from "./aggregate";
-export * from "./errors";
-export * from "./infrastructure_interfaces";
-export * from "./privileges";
-export * from "./types";

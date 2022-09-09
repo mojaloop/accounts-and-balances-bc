@@ -4,7 +4,7 @@ module.exports = {
   preset: "ts-jest",
   testEnvironment: "node",
   collectCoverage: true,
-  collectCoverageFrom: ["./src/web-server/express_web_server.ts"],
+  collectCoverageFrom: ["src/**/*.ts"],
   coverageReporters: ["json", "lcov"],
   clearMocks: true,
   coverageThreshold: {

@@ -31,7 +31,7 @@
 
 import {ConsoleLogger, ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {AccountsAndBalancesHttpServiceMock} from "./accounts_and_balances_http_service_mock";
-import {AccountsAndBalancesHttpClient} from "../src";
+import {AccountsAndBalancesHttpClient} from "../../src";
 import {
 	IAccountDTO,
 	IJournalEntryDTO,
@@ -40,7 +40,7 @@ import {
 	UnableToGetAccountError,
 	UnableToGetAccountsError,
 	UnableToGetJournalEntriesError
-} from "../src";
+} from "../../src";
 
 const BASE_URL_ACCOUNTS_AND_BALANCES_HTTP_SERVICE: string = "http://localhost:1234";
 const TIMEOUT_MS_ACCOUNTS_AND_BALANCES_HTTP_CLIENT: number = 10_000;

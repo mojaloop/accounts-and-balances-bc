@@ -76,30 +76,13 @@ export class Aggregate {
 		this.journalEntriesRepo = journalEntriesRepo;
 	}
 
-	async init(): Promise<void> {
-		try {
-			await this.auditingClient.init();
-			await this.accountsRepo.init();
-			await this.journalEntriesRepo.init();
-		} catch (e: unknown) {
-			this.logger.fatal(e);
-			throw e;
-		}
-	}
-
-	async destroy(): Promise<void> {
-		await this.accountsRepo.destroy();
-		await this.journalEntriesRepo.destroy();
-		await this.auditingClient.destroy();
-	}
-
 	private enforcePrivilege(securityContext: CallSecurityContext, privilegeId: string): void {
-		for (const roleId of securityContext.rolesIds) { // TODO: of?
+		for (const roleId of securityContext.rolesIds) {
 			if (this.authorizationClient.roleHasPrivilege(roleId, privilegeId)) {
 				return;
 			}
-			throw new UnauthorizedError(); // TODO: change error name.
 		}
+		throw new UnauthorizedError(); // TODO: change error name.
 	}
 
 	private getAuditSecurityContext(securityContext: CallSecurityContext): AuditSecurityContext {
@@ -140,7 +123,7 @@ export class Aggregate {
 	async createJournalEntries(journalEntries: IJournalEntry[], securityContext: CallSecurityContext): Promise<string[]> {
 		this.enforcePrivilege(securityContext, Privileges.CREATE_JOURNAL_ENTRY);
 		const idsJournalEntries: string[] = []; // TODO: verify.
-		for (const journalEntry of journalEntries) { // TODO: of?
+		for (const journalEntry of journalEntries) {
 			idsJournalEntries.push(await this.createJournalEntry(journalEntry)); // TODO: verify.
 		}
 		return idsJournalEntries;

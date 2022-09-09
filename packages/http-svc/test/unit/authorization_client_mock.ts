@@ -29,67 +29,35 @@
 
 "use strict";
 
+import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {Aggregate} from "@mojaloop/accounts-and-balances-bc-domain-lib";
-import {ExpressRoutes} from "./express_routes";
-import express from "express";
-import {TokenHelper} from "@mojaloop/security-bc-client-lib";
-import http from "http";
 
-export class ExpressHttpServer {
+// TODO: should anything by logged?
+export class AuthorizationClientMock implements IAuthorizationClient {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
-	private readonly HOST: string;
-	private readonly PORT_NO: number;
-	private readonly PATH_ROUTER: string;
 	// Other properties.
-	private readonly BASE_URL: string;
-	private readonly app: express.Express;
-	private readonly routes: ExpressRoutes;
-	private httpServer: http.Server;
+	private _roleHasPrivilege: boolean; // TODO: should this be done?
 
 	constructor(
-		logger: ILogger,
-		host: string,
-		portNo: number,
-		pathRouter: string,
-		tokenHelper: TokenHelper,
-		aggregate: Aggregate
+		logger: ILogger
 	) {
 		this.logger = logger;
-		this.HOST = host;
-		this.PORT_NO = portNo;
-		this.PATH_ROUTER = pathRouter;
 
-		this.BASE_URL = `http://${this.HOST}:${this.PORT_NO}`;
-		this.app = express();
-		this.routes = new ExpressRoutes(
-			logger,
-			tokenHelper,
-			aggregate
-		);
-
-		this.configure();
+		this._roleHasPrivilege = true;
 	}
 
-	private configure() {
-		this.app.use(express.json()); // For parsing application/json.
-		this.app.use(express.urlencoded({extended: true})); // For parsing application/x-www-form-urlencoded.
-		this.app.use(this.PATH_ROUTER, this.routes.router);
+	async init(): Promise<void> {
 	}
 
-	// TODO: name; async?
-	init(): void {
-		this.httpServer = this.app.listen(this.PORT_NO, () => {
-			this.logger.info("Server on 🚀");
-			this.logger.info(`Host: ${this.HOST}`);
-			this.logger.info(`Port: ${this.PORT_NO}`);
-			this.logger.info(`Base URL: ${this.BASE_URL}`);
-		});
+	async destroy(): Promise<void> {
 	}
 
-	// TODO: name; async?
-	destroy(): void {
-		this.httpServer.close();
+	roleHasPrivilege(roleId: string, privilegeId: string): boolean {
+		return this._roleHasPrivilege;
+	}
+
+	setRoleHasPrivilege(roleHasPrivilege: boolean) {
+		this._roleHasPrivilege = roleHasPrivilege;
 	}
 }

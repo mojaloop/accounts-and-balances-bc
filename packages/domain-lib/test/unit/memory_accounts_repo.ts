@@ -30,25 +30,27 @@
 "use strict";
 
 import {
-	IJournalEntriesRepo,
-	IJournalEntry,
-	JournalEntryAlreadyExistsError,
+	IAccount,
+	IAccountsRepo,
 	UnableToInitRepoError,
-	UnableToGetJournalEntriesError,
-	UnableToGetJournalEntryError,
-	UnableToStoreJournalEntryError
-} from "../src";
+	NoSuchAccountError,
+	AccountAlreadyExistsError,
+	UnableToStoreAccountError,
+	UnableToGetAccountError,
+	UnableToUpdateAccountError,
+	UnableToGetAccountsError
+} from "../../src";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 
-export class MemoryJournalEntriesRepo implements IJournalEntriesRepo {
+export class MemoryAccountsRepo implements IAccountsRepo {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
 	private readonly DB_URL: string;
 	private readonly DB_NAME: string;
 	private readonly COLLECTION_NAME: string;
 	// Other properties.
-	public unexpectedFailure: boolean = false; // TODO: should this be done?
-	private readonly journalEntries: Map<string, IJournalEntry>;
+	unexpectedFailure: boolean = false; // TODO: should this be done?
+	private readonly accounts: Map<string, IAccount>;
 
 	constructor(
 		logger: ILogger,
@@ -61,7 +63,7 @@ export class MemoryJournalEntriesRepo implements IJournalEntriesRepo {
 		this.DB_NAME = dbName;
 		this.COLLECTION_NAME = collectionName;
 
-		this.journalEntries = new Map<string, IJournalEntry>();
+		this.accounts = new Map<string, IAccount>();
 	}
 
 	async init(): Promise<void> {
@@ -73,34 +75,72 @@ export class MemoryJournalEntriesRepo implements IJournalEntriesRepo {
 	async destroy(): Promise<void> {
 	}
 
-	async journalEntryExistsById(journalEntryId: string): Promise<boolean> {
+	async accountExistsById(accountId: string): Promise<boolean> {
 		if (this.unexpectedFailure) {
-			throw new UnableToGetJournalEntryError();
+			throw new UnableToGetAccountError();
 		}
-		return this.journalEntries.has(journalEntryId);
+		return this.accounts.has(accountId);
 	}
 
-	async storeNewJournalEntry(journalEntry: IJournalEntry): Promise<void> {
+	async storeNewAccount(account: IAccount): Promise<void> {
 		if (this.unexpectedFailure) {
-			throw new UnableToStoreJournalEntryError();
+			throw new UnableToStoreAccountError();
 		}
-		if (await this.journalEntryExistsById(journalEntry.id)) {
-			throw new JournalEntryAlreadyExistsError();
+		if (await this.accountExistsById(account.id)) {
+			throw new AccountAlreadyExistsError();
 		}
-		this.journalEntries.set(journalEntry.id, journalEntry);
+		this.accounts.set(account.id, account);
 	}
 
-	async getJournalEntriesByAccountId(accountId: string): Promise<IJournalEntry[]> {
+	async getAccountById(accountId: string): Promise<IAccount | null> {
 		if (this.unexpectedFailure) {
-			throw new UnableToGetJournalEntriesError();
+			throw new UnableToGetAccountError();
 		}
-		const journalEntries: IJournalEntry[] = [];
-		this.journalEntries.forEach(journalEntry => {
-			if (journalEntry.creditedAccountId === accountId
-				|| journalEntry.debitedAccountId === accountId) {
-				journalEntries.push(journalEntry);
+		return this.accounts.get(accountId) ?? null;
+	}
+
+	async getAccountsByExternalId(externalId: string): Promise<IAccount[]> {
+		if (this.unexpectedFailure) {
+			throw new UnableToGetAccountsError();
+		}
+		const accounts: IAccount[] = [];
+		this.accounts.forEach(account => {
+			if (account.externalId === externalId) {
+				accounts.push(account);
 			}
 		});
-		return journalEntries;
+		return accounts;
+	}
+
+	async updateAccountCreditBalanceById(
+		accountId: string,
+		creditBalance: bigint,
+		timeStampLastJournalEntry: number
+	): Promise<void> {
+		if (this.unexpectedFailure) {
+			throw new UnableToUpdateAccountError();
+		}
+		const account: IAccount | undefined = this.accounts.get(accountId);
+		if (account === undefined) {
+			throw new NoSuchAccountError();
+		}
+		account.creditBalance = creditBalance;
+		account.timestampLastJournalEntry = timeStampLastJournalEntry;
+	}
+
+	async updateAccountDebitBalanceById(
+		accountId: string,
+		debitBalance: bigint,
+		timeStampLastJournalEntry: number
+	): Promise<void> {
+		if (this.unexpectedFailure) {
+			throw new UnableToUpdateAccountError();
+		}
+		const account: IAccount | undefined = this.accounts.get(accountId);
+		if (account === undefined) {
+			throw new NoSuchAccountError();
+		}
+		account.debitBalance = debitBalance;
+		account.timestampLastJournalEntry = timeStampLastJournalEntry;
 	}
 }
