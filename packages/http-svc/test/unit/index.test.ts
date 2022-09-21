@@ -34,32 +34,21 @@ import {
 	IJournalEntriesRepo
 } from "@mojaloop/accounts-and-balances-bc-domain-lib";
 import {ConsoleLogger, ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {MemoryAccountsRepo} from "./memory_accounts_repo";
-import {MemoryJournalEntriesRepo} from "./memory_journal_entries_repo";
 import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
-import {AuditClientMock} from "./audit_client_mock";
 import {AuxiliaryAccountsAndBalancesHttpClient} from "./auxiliary_accounts_and_balances_http_client";
-import {AuthenticationServiceMock} from "./authentication_service_mock";
 import * as uuid from "uuid";
-import {AuthorizationClientMock} from "./authorization_client_mock";
-import {start, stop} from "../../src/service";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
+import {
+	AuditClientMock,
+	AuthenticationServiceMock,
+	AuthorizationClientMock,
+	MemoryAccountsRepo,
+	MemoryJournalEntriesRepo
+} from "@mojaloop/accounts-and-balances-bc-shared-mocks-lib";
+import {start, stop} from "../../src/service";
 
-/* ********** Constants Begin ********** */
-
-// Data base.
-const DB_HOST: string = "localhost";
-const DB_PORT_NO: number = 27017;
-const DB_URL: string = `mongodb://${DB_HOST}:${DB_PORT_NO}`;
-const DB_NAME: string = "accounts-and-balances";
-const ACCOUNTS_COLLECTION_NAME: string = "accounts";
-const JOURNAL_ENTRIES_COLLECTION_NAME: string = "journal-entries";
-
-// Accounts and Balances client.
 const BASE_URL_ACCOUNTS_AND_BALANCES_HTTP_SERVICE: string = "http://localhost:1234";
 const TIMEOUT_MS_ACCOUNTS_AND_BALANCES_HTTP_CLIENT: number = 10_000;
-
-/* ********** Constants End ********** */
 
 let authorizationClient: IAuthorizationClient;
 let accountsRepo: IAccountsRepo;
@@ -72,18 +61,8 @@ describe("accounts and balances http service - unit tests", () => {
 		const authenticationServiceMock: AuthenticationServiceMock = new AuthenticationServiceMock(logger);
 		authorizationClient = new AuthorizationClientMock(logger);
 		const auditingClient: IAuditClient = new AuditClientMock(logger);
-		accountsRepo = new MemoryAccountsRepo(
-			logger,
-			DB_URL,
-			DB_NAME,
-			ACCOUNTS_COLLECTION_NAME
-		);
-		journalEntriesRepo = new MemoryJournalEntriesRepo(
-			logger,
-			DB_URL,
-			DB_NAME,
-			JOURNAL_ENTRIES_COLLECTION_NAME
-		);
+		accountsRepo = new MemoryAccountsRepo(logger);
+		journalEntriesRepo = new MemoryJournalEntriesRepo(logger);
 		await start(
 			logger,
 			authorizationClient,
@@ -94,8 +73,8 @@ describe("accounts and balances http service - unit tests", () => {
 		auxiliaryAccountsAndBalancesHttpClient = new AuxiliaryAccountsAndBalancesHttpClient(
 			logger,
 			BASE_URL_ACCOUNTS_AND_BALANCES_HTTP_SERVICE,
-			AuthenticationServiceMock.VALID_ACCESS_TOKEN,
-			TIMEOUT_MS_ACCOUNTS_AND_BALANCES_HTTP_CLIENT
+			TIMEOUT_MS_ACCOUNTS_AND_BALANCES_HTTP_CLIENT,
+			AuthenticationServiceMock.VALID_ACCESS_TOKEN
 		);
 	});
 

@@ -13,8 +13,7 @@
 	"target": "es2020",
 	"module": "commonjs",
 	"lib": [
-	  "es2020",
-	  "esnext"
+	  "es2020"
 	],
 	"importHelpers": true,
 	"declaration": true,
@@ -39,6 +38,7 @@
 		"node_modules/*"
 	  ]
 	},
-	"esModuleInterop": true
+	"esModuleInterop": true,
+	"outDir": "./dist"
   }
 }

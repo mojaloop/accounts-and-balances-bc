@@ -37,7 +37,6 @@ import {
 	IJournalEntriesRepo,
 	Privileges
 } from "@mojaloop/accounts-and-balances-bc-domain-lib";
-import {ExpressHttpServer} from "./express_http_server";
 import {MongoAccountsRepo, MongoJournalEntriesRepo} from "@mojaloop/accounts-and-balances-bc-infrastructure-lib";
 import {
 	AuditClient,
@@ -49,6 +48,7 @@ import {existsSync} from "fs";
 import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {AuthorizationClient, TokenHelper} from "@mojaloop/security-bc-client-lib";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
+import {ExpressHttpServer} from "./express_http_server";
 
 /* ********** Constants Begin ********** */
 
@@ -96,11 +96,9 @@ const DB_NAME: string = "accounts-and-balances";
 const ACCOUNTS_COLLECTION_NAME: string = "accounts";
 const JOURNAL_ENTRIES_COLLECTION_NAME: string = "journal-entries";
 
-// HTTP server.
-const HTTP_SERVER_HOST: string = process.env.ACCOUNTS_AND_BALANCES_HTTP_SERVER_HOST ?? "localhost";
-const HTTP_SERVER_PORT_NO: number =
-	parseInt(process.env.ACCOUNTS_AND_BALANCES_HTTP_SERVER_PORT_NO ?? "") || 1234;
-const HTTP_SERVER_PATH_ROUTER: string = "/";
+// Server.
+const HTTP_SERVER_HOST: string = process.env.ACCOUNTS_AND_BALANCES_HTTP_SERVER_HOST || "localhost";
+const HTTP_SERVER_PORT_NO: number = parseInt(process.env.ACCOUNTS_AND_BALANCES_HTTP_SERVER_PORT_NO || "") || 1234;
 
 /* ********** Constants End ********** */
 
@@ -110,7 +108,7 @@ let accountsRepo: IAccountsRepo;
 let journalEntriesRepo: IJournalEntriesRepo;
 let httpServer: ExpressHttpServer;
 
-export async function start( // test comment
+export async function start(
 	_logger?: ILogger,
 	authorizationClient?: IAuthorizationClient,
 	_auditingClient?: IAuditClient,
@@ -251,14 +249,13 @@ export async function start( // test comment
 	// HTTP server.
 	httpServer = new ExpressHttpServer(
 		logger,
-		HTTP_SERVER_HOST,
-		HTTP_SERVER_PORT_NO,
-		HTTP_SERVER_PATH_ROUTER,
 		tokenHelper,
-		aggregate
+		aggregate,
+		HTTP_SERVER_HOST,
+		HTTP_SERVER_PORT_NO
 	);
 	try {
-		httpServer.init();
+		await httpServer.start();
 	} catch (e: unknown) {
 		logger.fatal(e);
 		await stop();
@@ -292,7 +289,7 @@ function addPrivileges(authorizationClient: AuthorizationClient): void {
 // TODO: verify ifs.
 export async function stop() {
 	if (httpServer) {
-		httpServer.destroy();
+		await httpServer.stop();
 	}
 	if (accountsRepo) {
 		await accountsRepo.destroy();

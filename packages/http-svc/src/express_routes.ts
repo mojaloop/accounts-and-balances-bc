@@ -30,7 +30,7 @@
 "use strict";
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import express from "express";
+import {NextFunction, Request, Response, Router} from "express";
 import {
 	Aggregate,
 	AccountAlreadyExistsError,
@@ -62,8 +62,8 @@ export class ExpressRoutes {
 	private readonly tokenHelper: TokenHelper;
 	private readonly aggregate: Aggregate;
 	// Other properties.
-	private readonly _router: express.Router;
-	private readonly UNKNOWN_ERROR_MESSAGE: string = "unknown error";
+	private static readonly UNKNOWN_ERROR_MESSAGE: string = "unknown error";
+	private readonly _router: Router;
 
 	constructor(
 		logger: ILogger,
@@ -74,8 +74,7 @@ export class ExpressRoutes {
 		this.tokenHelper = tokenHelper;
 		this.aggregate = aggregate;
 
-		this._router = express.Router();
-
+		this._router = Router();
 		this.setUp();
 	}
 
@@ -90,15 +89,15 @@ export class ExpressRoutes {
 		this._router.get("/journalEntries", this.journalEntries.bind(this)); // TODO: function name.
 	}
 
-	get router(): express.Router {
+	get router(): Router {
 		return this._router;
 	}
 
-	// TODO: name; express.NextFunction; clarify; why returns? logs vs error responses. all status codes 403?
+	// TODO: name; NextFunction; clarify; why returns? logs vs error responses. all status codes 403?
 	private async authenticate(
-		req: express.Request,
-		res: express.Response,
-		next: express.NextFunction
+		req: Request,
+		res: Response,
+		next: NextFunction
 	): Promise<void> {
 		const authorizationHeader: string | undefined = req.headers["authorization"]; // TODO: type.
 		if (authorizationHeader === undefined) {
@@ -175,7 +174,7 @@ export class ExpressRoutes {
 		next();
 	}
 
-	private async postAccount(req: express.Request, res: express.Response): Promise<void> {
+	private async postAccount(req: Request, res: Response): Promise<void> {
 		try {
 			const accountId: string = await this.aggregate.createAccount(req.body, req.securityContext!); // TODO: !.
 			this.sendSuccessResponse(
@@ -212,13 +211,13 @@ export class ExpressRoutes {
 				this.sendErrorResponse(
 					res,
 					500,
-					this.UNKNOWN_ERROR_MESSAGE
+					ExpressRoutes.UNKNOWN_ERROR_MESSAGE
 				);
 			}
 		}
 	}
 
-	private async postJournalEntries(req: express.Request, res: express.Response): Promise<void> {
+	private async postJournalEntries(req: Request, res: Response): Promise<void> {
 		try {
 			const idsJournalEntries: string[] =
 				await this.aggregate.createJournalEntries(req.body, req.securityContext!); // TODO: !.
@@ -280,13 +279,13 @@ export class ExpressRoutes {
 				this.sendErrorResponse(
 					res,
 					500,
-					this.UNKNOWN_ERROR_MESSAGE
+					ExpressRoutes.UNKNOWN_ERROR_MESSAGE
 				);
 			}
 		}
 	}
 
-	private async accounts(req: express.Request, res: express.Response): Promise<void> {
+	private async accounts(req: Request, res: Response): Promise<void> {
 		// req.query is always defined - if no query was specified, req.query is an empty object.
 		if (req.query.id !== undefined) {
 			await this.getAccountById(req, res);
@@ -303,7 +302,7 @@ export class ExpressRoutes {
 		);
 	}
 
-	private async journalEntries(req: express.Request, res: express.Response): Promise<void> {
+	private async journalEntries(req: Request, res: Response): Promise<void> {
 		// req.query is always defined - if no query was specified, req.query is an empty object.
 		if (req.query.accountId !== undefined) {
 			await this.getJournalEntriesByAccountId(req, res);
@@ -316,7 +315,7 @@ export class ExpressRoutes {
 		);
 	}
 
-	private async getAccountById(req: express.Request, res: express.Response): Promise<void> {
+	private async getAccountById(req: Request, res: Response): Promise<void> {
 		try {
 			// The properties of the req.query object are always strings. TODO: check.
 			const account: IAccount | null =
@@ -345,13 +344,13 @@ export class ExpressRoutes {
 				this.sendErrorResponse(
 					res,
 					500,
-					this.UNKNOWN_ERROR_MESSAGE
+					ExpressRoutes.UNKNOWN_ERROR_MESSAGE
 				);
 			}
 		}
 	}
 
-	private async getAccountsByExternalId(req: express.Request, res: express.Response): Promise<void> {
+	private async getAccountsByExternalId(req: Request, res: Response): Promise<void> {
 		try {
 			// The properties of the req.query object are always strings. TODO: check.
 			const accounts: IAccount[] =
@@ -380,13 +379,13 @@ export class ExpressRoutes {
 				this.sendErrorResponse(
 					res,
 					500,
-					this.UNKNOWN_ERROR_MESSAGE
+					ExpressRoutes.UNKNOWN_ERROR_MESSAGE
 				);
 			}
 		}
 	}
 
-	private async getJournalEntriesByAccountId(req: express.Request, res: express.Response): Promise<void> {
+	private async getJournalEntriesByAccountId(req: Request, res: Response): Promise<void> {
 		try {
 			// The properties of the req.query object are always strings. TODO: check.
 			const journalEntries: IJournalEntry[] =
@@ -415,17 +414,17 @@ export class ExpressRoutes {
 				this.sendErrorResponse(
 					res,
 					500,
-					this.UNKNOWN_ERROR_MESSAGE
+					ExpressRoutes.UNKNOWN_ERROR_MESSAGE
 				);
 			}
 		}
 	}
 
-	private sendErrorResponse(res: express.Response, statusCode: number, message: string) {
+	private sendErrorResponse(res: Response, statusCode: number, message: string) {
 		res.status(statusCode).json({message: message});
 	}
 
-	private sendSuccessResponse(res: express.Response, statusCode: number, data: any) {
+	private sendSuccessResponse(res: Response, statusCode: number, data: any) {
 		res.status(statusCode).json(data);
 	}
 

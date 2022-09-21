@@ -31,10 +31,20 @@
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {Aggregate} from "@mojaloop/accounts-and-balances-bc-domain-lib";
-import grpc from "@grpc/grpc-js";
-import protoLoader, {PackageDefinition} from "@grpc/proto-loader";
+// import grpc, {GrpcObject, ServiceDefinition} from "@grpc/grpc-js";
+// import protoLoader, {PackageDefinition} from "@grpc/proto-loader";
+import {
+	GrpcObject,
+	loadPackageDefinition,
+	Server,
+	ServerCredentials,
+	ServiceDefinition
+} from "@grpc/grpc-js";
+import {loadSync, PackageDefinition} from "@grpc/proto-loader";
+import {ProtoGrpcType} from "./proto/gen/accounts_and_balances";
+import {AccountsAndBalancesGrpcServiceHandlers} from "./proto/gen/AccountsAndBalancesGrpcService";
 import {TokenHelper} from "@mojaloop/security-bc-client-lib";
-import {GrpcObject} from "@grpc/grpc-js/src/make-client";
+import {Handlers} from "./rpcs";
 
 export class GrpcServer {
 	// Properties received through the constructor.
@@ -42,62 +52,78 @@ export class GrpcServer {
 	private readonly HOST: string;
 	private readonly PORT_NO: number;
 	// Other properties.
-	private grpcServer: grpc.Server;
+	private static readonly PROTO_FILE_PATH: string = "/home/goncalogarcia/Documents/Work/Mojaloop/vNext/BoundedContexts/accounts-and-balances-bc/packages/grpc-svc/src/proto/accounts_and_balances.proto"; // TODO: here?
+	private readonly server: Server;
 
 	constructor(
 		logger: ILogger,
-		host: string,
-		portNo: number,
 		tokenHelper: TokenHelper,
-		aggregate: Aggregate
+		aggregate: Aggregate,
+		host: string,
+		portNo: number
 	) {
 		this.logger = logger;
 		this.HOST = host;
 		this.PORT_NO = portNo;
 
-		const packageDefinition: PackageDefinition = protoLoader.loadSync(
-			PROTO_PATH,
+		const packageDefinition: PackageDefinition = loadSync(
+			GrpcServer.PROTO_FILE_PATH,
 			{
-				eepCase: true,
 				longs: String,
 				enums: String,
-				defaults: true,
-				oneofs: true
+				defaults: true
 			}
+		); // TODO: check other params.
+		const grpcObject: GrpcObject = loadPackageDefinition(packageDefinition);
+		const serviceDefinition: ServiceDefinition =
+			(grpcObject as unknown as ProtoGrpcType).AccountsAndBalancesGrpcService.service;
+
+		const handlers: Handlers = new Handlers(
+			this.logger,
+			aggregate
 		);
-		const protoDescriptor: GrpcObject = grpc.loadPackageDefinition(packageDefinition);
-		const routeguide = protoDescriptor.routeguide;
+		const serviceImplementation: AccountsAndBalancesGrpcServiceHandlers = handlers.getHandlers();
 
-		this.grpcServer = new grpc.Server();
-
-		this.configure();
+		this.server = new Server();
+		this.server.addService(
+			serviceDefinition,
+			serviceImplementation
+		);
 	}
 
-	private configure() {
-		this.grpcServer.addService(
-			AccountsAndBalancesGrpcService,
-			new Routes()
-		);
-	}
-
-	// TODO: name; async?
-	init(): void {
-		try {
-			this.grpcServer.bindAsync(
-				this.PORT_NO.toString(),
-				grpc.ServerCredentials.createInsecure(),
-				() => {
-					this.grpcServer.start();
+	async start(): Promise<void> {
+		return new Promise((resolve, reject) => {
+			this.server.bindAsync(
+				`${this.HOST}:${this.PORT_NO}`,
+				ServerCredentials.createInsecure(),
+				(error) => {
+					if (error) {
+						reject(error);
+					}
+					this.server.start();
+					this.logger.info("* * * * * * * * * * * * * * * * * * * *");
+					this.logger.info("gRPC server started 🚀");
+					this.logger.info(`Host: ${this.HOST}`);
+					this.logger.info(`Port: ${this.PORT_NO}`);
+					this.logger.info(`Base URL: grpc://${this.HOST}:${this.PORT_NO}`); // TODO: makes sense?
+					this.logger.info("* * * * * * * * * * * * * * * * * * * *");
+					resolve();
 				}
 			);
-		} catch (e: unknown) {
-			this.logger.fatal(e);
-			throw e;
-		}
+		});
 	}
 
-	// TODO: name; async?
-	destroy(): void {
-		this.grpcServer.destroy(); // TODO.
+	async stop(): Promise<void> {
+		return new Promise((resolve) => {
+			this.server.tryShutdown(() => {
+				this.logger.info("* * * * * * * * * * * * * * * * * * * *");
+				this.logger.info("gRPC server stopped 🏁");
+				this.logger.info("* * * * * * * * * * * * * * * * * * * *");
+				resolve();
+			});
+			// this.grpcServer.forceShutdown();
+			// this.grpcServer.removeService();
+			// this.grpcServer.unregister();
+		});
 	}
 }

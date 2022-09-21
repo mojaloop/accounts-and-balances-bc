@@ -46,23 +46,18 @@ import {
 	IAccount,
 	IJournalEntry, InvalidCreditBalanceError, InvalidJournalEntryAmountError
 } from "../../src";
-import {MemoryAccountsRepo} from "./memory_accounts_repo";
-import {MemoryJournalEntriesRepo} from "./memory_journal_entries_repo";
 import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
-import {AuditClientMock} from "./audit_client_mock";
 import {Account} from "../../src/entities/account";
 import {JournalEntry} from "../../src/entities/journal_entry";
 import * as uuid from "uuid";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
-import {AuthorizationClientMock} from "./authorization_client_mock";
-
-const DB_HOST: string = "localhost";
-const DB_PORT_NO: number = 27017;
-const DB_URL: string = `mongodb://${DB_HOST}:${DB_PORT_NO}`;
-const DB_NAME: string = "accounts-and-balances";
-const ACCOUNTS_COLLECTION_NAME: string = "accounts";
-const JOURNAL_ENTRIES_COLLECTION_NAME: string = "journal-entries";
+import {
+	AuditClientMock,
+	AuthorizationClientMock,
+	MemoryAccountsRepo,
+	MemoryJournalEntriesRepo
+} from "@mojaloop/accounts-and-balances-bc-shared-mocks-lib";
 
 let accountsRepo: IAccountsRepo;
 let journalEntriesRepo: IJournalEntriesRepo;
@@ -79,18 +74,8 @@ describe("accounts and balances domain library - unit tests", () => {
 		const logger: ILogger = new ConsoleLogger();
 		const authorizationClient: IAuthorizationClient = new AuthorizationClientMock(logger);
 		const auditingClient: IAuditClient = new AuditClientMock(logger);
-		accountsRepo = new MemoryAccountsRepo(
-			logger,
-			DB_URL,
-			DB_NAME,
-			ACCOUNTS_COLLECTION_NAME
-		);
-		journalEntriesRepo = new MemoryJournalEntriesRepo(
-			logger,
-			DB_URL,
-			DB_NAME,
-			JOURNAL_ENTRIES_COLLECTION_NAME
-		);
+		accountsRepo = new MemoryAccountsRepo(logger);
+		journalEntriesRepo = new MemoryJournalEntriesRepo(logger);
 		aggregate = new Aggregate(
 			logger,
 			authorizationClient,
@@ -201,13 +186,13 @@ describe("accounts and balances domain library - unit tests", () => {
 			25n,
 			0
 		);
-		(accountsRepo as MemoryAccountsRepo).unexpectedFailure = true; // TODO: should this be done?
+		(accountsRepo as MemoryAccountsRepo).setUnexpectedFailure(true); // TODO: should this be done?
 		await expect(
 			async () => {
 				await aggregate.createAccount(account, securityContext);
 			}
 		).rejects.toThrow(); // TODO: check for specific repo error?
-		(accountsRepo as MemoryAccountsRepo).unexpectedFailure = false; // TODO: should this be done?
+		(accountsRepo as MemoryAccountsRepo).setUnexpectedFailure(false); // TODO: should this be done?
 	});
 
 	// Create journal entries.
@@ -427,13 +412,13 @@ describe("accounts and balances domain library - unit tests", () => {
 			accounts[1].id,
 			0
 		);
-		(journalEntriesRepo as MemoryJournalEntriesRepo).unexpectedFailure = true; // TODO: should this be done?
+		(journalEntriesRepo as MemoryJournalEntriesRepo).setUnexpectedFailure(true); // TODO: should this be done?
 		await expect(
 			async () => {
 				await aggregate.createJournalEntries([journalEntry], securityContext);
 			}
 		).rejects.toThrow(); // TODO: check for specific repo error?
-		(journalEntriesRepo as MemoryJournalEntriesRepo).unexpectedFailure = false; // TODO: should this be done?
+		(journalEntriesRepo as MemoryJournalEntriesRepo).setUnexpectedFailure(false); // TODO: should this be done?
 	});
 	test("create journal entry with unexpected accounts repo failure", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
@@ -449,13 +434,13 @@ describe("accounts and balances domain library - unit tests", () => {
 			accounts[1].id,
 			0
 		);
-		(accountsRepo as MemoryAccountsRepo).unexpectedFailure = true; // TODO: should this be done?
+		(accountsRepo as MemoryAccountsRepo).setUnexpectedFailure(true); // TODO: should this be done?
 		await expect(
 			async () => {
 				await aggregate.createJournalEntries([journalEntry], securityContext);
 			}
 		).rejects.toThrow(); // TODO: check for specific repo error?
-		(accountsRepo as MemoryAccountsRepo).unexpectedFailure = false; // TODO: should this be done?
+		(accountsRepo as MemoryAccountsRepo).setUnexpectedFailure(false); // TODO: should this be done?
 	});
 
 	// Get account by id.
@@ -482,13 +467,13 @@ describe("accounts and balances domain library - unit tests", () => {
 	});
 	test("get account with unexpected accounts repo failure", async () => {
 		const accountId: string = uuid.v4();
-		(accountsRepo as MemoryAccountsRepo).unexpectedFailure = true; // TODO: should this be done?
+		(accountsRepo as MemoryAccountsRepo).setUnexpectedFailure(true); // TODO: should this be done?
 		await expect(
 			async () => {
 				await aggregate.getAccountById(accountId, securityContext);
 			}
 		).rejects.toThrow(); // TODO: check for specific repo error?
-		(accountsRepo as MemoryAccountsRepo).unexpectedFailure = false; // TODO: should this be done?
+		(accountsRepo as MemoryAccountsRepo).setUnexpectedFailure(false); // TODO: should this be done?
 	});
 
 	// Get accounts by external id.
@@ -505,13 +490,13 @@ describe("accounts and balances domain library - unit tests", () => {
 	});
 	test("get accounts with unexpected accounts repo failure", async () => {
 		const externalId: string = uuid.v4();
-		(accountsRepo as MemoryAccountsRepo).unexpectedFailure = true; // TODO: should this be done?
+		(accountsRepo as MemoryAccountsRepo).setUnexpectedFailure(true); // TODO: should this be done?
 		await expect(
 			async () => {
 				await aggregate.getAccountsByExternalId(externalId, securityContext);
 			}
 		).rejects.toThrow(); // TODO: check for specific repo error?
-		(accountsRepo as MemoryAccountsRepo).unexpectedFailure = false; // TODO: should this be done?
+		(accountsRepo as MemoryAccountsRepo).setUnexpectedFailure(false); // TODO: should this be done?
 	});
 
 	// Get journal entries by account id.
@@ -554,13 +539,13 @@ describe("accounts and balances domain library - unit tests", () => {
 	});
 	test("get journal entries with unexpected journal entries repo failure", async () => {
 		const accountId: string = uuid.v4();
-		(journalEntriesRepo as MemoryJournalEntriesRepo).unexpectedFailure = true; // TODO: should this be done?
+		(journalEntriesRepo as MemoryJournalEntriesRepo).setUnexpectedFailure(true); // TODO: should this be done?
 		await expect(
 			async () => {
 				await aggregate.getJournalEntriesByAccountId(accountId, securityContext);
 			}
 		).rejects.toThrow(); // TODO: check for specific repo error?
-		(journalEntriesRepo as MemoryJournalEntriesRepo).unexpectedFailure = false; // TODO: should this be done?
+		(journalEntriesRepo as MemoryJournalEntriesRepo).setUnexpectedFailure(false); // TODO: should this be done?
 	});
 });
 

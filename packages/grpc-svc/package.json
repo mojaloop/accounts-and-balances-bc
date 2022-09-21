@@ -22,17 +22,23 @@
     "clean:npm": "rm -fr node_modules",
     "clean:package-lock": "rm -f package-lock.json",
     "clean:coverage": "rm -fr coverage",
-    "clean:all": "npm run clean:dist && npm run clean:npm && npm run clean:package-lock && npm run clean:coverage",
+    "clean:proto-gen": "rm -fr src/proto/gen",
+    "clean:all": "npm run clean:dist && npm run clean:npm && npm run clean:package-lock && npm run clean:coverage && npm run clean:proto-gen",
     "dep:check": "ncu -e 2",
     "dep:upgrade": "ncu -u",
     "lint": "eslint src",
-    "build": "tsc",
+    "proto-gen": "sh proto-gen.sh",
+    "build": "npm run proto-gen && tsc",
     "test:unit": "jest",
+    "test:unit-single": "jest --coverage false -t",
     "start": "node dist/index.js"
   },
   "devDependencies": {
+    "@mojaloop/accounts-and-balances-bc-shared-mocks-lib": "*"
   },
   "dependencies": {
-    "@grpc/grpc-js": "^1.6.12"
+    "@mojaloop/accounts-and-balances-bc-domain-lib": "*",
+    "@grpc/grpc-js": "^1.7.0",
+    "@grpc/proto-loader": "^0.7.2"
   }
 }

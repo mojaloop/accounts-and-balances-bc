@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+service AccountsAndBalancesGrpcService {
+  // All unary RPCs.
+  rpc CreateAccount(GrpcAccount) returns (GrpcId);
+  rpc CreateJournalEntries(GrpcJournalEntryArray) returns (GrpcIdArray);
+  rpc GetAccountById(GrpcId) returns (GrpcAccount);
+  rpc GetAccountsByExternalId(GrpcId) returns (GrpcAccountArray);
+  rpc GetJournalEntriesByAccountId(GrpcId) returns (GrpcJournalEntryArray);
+}
+
+// TODO: check types; names starting with Grpc?
+
+// TODO: use string directly instead of having this type.
+message GrpcId {
+  string value = 1;
+}
+
+message GrpcIdArray {
+  repeated GrpcId value = 1;
+}
+
+message GrpcAccount {
+  string id = 1;
+	string externalId = 2; // TODO: | null?
+  GrpcAccountState state = 3;
+  GrpcAccountType type = 4;
+	string currency = 5;
+	uint64 creditBalance = 6; // TODO: bigint?
+	uint64 debitBalance = 7; // TODO: bigint?
+  uint64 timestampLastJournalEntry = 8;  // TODO: number?
+}
+
+enum GrpcAccountState {
+  ACTIVE = 0;
+  DELETED = 1;
+}
+
+enum GrpcAccountType {
+  POSITION = 0;
+  SETTLEMENT = 1;
+  FEE = 2;
+}
+
+message GrpcAccountArray {
+  repeated GrpcAccount value = 1;
+}
+
+message GrpcJournalEntry {
+  string id = 1;
+  string externalId = 2; // TODO: | null?
+	string externalCategory = 3; // TODO: | null?
+	string currency = 4;
+	uint64 amount = 5; // TODO: bigint?
+	string creditedAccountId = 6;
+	string debitedAccountId = 7;
+  uint64 timestamp = 8; // TODO: number?
+}
+
+message GrpcJournalEntryArray {
+  repeated GrpcJournalEntry value = 1;
+}

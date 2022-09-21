@@ -27,9 +27,11 @@
     "dep:upgrade": "ncu -u",
     "lint": "eslint src",
     "build": "tsc",
-    "test:unit": "jest"
+    "test:unit": "jest",
+    "test:unit-single": "jest --coverage false -t"
   },
   "devDependencies": {
+    "@mojaloop/accounts-and-balances-bc-shared-mocks-lib": "*",
     "@types/uuid": "^8.3.4"
   },
   "dependencies": {

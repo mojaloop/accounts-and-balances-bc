@@ -32,64 +32,70 @@
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {Aggregate} from "@mojaloop/accounts-and-balances-bc-domain-lib";
 import {ExpressRoutes} from "./express_routes";
-import express from "express";
+import express, {Express, json, urlencoded} from "express";
 import {TokenHelper} from "@mojaloop/security-bc-client-lib";
-import http from "http";
+import {createServer, Server} from "http";
 
 export class ExpressHttpServer {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
 	private readonly HOST: string;
 	private readonly PORT_NO: number;
-	private readonly PATH_ROUTER: string;
 	// Other properties.
-	private readonly BASE_URL: string;
-	private readonly app: express.Express;
-	private readonly routes: ExpressRoutes;
-	private httpServer: http.Server;
+	private static readonly ROUTER_PATH: string = "/"; // TODO: here?
+	private server: Server;
 
 	constructor(
 		logger: ILogger,
-		host: string,
-		portNo: number,
-		pathRouter: string,
 		tokenHelper: TokenHelper,
-		aggregate: Aggregate
+		aggregate: Aggregate,
+		host: string,
+		portNo: number
 	) {
 		this.logger = logger;
 		this.HOST = host;
 		this.PORT_NO = portNo;
-		this.PATH_ROUTER = pathRouter;
 
-		this.BASE_URL = `http://${this.HOST}:${this.PORT_NO}`;
-		this.app = express();
-		this.routes = new ExpressRoutes(
-			logger,
+		const routes: ExpressRoutes = new ExpressRoutes(
+			this.logger,
 			tokenHelper,
 			aggregate
 		);
-
-		this.configure();
+		const app: Express = express();
+		app.use(json()); // For parsing application/json.
+		app.use(urlencoded({extended: true})); // For parsing application/x-www-form-urlencoded.
+		app.use(ExpressHttpServer.ROUTER_PATH, routes.router);
+		this.server = createServer(app);
 	}
 
-	private configure() {
-		this.app.use(express.json()); // For parsing application/json.
-		this.app.use(express.urlencoded({extended: true})); // For parsing application/x-www-form-urlencoded.
-		this.app.use(this.PATH_ROUTER, this.routes.router);
-	}
-
-	// TODO: name; async?
-	init(): void {
-		this.httpServer = this.app.listen(this.PORT_NO, () => {
-			this.logger.info("Server on 🚀");
-			this.logger.info(`Host: ${this.HOST}`);
-			this.logger.info(`Port: ${this.PORT_NO}`);
-			this.logger.info(`Base URL: ${this.BASE_URL}`);
+	async start(): Promise<void> {
+		return new Promise((resolve, reject) => {
+			this.server.listen(
+				this.PORT_NO,
+				this.HOST,
+				() => {
+					this.logger.info("* * * * * * * * * * * * * * * * * * * *");
+					this.logger.info("HTTP server started 🚀");
+					this.logger.info(`Host: ${this.HOST}`);
+					this.logger.info(`Port: ${this.PORT_NO}`);
+					this.logger.info(`Base URL: http://${this.HOST}:${this.PORT_NO}`);
+					this.logger.info("* * * * * * * * * * * * * * * * * * * *");
+					resolve();
+				}
+			).on("error", (error: Error) => {
+				reject(error);
+			});
 		});
 	}
 
-	// TODO: name; async?
-	destroy(): void {
-		this.httpServer.close();
+	async stop(): Promise<void> {
+		return new Promise((resolve) => {
+			this.server.close(() => {
+				this.logger.info("* * * * * * * * * * * * * * * * * * * *");
+				this.logger.info("HTTP server stopped 🏁");
+				this.logger.info("* * * * * * * * * * * * * * * * * * * *");
+				resolve();
+			});
+		});
 	}
 }

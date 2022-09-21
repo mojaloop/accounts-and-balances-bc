@@ -34,7 +34,9 @@ export interface IAccount {
 	externalId: string | null;
 	state: AccountState;
 	type: AccountType;
-	currency: string; // https://en.wikipedia.org/wiki/ISO_4217
+	currency: string;
+	// currencyCode: string; // https://en.wikipedia.org/wiki/ISO_4217
+	// currencyDecimals: number;
 	creditBalance: bigint;
 	debitBalance: bigint;
 	timestampLastJournalEntry: number;
@@ -56,6 +58,8 @@ export interface IJournalEntry {
 	externalId: string | null;
 	externalCategory: string | null;
 	currency: string;
+	// currencyCode: string; // https://en.wikipedia.org/wiki/ISO_4217
+	// currencyDecimals: number;
 	amount: bigint;
 	creditedAccountId: string;
 	debitedAccountId: string;

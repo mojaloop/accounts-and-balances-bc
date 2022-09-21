@@ -41,8 +41,8 @@ export class AuxiliaryAccountsAndBalancesHttpClient {
 	constructor(
 		logger: ILogger,
 		baseUrlHttpService: string,
-		accessToken: string,
-		timeoutMs: number
+		timeoutMs: number,
+		accessToken: string
 	) {
 		this.logger = logger;
 

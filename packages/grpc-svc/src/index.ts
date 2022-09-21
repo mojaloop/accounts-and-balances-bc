@@ -28,3 +28,7 @@
  ******/
 
 "use strict";
+
+import {start} from "./service";
+
+start();
