@@ -29,7 +29,7 @@
 
 "use strict";
 
-import {IJournalEntry} from "../types";
+import {IJournalEntry} from "@mojaloop/accounts-and-balances-bc-common-lib";
 import {
 	InvalidJournalEntryAmountError
 } from "../errors";

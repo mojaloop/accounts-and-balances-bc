@@ -34,9 +34,9 @@ export interface IAccountDTO {
 	externalId: string | null;
 	state: "ACTIVE" | "DELETED";
 	type: "POSITION" | "SETTLEMENT" | "FEE";
-	currencyCode: string; // https://en.wikipedia.org/wiki/ISO_4217
-	creditBalance: string;
-	debitBalance: string;
+	currency: string; // https://en.wikipedia.org/wiki/ISO_4217
+	creditBalance: number;
+	debitBalance: number;
 	timestampLastJournalEntry: number;
 }
 
@@ -44,8 +44,8 @@ export interface IJournalEntryDTO {
 	id: string;
 	externalId: string | null;
 	externalCategory: string | null;
-	currencyCode: string; // https://en.wikipedia.org/wiki/ISO_4217
-	amount: string;
+	currency: string; // https://en.wikipedia.org/wiki/ISO_4217
+	amount: number;
 	creditedAccountId: string;
 	debitedAccountId: string;
 	timestamp: number;

@@ -30,16 +30,18 @@
 "use strict";
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {loadSync, PackageDefinition} from "@grpc/proto-loader";
-import {credentials, GrpcObject, loadPackageDefinition, ServiceError} from "@grpc/grpc-js";
-import {ProtoGrpcType} from "../../src/proto/gen/accounts_and_balances";
-import {AccountsAndBalancesGrpcServiceClient} from "../../src/proto/gen/AccountsAndBalancesGrpcService";
-import {GrpcAccount, GrpcAccount__Output} from "../../src/proto/gen/GrpcAccount";
-import {GrpcId__Output} from "../../src/proto/gen/GrpcId";
-import {GrpcIdArray__Output} from "../../src/proto/gen/GrpcIdArray";
-import {GrpcAccountArray__Output} from "../../src/proto/gen/GrpcAccountArray";
-import {GrpcJournalEntryArray, GrpcJournalEntryArray__Output} from "../../src/proto/gen/GrpcJournalEntryArray";
-import {IAccount, IJournalEntry} from "@mojaloop/accounts-and-balances-bc-domain-lib";
+import {PackageDefinition} from "@grpc/proto-loader";
+import {credentials, GrpcObject, loadPackageDefinition} from "@grpc/grpc-js";
+import {
+	IAccount,
+	IJournalEntry,
+	GrpcAccount,
+	GrpcId,
+	GrpcJournalEntryArray,
+	ProtoGrpcType,
+	AccountsAndBalancesGrpcServiceClient, grpcAccountToIAccount, grpcJournalEntryToIJournalEntry,
+	loadProto
+} from "@mojaloop/accounts-and-balances-bc-common-lib";
 
 export class AuxiliaryAccountsAndBalancesGrpcClient {
 	// Properties received through the constructor.
@@ -49,20 +51,12 @@ export class AuxiliaryAccountsAndBalancesGrpcClient {
 
 	constructor(
 		logger: ILogger,
-		portFilePath: string,
 		host: string,
-		portNo: number,
+		portNo: number
 	) {
 		this.logger = logger;
 
-		const packageDefinition: PackageDefinition = loadSync(
-			portFilePath,
-			{
-				longs: String,
-				enums: String,
-				defaults: true
-			}
-		); // TODO: check other params.
+		const packageDefinition: PackageDefinition = loadProto();
 		const grpcObject: GrpcObject = loadPackageDefinition(packageDefinition);
 		this.grpcClient = new (grpcObject as unknown as ProtoGrpcType).AccountsAndBalancesGrpcService(
 			`${host}:${portNo}`,
@@ -73,7 +67,7 @@ export class AuxiliaryAccountsAndBalancesGrpcClient {
 	async init(): Promise<void> {
 		return new Promise((resolve, reject) => {
 			this.grpcClient.waitForReady(
-				Date.now() + 50000,
+				Date.now() + 50000, // TODO: put this value in a constant.
 				(error) => {
 					if (error) {
 						reject(error);
@@ -87,78 +81,102 @@ export class AuxiliaryAccountsAndBalancesGrpcClient {
 
 	async destroy(): Promise<void> {
 		this.grpcClient.close();
-		this.logger.info("gRPC client destroyed 🚀");
+		this.logger.info("gRPC client destroyed 🏁");
 	}
 
-	async createAccount(account: any): Promise<string> {
+	// TODO: verify types.
+	async createAccount(grpcAccount: GrpcAccount): Promise<string> {
 		return new Promise((resolve, reject) => {
 			this.grpcClient.createAccount(
-				account,
-				(error, accountId?: GrpcId__Output) => {
+				grpcAccount,
+				(error, grpcId) => {
 					if (error) {
 						reject(error);
+						return; // TODO: return?
 					}
-					resolve(accountId?.value as string); // TODO: correct.
+					const accountId: string = grpcId!.grpcId; // TODO: !.
+					resolve(accountId);
 				}
 			);
 		});
 	}
 
-	async createJournalEntries(journalEntries: any[]): Promise<string[]> {
+	// TODO: verify types.
+	async createJournalEntries(grpcJournalEntryArray: GrpcJournalEntryArray): Promise<string[]> {
 		return new Promise((resolve, reject) => {
 			this.grpcClient.createJournalEntries(
-				{value: journalEntries},
-				(e, idsJournalEntries?: GrpcIdArray__Output) => {
-					if (e) {
-						reject(e);
+				grpcJournalEntryArray,
+				(error, grpcIdArray) => {
+					if (error) {
+						reject(error);
+						return; // TODO: return?
 					}
-					resolve(idsJournalEntries as unknown as string[]);
+					const idsJournalEntries = grpcIdArray!.grpcIdArray.map(grpcId => { // TODO: !.
+						return grpcId.grpcId;
+					});
+					resolve(idsJournalEntries);
 				}
 			);
 		});
 	}
 
-	async getAccountById(accountId: string): Promise<IAccount | null> {
+	// TODO: verify types.
+	async getAccountById(accountGrpcId: GrpcId): Promise<IAccount | null> {
 		return new Promise((resolve, reject) => {
 			this.grpcClient.getAccountById(
-				{value: accountId},
-				(e: ServiceError | null, account?: GrpcAccount__Output) => {
-					if (e) {
-						reject(e);
+				accountGrpcId,
+				(error, grpcAccount) => {
+					if (error) {
+						reject(error);
+						return; // TODO: return?
 					}
-					// TODO: do this?
-					if (account?.id === "") {
-						resolve(null);
+					let iAccount: IAccount | null;
+					if (grpcAccount!.id === "") { // TODO: !.
+						iAccount = null;
+					} else {
+						iAccount = grpcAccountToIAccount(grpcAccount!); // TODO: !.
 					}
-					resolve(account as unknown as IAccount);
+					resolve(iAccount);
 				}
 			);
 		});
 	}
 
-	async getAccountsByExternalId(externalId: string): Promise<IAccount[]> {
+	// TODO: verify types.
+	async getAccountsByExternalId(externalGrpcId: GrpcId): Promise<IAccount[]> {
 		return new Promise((resolve, reject) => {
 			this.grpcClient.getAccountsByExternalId(
-				{value: externalId},
-				(e: ServiceError | null, accounts?: GrpcAccountArray__Output) => {
-					if (e) {
-						reject(e);
+				externalGrpcId,
+				(error, grpcAccountArray) => {
+					if (error) {
+						reject(error);
+						return; // TODO: return?
 					}
-					resolve(accounts as unknown as IAccount[]);
+					const iAccounts: IAccount[] = [];
+					for (const grpcAccount of grpcAccountArray!.grpcAccountArray) { // TODO: !.
+						iAccounts.push(grpcAccountToIAccount(grpcAccount));
+					}
+					resolve(iAccounts);
 				}
 			);
 		});
 	}
 
-	async getJournalEntriesByAccountId(accountId: string): Promise<IJournalEntry[]> {
+	// TODO: verify types.
+	async getJournalEntriesByAccountId(accountGrpcId: GrpcId): Promise<IJournalEntry[]> {
 		return new Promise((resolve, reject) => {
 			this.grpcClient.getJournalEntriesByAccountId(
-				{value: accountId},
-				(e: ServiceError | null, journalEntries?: GrpcJournalEntryArray__Output) => {
-					if (e) {
-						reject(e);
+				accountGrpcId,
+				(error, grpcJournalEntryArray) => {
+					if (error) {
+						reject(error);
+						return; // TODO: return?
 					}
-					resolve(journalEntries as unknown as IJournalEntry[]);
+					const iJournalEntries: IJournalEntry[] = [];
+					for (const grpcJournalEntry of grpcJournalEntryArray!.grpcJournalEntryArray) { // TODO: !.
+						iJournalEntries.push(grpcJournalEntryToIJournalEntry(grpcJournalEntry));
+					}
+					resolve(iJournalEntries);
 				}
 			);
 		});

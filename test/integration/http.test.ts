@@ -68,7 +68,7 @@ const ACCESS_TOKEN: string = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InNSMH
 let logger: KafkaLogger;
 let accountsAndBalancesHttpClient: AccountsAndBalancesHttpClient;
 
-describe("accounts and balances - integration tests", () => {
+describe("accounts and balances - integration tests with HTTP service", () => {
 	beforeAll(async () => {
 		const kafkaProducerOptions: MLKafkaProducerOptions = {
 			kafkaBrokerList: MESSAGE_BROKER_URL

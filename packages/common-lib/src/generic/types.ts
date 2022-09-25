@@ -58,6 +58,7 @@ export interface IJournalEntry {
 	externalId: string | null;
 	externalCategory: string | null;
 	currency: string;
+	// TODO: currencyCode and currencyDecimals required?
 	// currencyCode: string; // https://en.wikipedia.org/wiki/ISO_4217
 	// currencyDecimals: number;
 	amount: bigint;

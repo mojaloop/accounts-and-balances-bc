@@ -34,7 +34,7 @@ import {
 	InvalidDebitBalanceError
 } from "../errors";
 
-import {IAccount, AccountState, AccountType} from "../types";
+import {IAccount, AccountState, AccountType} from "@mojaloop/accounts-and-balances-bc-common-lib";
 
 export class Account implements IAccount {
 	id: string;

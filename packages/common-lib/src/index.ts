@@ -29,29 +29,18 @@
 
 "use strict";
 
-import {IAccount, IJournalEntry} from "@mojaloop/accounts-and-balances-bc-common-lib";
+// TODO: export everything at once.
 
-export interface IAccountsRepo {
-	init(): Promise<void>;
-	destroy(): Promise<void>;
-	accountExistsById(accountId: string): Promise<boolean>;
-	storeNewAccount(account: IAccount): Promise<void>; // Throws if account.id is not unique.
-	getAccountById(accountId: string): Promise<IAccount | null>;
-	getAccountsByExternalId(externalId: string): Promise<IAccount[]>;
-	updateAccountCreditBalanceById(
-		accountId: string,
-		creditBalance: bigint,
-		timeStampLastJournalEntry: number): Promise<void>;
-	updateAccountDebitBalanceById(
-		accountId: string,
-		debitBalance: bigint,
-		timeStampLastJournalEntry: number): Promise<void>;
-}
+export * from "./generic/types";
 
-export interface IJournalEntriesRepo {
-	init(): Promise<void>;
-	destroy(): Promise<void>;
-	journalEntryExistsById(journalEntryId: string): Promise<boolean>;
-	storeNewJournalEntry(journalEntry: IJournalEntry): Promise<void>; // Throws if account.id is not unique.
-	getJournalEntriesByAccountId(accountId: string): Promise<IJournalEntry[]>;
-}
+export * from "./grpc/types/AccountsAndBalancesGrpcService";
+export * from "./grpc/types/GrpcId";
+export * from "./grpc/types/GrpcIdArray";
+export * from "./grpc/types/GrpcAccount";
+export * from "./grpc/types/GrpcAccountState";
+export * from "./grpc/types/GrpcAccountType";
+export * from "./grpc/types/GrpcAccountArray";
+export * from "./grpc/types/GrpcJournalEntry";
+export * from "./grpc/types/GrpcJournalEntryArray";
+export * from "./grpc/types/accounts_and_balances";
+export * from "./grpc/utils";

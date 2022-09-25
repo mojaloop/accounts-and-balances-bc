@@ -38,13 +38,15 @@ import {
 	InvalidDebitBalanceError,
 	InvalidJournalEntryAmountError,
 	JournalEntryAlreadyExistsError,
-	IAccount,
-	IJournalEntry,
 	CreditedAndDebitedAccountsAreTheSameError,
 	NoSuchCreditedAccountError,
 	NoSuchDebitedAccountError,
 	CurrenciesDifferError, InsufficientBalanceError, UnauthorizedError
 } from "@mojaloop/accounts-and-balances-bc-domain-lib";
+import {
+	IAccount,
+	IJournalEntry
+} from "@mojaloop/accounts-and-balances-bc-common-lib";
 import {TokenHelper, CallSecurityContext} from "@mojaloop/security-bc-client-lib";
 
 const BEARER_LENGTH: number = 2; // TODO: why 2?

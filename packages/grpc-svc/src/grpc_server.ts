@@ -40,11 +40,14 @@ import {
 	ServerCredentials,
 	ServiceDefinition
 } from "@grpc/grpc-js";
-import {loadSync, PackageDefinition} from "@grpc/proto-loader";
-import {ProtoGrpcType} from "./proto/gen/accounts_and_balances";
-import {AccountsAndBalancesGrpcServiceHandlers} from "./proto/gen/AccountsAndBalancesGrpcService";
+import {PackageDefinition} from "@grpc/proto-loader";
+import {
+	ProtoGrpcType,
+	AccountsAndBalancesGrpcServiceHandlers,
+	loadProto
+} from "@mojaloop/accounts-and-balances-bc-common-lib";
 import {TokenHelper} from "@mojaloop/security-bc-client-lib";
-import {Handlers} from "./rpcs";
+import {RpcHandlers} from "./rpc_handlers";
 
 export class GrpcServer {
 	// Properties received through the constructor.
@@ -52,7 +55,7 @@ export class GrpcServer {
 	private readonly HOST: string;
 	private readonly PORT_NO: number;
 	// Other properties.
-	private static readonly PROTO_FILE_PATH: string = "/home/goncalogarcia/Documents/Work/Mojaloop/vNext/BoundedContexts/accounts-and-balances-bc/packages/grpc-svc/src/proto/accounts_and_balances.proto"; // TODO: here?
+	private static readonly PROTO_FILE_PATH: string = "/home/goncalogarcia/Documents/Work/Mojaloop/vNext/BoundedContexts/accounts-and-balances-bc/packages/grpc-svc/src/accounts_and_balances.proto"; // TODO: here?
 	private readonly server: Server;
 
 	constructor(
@@ -66,23 +69,16 @@ export class GrpcServer {
 		this.HOST = host;
 		this.PORT_NO = portNo;
 
-		const packageDefinition: PackageDefinition = loadSync(
-			GrpcServer.PROTO_FILE_PATH,
-			{
-				longs: String,
-				enums: String,
-				defaults: true
-			}
-		); // TODO: check other params.
+		const packageDefinition: PackageDefinition = loadProto();
 		const grpcObject: GrpcObject = loadPackageDefinition(packageDefinition);
 		const serviceDefinition: ServiceDefinition =
 			(grpcObject as unknown as ProtoGrpcType).AccountsAndBalancesGrpcService.service;
 
-		const handlers: Handlers = new Handlers(
+		const rpcHandlers: RpcHandlers = new RpcHandlers(
 			this.logger,
 			aggregate
 		);
-		const serviceImplementation: AccountsAndBalancesGrpcServiceHandlers = handlers.getHandlers();
+		const serviceImplementation: AccountsAndBalancesGrpcServiceHandlers = rpcHandlers.getHandlers();
 
 		this.server = new Server();
 		this.server.addService(
@@ -115,6 +111,7 @@ export class GrpcServer {
 
 	async stop(): Promise<void> {
 		return new Promise((resolve) => {
+			// TODO: is this the right function to use?
 			this.server.tryShutdown(() => {
 				this.logger.info("* * * * * * * * * * * * * * * * * * * *");
 				this.logger.info("gRPC server stopped 🏁");

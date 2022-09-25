@@ -33,7 +33,6 @@ import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {MongoClient, Collection, UpdateResult} from "mongodb";
 import {
 	IAccountsRepo,
-	IAccount,
 	AccountAlreadyExistsError,
 	NoSuchAccountError,
 	UnableToGetAccountError,
@@ -42,6 +41,7 @@ import {
 	UnableToStoreAccountError,
 	UnableToUpdateAccountError
 } from "@mojaloop/accounts-and-balances-bc-domain-lib";
+import {IAccount} from "@mojaloop/accounts-and-balances-bc-common-lib";
 
 export class MongoAccountsRepo implements IAccountsRepo{
 	// Properties received through the constructor.

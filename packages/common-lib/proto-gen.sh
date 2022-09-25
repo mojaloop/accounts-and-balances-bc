@@ -5,5 +5,5 @@ proto-loader-gen-types \
   --defaults true \
   --enums String \
   --longs String \
-  --outDir src/proto/gen \
-  src/proto/*.proto
+  --outDir src/grpc/types \
+  src/grpc/*.proto

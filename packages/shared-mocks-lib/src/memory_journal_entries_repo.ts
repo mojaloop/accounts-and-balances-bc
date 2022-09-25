@@ -31,13 +31,13 @@
 
 import {
 	IJournalEntriesRepo,
-	IJournalEntry,
 	JournalEntryAlreadyExistsError,
 	UnableToInitRepoError,
 	UnableToGetJournalEntriesError,
 	UnableToGetJournalEntryError,
 	UnableToStoreJournalEntryError
 } from "@mojaloop/accounts-and-balances-bc-domain-lib";
+import {IJournalEntry} from "@mojaloop/accounts-and-balances-bc-common-lib";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 
 export class MemoryJournalEntriesRepo implements IJournalEntriesRepo {

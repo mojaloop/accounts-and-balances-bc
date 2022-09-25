@@ -1,4 +1,4 @@
-// Original file: src/proto/accounts_and_balances.proto
+// Original file: src/grpc/accounts_and_balances.proto
 
 import type { Long } from '@grpc/proto-loader';
 

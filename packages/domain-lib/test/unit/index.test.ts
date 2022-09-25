@@ -31,8 +31,6 @@
 
 import {ConsoleLogger, ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {
-	AccountState,
-	AccountType,
 	AccountAlreadyExistsError,
 	NoSuchCreditedAccountError,
 	NoSuchDebitedAccountError,
@@ -43,9 +41,14 @@ import {
 	IJournalEntriesRepo,
 	Aggregate,
 	JournalEntryAlreadyExistsError,
-	IAccount,
-	IJournalEntry, InvalidCreditBalanceError, InvalidJournalEntryAmountError
+	InvalidCreditBalanceError, InvalidJournalEntryAmountError
 } from "../../src";
+import {
+	IAccount,
+	IJournalEntry,
+	AccountState,
+	AccountType
+} from "@mojaloop/accounts-and-balances-bc-common-lib";
 import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
 import {Account} from "../../src/entities/account";

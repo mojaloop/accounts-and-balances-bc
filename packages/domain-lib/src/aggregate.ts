@@ -44,7 +44,7 @@ import {
 import {IAccountsRepo, IJournalEntriesRepo} from "./infrastructure_interfaces";
 import {Account} from "./entities/account";
 import {JournalEntry} from "./entities/journal_entry";
-import {IAccount, IJournalEntry} from "./types";
+import {IAccount, IJournalEntry} from "@mojaloop/accounts-and-balances-bc-common-lib";
 import {IAuditClient, AuditSecurityContext} from "@mojaloop/auditing-bc-public-types-lib";
 import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";

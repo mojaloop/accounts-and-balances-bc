@@ -31,31 +31,31 @@
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
+import {Aggregate} from "@mojaloop/accounts-and-balances-bc-domain-lib";
 import {
-	AccountState,
-	AccountType,
-	Aggregate,
 	IAccount,
-	IJournalEntry
-} from "@mojaloop/accounts-and-balances-bc-domain-lib";
+	IJournalEntry,
+	GrpcAccount,
+	GrpcAccount__Output,
+	GrpcId,
+	GrpcId__Output,
+	GrpcJournalEntryArray,
+	GrpcJournalEntryArray__Output,
+	GrpcIdArray,
+	GrpcAccountArray,
+	GrpcJournalEntry__Output,
+	AccountsAndBalancesGrpcServiceHandlers,
+	IAccountToGrpcAccount,
+	IJournalEntryToGrpcJournalEntry,
+	grpcAccountToIAccount,
+	grpcJournalEntryToIJournalEntry
+} from "@mojaloop/accounts-and-balances-bc-common-lib";
 import {
 	sendUnaryData,
 	ServerUnaryCall,
 } from "@grpc/grpc-js";
-import {GrpcAccount, GrpcAccount__Output} from "./proto/gen/GrpcAccount";
-import {GrpcId, GrpcId__Output} from "./proto/gen/GrpcId";
-import {GrpcJournalEntryArray, GrpcJournalEntryArray__Output} from "./proto/gen/GrpcJournalEntryArray";
-import {GrpcIdArray} from "./proto/gen/GrpcIdArray";
-import {GrpcAccountArray} from "./proto/gen/GrpcAccountArray";
-import {AccountsAndBalancesGrpcServiceHandlers} from "./proto/gen/AccountsAndBalancesGrpcService";
-import {
-	domainAccountToGrpcAccount, domainJournalEntryToGrpcJournalEntry,
-	grpcAccountToDomainAccount,
-	grpcJournalEntryToDomainJournalEntry
-} from "./converters";
-import {GrpcJournalEntry__Output} from "./proto/gen/GrpcJournalEntry";
 
-export class Handlers {
+export class RpcHandlers {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
 	private readonly aggregate: Aggregate;
@@ -85,15 +85,22 @@ export class Handlers {
 		}
 	}
 
+	// TODO: error handling; verify types.
+
 	private async createAccount(
 		call: ServerUnaryCall<GrpcAccount__Output, GrpcId>,
 		callback: sendUnaryData<GrpcId>
 	): Promise<void> {
 		try {
-			const domainAccount: IAccount = grpcAccountToDomainAccount(call.request);
-			const accountId: string = await this.aggregate.createAccount(domainAccount, this.securityContext);
-			callback(null, {value: accountId});
-		} catch (e: unknown) {
+			const iAccount: IAccount = grpcAccountToIAccount(call.request);
+			const accountId: string = await this.aggregate.createAccount(iAccount, this.securityContext);
+			callback(null, {grpcId: accountId});
+		} catch (error: unknown) {
+			if (error instanceof Error) {
+				callback(error, null);
+				return;
+			}
+			this.logger.error(error);
 		}
 	}
 
@@ -101,19 +108,23 @@ export class Handlers {
 		call: ServerUnaryCall<GrpcJournalEntryArray__Output, GrpcIdArray>,
 		callback: sendUnaryData<GrpcIdArray>
 	): Promise<void> {
-		const domainJournalEntries: IJournalEntry[] = [];
-		for (const grpcJournalEntry of call.request.value) {
-			domainJournalEntries.push(grpcJournalEntryToDomainJournalEntry(grpcJournalEntry))
-		}
+		const iJournalEntries: IJournalEntry[] = [];
 		try {
+			for (const grpcJournalEntry of call.request.grpcJournalEntryArray) {
+				iJournalEntries.push(grpcJournalEntryToIJournalEntry(grpcJournalEntry));
+			}
 			const idsJournalEntries: string[] =
-				await this.aggregate.createJournalEntries(domainJournalEntries, this.securityContext);
-			const x = idsJournalEntries.map(id => {
-				return {value: id};
+				await this.aggregate.createJournalEntries(iJournalEntries, this.securityContext);
+			const grpcIdsJournalEntries: GrpcId[] = idsJournalEntries.map(id => {
+				return {grpcId: id};
 			});
-			callback(null, {value: x});
-		} catch (e: unknown) {
-			this.logger.debug("");
+			callback(null, {grpcIdArray: grpcIdsJournalEntries});
+		} catch (error: unknown) {
+			if (error instanceof Error) {
+				callback(error, null);
+				return;
+			}
+			this.logger.error(error);
 		}
 	}
 
@@ -121,15 +132,21 @@ export class Handlers {
 		call: ServerUnaryCall<GrpcId__Output, GrpcAccount>,
 		callback: sendUnaryData<GrpcAccount>
 	): Promise<void> {
-		const accountId: string = call.request.value;
+		const accountId: string = call.request.grpcId;
 		try {
-			const domainAccount: IAccount | null = await this.aggregate.getAccountById(accountId, this.securityContext);
-			if (!domainAccount) {
-				callback(null, {}); // Default account is sent (fields with default values).
+			const iAccount: IAccount | null = await this.aggregate.getAccountById(accountId, this.securityContext);
+			if (!iAccount) {
+				callback(null, {}); // Default gRPC account is sent (fields with default values).
+				return;
 			}
-			const grpcAccount: GrpcAccount__Output = domainAccountToGrpcAccount(domainAccount!); // TODO: !.
+			const grpcAccount: GrpcAccount__Output = IAccountToGrpcAccount(iAccount!); // TODO: !.
 			callback(null, grpcAccount);
-		} catch (e: unknown) {
+		} catch (error: unknown) {
+			if (error instanceof Error) {
+				callback(error, null);
+				return;
+			}
+			this.logger.error(error);
 		}
 	}
 
@@ -137,16 +154,21 @@ export class Handlers {
 		call: ServerUnaryCall<GrpcId__Output, GrpcAccountArray>,
 		callback: sendUnaryData<GrpcAccountArray>
 	): Promise<void> {
-		const externalId: string = call.request.value;
+		const externalId: string = call.request.grpcId;
 		try {
-			const domainAccounts: IAccount[] =
+			const iAccounts: IAccount[] =
 				await this.aggregate.getAccountsByExternalId(externalId, this.securityContext);
-			const grpcAccounts: GrpcAccount__Output[] = []; // TODO: verify.
-			for (const domainAccount of domainAccounts) {
-				grpcAccounts.push(domainAccountToGrpcAccount(domainAccount));
+			const grpcAccounts: GrpcAccount__Output[] = [];
+			for (const iAccount of iAccounts) {
+				grpcAccounts.push(IAccountToGrpcAccount(iAccount));
 			}
-			callback(null, {value: grpcAccounts});
-		} catch (e: unknown) {
+			callback(null, {grpcAccountArray: grpcAccounts});
+		} catch (error: unknown) {
+			if (error instanceof Error) {
+				callback(error, null);
+				return;
+			}
+			this.logger.error(error);
 		}
 	}
 
@@ -154,16 +176,21 @@ export class Handlers {
 		call: ServerUnaryCall<GrpcId__Output, GrpcJournalEntryArray>,
 		callback: sendUnaryData<GrpcJournalEntryArray>
 	): Promise<void> {
-		const accountId: string = call.request.value;
+		const accountId: string = call.request.grpcId;
 		try {
-			const domainJournalEntries: IJournalEntry[] =
+			const iJournalEntries: IJournalEntry[] =
 				await this.aggregate.getJournalEntriesByAccountId(accountId, this.securityContext);
 			const grpcJournalEntries: GrpcJournalEntry__Output[] = [];
-			for (const domainJournalEntry of domainJournalEntries) {
-				grpcJournalEntries.push(domainJournalEntryToGrpcJournalEntry(domainJournalEntry));
+			for (const iJournalEntry of iJournalEntries) {
+				grpcJournalEntries.push(IJournalEntryToGrpcJournalEntry(iJournalEntry));
 			}
-			callback(null, {value: grpcJournalEntries});
-		} catch (e: unknown) {
+			callback(null, {grpcJournalEntryArray: grpcJournalEntries});
+		} catch (error: unknown) {
+			if (error instanceof Error) {
+				callback(error, null);
+				return;
+			}
+			this.logger.error(error);
 		}
 	}
 }

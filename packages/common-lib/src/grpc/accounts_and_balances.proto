@@ -13,11 +13,11 @@ service AccountsAndBalancesGrpcService {
 
 // TODO: use string directly instead of having this type.
 message GrpcId {
-  string value = 1;
+  string grpcId = 1;
 }
 
 message GrpcIdArray {
-  repeated GrpcId value = 1;
+  repeated GrpcId grpcIdArray = 1;
 }
 
 message GrpcAccount {
@@ -43,7 +43,7 @@ enum GrpcAccountType {
 }
 
 message GrpcAccountArray {
-  repeated GrpcAccount value = 1;
+  repeated GrpcAccount grpcAccountArray = 1;
 }
 
 message GrpcJournalEntry {
@@ -58,5 +58,5 @@ message GrpcJournalEntry {
 }
 
 message GrpcJournalEntryArray {
-  repeated GrpcJournalEntry value = 1;
+  repeated GrpcJournalEntry grpcJournalEntryArray = 1;
 }

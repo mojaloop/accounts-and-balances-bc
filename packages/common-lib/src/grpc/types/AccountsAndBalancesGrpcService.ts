@@ -1,4 +1,4 @@
-// Original file: src/proto/accounts_and_balances.proto
+// Original file: src/grpc/accounts_and_balances.proto
 
 import type * as grpc from '@grpc/grpc-js'
 import type { MethodDefinition } from '@grpc/proto-loader'

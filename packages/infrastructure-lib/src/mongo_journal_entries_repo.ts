@@ -32,7 +32,6 @@
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {MongoClient, Collection} from "mongodb";
 import {
-	IJournalEntry,
 	IJournalEntriesRepo,
 	JournalEntryAlreadyExistsError,
 	UnableToGetJournalEntriesError,
@@ -40,6 +39,7 @@ import {
 	UnableToInitRepoError,
 	UnableToStoreJournalEntryError
 } from "@mojaloop/accounts-and-balances-bc-domain-lib";
+import {IJournalEntry} from "@mojaloop/accounts-and-balances-bc-common-lib";
 
 export class MongoJournalEntriesRepo implements IJournalEntriesRepo {
 	// Properties received through the constructor.

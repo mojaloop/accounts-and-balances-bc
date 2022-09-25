@@ -37,19 +37,18 @@ import {
 	MemoryAccountsRepo, MemoryJournalEntriesRepo
 } from "@mojaloop/accounts-and-balances-bc-shared-mocks-lib";
 import {
-	AccountState,
-	AccountType,
 	IAccountsRepo,
 	IJournalEntriesRepo
 } from "@mojaloop/accounts-and-balances-bc-domain-lib";
+import {
+	GrpcAccountState,
+	GrpcAccountType, GrpcAccount, GrpcId, GrpcJournalEntry, IAccount, IJournalEntry
+} from "@mojaloop/accounts-and-balances-bc-common-lib";
 import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
 import {AuxiliaryAccountsAndBalancesGrpcClient} from "./auxiliary_accounts_and_balances_grpc_client";
 import {start, stop} from "../../src/service";
-import {GrpcAccountState} from "../../dist/proto/gen/GrpcAccountState";
-import {GrpcAccountType} from "../../dist/proto/gen/GrpcAccountType";
 
-const PROTO_FILE_PATH: string = "/home/goncalogarcia/Documents/Work/Mojaloop/vNext/BoundedContexts/accounts-and-balances-bc/packages/grpc-svc/src/proto/accounts_and_balances.proto"; // TODO: change name.
 const ACCOUNTS_AND_BALANCES_GRPC_SERVICE_HOST: string = "localhost"; // TODO: change name.
 const ACCOUNTS_AND_BALANCES_GRPC_SERVICE_PORT_NO: number = 1234; // TODO: change name.
 
@@ -60,7 +59,6 @@ let auxiliaryAccountsAndBalancesGrpcClient: AuxiliaryAccountsAndBalancesGrpcClie
 
 describe("accounts and balances grpc service - unit tests", () => {
 	beforeAll(async () => {
-		jest.setTimeout(50000); // TODO: remove.
 		const logger: ILogger = new ConsoleLogger();
 		const authenticationServiceMock: AuthenticationServiceMock = new AuthenticationServiceMock(logger);
 		authorizationClient = new AuthorizationClientMock(logger);
@@ -76,7 +74,6 @@ describe("accounts and balances grpc service - unit tests", () => {
 		);
 		auxiliaryAccountsAndBalancesGrpcClient = new AuxiliaryAccountsAndBalancesGrpcClient(
 			logger,
-			PROTO_FILE_PATH,
 			ACCOUNTS_AND_BALANCES_GRPC_SERVICE_HOST,
 			ACCOUNTS_AND_BALANCES_GRPC_SERVICE_PORT_NO
 		);
@@ -90,9 +87,9 @@ describe("accounts and balances grpc service - unit tests", () => {
 
 	test("create non-existent account", async () => {
 		const accountId: string = uuid.v4();
-		const account = {
+		const grpcAccount: GrpcAccount = {
 			id: accountId,
-			externalId: null,
+			externalId: "",
 			state: GrpcAccountState.ACTIVE,
 			type: GrpcAccountType.POSITION,
 			currency: "EUR",
@@ -100,19 +97,19 @@ describe("accounts and balances grpc service - unit tests", () => {
 			debitBalance: "25",
 			timestampLastJournalEntry: "0"
 		};
-		const x: string = await auxiliaryAccountsAndBalancesGrpcClient.createAccount(account);
-		expect(x).toEqual(accountId);
+		const accountIdReceived: string = await auxiliaryAccountsAndBalancesGrpcClient.createAccount(grpcAccount);
+		expect(accountIdReceived).toEqual(accountId);
 	});
 
 	test("create non-existent journal entry", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
-		const accounts: any[] = await create2Accounts();
+		const accounts: GrpcAccount[] = await create2Accounts();
 		// Journal entry A.
 		const idJournalEntryA: string = uuid.v4();
-		const journalEntryA = {
+		const grpcJournalEntryA: GrpcJournalEntry = {
 			id: idJournalEntryA,
-			externalId: null,
-			externalCategory: null,
+			externalId: "",
+			externalCategory: "",
 			currency: "EUR",
 			amount: "5",
 			creditedAccountId: accounts[0].id,
@@ -121,72 +118,73 @@ describe("accounts and balances grpc service - unit tests", () => {
 		};
 		// Journal entry B.
 		const idJournalEntryB: string = idJournalEntryA + 1;
-		const journalEntryB = {
+		const grpcJournalEntryB: GrpcJournalEntry = {
 			id: idJournalEntryB,
-			externalId: null,
-			externalCategory: null,
+			externalId: "",
+			externalCategory: "",
 			currency: "EUR",
 			amount: "5",
 			creditedAccountId: accounts[1].id,
 			debitedAccountId: accounts[0].id,
 			timestamp: "0"
 		};
-		const x: string[] = await auxiliaryAccountsAndBalancesGrpcClient.createJournalEntries(
-			[journalEntryA, journalEntryB]
+		const idsJournalEntries: string[] = await auxiliaryAccountsAndBalancesGrpcClient.createJournalEntries(
+			{grpcJournalEntryArray: [grpcJournalEntryA, grpcJournalEntryB]}
 		);
-		expect(x).toEqual({"value": [{"value": idJournalEntryA}, {"value": idJournalEntryB}]});
+		expect(idsJournalEntries).toEqual([idJournalEntryA, idJournalEntryB]);
 	});
 
 	test("get non-existent account by id", async () => {
-		const accountId: string = uuid.v4();
-		const x = await auxiliaryAccountsAndBalancesGrpcClient.getAccountById(accountId);
-		expect(x).toEqual(null);
+		const accountGrpcId: GrpcId = {grpcId: uuid.v4()};
+		const account: IAccount | null = await auxiliaryAccountsAndBalancesGrpcClient.getAccountById(accountGrpcId);
+		expect(account).toEqual(null);
 	});
 
 	test("get non-existent accounts by external id", async () => {
 		const externalId: string = uuid.v4();
-		const x =
-			await auxiliaryAccountsAndBalancesGrpcClient.getAccountsByExternalId(externalId);
-		expect(x).toEqual({"value": []});
+		const accounts: IAccount[] = await auxiliaryAccountsAndBalancesGrpcClient.getAccountsByExternalId(
+			{grpcId: externalId}
+		);
+		expect(accounts).toEqual([]);
 	});
 
 	test("get non-existent journal entries by account id", async () => {
-		const accountId: string = uuid.v4();
-		const x =
-			await auxiliaryAccountsAndBalancesGrpcClient.getJournalEntriesByAccountId(accountId);
-		expect(x).toEqual({"value": []});
+		const accountId: string =uuid.v4();
+		const journalEntries: IJournalEntry[] =
+			await auxiliaryAccountsAndBalancesGrpcClient.getJournalEntriesByAccountId({grpcId: accountId});
+		expect(journalEntries).toEqual([]);
 	});
 });
 
 async function create2Accounts(
-	externalIdAccountA: string | null = null,
-	externalIdAccountB: string | null = null
+	externalIdAccountA: string = "",
+	externalIdAccountB: string = ""
 ): Promise<any[]> {
 	// Account A.
 	const idAccountA: string = uuid.v4();
-	const accountA = {
+	const grpcAccountA: GrpcAccount = {
 		id: idAccountA,
 		externalId: externalIdAccountA,
-		state: AccountState.ACTIVE,
-		type: AccountType.POSITION,
+		state: GrpcAccountState.ACTIVE,
+		type: GrpcAccountType.POSITION,
 		currency: "EUR",
 		creditBalance: "100",
 		debitBalance: "25",
 		timestampLastJournalEntry: "0"
 	};
-	await auxiliaryAccountsAndBalancesGrpcClient.createAccount(accountA);
+	await auxiliaryAccountsAndBalancesGrpcClient.createAccount(grpcAccountA);
 	// Account B.
 	const idAccountB: string = idAccountA + 1;
-	const accountB = {
+	const grpcAccountB: GrpcAccount = {
 		id: idAccountB,
 		externalId: externalIdAccountB,
-		state: AccountState.ACTIVE,
-		type: AccountType.POSITION,
+		state: GrpcAccountState.ACTIVE,
+		type: GrpcAccountType.POSITION,
 		currency: "EUR",
 		creditBalance: "100",
 		debitBalance: "25",
 		timestampLastJournalEntry: "0"
 	};
-	await auxiliaryAccountsAndBalancesGrpcClient.createAccount(accountB);
-	return [accountA, accountB];
+	await auxiliaryAccountsAndBalancesGrpcClient.createAccount(grpcAccountB);
+	return [grpcAccountA, grpcAccountB];
 }
