@@ -25,6 +25,8 @@
     "clean:all": "npm run clean:dist && npm run clean:npm && npm run clean:package-lock && npm run clean:coverage",
     "dep:check": "ncu -e 2",
     "dep:upgrade": "ncu -u",
+    "audit:check": "npm audit",
+    "audit:fix": "npm audit fix",
     "lint": "eslint src",
     "build": "tsc",
     "test:unit": "jest",
@@ -34,9 +36,7 @@
   "devDependencies": {
     "@mojaloop/accounts-and-balances-bc-shared-mocks-lib": "*",
     "@types/express": "^4.17.14",
-    "@types/node": "^18.7.18",
-    "@types/uuid": "^8.3.4",
-    "uuid": "^9.0.0"
+    "@types/node": "^18.7.18"
   },
   "dependencies": {
     "@mojaloop/accounts-and-balances-bc-domain-lib": "*",

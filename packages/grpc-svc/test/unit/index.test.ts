@@ -29,7 +29,7 @@
 
 "use strict";
 
-import * as uuid from "uuid";
+import * as Crypto from "crypto";
 import {ConsoleLogger, ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {
 	AuditClientMock, AuthenticationServiceMock,
@@ -86,7 +86,7 @@ describe("accounts and balances grpc service - unit tests", () => {
 	});
 
 	test("create non-existent account", async () => {
-		const accountId: string = uuid.v4();
+		const accountId: string = Crypto.randomUUID();
 		const grpcAccount: GrpcAccount = {
 			id: accountId,
 			externalId: "",
@@ -105,7 +105,7 @@ describe("accounts and balances grpc service - unit tests", () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: GrpcAccount[] = await create2Accounts();
 		// Journal entry A.
-		const idJournalEntryA: string = uuid.v4();
+		const idJournalEntryA: string = Crypto.randomUUID();
 		const grpcJournalEntryA: GrpcJournalEntry = {
 			id: idJournalEntryA,
 			externalId: "",
@@ -135,13 +135,13 @@ describe("accounts and balances grpc service - unit tests", () => {
 	});
 
 	test("get non-existent account by id", async () => {
-		const accountGrpcId: GrpcId = {grpcId: uuid.v4()};
+		const accountGrpcId: GrpcId = {grpcId: Crypto.randomUUID()};
 		const account: IAccount | null = await auxiliaryAccountsAndBalancesGrpcClient.getAccountById(accountGrpcId);
 		expect(account).toEqual(null);
 	});
 
 	test("get non-existent accounts by external id", async () => {
-		const externalId: string = uuid.v4();
+		const externalId: string = Crypto.randomUUID();
 		const accounts: IAccount[] = await auxiliaryAccountsAndBalancesGrpcClient.getAccountsByExternalId(
 			{grpcId: externalId}
 		);
@@ -149,7 +149,7 @@ describe("accounts and balances grpc service - unit tests", () => {
 	});
 
 	test("get non-existent journal entries by account id", async () => {
-		const accountId: string =uuid.v4();
+		const accountId: string =Crypto.randomUUID();
 		const journalEntries: IJournalEntry[] =
 			await auxiliaryAccountsAndBalancesGrpcClient.getJournalEntriesByAccountId({grpcId: accountId});
 		expect(journalEntries).toEqual([]);
@@ -161,7 +161,7 @@ async function create2Accounts(
 	externalIdAccountB: string = ""
 ): Promise<any[]> {
 	// Account A.
-	const idAccountA: string = uuid.v4();
+	const idAccountA: string = Crypto.randomUUID();
 	const grpcAccountA: GrpcAccount = {
 		id: idAccountA,
 		externalId: externalIdAccountA,

@@ -30,7 +30,7 @@
 "use strict";
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import * as uuid from "uuid";
+import * as Crypto from "crypto";
 import {
 	AccountAlreadyExistsError,
 	CreditedAndDebitedAccountsAreTheSameError,
@@ -94,12 +94,12 @@ export class Aggregate {
 		};
 	}
 
-	// TODO: why ignore the case in which uuid.v4() generates an already existing id?
+	// TODO: why ignore the case in which Crypto.randomUUID() generates an already existing id?
 	async createAccount(account: IAccount, securityContext: CallSecurityContext): Promise<string> {
 		this.enforcePrivilege(securityContext, Privileges.CREATE_ACCOUNT);
 		// Generate a random UUId, if needed.
 		if (account.id === undefined || account.id === null || account.id === "") {
-			account.id = uuid.v4();
+			account.id = Crypto.randomUUID();
 		}
 		Account.validateAccount(account);
 		// Store the account.
@@ -133,7 +133,7 @@ export class Aggregate {
 	private async createJournalEntry(journalEntry: IJournalEntry): Promise<string> {
 		// Generate a random UUId, if needed.
 		if (journalEntry.id === undefined || journalEntry.id === null || journalEntry.id === "") {
-			journalEntry.id = uuid.v4();
+			journalEntry.id = Crypto.randomUUID();
 		}
 		JournalEntry.validateJournalEntry(journalEntry);
 		// Check if the credited and debited accounts are the same. TODO: required?

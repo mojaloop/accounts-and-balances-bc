@@ -133,7 +133,7 @@ export async function start(
 			LOGGING_LEVEL
 		);
 		try {
-			await (logger as KafkaLogger).start();
+			await (logger as KafkaLogger).init();
 		} catch (e: unknown) {
 			logger.fatal(e);
 			await stop();

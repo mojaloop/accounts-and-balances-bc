@@ -30,22 +30,25 @@
 "use strict";
 
 import {LogLevel} from "@mojaloop/logging-bc-public-types-lib";
-import {
-	AccountsAndBalancesHttpClient,
-	IAccountDTO,
-	IJournalEntryDTO,
-	UnableToCreateAccountError,
-	UnableToCreateJournalEntriesError
-} from "@mojaloop/accounts-and-balances-bc-http-client-lib";
 import {KafkaLogger} from "@mojaloop/logging-bc-client-lib";
 import {MLKafkaProducerOptions} from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib";
-import * as uuid from "uuid";
+import * as Crypto from "crypto";
+import {AccountsAndBalancesGrpcClient} from "@mojaloop/accounts-and-balances-bc-grpc-client-lib";
+import {
+	GrpcAccount,
+	GrpcAccountState,
+	GrpcAccountType,
+	GrpcId,
+	GrpcJournalEntry,
+	IAccount,
+	IJournalEntry
+} from "@mojaloop/accounts-and-balances-bc-common-lib";
 
 /* ********** Constants Begin ********** */
 
 // General.
 const BOUNDED_CONTEXT_NAME: string = "accounts-and-balances-bc";
-const SERVICE_NAME: string = "integration-tests";
+const SERVICE_NAME: string = "integration-tests-grpc";
 const SERVICE_VERSION: string = "0.0.1";
 
 // Message broker.
@@ -58,15 +61,14 @@ const MESSAGE_BROKER_URL: string = `${MESSAGE_BROKER_HOST}:${MESSAGE_BROKER_PORT
 const LOGGING_LEVEL: LogLevel = LogLevel.INFO;
 const LOGGING_TOPIC: string = "logs";
 
-// Accounts and Balances HTTP client.
-const BASE_URL_ACCOUNTS_AND_BALANCES_HTTP_SERVICE: string = "http://localhost:1234";
-const TIMEOUT_MS_ACCOUNTS_AND_BALANCES_HTTP_CLIENT: number = 10_000;
-const ACCESS_TOKEN: string = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InNSMHVoT2hpM05VbmJlMTF5SDZtOUZtcFpNN2JiRVl2czdpbGNfanN1MHMifQ.eyJ0eXAiOiJCZWFyZXIiLCJhenAiOiJzZWN1cml0eS1iYy11aSIsInJvbGVzIjpbXSwiaWF0IjoxNjYyMjE5NzQ5LCJleHAiOjQ4MTc5MTQ5NDksImF1ZCI6Im1vamFsb29wLnZuZXh0LmRlZmF1bHRfYXVkaWVuY2UiLCJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjMyMDEvIiwic3ViIjoidXNlcjo6dXNlciIsImp0aSI6ImJjYzk3OWRlLTdkNzItNGUyNC04YjIyLWM5NjlmMDAwYTg0YSJ9.py8iSYZp0KtZ1os7vXoH8oOAZFQCJyj3gWNW3EQTGl-cS8U6ErJpEv0nGrNfPGIdwNgSBe0esjlLKU7hCA-p71AnToCxA3zDqMaB6Pm7FH376AP71VTTGNa2rcWMrQivPEFzlxpvlIV-KWVrJUE2j0-SVPjlSphBnqBHybID_y3I1Ix5eoKsotZrBNeVzYqRcN7lUnbdxb7Oi5-ss5bmmo__iAB4EaW8LfdgiIL3AsYrxWoRdsBNOa1v7AJ6v7z7HcWzdJ1hF_DgG7wX2sVRHZcCnT55bL-zb614csaUbEeOpOmQ5STsR9rdSFPfN2vzpD9OX6b2uHj4digHQtuCDA";
+// Accounts and Balances gRPC client.
+const ACCOUNTS_AND_BALANCES_GRPC_SERVICE_HOST: string = "localhost"; // TODO: change name.
+const ACCOUNTS_AND_BALANCES_GRPC_SERVICE_PORT_NO: number = 1234; // TODO: change name.
 
 /* ********** Constants End ********** */
 
 let logger: KafkaLogger;
-let accountsAndBalancesHttpClient: AccountsAndBalancesHttpClient;
+let accountsAndBalancesGrpcClient: AccountsAndBalancesGrpcClient;
 
 describe("accounts and balances - integration tests with gRPC service", () => {
 	beforeAll(async () => {
@@ -81,16 +83,119 @@ describe("accounts and balances - integration tests with gRPC service", () => {
 			LOGGING_TOPIC,
 			LOGGING_LEVEL
 		);
-		await logger.start();
-		accountsAndBalancesHttpClient = new AccountsAndBalancesHttpClient(
+		await logger.init();
+		accountsAndBalancesGrpcClient = new AccountsAndBalancesGrpcClient(
 			logger,
-			BASE_URL_ACCOUNTS_AND_BALANCES_HTTP_SERVICE,
-			TIMEOUT_MS_ACCOUNTS_AND_BALANCES_HTTP_CLIENT,
-			ACCESS_TOKEN
+			ACCOUNTS_AND_BALANCES_GRPC_SERVICE_HOST,
+			ACCOUNTS_AND_BALANCES_GRPC_SERVICE_PORT_NO
 		);
+		await accountsAndBalancesGrpcClient.init();
 	});
 
 	afterAll(async () => {
 		await logger.destroy();
 	});
+
+	test("create non-existent account", async () => {
+		const accountId: string = Crypto.randomUUID();
+		const grpcAccount: GrpcAccount = {
+			id: accountId,
+			externalId: "",
+			state: GrpcAccountState.ACTIVE,
+			type: GrpcAccountType.POSITION,
+			currency: "EUR",
+			creditBalance: "100",
+			debitBalance: "25",
+			timestampLastJournalEntry: "0"
+		};
+		const accountIdReceived: string = await accountsAndBalancesGrpcClient.createAccount(grpcAccount);
+		expect(accountIdReceived).toEqual(accountId);
+	});
+
+	test("create non-existent journal entry", async () => {
+		// Before creating a journal entry, the respective accounts need to be created.
+		const accounts: GrpcAccount[] = await create2Accounts();
+		// Journal entry A.
+		const idJournalEntryA: string = Crypto.randomUUID();
+		const grpcJournalEntryA: GrpcJournalEntry = {
+			id: idJournalEntryA,
+			externalId: "",
+			externalCategory: "",
+			currency: "EUR",
+			amount: "5",
+			creditedAccountId: accounts[0].id,
+			debitedAccountId: accounts[1].id,
+			timestamp: "0"
+		};
+		// Journal entry B.
+		const idJournalEntryB: string = idJournalEntryA + 1;
+		const grpcJournalEntryB: GrpcJournalEntry = {
+			id: idJournalEntryB,
+			externalId: "",
+			externalCategory: "",
+			currency: "EUR",
+			amount: "5",
+			creditedAccountId: accounts[1].id,
+			debitedAccountId: accounts[0].id,
+			timestamp: "0"
+		};
+		const idsJournalEntries: string[] = await accountsAndBalancesGrpcClient.createJournalEntries(
+			{grpcJournalEntryArray: [grpcJournalEntryA, grpcJournalEntryB]}
+		);
+		expect(idsJournalEntries).toEqual([idJournalEntryA, idJournalEntryB]);
+	});
+
+	test("get non-existent account by id", async () => {
+		const accountGrpcId: GrpcId = {grpcId: Crypto.randomUUID()};
+		const account: IAccount | null = await accountsAndBalancesGrpcClient.getAccountById(accountGrpcId);
+		expect(account).toEqual(null);
+	});
+
+	test("get non-existent accounts by external id", async () => {
+		const externalId: string = Crypto.randomUUID();
+		const accounts: IAccount[] = await accountsAndBalancesGrpcClient.getAccountsByExternalId(
+			{grpcId: externalId}
+		);
+		expect(accounts).toEqual([]);
+	});
+
+	test("get non-existent journal entries by account id", async () => {
+		const accountId: string =Crypto.randomUUID();
+		const journalEntries: IJournalEntry[] =
+			await accountsAndBalancesGrpcClient.getJournalEntriesByAccountId({grpcId: accountId});
+		expect(journalEntries).toEqual([]);
+	});
 });
+
+async function create2Accounts(
+	externalIdAccountA: string = "",
+	externalIdAccountB: string = ""
+): Promise<any[]> {
+	// Account A.
+	const idAccountA: string = Crypto.randomUUID();
+	const grpcAccountA: GrpcAccount = {
+		id: idAccountA,
+		externalId: externalIdAccountA,
+		state: GrpcAccountState.ACTIVE,
+		type: GrpcAccountType.POSITION,
+		currency: "EUR",
+		creditBalance: "100",
+		debitBalance: "25",
+		timestampLastJournalEntry: "0"
+	};
+	await accountsAndBalancesGrpcClient.createAccount(grpcAccountA);
+	// Account B.
+	const idAccountB: string = idAccountA + 1;
+	const grpcAccountB: GrpcAccount = {
+		id: idAccountB,
+		externalId: externalIdAccountB,
+		state: GrpcAccountState.ACTIVE,
+		type: GrpcAccountType.POSITION,
+		currency: "EUR",
+		creditBalance: "100",
+		debitBalance: "25",
+		timestampLastJournalEntry: "0"
+	};
+	await accountsAndBalancesGrpcClient.createAccount(grpcAccountB);
+	return [grpcAccountA, grpcAccountB];
+}

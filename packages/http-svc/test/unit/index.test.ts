@@ -36,7 +36,7 @@ import {
 import {ConsoleLogger, ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {AuxiliaryAccountsAndBalancesHttpClient} from "./auxiliary_accounts_and_balances_http_client";
-import * as uuid from "uuid";
+import * as Crypto from "crypto";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
 import {
 	AuditClientMock,
@@ -84,7 +84,7 @@ describe("accounts and balances http service - unit tests", () => {
 
 	// Create account.
 	test("create non-existent account", async () => {
-		const accountId: string = uuid.v4();
+		const accountId: string = Crypto.randomUUID();
 		const account = {
 			id: accountId,
 			externalId: null,
@@ -99,7 +99,7 @@ describe("accounts and balances http service - unit tests", () => {
 		expect(statusCodeResponse).toEqual(201);
 	});
 	test("create existent account", async () => {
-		const accountId: string = uuid.v4();
+		const accountId: string = Crypto.randomUUID();
 		const account = {
 			id: accountId,
 			externalId: null,
@@ -130,7 +130,7 @@ describe("accounts and balances http service - unit tests", () => {
 		expect(statusCodeResponse).toEqual(201);
 	});
 	test("create account with invalid credit balance", async () => {
-		const accountId: string = uuid.v4();
+		const accountId: string = Crypto.randomUUID();
 		const account = {
 			id: accountId,
 			externalId: null,
@@ -145,7 +145,7 @@ describe("accounts and balances http service - unit tests", () => {
 		expect(statusCodeResponse).toEqual(400);
 	});
 	test("create account with invalid debit balance", async () => {
-		const accountId: string = uuid.v4();
+		const accountId: string = Crypto.randomUUID();
 		const account = {
 			id: accountId,
 			externalId: null,
@@ -160,7 +160,7 @@ describe("accounts and balances http service - unit tests", () => {
 		expect(statusCodeResponse).toEqual(400);
 	});
 	test("create account with unexpected accounts repo failure", async () => {
-		const accountId: string = uuid.v4();
+		const accountId: string = Crypto.randomUUID();
 		const account = {
 			id: accountId,
 			externalId: null,
@@ -177,7 +177,7 @@ describe("accounts and balances http service - unit tests", () => {
 		(accountsRepo as MemoryAccountsRepo).setUnexpectedFailure(false); // TODO: should this be done?
 	});
 	test("create account with invalid access token", async () => {
-		const accountId: string = uuid.v4();
+		const accountId: string = Crypto.randomUUID();
 		const account = {
 			id: accountId,
 			externalId: null,
@@ -194,7 +194,7 @@ describe("accounts and balances http service - unit tests", () => {
 		auxiliaryAccountsAndBalancesHttpClient.setAccessToken(AuthenticationServiceMock.VALID_ACCESS_TOKEN);
 	});
 	test("create account without privileges", async () => {
-		const accountId: string = uuid.v4();
+		const accountId: string = Crypto.randomUUID();
 		const account = {
 			id: accountId,
 			externalId: null,
@@ -216,7 +216,7 @@ describe("accounts and balances http service - unit tests", () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: any[] = await create2Accounts();
 		// Journal entry A.
-		const idJournalEntryA: string = uuid.v4();
+		const idJournalEntryA: string = Crypto.randomUUID();
 		const journalEntryA = {
 			id: idJournalEntryA,
 			externalId: null,
@@ -248,7 +248,7 @@ describe("accounts and balances http service - unit tests", () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: any[] = await create2Accounts();
 		// Journal entry A.
-		const idJournalEntryA: string = uuid.v4();
+		const idJournalEntryA: string = Crypto.randomUUID();
 		const journalEntryA = {
 			id: idJournalEntryA,
 			externalId: null,
@@ -298,7 +298,7 @@ describe("accounts and balances http service - unit tests", () => {
 	test("create journal entry with same credited and debited accounts", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: any[] = await create2Accounts();
-		const journalEntryId: string = uuid.v4();
+		const journalEntryId: string = Crypto.randomUUID();
 		const journalEntry = {
 			id: journalEntryId,
 			externalId: null,
@@ -316,7 +316,7 @@ describe("accounts and balances http service - unit tests", () => {
 	test("create journal entry with non-existent credited account", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: any[] = await create2Accounts();
-		const journalEntryId: string = uuid.v4();
+		const journalEntryId: string = Crypto.randomUUID();
 		const journalEntry = {
 			id: journalEntryId,
 			externalId: null,
@@ -334,7 +334,7 @@ describe("accounts and balances http service - unit tests", () => {
 	test("create journal entry with non-existent debited account", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: any[] = await create2Accounts();
-		const journalEntryId: string = uuid.v4();
+		const journalEntryId: string = Crypto.randomUUID();
 		const journalEntry = {
 			id: journalEntryId,
 			externalId: null,
@@ -352,7 +352,7 @@ describe("accounts and balances http service - unit tests", () => {
 	test("create journal entry with different currency", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: any[] = await create2Accounts(); // Accounts created with EUR.
-		const journalEntryId: string = uuid.v4();
+		const journalEntryId: string = Crypto.randomUUID();
 		const journalEntry = {
 			id: journalEntryId,
 			externalId: null,
@@ -370,7 +370,7 @@ describe("accounts and balances http service - unit tests", () => {
 	test("create journal entry with exceeding amount", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: any[] = await create2Accounts(); // Accounts created with 100 credit balance each.
-		const journalEntryId: string = uuid.v4();
+		const journalEntryId: string = Crypto.randomUUID();
 		const journalEntry = {
 			id: journalEntryId,
 			externalId: null,
@@ -388,7 +388,7 @@ describe("accounts and balances http service - unit tests", () => {
 	test("create journal entry with invalid amount", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: any[] = await create2Accounts(); // Accounts created with 100 credit balance each.
-		const journalEntryId: string = uuid.v4();
+		const journalEntryId: string = Crypto.randomUUID();
 		const journalEntry = {
 			id: journalEntryId,
 			externalId: null,
@@ -406,7 +406,7 @@ describe("accounts and balances http service - unit tests", () => {
 	test("create journal entry with unexpected journal entries repo failure", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: any[] = await create2Accounts();
-		const journalEntryId: string = uuid.v4();
+		const journalEntryId: string = Crypto.randomUUID();
 		const journalEntry = {
 			id: journalEntryId,
 			externalId: null,
@@ -426,7 +426,7 @@ describe("accounts and balances http service - unit tests", () => {
 	test("create journal entry with unexpected accounts repo failure", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: any[] = await create2Accounts();
-		const journalEntryId: string = uuid.v4();
+		const journalEntryId: string = Crypto.randomUUID();
 		const journalEntry = {
 			id: journalEntryId,
 			externalId: null,
@@ -446,7 +446,7 @@ describe("accounts and balances http service - unit tests", () => {
 	test("create journal entry without privileges", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: any[] = await create2Accounts();
-		const journalEntryId: string = uuid.v4();
+		const journalEntryId: string = Crypto.randomUUID();
 		const journalEntry = {
 			id: journalEntryId,
 			externalId: null,
@@ -466,12 +466,12 @@ describe("accounts and balances http service - unit tests", () => {
 
 	// Get account by id.
 	test("get non-existent account by id", async () => {
-		const accountId: string = uuid.v4();
+		const accountId: string = Crypto.randomUUID();
 		const statusCodeResponse: number = await auxiliaryAccountsAndBalancesHttpClient.getAccountById(accountId);
 		expect(statusCodeResponse).toEqual(404);
 	});
 	test("get existent account by id", async () => {
-		const accountId: string = uuid.v4();
+		const accountId: string = Crypto.randomUUID();
 		const account = {
 			id: accountId,
 			externalId: null,
@@ -487,7 +487,7 @@ describe("accounts and balances http service - unit tests", () => {
 		expect(statusCodeResponse).toEqual(200);
 	});
 	test("get account by id without privileges", async () => {
-		const accountId: string = uuid.v4();
+		const accountId: string = Crypto.randomUUID();
 		(authorizationClient as AuthorizationClientMock).setRoleHasPrivilege(false); // TODO: should this be done?
 		const statusCodeResponse: number = await auxiliaryAccountsAndBalancesHttpClient.getAccountById(accountId);
 		expect(statusCodeResponse).toEqual(403);
@@ -496,20 +496,20 @@ describe("accounts and balances http service - unit tests", () => {
 
 	// Get accounts by external id.
 	test("get non-existent accounts by external id", async () => {
-		const externalId: string = uuid.v4();
+		const externalId: string = Crypto.randomUUID();
 		const statusCodeResponse: number =
 			await auxiliaryAccountsAndBalancesHttpClient.getAccountsByExternalId(externalId);
 		expect(statusCodeResponse).toEqual(404);
 	});
 	test("get existent accounts by external id", async () => {
-		const externalId: string = uuid.v4();
+		const externalId: string = Crypto.randomUUID();
 		await create2Accounts(externalId, externalId);
 		const statusCodeResponse: number =
 			await auxiliaryAccountsAndBalancesHttpClient.getAccountsByExternalId(externalId);
 		expect(statusCodeResponse).toEqual(200);
 	});
 	test("get accounts by external id without privileges", async () => {
-		const externalId: string = uuid.v4();
+		const externalId: string = Crypto.randomUUID();
 		(authorizationClient as AuthorizationClientMock).setRoleHasPrivilege(false); // TODO: should this be done?
 		const statusCodeResponse: number =
 			await auxiliaryAccountsAndBalancesHttpClient.getAccountsByExternalId(externalId);
@@ -519,7 +519,7 @@ describe("accounts and balances http service - unit tests", () => {
 
 	// Get journal entries by account id.
 	test("get non-existent journal entries by account id", async () => {
-		const accountId: string = uuid.v4();
+		const accountId: string = Crypto.randomUUID();
 		const statusCodeResponse: number =
 			await auxiliaryAccountsAndBalancesHttpClient.getJournalEntriesByAccountId(accountId);
 		expect(statusCodeResponse).toEqual(404);
@@ -528,7 +528,7 @@ describe("accounts and balances http service - unit tests", () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: any[] = await create2Accounts();
 		// Journal entry A.
-		const idJournalEntryA: string = uuid.v4();
+		const idJournalEntryA: string = Crypto.randomUUID();
 		const journalEntryA = {
 			id: idJournalEntryA,
 			externalId: null,
@@ -557,7 +557,7 @@ describe("accounts and balances http service - unit tests", () => {
 		expect(statusCodeResponse).toEqual(200);
 	});
 	test("get journal entries by account id without privileges", async () => {
-		const accountId: string = uuid.v4();
+		const accountId: string = Crypto.randomUUID();
 		(authorizationClient as AuthorizationClientMock).setRoleHasPrivilege(false); // TODO: should this be done?
 		const statusCodeResponse: number =
 			await auxiliaryAccountsAndBalancesHttpClient.getJournalEntriesByAccountId(accountId);
@@ -571,7 +571,7 @@ async function create2Accounts(
 	externalIdAccountB: string | null = null
 ): Promise<any[]> {
 	// Account A.
-	const idAccountA: string = uuid.v4();
+	const idAccountA: string = Crypto.randomUUID();
 	const accountA = {
 		id: idAccountA,
 		externalId: externalIdAccountA,

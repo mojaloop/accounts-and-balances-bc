@@ -39,13 +39,13 @@ import {
 } from "@mojaloop/accounts-and-balances-bc-http-client-lib";
 import {KafkaLogger} from "@mojaloop/logging-bc-client-lib";
 import {MLKafkaProducerOptions} from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib";
-import * as uuid from "uuid";
+import * as Crypto from "crypto";
 
 /* ********** Constants Begin ********** */
 
 // General.
 const BOUNDED_CONTEXT_NAME: string = "accounts-and-balances-bc";
-const SERVICE_NAME: string = "integration-tests";
+const SERVICE_NAME: string = "integration-tests-http";
 const SERVICE_VERSION: string = "0.0.1";
 
 // Message broker.
@@ -81,7 +81,7 @@ describe("accounts and balances - integration tests with HTTP service", () => {
 			LOGGING_TOPIC,
 			LOGGING_LEVEL
 		);
-		await logger.start();
+		await logger.init();
 		accountsAndBalancesHttpClient = new AccountsAndBalancesHttpClient(
 			logger,
 			BASE_URL_ACCOUNTS_AND_BALANCES_HTTP_SERVICE,
@@ -96,7 +96,7 @@ describe("accounts and balances - integration tests with HTTP service", () => {
 
 	// Create account.
 	test("create non-existent account", async () => {
-		const accountId: string = uuid.v4();
+		const accountId: string = Crypto.randomUUID();
 		const account: IAccountDTO = {
 			id: accountId,
 			externalId: null,
@@ -111,7 +111,7 @@ describe("accounts and balances - integration tests with HTTP service", () => {
 		expect(accountIdReceived).toEqual(accountId);
 	});
 	test("create existent account", async () => {
-		const accountId: string = uuid.v4();
+		const accountId: string = Crypto.randomUUID();
 		const account: IAccountDTO = {
 			id: accountId,
 			externalId: null,
@@ -145,7 +145,7 @@ describe("accounts and balances - integration tests with HTTP service", () => {
 		expect(accountIdReceived).not.toEqual(accountId); // TODO: makes sense?
 	});
 	test("create account with invalid credit balance", async () => {
-		const accountId: string = uuid.v4();
+		const accountId: string = Crypto.randomUUID();
 		const account: IAccountDTO = {
 			id: accountId,
 			externalId: null,
@@ -163,7 +163,7 @@ describe("accounts and balances - integration tests with HTTP service", () => {
 		).rejects.toThrow(UnableToCreateAccountError);
 	});
 	test("create account with invalid debit balance", async () => {
-		const accountId: string = uuid.v4();
+		const accountId: string = Crypto.randomUUID();
 		const account: IAccountDTO = {
 			id: accountId,
 			externalId: null,
@@ -182,7 +182,7 @@ describe("accounts and balances - integration tests with HTTP service", () => {
 	});
 	// TODO: verify.
 	/*test("create account with unreachable server", async () => {
-		const accountId: string = uuid.v4();
+		const accountId: string = Crypto.randomUUID();
 		const account: IAccountDTO = {
 			id: accountId,
 			externalId: null,
@@ -207,7 +207,7 @@ describe("accounts and balances - integration tests with HTTP service", () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: any[] = await create2Accounts();
 		// Journal entry A.
-		const idJournalEntryA: string = uuid.v4();
+		const idJournalEntryA: string = Crypto.randomUUID();
 		const journalEntryA: IJournalEntryDTO = {
 			id: idJournalEntryA,
 			externalId: null,
@@ -238,7 +238,7 @@ describe("accounts and balances - integration tests with HTTP service", () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: any[] = await create2Accounts();
 		// Journal entry A.
-		const idJournalEntryA: string = uuid.v4();
+		const idJournalEntryA: string = Crypto.randomUUID();
 		const journalEntryA: IJournalEntryDTO = {
 			id: idJournalEntryA,
 			externalId: null,
@@ -289,7 +289,7 @@ describe("accounts and balances - integration tests with HTTP service", () => {
 	test("create journal entry with same credited and debited accounts", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: any[] = await create2Accounts();
-		const journalEntryId: string = uuid.v4();
+		const journalEntryId: string = Crypto.randomUUID();
 		const journalEntry: IJournalEntryDTO = {
 			id: journalEntryId,
 			externalId: null,
@@ -309,7 +309,7 @@ describe("accounts and balances - integration tests with HTTP service", () => {
 	test("create journal entry with non-existent credited account", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: any[] = await create2Accounts();
-		const journalEntryId: string = uuid.v4();
+		const journalEntryId: string = Crypto.randomUUID();
 		const journalEntry: IJournalEntryDTO = {
 			id: journalEntryId,
 			externalId: null,
@@ -329,7 +329,7 @@ describe("accounts and balances - integration tests with HTTP service", () => {
 	test("create journal entry with non-existent debited account", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: any[] = await create2Accounts();
-		const journalEntryId: string = uuid.v4();
+		const journalEntryId: string = Crypto.randomUUID();
 		const journalEntry: IJournalEntryDTO = {
 			id: journalEntryId,
 			externalId: null,
@@ -349,7 +349,7 @@ describe("accounts and balances - integration tests with HTTP service", () => {
 	test("create journal entry with different currency", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: any[] = await create2Accounts(); // Accounts created with EUR.
-		const journalEntryId: string = uuid.v4();
+		const journalEntryId: string = Crypto.randomUUID();
 		const journalEntry: IJournalEntryDTO = {
 			id: journalEntryId,
 			externalId: null,
@@ -369,7 +369,7 @@ describe("accounts and balances - integration tests with HTTP service", () => {
 	test("create journal entry with exceeding amount", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: any[] = await create2Accounts(); // Accounts created with 100 credit balance each.
-		const journalEntryId: string = uuid.v4();
+		const journalEntryId: string = Crypto.randomUUID();
 		const journalEntry: IJournalEntryDTO = {
 			id: journalEntryId,
 			externalId: null,
@@ -389,7 +389,7 @@ describe("accounts and balances - integration tests with HTTP service", () => {
 	test("create journal entry with invalid amount", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: any[] = await create2Accounts(); // Accounts created with 100 credit balance each.
-		const journalEntryId: string = uuid.v4();
+		const journalEntryId: string = Crypto.randomUUID();
 		const journalEntry: IJournalEntryDTO = {
 			id: journalEntryId,
 			externalId: null,
@@ -408,7 +408,7 @@ describe("accounts and balances - integration tests with HTTP service", () => {
 	});
 	// TODO: verify.
 	/*test("create journal entry with unreachable server", async () => {
-		const journalEntryId: string = uuid.v4();
+		const journalEntryId: string = Crypto.randomUUID();
 		const journalEntry: IJournalEntryDTO = {
 			id: journalEntryId,
 			externalId: null,
@@ -430,12 +430,12 @@ describe("accounts and balances - integration tests with HTTP service", () => {
 
 	// Get account by id.
 	test("get non-existent account by id", async () => {
-		const accountId: string = uuid.v4();
+		const accountId: string = Crypto.randomUUID();
 		const account: IAccountDTO | null = await accountsAndBalancesHttpClient.getAccountById(accountId);
 		expect(account).toBeNull();
 	});
 	test("get existent account by id", async () => {
-		const accountId: string = uuid.v4();
+		const accountId: string = Crypto.randomUUID();
 		const account: IAccountDTO = {
 			id: accountId,
 			externalId: null,
@@ -454,12 +454,12 @@ describe("accounts and balances - integration tests with HTTP service", () => {
 
 	// Get accounts by external id.
 	test("get non-existent accounts by external id", async () => {
-		const externalId: string = uuid.v4();
+		const externalId: string = Crypto.randomUUID();
 		const accounts: IAccountDTO[] = await accountsAndBalancesHttpClient.getAccountsByExternalId(externalId);
 		expect(accounts).toEqual([]);
 	});
 	test("get existent accounts by external id", async () => {
-		const externalId: string = uuid.v4();
+		const externalId: string = Crypto.randomUUID();
 		const accounts: any[] = await create2Accounts(externalId, externalId);
 		const accountsReceived: IAccountDTO[] =
 			await accountsAndBalancesHttpClient.getAccountsByExternalId(externalId);
@@ -468,7 +468,7 @@ describe("accounts and balances - integration tests with HTTP service", () => {
 
 	// Get journal entries by account id.
 	test("get non-existent journal entries by account id", async () => {
-		const accountId: string = uuid.v4();
+		const accountId: string = Crypto.randomUUID();
 		const journalEntries: IJournalEntryDTO[] =
 			await accountsAndBalancesHttpClient.getJournalEntriesByAccountId(accountId);
 		expect(journalEntries).toEqual([]);
@@ -477,7 +477,7 @@ describe("accounts and balances - integration tests with HTTP service", () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: any[] = await create2Accounts();
 		// Journal entry A.
-		const idJournalEntryA: string = uuid.v4();
+		const idJournalEntryA: string = Crypto.randomUUID();
 		const journalEntryA: IJournalEntryDTO = {
 			id: idJournalEntryA,
 			externalId: null,
@@ -512,7 +512,7 @@ async function create2Accounts(
 	externalIdAccountB: string | null = null
 ): Promise<any[]> {
 	// Account A.
-	const idAccountA: string = uuid.v4();
+	const idAccountA: string = Crypto.randomUUID();
 	const accountA: IAccountDTO = {
 		id: idAccountA,
 		externalId: externalIdAccountA,

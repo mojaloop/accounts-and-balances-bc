@@ -25,6 +25,8 @@
     "clean:all": "npm run clean:dist && npm run clean:npm && npm run clean:package-lock && npm run clean:coverage && npm run clean:proto-gen",
     "dep:check": "ncu -e 2",
     "dep:upgrade": "ncu -u",
+    "audit:check": "npm audit",
+    "audit:fix": "npm audit fix",
     "lint": "eslint src",
     "proto-gen": "sh proto-gen.sh",
     "build": "npm run proto-gen && tsc",

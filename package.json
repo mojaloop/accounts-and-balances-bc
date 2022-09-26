@@ -21,6 +21,8 @@
     "clean:all": "npm run clean:dist && npm run clean:npm && npm run clean:package-lock && npm run clean:coverage",
     "dep:check": "ncu -e 2 && npm -ws -p run dep:check",
     "dep:upgrade": "ncu -u && npm -ws -p run dep:upgrade",
+    "audit:check": "npm -ws -p run audit:check",
+    "audit:fix": "npm -ws -p run audit:fix",
     "lint": "npm -ws -p run lint",
     "build": "npm -ws -p run build",
     "test:unit": "npm -ws -p run test:unit",

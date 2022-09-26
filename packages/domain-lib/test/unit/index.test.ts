@@ -53,7 +53,7 @@ import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
 import {Account} from "../../src/entities/account";
 import {JournalEntry} from "../../src/entities/journal_entry";
-import * as uuid from "uuid";
+import * as Crypto from "crypto";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
 import {
 	AuditClientMock,
@@ -93,7 +93,7 @@ describe("accounts and balances domain library - unit tests", () => {
 
 	// Create account.
 	test("create non-existent account", async () => {
-		const accountId: string = uuid.v4();
+		const accountId: string = Crypto.randomUUID();
 		const account: IAccount = new Account(
 			accountId,
 			null,
@@ -108,7 +108,7 @@ describe("accounts and balances domain library - unit tests", () => {
 		expect(accountIdReceived).toEqual(accountId);
 	});
 	test("create existent account", async () => {
-		const accountId: string = uuid.v4();
+		const accountId: string = Crypto.randomUUID();
 		const account: IAccount = new Account(
 			accountId,
 			null,
@@ -142,7 +142,7 @@ describe("accounts and balances domain library - unit tests", () => {
 		expect(accountIdReceived).not.toEqual(accountId); // TODO: makes sense?
 	});
 	test("create account with invalid credit balance", async () => {
-		const accountId: string = uuid.v4();
+		const accountId: string = Crypto.randomUUID();
 		const account: IAccount = new Account(
 			accountId,
 			null,
@@ -160,7 +160,7 @@ describe("accounts and balances domain library - unit tests", () => {
 		).rejects.toThrow(InvalidCreditBalanceError);
 	});
 	test("create account with invalid debit balance", async () => {
-		const accountId: string = uuid.v4();
+		const accountId: string = Crypto.randomUUID();
 		const account: IAccount = new Account(
 			accountId,
 			null,
@@ -178,7 +178,7 @@ describe("accounts and balances domain library - unit tests", () => {
 		).rejects.toThrow(InvalidDebitBalanceError);
 	});
 	test("create account with unexpected accounts repo failure", async () => {
-		const accountId: string = uuid.v4();
+		const accountId: string = Crypto.randomUUID();
 		const account: IAccount = new Account(
 			accountId,
 			null,
@@ -203,7 +203,7 @@ describe("accounts and balances domain library - unit tests", () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: IAccount[] = await create2Accounts();
 		// Journal entry A.
-		const idJournalEntryA: string = uuid.v4();
+		const idJournalEntryA: string = Crypto.randomUUID();
 		const journalEntryA: IJournalEntry = new JournalEntry(
 			idJournalEntryA,
 			null,
@@ -234,7 +234,7 @@ describe("accounts and balances domain library - unit tests", () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: IAccount[] = await create2Accounts();
 		// Journal entry A.
-		const idJournalEntryA: string = uuid.v4();
+		const idJournalEntryA: string = Crypto.randomUUID();
 		const journalEntryA: IJournalEntry = new JournalEntry(
 			idJournalEntryA,
 			null,
@@ -284,7 +284,7 @@ describe("accounts and balances domain library - unit tests", () => {
 	test("create journal entry with same credited and debited accounts", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: IAccount[] = await create2Accounts();
-		const journalEntryId: string = uuid.v4();
+		const journalEntryId: string = Crypto.randomUUID();
 		const journalEntry: IJournalEntry = new JournalEntry(
 			journalEntryId,
 			null,
@@ -304,7 +304,7 @@ describe("accounts and balances domain library - unit tests", () => {
 	test("create journal entry with non-existent credited account", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: IAccount[] = await create2Accounts();
-		const journalEntryId: string = uuid.v4();
+		const journalEntryId: string = Crypto.randomUUID();
 		const journalEntry: IJournalEntry = new JournalEntry(
 			journalEntryId,
 			null,
@@ -324,7 +324,7 @@ describe("accounts and balances domain library - unit tests", () => {
 	test("create journal entry with non-existent debited account", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: IAccount[] = await create2Accounts();
-		const journalEntryId: string = uuid.v4();
+		const journalEntryId: string = Crypto.randomUUID();
 		const journalEntry: IJournalEntry = new JournalEntry(
 			journalEntryId,
 			null,
@@ -344,7 +344,7 @@ describe("accounts and balances domain library - unit tests", () => {
 	test("create journal entry with different currency", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: IAccount[] = await create2Accounts(); // Accounts created with EUR.
-		const journalEntryId: string = uuid.v4();
+		const journalEntryId: string = Crypto.randomUUID();
 		const journalEntry: IJournalEntry = new JournalEntry(
 			journalEntryId,
 			null,
@@ -364,7 +364,7 @@ describe("accounts and balances domain library - unit tests", () => {
 	test("create journal entry with exceeding amount", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: IAccount[] = await create2Accounts(); // Accounts created with 100 credit balance each.
-		const journalEntryId: string = uuid.v4();
+		const journalEntryId: string = Crypto.randomUUID();
 		const journalEntry: IJournalEntry = new JournalEntry(
 			journalEntryId,
 			null,
@@ -384,7 +384,7 @@ describe("accounts and balances domain library - unit tests", () => {
 	test("create journal entry with invalid amount", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: IAccount[] = await create2Accounts(); // Accounts created with 100 credit balance each.
-		const journalEntryId: string = uuid.v4();
+		const journalEntryId: string = Crypto.randomUUID();
 		const journalEntry: IJournalEntry = new JournalEntry(
 			journalEntryId,
 			null,
@@ -404,7 +404,7 @@ describe("accounts and balances domain library - unit tests", () => {
 	test("create journal entry with unexpected journal entries repo failure", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: IAccount[] = await create2Accounts();
-		const journalEntryId: string = uuid.v4();
+		const journalEntryId: string = Crypto.randomUUID();
 		const journalEntry: IJournalEntry = new JournalEntry(
 			journalEntryId,
 			null,
@@ -426,7 +426,7 @@ describe("accounts and balances domain library - unit tests", () => {
 	test("create journal entry with unexpected accounts repo failure", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: IAccount[] = await create2Accounts();
-		const journalEntryId: string = uuid.v4();
+		const journalEntryId: string = Crypto.randomUUID();
 		const journalEntry: IJournalEntry = new JournalEntry(
 			journalEntryId,
 			null,
@@ -448,12 +448,12 @@ describe("accounts and balances domain library - unit tests", () => {
 
 	// Get account by id.
 	test("get non-existent account by id", async () => {
-		const accountId: string = uuid.v4();
+		const accountId: string = Crypto.randomUUID();
 		const account: IAccount | null = await aggregate.getAccountById(accountId, securityContext);
 		expect(account).toBeNull();
 	});
 	test("get existent account by id", async () => {
-		const accountId: string = uuid.v4();
+		const accountId: string = Crypto.randomUUID();
 		const account: IAccount = new Account(
 			accountId,
 			null,
@@ -469,7 +469,7 @@ describe("accounts and balances domain library - unit tests", () => {
 		expect(accountReceived).toEqual(account);
 	});
 	test("get account with unexpected accounts repo failure", async () => {
-		const accountId: string = uuid.v4();
+		const accountId: string = Crypto.randomUUID();
 		(accountsRepo as MemoryAccountsRepo).setUnexpectedFailure(true); // TODO: should this be done?
 		await expect(
 			async () => {
@@ -481,18 +481,18 @@ describe("accounts and balances domain library - unit tests", () => {
 
 	// Get accounts by external id.
 	test("get non-existent accounts by external id", async () => {
-		const externalId: string = uuid.v4();
+		const externalId: string = Crypto.randomUUID();
 		const accounts: IAccount[] = await aggregate.getAccountsByExternalId(externalId, securityContext);
 		expect(accounts).toEqual([]);
 	});
 	test("get existent accounts by external id", async () => {
-		const externalId: string = uuid.v4();
+		const externalId: string = Crypto.randomUUID();
 		const accounts: IAccount[] = await create2Accounts(externalId, externalId);
 		const accountsReceived: IAccount[] = await aggregate.getAccountsByExternalId(externalId, securityContext);
 		expect(accountsReceived).toEqual(accounts);
 	});
 	test("get accounts with unexpected accounts repo failure", async () => {
-		const externalId: string = uuid.v4();
+		const externalId: string = Crypto.randomUUID();
 		(accountsRepo as MemoryAccountsRepo).setUnexpectedFailure(true); // TODO: should this be done?
 		await expect(
 			async () => {
@@ -504,7 +504,7 @@ describe("accounts and balances domain library - unit tests", () => {
 
 	// Get journal entries by account id.
 	test("get non-existent journal entries by account id", async () => {
-		const accountId: string = uuid.v4();
+		const accountId: string = Crypto.randomUUID();
 		const journalEntries: IJournalEntry[] = await aggregate.getJournalEntriesByAccountId(accountId, securityContext);
 		expect(journalEntries).toEqual([]);
 	});
@@ -512,7 +512,7 @@ describe("accounts and balances domain library - unit tests", () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: IAccount[] = await create2Accounts();
 		// Journal entry A.
-		const idJournalEntryA: string = uuid.v4();
+		const idJournalEntryA: string = Crypto.randomUUID();
 		const journalEntryA: IJournalEntry = new JournalEntry(
 			idJournalEntryA,
 			null,
@@ -541,7 +541,7 @@ describe("accounts and balances domain library - unit tests", () => {
 		expect(journalEntriesReceived).toEqual([journalEntryA, journalEntryB]);
 	});
 	test("get journal entries with unexpected journal entries repo failure", async () => {
-		const accountId: string = uuid.v4();
+		const accountId: string = Crypto.randomUUID();
 		(journalEntriesRepo as MemoryJournalEntriesRepo).setUnexpectedFailure(true); // TODO: should this be done?
 		await expect(
 			async () => {
@@ -557,7 +557,7 @@ async function create2Accounts(
 	externalIdAccountB: string | null = null
 ): Promise<IAccount[]> {
 	// Account A.
-	const idAccountA: string = uuid.v4();
+	const idAccountA: string = Crypto.randomUUID();
 	const accountA: IAccount = new Account(
 		idAccountA,
 		externalIdAccountA,
@@ -570,7 +570,7 @@ async function create2Accounts(
 	);
 	await aggregate.createAccount(accountA, securityContext);
 	// Account B.
-	const idAccountB: string = uuid.v4();
+	const idAccountB: string = Crypto.randomUUID();
 	const accountB: IAccount = new Account(
 		idAccountB,
 		externalIdAccountB,

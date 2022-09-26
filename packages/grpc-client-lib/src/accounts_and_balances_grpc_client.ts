@@ -29,5 +29,156 @@
 
 "use strict";
 
+import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
+import {PackageDefinition} from "@grpc/proto-loader";
+import {credentials, GrpcObject, loadPackageDefinition} from "@grpc/grpc-js";
+import {
+	IAccount,
+	IJournalEntry,
+	GrpcAccount,
+	GrpcId,
+	GrpcJournalEntryArray,
+	ProtoGrpcType,
+	AccountsAndBalancesGrpcServiceClient, grpcAccountToIAccount, grpcJournalEntryToIJournalEntry,
+	loadProto
+} from "@mojaloop/accounts-and-balances-bc-common-lib";
+
 export class AccountsAndBalancesGrpcClient {
+	// Properties received through the constructor.
+	private readonly logger: ILogger;
+	// Other properties.
+	private readonly grpcClient: AccountsAndBalancesGrpcServiceClient;
+
+	constructor(
+		logger: ILogger,
+		host: string,
+		portNo: number
+	) {
+		this.logger = logger;
+
+		const packageDefinition: PackageDefinition = loadProto();
+		const grpcObject: GrpcObject = loadPackageDefinition(packageDefinition);
+		this.grpcClient = new (grpcObject as unknown as ProtoGrpcType).AccountsAndBalancesGrpcService(
+			`${host}:${portNo}`,
+			credentials.createInsecure()
+		);
+	}
+
+	async init(): Promise<void> {
+		return new Promise((resolve, reject) => {
+			this.grpcClient.waitForReady(
+				Date.now() + 50000, // TODO: put this value in a constant.
+				(error) => {
+					if (error) {
+						reject(error);
+					}
+					this.logger.info("gRPC client initialized 🚀");
+					resolve();
+				}
+			);
+		})
+	}
+
+	async destroy(): Promise<void> {
+		this.grpcClient.close();
+		this.logger.info("gRPC client destroyed 🏁");
+	}
+
+	// TODO: verify types.
+	async createAccount(grpcAccount: GrpcAccount): Promise<string> {
+		return new Promise((resolve, reject) => {
+			this.grpcClient.createAccount(
+				grpcAccount,
+				(error, grpcId) => {
+					if (error) {
+						reject(error);
+						return; // TODO: return?
+					}
+					const accountId: string = grpcId!.grpcId; // TODO: !.
+					resolve(accountId);
+				}
+			);
+		});
+	}
+
+	// TODO: verify types.
+	async createJournalEntries(grpcJournalEntryArray: GrpcJournalEntryArray): Promise<string[]> {
+		return new Promise((resolve, reject) => {
+			this.grpcClient.createJournalEntries(
+				grpcJournalEntryArray,
+				(error, grpcIdArray) => {
+					if (error) {
+						reject(error);
+						return; // TODO: return?
+					}
+					const idsJournalEntries = grpcIdArray!.grpcIdArray.map(grpcId => { // TODO: !.
+						return grpcId.grpcId;
+					});
+					resolve(idsJournalEntries);
+				}
+			);
+		});
+	}
+
+	// TODO: verify types.
+	async getAccountById(accountGrpcId: GrpcId): Promise<IAccount | null> {
+		return new Promise((resolve, reject) => {
+			this.grpcClient.getAccountById(
+				accountGrpcId,
+				(error, grpcAccount) => {
+					if (error) {
+						reject(error);
+						return; // TODO: return?
+					}
+					let iAccount: IAccount | null;
+					if (grpcAccount!.id === "") { // TODO: !.
+						iAccount = null;
+					} else {
+						iAccount = grpcAccountToIAccount(grpcAccount!); // TODO: !.
+					}
+					resolve(iAccount);
+				}
+			);
+		});
+	}
+
+	// TODO: verify types.
+	async getAccountsByExternalId(externalGrpcId: GrpcId): Promise<IAccount[]> {
+		return new Promise((resolve, reject) => {
+			this.grpcClient.getAccountsByExternalId(
+				externalGrpcId,
+				(error, grpcAccountArray) => {
+					if (error) {
+						reject(error);
+						return; // TODO: return?
+					}
+					const iAccounts: IAccount[] = [];
+					for (const grpcAccount of grpcAccountArray!.grpcAccountArray) { // TODO: !.
+						iAccounts.push(grpcAccountToIAccount(grpcAccount));
+					}
+					resolve(iAccounts);
+				}
+			);
+		});
+	}
+
+	// TODO: verify types.
+	async getJournalEntriesByAccountId(accountGrpcId: GrpcId): Promise<IJournalEntry[]> {
+		return new Promise((resolve, reject) => {
+			this.grpcClient.getJournalEntriesByAccountId(
+				accountGrpcId,
+				(error, grpcJournalEntryArray) => {
+					if (error) {
+						reject(error);
+						return; // TODO: return?
+					}
+					const iJournalEntries: IJournalEntry[] = [];
+					for (const grpcJournalEntry of grpcJournalEntryArray!.grpcJournalEntryArray) { // TODO: !.
+						iJournalEntries.push(grpcJournalEntryToIJournalEntry(grpcJournalEntry));
+					}
+					resolve(iJournalEntries);
+				}
+			);
+		});
+	}
 }
