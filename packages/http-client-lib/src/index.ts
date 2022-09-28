@@ -31,4 +31,3 @@
 
 export * from "./accounts_and_balances_http_client";
 export * from "./errors";
-export * from "./types";

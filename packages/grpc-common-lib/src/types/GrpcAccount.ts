@@ -1,4 +1,4 @@
-// Original file: src/grpc/accounts_and_balances.proto
+// Original file: src/accounts_and_balances.proto
 
 import type { GrpcAccountState as _GrpcAccountState } from './GrpcAccountState';
 import type { GrpcAccountType as _GrpcAccountType } from './GrpcAccountType';
@@ -10,8 +10,8 @@ export interface GrpcAccount {
   'state'?: (_GrpcAccountState | keyof typeof _GrpcAccountState);
   'type'?: (_GrpcAccountType | keyof typeof _GrpcAccountType);
   'currency'?: (string);
-  'creditBalance'?: (number | string | Long);
-  'debitBalance'?: (number | string | Long);
+  'creditBalance'?: (string);
+  'debitBalance'?: (string);
   'timestampLastJournalEntry'?: (number | string | Long);
 }
 
@@ -23,5 +23,5 @@ export interface GrpcAccount__Output {
   'currency': (string);
   'creditBalance': (string);
   'debitBalance': (string);
-  'timestampLastJournalEntry': (string);
+  'timestampLastJournalEntry': (number);
 }

@@ -1,4 +1,4 @@
-// Original file: src/grpc/accounts_and_balances.proto
+// Original file: src/accounts_and_balances.proto
 
 import type { Long } from '@grpc/proto-loader';
 
@@ -7,7 +7,7 @@ export interface GrpcJournalEntry {
   'externalId'?: (string);
   'externalCategory'?: (string);
   'currency'?: (string);
-  'amount'?: (number | string | Long);
+  'amount'?: (string);
   'creditedAccountId'?: (string);
   'debitedAccountId'?: (string);
   'timestamp'?: (number | string | Long);
@@ -21,5 +21,5 @@ export interface GrpcJournalEntry__Output {
   'amount': (string);
   'creditedAccountId': (string);
   'debitedAccountId': (string);
-  'timestamp': (string);
+  'timestamp': (number);
 }

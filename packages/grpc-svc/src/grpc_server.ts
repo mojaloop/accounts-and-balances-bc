@@ -45,7 +45,7 @@ import {
 	ProtoGrpcType,
 	AccountsAndBalancesGrpcServiceHandlers,
 	loadProto
-} from "@mojaloop/accounts-and-balances-bc-common-lib";
+} from "@mojaloop/accounts-and-balances-bc-grpc-common-lib";
 import {TokenHelper} from "@mojaloop/security-bc-client-lib";
 import {RpcHandlers} from "./rpc_handlers";
 

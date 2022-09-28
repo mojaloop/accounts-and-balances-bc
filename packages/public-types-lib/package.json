@@ -1,9 +1,9 @@
 {
-  "name": "@mojaloop/accounts-and-balances-bc-grpc-svc",
+  "name": "@mojaloop/accounts-and-balances-bc-public-types-lib",
   "version": "0.0.1",
-  "description": "Accounts and Balances BC - gRPC Service",
+  "description": "Accounts and Balances BC - Public Types Library",
   "license": "Apache-2.0",
-  "homepage": "https://github.com/mojaloop/accounts-and-balances-bc/tree/main/packages/grpc-svc",
+  "homepage": "https://github.com/mojaloop/accounts-and-balances-bc/tree/main/packages/public-types-lib",
   "bugs": {
     "url": "https://github.com/mojaloop/accounts-and-balances-bc/issues#readme"
   },
@@ -11,7 +11,6 @@
     "Gonçalo Garcia <goncalogarcia99@gmail.com>",
     "Pedro Sousa Barreto <pedrob@crosslaketech.com>"
   ],
-  "private": true,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
@@ -25,16 +24,14 @@
     "audit:fix": "npm audit fix",
     "lint": "eslint src/",
     "build": "tsc",
-    "test:unit": "jest",
-    "test:unit-single": "jest --coverage false -t",
-    "start": "node dist/index.js"
+    "test:unit": "echo \"public-types-lib doesn't have unit tests\""
   },
   "devDependencies": {
-    "@mojaloop/accounts-and-balances-bc-shared-mocks-lib": "*"
   },
   "dependencies": {
     "@mojaloop/accounts-and-balances-bc-domain-lib": "*",
-    "@grpc/grpc-js": "^1.7.0",
-    "@grpc/proto-loader": "^0.7.2"
+    "@mojaloop/auditing-bc-public-types-lib": "*",
+    "@mojaloop/security-bc-public-types-lib": "*",
+    "@mojaloop/logging-bc-public-types-lib": "^0.1.10"
   }
 }

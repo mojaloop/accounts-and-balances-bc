@@ -31,10 +31,10 @@
 
 import {
 	InvalidCreditBalanceError,
-	InvalidDebitBalanceError
+	InvalidDebitBalanceError, InvalidExternalIdError
 } from "../errors";
-
-import {IAccount, AccountState, AccountType} from "@mojaloop/accounts-and-balances-bc-common-lib";
+import {IAccount} from "../types";
+import {AccountState, AccountType, IAccountDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 export class Account implements IAccount {
 	id: string;
@@ -66,15 +66,55 @@ export class Account implements IAccount {
 		this.timestampLastJournalEntry = timestampLastJournalEntry;
 	}
 
-	static validateAccount(account: Account): void {
-		// currency. TODO: validate currency.
-		// creditBalance.
+	static getFromDto(accountDto: IAccountDto): Account {
+		let creditBalance: bigint, debitBalance: bigint;
+		try {
+			creditBalance = BigInt(accountDto.creditBalance);
+		} catch(error: unknown) {
+			throw new InvalidCreditBalanceError();
+		}
+		try {
+			debitBalance = BigInt(accountDto.debitBalance);
+		} catch(error: unknown) {
+			throw new InvalidDebitBalanceError();
+		}
+		return new Account(
+			accountDto.id,
+			accountDto.externalId,
+			accountDto.state,
+			accountDto.type,
+			accountDto.currency,
+			creditBalance,
+			debitBalance,
+			accountDto.timestampLastJournalEntry
+		);
+	}
+
+	static validate(account: Account): void {
+		// External id.
+		if (account.externalId === "") {
+			throw new InvalidExternalIdError();
+		}
+		// Credit balance.
 		if (account.creditBalance < 0) {
 			throw new InvalidCreditBalanceError();
 		}
-		// debitBalance.
+		// Debit balance.
 		if (account.debitBalance < 0) {
 			throw new InvalidDebitBalanceError();
 		}
+	}
+
+	static getDto(account: Account): IAccountDto {
+		return {
+			id: account.id,
+			externalId: account.externalId,
+			state: account.state,
+			type: account.type,
+			currency: account.currency,
+			creditBalance: account.creditBalance.toString(),
+			debitBalance: account.debitBalance.toString(),
+			timestampLastJournalEntry: account.timestampLastJournalEntry
+		};
 	}
 }

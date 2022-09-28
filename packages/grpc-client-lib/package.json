@@ -17,16 +17,12 @@
     "/dist"
   ],
   "scripts": {
-    "clean:dist": "rm -fr dist",
-    "clean:npm": "rm -fr node_modules",
-    "clean:package-lock": "rm -f package-lock.json",
-    "clean:coverage": "rm -fr coverage",
-    "clean:all": "npm run clean:dist && npm run clean:npm && npm run clean:package-lock && npm run clean:coverage",
+    "clean:dist": "rm -fr dist/",
     "dep:check": "ncu -e 2",
     "dep:upgrade": "ncu -u",
     "audit:check": "npm audit",
     "audit:fix": "npm audit fix",
-    "lint": "eslint src",
+    "lint": "eslint src/",
     "build": "tsc",
     "test:unit": "jest",
     "test:unit-single": "jest --coverage false -t",

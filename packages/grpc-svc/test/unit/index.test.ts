@@ -40,14 +40,16 @@ import {
 	IAccountsRepo,
 	IJournalEntriesRepo
 } from "@mojaloop/accounts-and-balances-bc-domain-lib";
-import {
-	GrpcAccountState,
-	GrpcAccountType, GrpcAccount, GrpcId, GrpcJournalEntry, IAccount, IJournalEntry
-} from "@mojaloop/accounts-and-balances-bc-common-lib";
 import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
 import {AuxiliaryAccountsAndBalancesGrpcClient} from "./auxiliary_accounts_and_balances_grpc_client";
 import {start, stop} from "../../src/service";
+import {
+	AccountState,
+	AccountType,
+	IAccountDto,
+	IJournalEntryDto
+} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 const ACCOUNTS_AND_BALANCES_GRPC_SERVICE_HOST: string = "localhost"; // TODO: change name.
 const ACCOUNTS_AND_BALANCES_GRPC_SERVICE_PORT_NO: number = 1234; // TODO: change name.
@@ -87,104 +89,103 @@ describe("accounts and balances grpc service - unit tests", () => {
 
 	test("create non-existent account", async () => {
 		const accountId: string = Crypto.randomUUID();
-		const grpcAccount: GrpcAccount = {
+		const accountDto: IAccountDto = {
 			id: accountId,
-			externalId: "",
-			state: GrpcAccountState.ACTIVE,
-			type: GrpcAccountType.POSITION,
+			externalId: null,
+			state: AccountState.ACTIVE,
+			type: AccountType.POSITION,
 			currency: "EUR",
 			creditBalance: "100",
 			debitBalance: "25",
-			timestampLastJournalEntry: "0"
+			timestampLastJournalEntry: 0
 		};
-		const accountIdReceived: string = await auxiliaryAccountsAndBalancesGrpcClient.createAccount(grpcAccount);
+		const accountIdReceived: string = await auxiliaryAccountsAndBalancesGrpcClient.createAccount(accountDto);
 		expect(accountIdReceived).toEqual(accountId);
 	});
 
 	test("create non-existent journal entry", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
-		const accounts: GrpcAccount[] = await create2Accounts();
+		const accountDtos: IAccountDto[] = await create2Accounts();
 		// Journal entry A.
 		const idJournalEntryA: string = Crypto.randomUUID();
-		const grpcJournalEntryA: GrpcJournalEntry = {
+		const journalEntryDtoA: IJournalEntryDto = {
 			id: idJournalEntryA,
 			externalId: "",
 			externalCategory: "",
 			currency: "EUR",
 			amount: "5",
-			creditedAccountId: accounts[0].id,
-			debitedAccountId: accounts[1].id,
-			timestamp: "0"
+			creditedAccountId: accountDtos[0].id,
+			debitedAccountId: accountDtos[1].id,
+			timestamp: 0
 		};
 		// Journal entry B.
 		const idJournalEntryB: string = idJournalEntryA + 1;
-		const grpcJournalEntryB: GrpcJournalEntry = {
+		const journalEntryDtoB: IJournalEntryDto = {
 			id: idJournalEntryB,
 			externalId: "",
 			externalCategory: "",
 			currency: "EUR",
 			amount: "5",
-			creditedAccountId: accounts[1].id,
-			debitedAccountId: accounts[0].id,
-			timestamp: "0"
+			creditedAccountId: accountDtos[1].id,
+			debitedAccountId: accountDtos[0].id,
+			timestamp: 0
 		};
 		const idsJournalEntries: string[] = await auxiliaryAccountsAndBalancesGrpcClient.createJournalEntries(
-			{grpcJournalEntryArray: [grpcJournalEntryA, grpcJournalEntryB]}
+			[journalEntryDtoA, journalEntryDtoB]
 		);
 		expect(idsJournalEntries).toEqual([idJournalEntryA, idJournalEntryB]);
 	});
 
 	test("get non-existent account by id", async () => {
-		const accountGrpcId: GrpcId = {grpcId: Crypto.randomUUID()};
-		const account: IAccount | null = await auxiliaryAccountsAndBalancesGrpcClient.getAccountById(accountGrpcId);
-		expect(account).toEqual(null);
+		const accountId: string = Crypto.randomUUID();
+		const accountDto: IAccountDto | null = await auxiliaryAccountsAndBalancesGrpcClient.getAccountById(accountId);
+		expect(accountDto).toEqual(null);
 	});
 
 	test("get non-existent accounts by external id", async () => {
 		const externalId: string = Crypto.randomUUID();
-		const accounts: IAccount[] = await auxiliaryAccountsAndBalancesGrpcClient.getAccountsByExternalId(
-			{grpcId: externalId}
-		);
-		expect(accounts).toEqual([]);
+		const accountDtos: IAccountDto[] =
+			await auxiliaryAccountsAndBalancesGrpcClient.getAccountsByExternalId(externalId);
+		expect(accountDtos).toEqual([]);
 	});
 
 	test("get non-existent journal entries by account id", async () => {
-		const accountId: string =Crypto.randomUUID();
-		const journalEntries: IJournalEntry[] =
-			await auxiliaryAccountsAndBalancesGrpcClient.getJournalEntriesByAccountId({grpcId: accountId});
-		expect(journalEntries).toEqual([]);
+		const accountId: string = Crypto.randomUUID();
+		const journalEntryDtos: IJournalEntryDto[] =
+			await auxiliaryAccountsAndBalancesGrpcClient.getJournalEntriesByAccountId(accountId);
+		expect(journalEntryDtos).toEqual([]);
 	});
 });
 
 async function create2Accounts(
 	externalIdAccountA: string = "",
 	externalIdAccountB: string = ""
-): Promise<any[]> {
+): Promise<IAccountDto[]> {
 	// Account A.
 	const idAccountA: string = Crypto.randomUUID();
-	const grpcAccountA: GrpcAccount = {
+	const accountDtoA: IAccountDto = {
 		id: idAccountA,
 		externalId: externalIdAccountA,
-		state: GrpcAccountState.ACTIVE,
-		type: GrpcAccountType.POSITION,
+		state: AccountState.ACTIVE,
+		type: AccountType.POSITION,
 		currency: "EUR",
 		creditBalance: "100",
 		debitBalance: "25",
-		timestampLastJournalEntry: "0"
+		timestampLastJournalEntry: 0
 	};
-	await auxiliaryAccountsAndBalancesGrpcClient.createAccount(grpcAccountA);
+	await auxiliaryAccountsAndBalancesGrpcClient.createAccount(accountDtoA);
 	// Account B.
 	const idAccountB: string = idAccountA + 1;
-	const grpcAccountB: GrpcAccount = {
+	const accountDtoB: IAccountDto = {
 		id: idAccountB,
 		externalId: externalIdAccountB,
-		state: GrpcAccountState.ACTIVE,
-		type: GrpcAccountType.POSITION,
+		state: AccountState.ACTIVE,
+		type: AccountType.POSITION,
 		currency: "EUR",
 		creditBalance: "100",
 		debitBalance: "25",
-		timestampLastJournalEntry: "0"
+		timestampLastJournalEntry: 0
 	};
-	await auxiliaryAccountsAndBalancesGrpcClient.createAccount(grpcAccountB);
-	return [grpcAccountA, grpcAccountB];
+	await auxiliaryAccountsAndBalancesGrpcClient.createAccount(accountDtoB);
+	return [accountDtoA, accountDtoB];
 }

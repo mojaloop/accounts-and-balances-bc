@@ -29,10 +29,9 @@
 
 "use strict";
 
-import {IJournalEntry} from "@mojaloop/accounts-and-balances-bc-common-lib";
-import {
-	InvalidJournalEntryAmountError
-} from "../errors";
+import {InvalidExternalCategoryError, InvalidExternalIdError, InvalidJournalEntryAmountError} from "../errors";
+import {IJournalEntry} from "../types";
+import {IJournalEntryDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 export class JournalEntry implements IJournalEntry {
 	id: string;
@@ -64,11 +63,50 @@ export class JournalEntry implements IJournalEntry {
 		this.timestamp = timestamp;
 	}
 
-	static validateJournalEntry(journalEntry: JournalEntry): void {
-		// currency. TODO: validate currency.
-		// amount.
-		if (journalEntry.amount <= 0) {
+	static getFromDto(journalEntryDto: IJournalEntryDto): JournalEntry {
+		let amount: bigint;
+		try {
+			amount = BigInt(journalEntryDto.amount);
+		} catch(error: unknown) {
 			throw new InvalidJournalEntryAmountError();
 		}
+		return new JournalEntry(
+			journalEntryDto.id,
+			journalEntryDto.externalId,
+			journalEntryDto.externalCategory,
+			journalEntryDto.currency,
+			amount,
+			journalEntryDto.creditedAccountId,
+			journalEntryDto.debitedAccountId,
+			journalEntryDto.timestamp
+		);
+	}
+
+	static validate(journalEntry: JournalEntry): void {
+		// External id.
+		if (journalEntry.externalId === "") {
+			throw new InvalidExternalIdError();
+		}
+		// External category.
+		if (journalEntry.externalCategory === "") {
+			throw new InvalidExternalCategoryError();
+		}
+		// Amount.
+		if (journalEntry.amount < 0) {
+			throw new InvalidJournalEntryAmountError();
+		}
+	}
+
+	static getDto(journalEntry: JournalEntry): IJournalEntryDto {
+		return {
+			id: journalEntry.id,
+			externalId: journalEntry.externalId,
+			externalCategory: journalEntry.externalCategory,
+			currency: journalEntry.currency,
+			amount: journalEntry.amount.toString(),
+			creditedAccountId: journalEntry.creditedAccountId,
+			debitedAccountId: journalEntry.debitedAccountId,
+			timestamp: journalEntry.timestamp
+		};
 	}
 }

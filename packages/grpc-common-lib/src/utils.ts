@@ -29,86 +29,79 @@
 
 "use strict";
 
-import {
-	IAccount,
-	IJournalEntry,
-	AccountState,
-	AccountType
-} from "../generic/types";
 import {GrpcAccount__Output} from "./types/GrpcAccount";
 import {GrpcJournalEntry__Output} from "./types/GrpcJournalEntry";
 import {loadSync, PackageDefinition} from "@grpc/proto-loader";
+import * as path from "path";
+import {
+	AccountState,
+	AccountType,
+	IAccountDto,
+	IJournalEntryDto
+} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
-// TODO: relative path.
-const PROTO_FILE_PATH: string = "/home/goncalogarcia/Documents/Work/Mojaloop/vNext/BoundedContexts/accounts-and-balances-bc/packages/common-lib/src/grpc/accounts_and_balances.proto";
+const PROTO_FILE_NAME = "accounts_and_balances.proto";
+const PROTO_FILE_PATH = path.join(__dirname, PROTO_FILE_NAME);
 
 export function loadProto(): PackageDefinition {
 	return loadSync(
 		PROTO_FILE_PATH,
 		{
-			longs: String,
+			longs: Number,
 			enums: String,
 			defaults: true
 		}
 	);
 }
 
-export function grpcAccountToIAccount(grpcAccount: GrpcAccount__Output): IAccount {
-	const timestampLastJournalEntry: bigint = BigInt(grpcAccount.timestampLastJournalEntry);
-	if (timestampLastJournalEntry > Number.MAX_SAFE_INTEGER) {
-		throw new Error(); // TODO: create type.
-	}
+export function grpcAccountToAccountDto(grpcAccount: GrpcAccount__Output): IAccountDto {
 	return {
 		id: grpcAccount.id,
 		externalId: grpcAccount.externalId || null,
 		state: grpcAccount.state as AccountState,
 		type: grpcAccount.type as AccountType,
 		currency: grpcAccount.currency,
-		creditBalance: BigInt(grpcAccount.creditBalance),
-		debitBalance: BigInt(grpcAccount.debitBalance),
-		timestampLastJournalEntry: parseInt(grpcAccount.timestampLastJournalEntry)
+		creditBalance: grpcAccount.creditBalance,
+		debitBalance: grpcAccount.debitBalance,
+		timestampLastJournalEntry: grpcAccount.timestampLastJournalEntry
 	}
 }
 
-export function IAccountToGrpcAccount(domainAccount: IAccount): GrpcAccount__Output {
+export function accountDtoToGrpcAccount(accountDto: IAccountDto): GrpcAccount__Output {
 	return {
-		id: domainAccount.id,
-		externalId: domainAccount.externalId || "",
-		state: domainAccount.state,
-		type: domainAccount.type,
-		currency: domainAccount.currency,
-		creditBalance: domainAccount.creditBalance.toString(),
-		debitBalance: domainAccount.debitBalance.toString(),
-		timestampLastJournalEntry: domainAccount.timestampLastJournalEntry.toString()
+		id: accountDto.id,
+		externalId: accountDto.externalId || "",
+		state: accountDto.state,
+		type: accountDto.type,
+		currency: accountDto.currency,
+		creditBalance: accountDto.creditBalance,
+		debitBalance: accountDto.debitBalance,
+		timestampLastJournalEntry: accountDto.timestampLastJournalEntry
 	}
 }
 
-export function grpcJournalEntryToIJournalEntry(grpcJournalEntry: GrpcJournalEntry__Output): IJournalEntry {
-	const timestamp: bigint = BigInt(grpcJournalEntry.timestamp);
-	if (timestamp > Number.MAX_SAFE_INTEGER) {
-		throw new Error(); // TODO: create type.
-	}
+export function grpcJournalEntryToJournalEntryDto(grpcJournalEntry: GrpcJournalEntry__Output): IJournalEntryDto {
 	return {
 		id: grpcJournalEntry.id,
 		externalId: grpcJournalEntry.externalId || null,
 		externalCategory: grpcJournalEntry.externalCategory || null,
 		currency: grpcJournalEntry.currency,
-		amount: BigInt(grpcJournalEntry.amount),
+		amount: grpcJournalEntry.amount,
 		creditedAccountId: grpcJournalEntry.creditedAccountId,
 		debitedAccountId: grpcJournalEntry.debitedAccountId,
-		timestamp: parseInt(grpcJournalEntry.timestamp)
+		timestamp: grpcJournalEntry.timestamp
 	}
 }
 
-export function IJournalEntryToGrpcJournalEntry(domainJournalEntry: IJournalEntry): GrpcJournalEntry__Output {
+export function journalEntryDtoToGrpcJournalEntry(journalEntryDto: IJournalEntryDto): GrpcJournalEntry__Output {
 	return {
-		id: domainJournalEntry.id,
-		externalId: domainJournalEntry.externalId || "",
-		externalCategory: domainJournalEntry.externalId || "",
-		currency: domainJournalEntry.currency,
-		amount: domainJournalEntry.amount.toString(),
-		creditedAccountId: domainJournalEntry.creditedAccountId.toString(),
-		debitedAccountId: domainJournalEntry.debitedAccountId.toString(),
-		timestamp: domainJournalEntry.timestamp.toString()
+		id: journalEntryDto.id,
+		externalId: journalEntryDto.externalId || "",
+		externalCategory: journalEntryDto.externalId || "",
+		currency: journalEntryDto.currency,
+		amount: journalEntryDto.amount,
+		creditedAccountId: journalEntryDto.creditedAccountId,
+		debitedAccountId: journalEntryDto.debitedAccountId,
+		timestamp: journalEntryDto.timestamp
 	}
 }

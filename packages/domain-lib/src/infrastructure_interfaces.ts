@@ -29,7 +29,7 @@
 
 "use strict";
 
-import {IAccount, IJournalEntry} from "@mojaloop/accounts-and-balances-bc-common-lib";
+import {IAccount, IJournalEntry} from "./types";
 
 export interface IAccountsRepo {
 	init(): Promise<void>;

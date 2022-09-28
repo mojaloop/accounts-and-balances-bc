@@ -30,6 +30,7 @@
 "use strict";
 
 import {
+	IAccount,
 	IAccountsRepo,
 	UnableToInitRepoError,
 	NoSuchAccountError,
@@ -39,7 +40,6 @@ import {
 	UnableToUpdateAccountError,
 	UnableToGetAccountsError
 } from "@mojaloop/accounts-and-balances-bc-domain-lib";
-import {IAccount} from "@mojaloop/accounts-and-balances-bc-common-lib";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 
 export class MemoryAccountsRepo implements IAccountsRepo {

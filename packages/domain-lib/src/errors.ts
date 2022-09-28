@@ -33,12 +33,15 @@
 export class InvalidCreditBalanceError extends Error {}
 export class InvalidDebitBalanceError extends Error {}
 // JournalEntry.
+export class InvalidExternalCategoryError extends Error {}
 export class InvalidJournalEntryAmountError extends Error {}
 export class CreditedAndDebitedAccountsAreTheSameError extends Error {}
 export class NoSuchCreditedAccountError extends Error {}
 export class NoSuchDebitedAccountError extends Error {}
 export class CurrenciesDifferError extends Error {}
 export class InsufficientBalanceError extends Error {}
+// Common.
+export class InvalidExternalIdError extends Error {}
 // Repos.
 export class UnableToInitRepoError extends Error {}
 export class AccountAlreadyExistsError extends Error {}

@@ -36,3 +36,4 @@ export * from "./aggregate";
 export * from "./errors";
 export * from "./infrastructure_interfaces";
 export * from "./privileges";
+export * from "./types";

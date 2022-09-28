@@ -33,15 +33,17 @@ import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {PackageDefinition} from "@grpc/proto-loader";
 import {credentials, GrpcObject, loadPackageDefinition} from "@grpc/grpc-js";
 import {
-	IAccount,
-	IJournalEntry,
+	ProtoGrpcType,
+	AccountsAndBalancesGrpcServiceClient,
+	loadProto,
+	accountDtoToGrpcAccount,
 	GrpcAccount,
 	GrpcId,
 	GrpcJournalEntryArray,
-	ProtoGrpcType,
-	AccountsAndBalancesGrpcServiceClient, grpcAccountToIAccount, grpcJournalEntryToIJournalEntry,
-	loadProto
-} from "@mojaloop/accounts-and-balances-bc-common-lib";
+	journalEntryDtoToGrpcJournalEntry,
+	GrpcJournalEntry, grpcAccountToAccountDto, grpcJournalEntryToJournalEntryDto
+} from "@mojaloop/accounts-and-balances-bc-grpc-common-lib";
+import {IAccountDto, IJournalEntryDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 export class AuxiliaryAccountsAndBalancesGrpcClient {
 	// Properties received through the constructor.
@@ -85,8 +87,9 @@ export class AuxiliaryAccountsAndBalancesGrpcClient {
 	}
 
 	// TODO: verify types.
-	async createAccount(grpcAccount: GrpcAccount): Promise<string> {
+	async createAccount(accountDto: IAccountDto): Promise<string> {
 		return new Promise((resolve, reject) => {
+			const grpcAccount: GrpcAccount = accountDtoToGrpcAccount(accountDto);
 			this.grpcClient.createAccount(
 				grpcAccount,
 				(error, grpcId) => {
@@ -102,8 +105,12 @@ export class AuxiliaryAccountsAndBalancesGrpcClient {
 	}
 
 	// TODO: verify types.
-	async createJournalEntries(grpcJournalEntryArray: GrpcJournalEntryArray): Promise<string[]> {
+	async createJournalEntries(journalEntryDtos: IJournalEntryDto[]): Promise<string[]> {
 		return new Promise((resolve, reject) => {
+			const grpcJournalEntries: GrpcJournalEntry[] = journalEntryDtos.map(journalEntryDto => {
+				return journalEntryDtoToGrpcJournalEntry(journalEntryDto);
+			});
+			const grpcJournalEntryArray: GrpcJournalEntryArray = {grpcJournalEntryArray: grpcJournalEntries};
 			this.grpcClient.createJournalEntries(
 				grpcJournalEntryArray,
 				(error, grpcIdArray) => {
@@ -121,62 +128,64 @@ export class AuxiliaryAccountsAndBalancesGrpcClient {
 	}
 
 	// TODO: verify types.
-	async getAccountById(accountGrpcId: GrpcId): Promise<IAccount | null> {
+	async getAccountById(accountId: string): Promise<IAccountDto | null> {
 		return new Promise((resolve, reject) => {
+			const grpcAccountId: GrpcId = {grpcId: accountId};
 			this.grpcClient.getAccountById(
-				accountGrpcId,
+				grpcAccountId,
 				(error, grpcAccount) => {
 					if (error) {
 						reject(error);
 						return; // TODO: return?
 					}
-					let iAccount: IAccount | null;
+					let accountDto: IAccountDto | null;
 					if (grpcAccount!.id === "") { // TODO: !.
-						iAccount = null;
+						accountDto = null;
 					} else {
-						iAccount = grpcAccountToIAccount(grpcAccount!); // TODO: !.
+						accountDto = grpcAccountToAccountDto(grpcAccount!); // TODO: !.
 					}
-					resolve(iAccount);
+					resolve(accountDto);
 				}
 			);
 		});
 	}
 
 	// TODO: verify types.
-	async getAccountsByExternalId(externalGrpcId: GrpcId): Promise<IAccount[]> {
+	async getAccountsByExternalId(externalId: string): Promise<IAccountDto[]> {
 		return new Promise((resolve, reject) => {
+			const grpcExternalId: GrpcId = {grpcId: externalId};
 			this.grpcClient.getAccountsByExternalId(
-				externalGrpcId,
+				grpcExternalId,
 				(error, grpcAccountArray) => {
 					if (error) {
 						reject(error);
 						return; // TODO: return?
 					}
-					const iAccounts: IAccount[] = [];
-					for (const grpcAccount of grpcAccountArray!.grpcAccountArray) { // TODO: !.
-						iAccounts.push(grpcAccountToIAccount(grpcAccount));
-					}
-					resolve(iAccounts);
+					const accountDtos: IAccountDto[] = grpcAccountArray!.grpcAccountArray.map(grpcAccount => { // TODO: !.
+						return grpcAccountToAccountDto(grpcAccount);
+					});
+					resolve(accountDtos);
 				}
 			);
 		});
 	}
 
 	// TODO: verify types.
-	async getJournalEntriesByAccountId(accountGrpcId: GrpcId): Promise<IJournalEntry[]> {
+	async getJournalEntriesByAccountId(accountId: string): Promise<IJournalEntryDto[]> {
 		return new Promise((resolve, reject) => {
+			const grpcAccountId: GrpcId = {grpcId: accountId};
 			this.grpcClient.getJournalEntriesByAccountId(
-				accountGrpcId,
+				grpcAccountId,
 				(error, grpcJournalEntryArray) => {
 					if (error) {
 						reject(error);
 						return; // TODO: return?
 					}
-					const iJournalEntries: IJournalEntry[] = [];
-					for (const grpcJournalEntry of grpcJournalEntryArray!.grpcJournalEntryArray) { // TODO: !.
-						iJournalEntries.push(grpcJournalEntryToIJournalEntry(grpcJournalEntry));
-					}
-					resolve(iJournalEntries);
+					const journalEntryDtos: IJournalEntryDto[] =
+						grpcJournalEntryArray!.grpcJournalEntryArray.map(grpcJournalEntry => { // TODO: !.
+							return grpcJournalEntryToJournalEntryDto(grpcJournalEntry);
+						});
+					resolve(journalEntryDtos);
 				}
 			);
 		});

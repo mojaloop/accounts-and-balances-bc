@@ -29,40 +29,16 @@
 
 "use strict";
 
-export interface IAccount {
-	id: string;
-	externalId: string | null;
-	state: AccountState;
-	type: AccountType;
-	currency: string;
-	// currencyCode: string; // https://en.wikipedia.org/wiki/ISO_4217
-	// currencyDecimals: number;
-	creditBalance: bigint;
-	debitBalance: bigint;
-	timestampLastJournalEntry: number;
-}
+// TODO: export everything at once.
 
-export enum AccountState {
-	ACTIVE = "ACTIVE",
-	DELETED = "DELETED"
-}
-
-export enum AccountType {
-	POSITION = "POSITION",
-	SETTLEMENT = "SETTLEMENT",
-	FEE = "FEE"
-}
-
-export interface IJournalEntry {
-	id: string;
-	externalId: string | null;
-	externalCategory: string | null;
-	currency: string;
-	// TODO: currencyCode and currencyDecimals required?
-	// currencyCode: string; // https://en.wikipedia.org/wiki/ISO_4217
-	// currencyDecimals: number;
-	amount: bigint;
-	creditedAccountId: string;
-	debitedAccountId: string;
-	timestamp: number;
-}
+export * from "./types/AccountsAndBalancesGrpcService";
+export * from "./types/GrpcId";
+export * from "./types/GrpcIdArray";
+export * from "./types/GrpcAccount";
+export * from "./types/GrpcAccountState";
+export * from "./types/GrpcAccountType";
+export * from "./types/GrpcAccountArray";
+export * from "./types/GrpcJournalEntry";
+export * from "./types/GrpcJournalEntryArray";
+export * from "./types/accounts_and_balances";
+export * from "./utils";

@@ -41,13 +41,14 @@ import {
 	CreditedAndDebitedAccountsAreTheSameError,
 	NoSuchCreditedAccountError,
 	NoSuchDebitedAccountError,
-	CurrenciesDifferError, InsufficientBalanceError, UnauthorizedError
+	CurrenciesDifferError,
+	InsufficientBalanceError,
+	UnauthorizedError,
+	InvalidExternalIdError,
+	InvalidExternalCategoryError
 } from "@mojaloop/accounts-and-balances-bc-domain-lib";
-import {
-	IAccount,
-	IJournalEntry
-} from "@mojaloop/accounts-and-balances-bc-common-lib";
 import {TokenHelper, CallSecurityContext} from "@mojaloop/security-bc-client-lib";
+import {IAccountDto, IJournalEntryDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 const BEARER_LENGTH: number = 2; // TODO: why 2?
 
@@ -185,7 +186,13 @@ export class ExpressRoutes {
 				{accountId: accountId}
 			);
 		} catch (e: unknown) {
-			if (e instanceof InvalidCreditBalanceError) {
+			if (e instanceof InvalidExternalIdError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid external id"
+				);
+			} else if (e instanceof InvalidCreditBalanceError) {
 				this.sendErrorResponse(
 					res,
 					400,
@@ -229,7 +236,19 @@ export class ExpressRoutes {
 				{idsJournalEntries: idsJournalEntries}
 			);
 		} catch (e: unknown) {
-			if (e instanceof InvalidJournalEntryAmountError) {
+			if (e instanceof InvalidExternalIdError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid external id"
+				);
+			} else if (e instanceof InvalidExternalCategoryError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid external category"
+				);
+			} else if (e instanceof InvalidJournalEntryAmountError) {
 				this.sendErrorResponse(
 					res,
 					400,
@@ -320,9 +339,9 @@ export class ExpressRoutes {
 	private async getAccountById(req: Request, res: Response): Promise<void> {
 		try {
 			// The properties of the req.query object are always strings. TODO: check.
-			const account: IAccount | null =
+			const accountDto: IAccountDto | null =
 				await this.aggregate.getAccountById(req.query.id as string, req.securityContext!); // TODO: cast? !.
-			if (account === null) {
+			if (accountDto === null) {
 				this.sendErrorResponse(
 					res,
 					404,
@@ -333,7 +352,7 @@ export class ExpressRoutes {
 			this.sendSuccessResponse(
 				res,
 				200,
-				{account: account}
+				{account: accountDto}
 			);
 		} catch (e: unknown) {
 			if (e instanceof UnauthorizedError) {
@@ -355,9 +374,9 @@ export class ExpressRoutes {
 	private async getAccountsByExternalId(req: Request, res: Response): Promise<void> {
 		try {
 			// The properties of the req.query object are always strings. TODO: check.
-			const accounts: IAccount[] =
+			const accountDtos: IAccountDto[] =
 				await this.aggregate.getAccountsByExternalId(req.query.externalId as string, req.securityContext!); // TODO: cast? !.
-			if (accounts.length === 0) {
+			if (accountDtos.length === 0) {
 				this.sendErrorResponse(
 					res,
 					404,
@@ -368,7 +387,7 @@ export class ExpressRoutes {
 			this.sendSuccessResponse(
 				res,
 				200,
-				{accounts: accounts}
+				{accounts: accountDtos}
 			);
 		} catch (e: unknown) {
 			if (e instanceof UnauthorizedError) {
@@ -390,9 +409,10 @@ export class ExpressRoutes {
 	private async getJournalEntriesByAccountId(req: Request, res: Response): Promise<void> {
 		try {
 			// The properties of the req.query object are always strings. TODO: check.
-			const journalEntries: IJournalEntry[] =
+			// The properties of the req.query object are always strings. TODO: check.
+			const journalEntryDtos: IJournalEntryDto[] =
 				await this.aggregate.getJournalEntriesByAccountId(req.query.accountId as string, req.securityContext!); // TODO: cast? !.
-			if (journalEntries.length === 0) {
+			if (journalEntryDtos.length === 0) {
 				this.sendErrorResponse(
 					res,
 					404,
@@ -403,7 +423,7 @@ export class ExpressRoutes {
 			this.sendSuccessResponse(
 				res,
 				200,
-				{journalEntries: journalEntries}
+				{journalEntries: journalEntryDtos}
 			);
 		} catch (e: unknown) {
 			if (e instanceof UnauthorizedError) {

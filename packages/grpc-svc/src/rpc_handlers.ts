@@ -33,8 +33,6 @@ import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
 import {Aggregate} from "@mojaloop/accounts-and-balances-bc-domain-lib";
 import {
-	IAccount,
-	IJournalEntry,
 	GrpcAccount,
 	GrpcAccount__Output,
 	GrpcId,
@@ -45,15 +43,16 @@ import {
 	GrpcAccountArray,
 	GrpcJournalEntry__Output,
 	AccountsAndBalancesGrpcServiceHandlers,
-	IAccountToGrpcAccount,
-	IJournalEntryToGrpcJournalEntry,
-	grpcAccountToIAccount,
-	grpcJournalEntryToIJournalEntry
-} from "@mojaloop/accounts-and-balances-bc-common-lib";
+	grpcAccountToAccountDto,
+	grpcJournalEntryToJournalEntryDto,
+	accountDtoToGrpcAccount,
+	journalEntryDtoToGrpcJournalEntry
+} from "@mojaloop/accounts-and-balances-bc-grpc-common-lib";
 import {
 	sendUnaryData,
 	ServerUnaryCall,
 } from "@grpc/grpc-js";
+import {IAccountDto, IJournalEntryDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 export class RpcHandlers {
 	// Properties received through the constructor.
@@ -92,9 +91,10 @@ export class RpcHandlers {
 		callback: sendUnaryData<GrpcId>
 	): Promise<void> {
 		try {
-			const iAccount: IAccount = grpcAccountToIAccount(call.request);
-			const accountId: string = await this.aggregate.createAccount(iAccount, this.securityContext);
-			callback(null, {grpcId: accountId});
+			const accountDto: IAccountDto = grpcAccountToAccountDto(call.request);
+			const accountId: string = await this.aggregate.createAccount(accountDto, this.securityContext);
+			const grpcAccountId: GrpcId = {grpcId: accountId};
+			callback(null, grpcAccountId);
 		} catch (error: unknown) {
 			if (error instanceof Error) {
 				callback(error, null);
@@ -108,13 +108,12 @@ export class RpcHandlers {
 		call: ServerUnaryCall<GrpcJournalEntryArray__Output, GrpcIdArray>,
 		callback: sendUnaryData<GrpcIdArray>
 	): Promise<void> {
-		const iJournalEntries: IJournalEntry[] = [];
+		const journalEntryDtos: IJournalEntryDto[] = call.request.grpcJournalEntryArray.map(grpcJournalEntry => {
+			return grpcJournalEntryToJournalEntryDto(grpcJournalEntry);
+		});
 		try {
-			for (const grpcJournalEntry of call.request.grpcJournalEntryArray) {
-				iJournalEntries.push(grpcJournalEntryToIJournalEntry(grpcJournalEntry));
-			}
 			const idsJournalEntries: string[] =
-				await this.aggregate.createJournalEntries(iJournalEntries, this.securityContext);
+				await this.aggregate.createJournalEntries(journalEntryDtos, this.securityContext);
 			const grpcIdsJournalEntries: GrpcId[] = idsJournalEntries.map(id => {
 				return {grpcId: id};
 			});
@@ -134,12 +133,12 @@ export class RpcHandlers {
 	): Promise<void> {
 		const accountId: string = call.request.grpcId;
 		try {
-			const iAccount: IAccount | null = await this.aggregate.getAccountById(accountId, this.securityContext);
-			if (!iAccount) {
+			const accountDto: IAccountDto | null = await this.aggregate.getAccountById(accountId, this.securityContext);
+			if (accountDto === null) {
 				callback(null, {}); // Default gRPC account is sent (fields with default values).
 				return;
 			}
-			const grpcAccount: GrpcAccount__Output = IAccountToGrpcAccount(iAccount!); // TODO: !.
+			const grpcAccount: GrpcAccount = accountDtoToGrpcAccount(accountDto);
 			callback(null, grpcAccount);
 		} catch (error: unknown) {
 			if (error instanceof Error) {
@@ -156,12 +155,11 @@ export class RpcHandlers {
 	): Promise<void> {
 		const externalId: string = call.request.grpcId;
 		try {
-			const iAccounts: IAccount[] =
+			const accountDtos: IAccountDto[] =
 				await this.aggregate.getAccountsByExternalId(externalId, this.securityContext);
-			const grpcAccounts: GrpcAccount__Output[] = [];
-			for (const iAccount of iAccounts) {
-				grpcAccounts.push(IAccountToGrpcAccount(iAccount));
-			}
+			const grpcAccounts: GrpcAccount__Output[] = accountDtos.map(accountDto => {
+				return accountDtoToGrpcAccount(accountDto);
+			});
 			callback(null, {grpcAccountArray: grpcAccounts});
 		} catch (error: unknown) {
 			if (error instanceof Error) {
@@ -178,12 +176,11 @@ export class RpcHandlers {
 	): Promise<void> {
 		const accountId: string = call.request.grpcId;
 		try {
-			const iJournalEntries: IJournalEntry[] =
+			const journalEntryDtos: IJournalEntryDto[] =
 				await this.aggregate.getJournalEntriesByAccountId(accountId, this.securityContext);
-			const grpcJournalEntries: GrpcJournalEntry__Output[] = [];
-			for (const iJournalEntry of iJournalEntries) {
-				grpcJournalEntries.push(IJournalEntryToGrpcJournalEntry(iJournalEntry));
-			}
+			const grpcJournalEntries: GrpcJournalEntry__Output[] = journalEntryDtos.map(journalEntryDto => {
+				return journalEntryDtoToGrpcJournalEntry(journalEntryDto);
+			});
 			callback(null, {grpcJournalEntryArray: grpcJournalEntries});
 		} catch (error: unknown) {
 			if (error instanceof Error) {

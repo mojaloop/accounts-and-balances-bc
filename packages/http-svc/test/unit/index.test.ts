@@ -46,6 +46,12 @@ import {
 	MemoryJournalEntriesRepo
 } from "@mojaloop/accounts-and-balances-bc-shared-mocks-lib";
 import {start, stop} from "../../src/service";
+import {
+	AccountState,
+	AccountType,
+	IAccountDto,
+	IJournalEntryDto
+} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 const BASE_URL_ACCOUNTS_AND_BALANCES_HTTP_SERVICE: string = "http://localhost:1234";
 const TIMEOUT_MS_ACCOUNTS_AND_BALANCES_HTTP_CLIENT: number = 10_000;
@@ -85,128 +91,128 @@ describe("accounts and balances http service - unit tests", () => {
 	// Create account.
 	test("create non-existent account", async () => {
 		const accountId: string = Crypto.randomUUID();
-		const account = {
+		const accountDto: IAccountDto = {
 			id: accountId,
 			externalId: null,
-			state: "ACTIVE",
-			type: "POSITION",
+			state: AccountState.ACTIVE,
+			type: AccountType.POSITION,
 			currency: "EUR",
-			creditBalance: 100,
-			debitBalance: 25,
+			creditBalance: "100",
+			debitBalance: "25",
 			timestampLastJournalEntry: 0
 		};
-		const statusCodeResponse: number = await auxiliaryAccountsAndBalancesHttpClient.createAccount(account);
+		const statusCodeResponse: number = await auxiliaryAccountsAndBalancesHttpClient.createAccount(accountDto);
 		expect(statusCodeResponse).toEqual(201);
 	});
 	test("create existent account", async () => {
 		const accountId: string = Crypto.randomUUID();
-		const account = {
+		const accountDto: IAccountDto = {
 			id: accountId,
 			externalId: null,
-			state: "ACTIVE",
-			type: "POSITION",
+			state: AccountState.ACTIVE,
+			type: AccountType.POSITION,
 			currency: "EUR",
-			creditBalance: 100,
-			debitBalance: 25,
+			creditBalance: "100",
+			debitBalance: "25",
 			timestampLastJournalEntry: 0
 		};
-		await auxiliaryAccountsAndBalancesHttpClient.createAccount(account);
-		const statusCodeResponse: number = await auxiliaryAccountsAndBalancesHttpClient.createAccount(account);
+		await auxiliaryAccountsAndBalancesHttpClient.createAccount(accountDto);
+		const statusCodeResponse: number = await auxiliaryAccountsAndBalancesHttpClient.createAccount(accountDto);
 		expect(statusCodeResponse).toEqual(409);
 	});
 	test("create account with empty string as id", async () => {
 		const accountId: string = "";
-		const account = {
+		const accountDto: IAccountDto = {
 			id: accountId,
 			externalId: null,
-			state: "ACTIVE",
-			type: "POSITION",
+			state: AccountState.ACTIVE,
+			type: AccountType.POSITION,
 			currency: "EUR",
-			creditBalance: 100,
-			debitBalance: 25,
+			creditBalance: "100",
+			debitBalance: "25",
 			timestampLastJournalEntry: 0
 		};
-		const statusCodeResponse: number = await auxiliaryAccountsAndBalancesHttpClient.createAccount(account);
+		const statusCodeResponse: number = await auxiliaryAccountsAndBalancesHttpClient.createAccount(accountDto);
 		expect(statusCodeResponse).toEqual(201);
 	});
 	test("create account with invalid credit balance", async () => {
 		const accountId: string = Crypto.randomUUID();
-		const account = {
+		const accountDto: IAccountDto = {
 			id: accountId,
 			externalId: null,
-			state: "ACTIVE",
-			type: "POSITION",
+			state: AccountState.ACTIVE,
+			type: AccountType.POSITION,
 			currency: "EUR",
-			creditBalance: -100,
-			debitBalance: 25,
+			creditBalance: "-100",
+			debitBalance: "25",
 			timestampLastJournalEntry: 0
 		};
-		const statusCodeResponse: number = await auxiliaryAccountsAndBalancesHttpClient.createAccount(account);
+		const statusCodeResponse: number = await auxiliaryAccountsAndBalancesHttpClient.createAccount(accountDto);
 		expect(statusCodeResponse).toEqual(400);
 	});
 	test("create account with invalid debit balance", async () => {
 		const accountId: string = Crypto.randomUUID();
-		const account = {
+		const accountDto: IAccountDto = {
 			id: accountId,
 			externalId: null,
-			state: "ACTIVE",
-			type: "POSITION",
+			state: AccountState.ACTIVE,
+			type: AccountType.POSITION,
 			currency: "EUR",
-			creditBalance: 100,
-			debitBalance: -25,
+			creditBalance: "100",
+			debitBalance: "-25",
 			timestampLastJournalEntry: 0
 		};
-		const statusCodeResponse: number = await auxiliaryAccountsAndBalancesHttpClient.createAccount(account);
+		const statusCodeResponse: number = await auxiliaryAccountsAndBalancesHttpClient.createAccount(accountDto);
 		expect(statusCodeResponse).toEqual(400);
 	});
 	test("create account with unexpected accounts repo failure", async () => {
 		const accountId: string = Crypto.randomUUID();
-		const account = {
+		const accountDto: IAccountDto = {
 			id: accountId,
 			externalId: null,
-			state: "ACTIVE",
-			type: "POSITION",
+			state: AccountState.ACTIVE,
+			type: AccountType.POSITION,
 			currency: "EUR",
-			creditBalance: 100,
-			debitBalance: 25,
+			creditBalance: "100",
+			debitBalance: "25",
 			timestampLastJournalEntry: 0
 		};
 		(accountsRepo as MemoryAccountsRepo).setUnexpectedFailure(true); // TODO: should this be done?
-		const statusCodeResponse: number = await auxiliaryAccountsAndBalancesHttpClient.createAccount(account);
+		const statusCodeResponse: number = await auxiliaryAccountsAndBalancesHttpClient.createAccount(accountDto);
 		expect(statusCodeResponse).toEqual(500);
 		(accountsRepo as MemoryAccountsRepo).setUnexpectedFailure(false); // TODO: should this be done?
 	});
 	test("create account with invalid access token", async () => {
 		const accountId: string = Crypto.randomUUID();
-		const account = {
+		const accountDto: IAccountDto = {
 			id: accountId,
 			externalId: null,
-			state: "ACTIVE",
-			type: "POSITION",
+			state: AccountState.ACTIVE,
+			type: AccountType.POSITION,
 			currency: "EUR",
-			creditBalance: 100,
-			debitBalance: 25,
+			creditBalance: "100",
+			debitBalance: "25",
 			timestampLastJournalEntry: 0
 		};
 		auxiliaryAccountsAndBalancesHttpClient.setAccessToken("");
-		const statusCodeResponse: number = await auxiliaryAccountsAndBalancesHttpClient.createAccount(account);
+		const statusCodeResponse: number = await auxiliaryAccountsAndBalancesHttpClient.createAccount(accountDto);
 		expect(statusCodeResponse).toEqual(403);
 		auxiliaryAccountsAndBalancesHttpClient.setAccessToken(AuthenticationServiceMock.VALID_ACCESS_TOKEN);
 	});
 	test("create account without privileges", async () => {
 		const accountId: string = Crypto.randomUUID();
-		const account = {
+		const accountDto: IAccountDto = {
 			id: accountId,
 			externalId: null,
-			state: "ACTIVE",
-			type: "POSITION",
+			state: AccountState.ACTIVE,
+			type: AccountType.POSITION,
 			currency: "EUR",
-			creditBalance: 100,
-			debitBalance: 25,
+			creditBalance: "100",
+			debitBalance: "25",
 			timestampLastJournalEntry: 0
 		};
 		(authorizationClient as AuthorizationClientMock).setRoleHasPrivilege(false); // TODO: should this be done?
-		const statusCodeResponse: number = await auxiliaryAccountsAndBalancesHttpClient.createAccount(account);
+		const statusCodeResponse: number = await auxiliaryAccountsAndBalancesHttpClient.createAccount(accountDto);
 		expect(statusCodeResponse).toEqual(403);
 		(authorizationClient as AuthorizationClientMock).setRoleHasPrivilege(true); // TODO: should this be done?
 	});
@@ -214,252 +220,253 @@ describe("accounts and balances http service - unit tests", () => {
 	// Create journal entries.
 	test("create non-existent journal entries", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
-		const accounts: any[] = await create2Accounts();
+		const accountDtos: IAccountDto[] = await create2Accounts();
 		// Journal entry A.
 		const idJournalEntryA: string = Crypto.randomUUID();
-		const journalEntryA = {
+		const journalEntryDtoA: IJournalEntryDto = {
 			id: idJournalEntryA,
 			externalId: null,
 			externalCategory: null,
 			currency: "EUR",
-			amount: 5,
-			creditedAccountId: accounts[0].id,
-			debitedAccountId: accounts[1].id,
+			amount: "5",
+			creditedAccountId: accountDtos[0].id,
+			debitedAccountId: accountDtos[1].id,
 			timestamp: 0
 		};
 		// Journal entry B.
 		const idJournalEntryB: string = idJournalEntryA + 1;
-		const journalEntryB = {
+		const journalEntryDtoB: IJournalEntryDto = {
 			id: idJournalEntryB,
 			externalId: null,
 			externalCategory: null,
 			currency: "EUR",
-			amount: 5,
-			creditedAccountId: accounts[1].id,
-			debitedAccountId: accounts[0].id,
+			amount: "5",
+			creditedAccountId: accountDtos[1].id,
+			debitedAccountId: accountDtos[0].id,
 			timestamp: 0
 		};
 		const statusCodeResponse: number = await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries(
-			[journalEntryA, journalEntryB]
+			[journalEntryDtoA, journalEntryDtoB]
 		);
 		expect(statusCodeResponse).toEqual(201);
 	});
 	test("create existent journal entries", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
-		const accounts: any[] = await create2Accounts();
+		const accountDtos: IAccountDto[] = await create2Accounts();
 		// Journal entry A.
 		const idJournalEntryA: string = Crypto.randomUUID();
-		const journalEntryA = {
+		const journalEntryDtoA: IJournalEntryDto = {
 			id: idJournalEntryA,
 			externalId: null,
 			externalCategory: null,
 			currency: "EUR",
-			amount: 5,
-			creditedAccountId: accounts[0].id,
-			debitedAccountId: accounts[1].id,
+			amount: "5",
+			creditedAccountId: accountDtos[0].id,
+			debitedAccountId: accountDtos[1].id,
 			timestamp: 0
 		};
 		// Journal entry B.
 		const idJournalEntryB: string = idJournalEntryA + 1;
-		const journalEntryB = {
+		const journalEntryDtoB: IJournalEntryDto = {
 			id: idJournalEntryB,
 			externalId: null,
 			externalCategory: null,
 			currency: "EUR",
-			amount: 5,
-			creditedAccountId: accounts[1].id,
-			debitedAccountId: accounts[0].id,
+			amount: "5",
+			creditedAccountId: accountDtos[1].id,
+			debitedAccountId: accountDtos[0].id,
 			timestamp: 0
 		};
-		await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntryA, journalEntryB]);
+		await auxiliaryAccountsAndBalancesHttpClient
+			.createJournalEntries([journalEntryDtoA, journalEntryDtoB]);
 		const statusCodeResponse: number = await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries(
-			[journalEntryA, journalEntryB]
+			[journalEntryDtoA, journalEntryDtoB]
 		);
 		expect(statusCodeResponse).toEqual(409);
 	});
 	test("create journal entry with empty string as id", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
-		const accounts: any[] = await create2Accounts();
+		const accountDtos: IAccountDto[] = await create2Accounts();
 		const journalEntryId: string = "";
-		const journalEntry = {
+		const journalEntryDto: IJournalEntryDto = {
 			id: journalEntryId,
 			externalId: null,
 			externalCategory: null,
 			currency: "EUR",
-			amount: 5,
-			creditedAccountId: accounts[0].id,
-			debitedAccountId: accounts[1].id,
+			amount: "5",
+			creditedAccountId: accountDtos[0].id,
+			debitedAccountId: accountDtos[1].id,
 			timestamp: 0
 		};
 		const statusCodeResponse: number =
-			await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntry]);
+			await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntryDto]);
 		expect(statusCodeResponse).toEqual(201);
 	});
 	test("create journal entry with same credited and debited accounts", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
-		const accounts: any[] = await create2Accounts();
+		const accountDtos: IAccountDto[] = await create2Accounts();
 		const journalEntryId: string = Crypto.randomUUID();
-		const journalEntry = {
+		const journalEntryDto: IJournalEntryDto = {
 			id: journalEntryId,
 			externalId: null,
 			externalCategory: null,
 			currency: "EUR",
-			amount: 5,
-			creditedAccountId: accounts[0].id,
-			debitedAccountId: accounts[0].id,
+			amount: "5",
+			creditedAccountId: accountDtos[0].id,
+			debitedAccountId: accountDtos[0].id,
 			timestamp: 0
 		};
 		const statusCodeResponse: number =
-			await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntry]);
+			await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntryDto]);
 		expect(statusCodeResponse).toEqual(400);
 	});
 	test("create journal entry with non-existent credited account", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
-		const accounts: any[] = await create2Accounts();
+		const accountDtos: IAccountDto[] = await create2Accounts();
 		const journalEntryId: string = Crypto.randomUUID();
-		const journalEntry = {
+		const journalEntryDto: IJournalEntryDto = {
 			id: journalEntryId,
 			externalId: null,
 			externalCategory: null,
 			currency: "EUR",
-			amount: 5,
+			amount: "5",
 			creditedAccountId: "some string",
-			debitedAccountId: accounts[1].id,
+			debitedAccountId: accountDtos[1].id,
 			timestamp: 0
 		};
 		const statusCodeResponse: number =
-			await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntry]);
+			await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntryDto]);
 		expect(statusCodeResponse).toEqual(400);
 	});
 	test("create journal entry with non-existent debited account", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
-		const accounts: any[] = await create2Accounts();
+		const accountDtos: IAccountDto[] = await create2Accounts();
 		const journalEntryId: string = Crypto.randomUUID();
-		const journalEntry = {
+		const journalEntryDto: IJournalEntryDto = {
 			id: journalEntryId,
 			externalId: null,
 			externalCategory: null,
 			currency: "EUR",
-			amount: 5,
-			creditedAccountId: accounts[0].id,
+			amount: "5",
+			creditedAccountId: accountDtos[0].id,
 			debitedAccountId: "some string",
 			timestamp: 0
 		};
 		const statusCodeResponse: number =
-			await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntry]);
+			await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntryDto]);
 		expect(statusCodeResponse).toEqual(400);
 	});
 	test("create journal entry with different currency", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
-		const accounts: any[] = await create2Accounts(); // Accounts created with EUR.
+		const accountDtos: IAccountDto[] = await create2Accounts(); // Accounts created with EUR.
 		const journalEntryId: string = Crypto.randomUUID();
-		const journalEntry = {
+		const journalEntryDto: IJournalEntryDto = {
 			id: journalEntryId,
 			externalId: null,
 			externalCategory: null,
 			currency: "USD",
-			amount: 5,
-			creditedAccountId: accounts[0].id,
-			debitedAccountId: accounts[1].id,
+			amount: "5",
+			creditedAccountId: accountDtos[0].id,
+			debitedAccountId: accountDtos[1].id,
 			timestamp: 0
 		};
 		const statusCodeResponse: number =
-			await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntry]);
+			await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntryDto]);
 		expect(statusCodeResponse).toEqual(400);
 	});
 	test("create journal entry with exceeding amount", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
-		const accounts: any[] = await create2Accounts(); // Accounts created with 100 credit balance each.
+		const accountDtos: IAccountDto[] = await create2Accounts(); // Accounts created with "100" credit balance each.
 		const journalEntryId: string = Crypto.randomUUID();
-		const journalEntry = {
+		const journalEntryDto: IJournalEntryDto = {
 			id: journalEntryId,
 			externalId: null,
 			externalCategory: null,
 			currency: "EUR",
-			amount: 10_000,
-			creditedAccountId: accounts[0].id,
-			debitedAccountId: accounts[1].id,
+			amount: "10000",
+			creditedAccountId: accountDtos[0].id,
+			debitedAccountId: accountDtos[1].id,
 			timestamp: 0
 		};
 		const statusCodeResponse: number =
-			await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntry]);
+			await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntryDto]);
 		expect(statusCodeResponse).toEqual(400);
 	});
 	test("create journal entry with invalid amount", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
-		const accounts: any[] = await create2Accounts(); // Accounts created with 100 credit balance each.
+		const accountDtos: IAccountDto[] = await create2Accounts(); // Accounts created with "100" credit balance each.
 		const journalEntryId: string = Crypto.randomUUID();
-		const journalEntry = {
+		const journalEntryDto: IJournalEntryDto = {
 			id: journalEntryId,
 			externalId: null,
 			externalCategory: null,
 			currency: "EUR",
-			amount: -5,
-			creditedAccountId: accounts[0].id,
-			debitedAccountId: accounts[1].id,
+			amount: "-5",
+			creditedAccountId: accountDtos[0].id,
+			debitedAccountId: accountDtos[1].id,
 			timestamp: 0
 		};
 		const statusCodeResponse: number =
-			await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntry]);
+			await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntryDto]);
 		expect(statusCodeResponse).toEqual(400);
 	});
 	test("create journal entry with unexpected journal entries repo failure", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
-		const accounts: any[] = await create2Accounts();
+		const accountDtos: IAccountDto[] = await create2Accounts();
 		const journalEntryId: string = Crypto.randomUUID();
-		const journalEntry = {
+		const journalEntryDto: IJournalEntryDto = {
 			id: journalEntryId,
 			externalId: null,
 			externalCategory: null,
 			currency: "EUR",
-			amount: 5,
-			creditedAccountId: accounts[0].id,
-			debitedAccountId: accounts[1].id,
+			amount: "5",
+			creditedAccountId: accountDtos[0].id,
+			debitedAccountId: accountDtos[1].id,
 			timestamp: 0
 		};
 		(journalEntriesRepo as MemoryJournalEntriesRepo).setUnexpectedFailure(true); // TODO: should this be done?
 		const statusCodeResponse: number =
-			await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntry]);
+			await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntryDto]);
 		expect(statusCodeResponse).toEqual(500);
 		(journalEntriesRepo as MemoryJournalEntriesRepo).setUnexpectedFailure(false); // TODO: should this be done?
 	});
 	test("create journal entry with unexpected accounts repo failure", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
-		const accounts: any[] = await create2Accounts();
+		const accountDtos: IAccountDto[] = await create2Accounts();
 		const journalEntryId: string = Crypto.randomUUID();
-		const journalEntry = {
+		const journalEntryDto: IJournalEntryDto = {
 			id: journalEntryId,
 			externalId: null,
 			externalCategory: null,
 			currency: "EUR",
-			amount: 5,
-			creditedAccountId: accounts[0].id,
-			debitedAccountId: accounts[1].id,
+			amount: "5",
+			creditedAccountId: accountDtos[0].id,
+			debitedAccountId: accountDtos[1].id,
 			timestamp: 0
 		};
 		(accountsRepo as MemoryAccountsRepo).setUnexpectedFailure(true); // TODO: should this be done?
 		const statusCodeResponse: number =
-			await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntry]);
+			await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntryDto]);
 		expect(statusCodeResponse).toEqual(500);
 		(accountsRepo as MemoryAccountsRepo).setUnexpectedFailure(false); // TODO: should this be done?
 	});
 	test("create journal entry without privileges", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
-		const accounts: any[] = await create2Accounts();
+		const accountDtos: IAccountDto[] = await create2Accounts();
 		const journalEntryId: string = Crypto.randomUUID();
-		const journalEntry = {
+		const journalEntryDto: IJournalEntryDto = {
 			id: journalEntryId,
 			externalId: null,
 			externalCategory: null,
 			currency: "EUR",
-			amount: 5,
-			creditedAccountId: accounts[0].id,
-			debitedAccountId: accounts[1].id,
+			amount: "5",
+			creditedAccountId: accountDtos[0].id,
+			debitedAccountId: accountDtos[1].id,
 			timestamp: 0
 		};
 		(authorizationClient as AuthorizationClientMock).setRoleHasPrivilege(false); // TODO: should this be done?
 		const statusCodeResponse: number =
-			await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntry]);
+			await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntryDto]);
 		expect(statusCodeResponse).toEqual(403);
 		(authorizationClient as AuthorizationClientMock).setRoleHasPrivilege(true); // TODO: should this be done?
 	});
@@ -472,17 +479,17 @@ describe("accounts and balances http service - unit tests", () => {
 	});
 	test("get existent account by id", async () => {
 		const accountId: string = Crypto.randomUUID();
-		const account = {
+		const accountDto: IAccountDto = {
 			id: accountId,
 			externalId: null,
-			state: "ACTIVE",
-			type: "POSITION",
+			state: AccountState.ACTIVE,
+			type: AccountType.POSITION,
 			currency: "EUR",
-			creditBalance: 100,
-			debitBalance: 25,
+			creditBalance: "100",
+			debitBalance: "25",
 			timestampLastJournalEntry: 0
 		};
-		await auxiliaryAccountsAndBalancesHttpClient.createAccount(account);
+		await auxiliaryAccountsAndBalancesHttpClient.createAccount(accountDto);
 		const statusCodeResponse: number = await auxiliaryAccountsAndBalancesHttpClient.getAccountById(accountId);
 		expect(statusCodeResponse).toEqual(200);
 	});
@@ -526,34 +533,35 @@ describe("accounts and balances http service - unit tests", () => {
 	});
 	test("get existent journal entries by account id", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
-		const accounts: any[] = await create2Accounts();
+		const accountDtos: IAccountDto[] = await create2Accounts();
 		// Journal entry A.
 		const idJournalEntryA: string = Crypto.randomUUID();
-		const journalEntryA = {
+		const journalEntryDtoA: IJournalEntryDto = {
 			id: idJournalEntryA,
 			externalId: null,
 			externalCategory: null,
 			currency: "EUR",
-			amount: 5,
-			creditedAccountId: accounts[0].id,
-			debitedAccountId: accounts[1].id,
+			amount: "5",
+			creditedAccountId: accountDtos[0].id,
+			debitedAccountId: accountDtos[1].id,
 			timestamp: 0
 		};
 		// Journal entry B.
 		const idJournalEntryB: string = idJournalEntryA + 1;
-		const journalEntryB = {
+		const journalEntryDtoB: IJournalEntryDto = {
 			id: idJournalEntryB,
 			externalId: null,
 			externalCategory: null,
 			currency: "EUR",
-			amount: 5,
-			creditedAccountId: accounts[1].id,
-			debitedAccountId: accounts[0].id,
+			amount: "5",
+			creditedAccountId: accountDtos[1].id,
+			debitedAccountId: accountDtos[0].id,
 			timestamp: 0
 		};
-		await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntryA, journalEntryB]);
+		await auxiliaryAccountsAndBalancesHttpClient
+			.createJournalEntries([journalEntryDtoA, journalEntryDtoB]);
 		const statusCodeResponse: number =
-			await auxiliaryAccountsAndBalancesHttpClient.getJournalEntriesByAccountId(accounts[0].id);
+			await auxiliaryAccountsAndBalancesHttpClient.getJournalEntriesByAccountId(accountDtos[0].id);
 		expect(statusCodeResponse).toEqual(200);
 	});
 	test("get journal entries by account id without privileges", async () => {
@@ -569,32 +577,32 @@ describe("accounts and balances http service - unit tests", () => {
 async function create2Accounts(
 	externalIdAccountA: string | null = null,
 	externalIdAccountB: string | null = null
-): Promise<any[]> {
+): Promise<IAccountDto[]> {
 	// Account A.
 	const idAccountA: string = Crypto.randomUUID();
-	const accountA = {
+	const accountDtoA = {
 		id: idAccountA,
 		externalId: externalIdAccountA,
-		state: "ACTIVE",
-		type: "POSITION",
+		state: AccountState.ACTIVE,
+		type: AccountType.POSITION,
 		currency: "EUR",
-		creditBalance: 100,
-		debitBalance: 25,
+		creditBalance: "100",
+		debitBalance: "25",
 		timestampLastJournalEntry: 0
 	};
-	await auxiliaryAccountsAndBalancesHttpClient.createAccount(accountA);
+	await auxiliaryAccountsAndBalancesHttpClient.createAccount(accountDtoA);
 	// Account B.
 	const idAccountB: string = idAccountA + 1;
-	const accountB = {
+	const accountDtoB = {
 		id: idAccountB,
 		externalId: externalIdAccountB,
-		state: "ACTIVE",
-		type: "POSITION",
+		state: AccountState.ACTIVE,
+		type: AccountType.POSITION,
 		currency: "EUR",
-		creditBalance: 100,
-		debitBalance: 25,
+		creditBalance: "100",
+		debitBalance: "25",
 		timestampLastJournalEntry: 0
 	};
-	await auxiliaryAccountsAndBalancesHttpClient.createAccount(accountB);
-	return [accountA, accountB];
+	await auxiliaryAccountsAndBalancesHttpClient.createAccount(accountDtoB);
+	return [accountDtoA, accountDtoB];
 }

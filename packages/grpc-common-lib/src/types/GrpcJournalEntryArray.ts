@@ -1,4 +1,4 @@
-// Original file: src/grpc/accounts_and_balances.proto
+// Original file: src/accounts_and_balances.proto
 
 import type { GrpcJournalEntry as _GrpcJournalEntry, GrpcJournalEntry__Output as _GrpcJournalEntry__Output } from './GrpcJournalEntry';
 

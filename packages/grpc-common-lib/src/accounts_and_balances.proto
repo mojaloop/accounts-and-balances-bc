@@ -11,7 +11,7 @@ service AccountsAndBalancesGrpcService {
 
 // TODO: check types; names starting with Grpc?
 
-// TODO: use string directly instead of having this type.
+// TODO: use strings directly instead of having this type.
 message GrpcId {
   string grpcId = 1;
 }
@@ -22,13 +22,13 @@ message GrpcIdArray {
 
 message GrpcAccount {
   string id = 1;
-	string externalId = 2; // TODO: | null?
+	string externalId = 2;
   GrpcAccountState state = 3;
   GrpcAccountType type = 4;
 	string currency = 5;
-	uint64 creditBalance = 6; // TODO: bigint?
-	uint64 debitBalance = 7; // TODO: bigint?
-  uint64 timestampLastJournalEntry = 8;  // TODO: number?
+	string creditBalance = 6;
+  string debitBalance = 7;
+  uint64 timestampLastJournalEntry = 8;
 }
 
 enum GrpcAccountState {
@@ -48,13 +48,13 @@ message GrpcAccountArray {
 
 message GrpcJournalEntry {
   string id = 1;
-  string externalId = 2; // TODO: | null?
-	string externalCategory = 3; // TODO: | null?
+  string externalId = 2;
+	string externalCategory = 3;
 	string currency = 4;
-	uint64 amount = 5; // TODO: bigint?
+	string amount = 5;
 	string creditedAccountId = 6;
 	string debitedAccountId = 7;
-  uint64 timestamp = 8; // TODO: number?
+  uint64 timestamp = 8;
 }
 
 message GrpcJournalEntryArray {

@@ -1,4 +1,4 @@
-// Original file: src/grpc/accounts_and_balances.proto
+// Original file: src/accounts_and_balances.proto
 
 import type { GrpcId as _GrpcId, GrpcId__Output as _GrpcId__Output } from './GrpcId';
 

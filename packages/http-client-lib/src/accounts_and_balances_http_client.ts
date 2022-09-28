@@ -38,7 +38,7 @@ import {
 	UnableToGetAccountsError,
 	UnableToGetJournalEntriesError
 } from "./errors";
-import {IAccountDTO, IJournalEntryDTO} from "./types";
+import {IAccountDto, IJournalEntryDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 // TODO: put error-handling code inside a function to avoid repetition?
 export class AccountsAndBalancesHttpClient {
@@ -69,9 +69,9 @@ export class AccountsAndBalancesHttpClient {
 		this.httpClient.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
 	}
 
-	async createAccount(account: IAccountDTO): Promise<string> {
+	async createAccount(accountDto: IAccountDto): Promise<string> {
 		try {
-			const axiosResponse: AxiosResponse = await this.httpClient.post("/accounts", account);
+			const axiosResponse: AxiosResponse = await this.httpClient.post("/accounts", accountDto);
 			return axiosResponse.data.accountId;
 		} catch (e: unknown) {
 			if (axios.isAxiosError(e)) {
@@ -85,9 +85,9 @@ export class AccountsAndBalancesHttpClient {
 		}
 	}
 
-	async createJournalEntries(journalEntries: IJournalEntryDTO[]): Promise<string[]> {
+	async createJournalEntries(journalEntryDtos: IJournalEntryDto[]): Promise<string[]> {
 		try {
-			const axiosResponse: AxiosResponse = await this.httpClient.post("/journalEntries", journalEntries);
+			const axiosResponse: AxiosResponse = await this.httpClient.post("/journalEntries", journalEntryDtos);
 			return axiosResponse.data.idsJournalEntries;
 		} catch (e: unknown) {
 			if (axios.isAxiosError(e)) {
@@ -101,7 +101,7 @@ export class AccountsAndBalancesHttpClient {
 		}
 	}
 
-	async getAccountById(accountId: string): Promise<IAccountDTO | null> {
+	async getAccountById(accountId: string): Promise<IAccountDto | null> {
 		try {
 			const axiosResponse: AxiosResponse = await this.httpClient.get(
 				`/accounts?id=${accountId}`,
@@ -127,7 +127,7 @@ export class AccountsAndBalancesHttpClient {
 		}
 	}
 
-	async getAccountsByExternalId(externalId: string): Promise<IAccountDTO[]> {
+	async getAccountsByExternalId(externalId: string): Promise<IAccountDto[]> {
 		try {
 			const axiosResponse: AxiosResponse = await this.httpClient.get(
 				`/accounts?externalId=${externalId}`,
@@ -153,7 +153,7 @@ export class AccountsAndBalancesHttpClient {
 		}
 	}
 
-	async getJournalEntriesByAccountId(accountId: string): Promise<IJournalEntryDTO[]> {
+	async getJournalEntriesByAccountId(accountId: string): Promise<IJournalEntryDto[]> {
 		try {
 			const axiosResponse: AxiosResponse = await this.httpClient.get(
 				`/journalEntries?accountId=${accountId}`,

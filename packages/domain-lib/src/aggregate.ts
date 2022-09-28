@@ -44,11 +44,12 @@ import {
 import {IAccountsRepo, IJournalEntriesRepo} from "./infrastructure_interfaces";
 import {Account} from "./entities/account";
 import {JournalEntry} from "./entities/journal_entry";
-import {IAccount, IJournalEntry} from "@mojaloop/accounts-and-balances-bc-common-lib";
+import {IAccountDto, IJournalEntryDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {IAuditClient, AuditSecurityContext} from "@mojaloop/auditing-bc-public-types-lib";
 import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
 import {Privileges} from "./privileges";
+import {IAccount, IJournalEntry} from "./types";
 
 enum AuditingActions {
 	ACCOUNT_CREATED = "ACCOUNT_CREATED"
@@ -95,13 +96,14 @@ export class Aggregate {
 	}
 
 	// TODO: why ignore the case in which Crypto.randomUUID() generates an already existing id?
-	async createAccount(account: IAccount, securityContext: CallSecurityContext): Promise<string> {
+	async createAccount(accountDto: IAccountDto, securityContext: CallSecurityContext): Promise<string> {
 		this.enforcePrivilege(securityContext, Privileges.CREATE_ACCOUNT);
 		// Generate a random UUId, if needed.
-		if (account.id === undefined || account.id === null || account.id === "") {
-			account.id = Crypto.randomUUID();
+		if (accountDto.id === "") {
+			accountDto.id = Crypto.randomUUID();
 		}
-		Account.validateAccount(account);
+		const account: Account = Account.getFromDto(accountDto);
+		Account.validate(account);
 		// Store the account.
 		try {
 			await this.accountsRepo.storeNewAccount(account);
@@ -121,21 +123,22 @@ export class Aggregate {
 		return account.id;
 	}
 
-	async createJournalEntries(journalEntries: IJournalEntry[], securityContext: CallSecurityContext): Promise<string[]> {
+	async createJournalEntries(journalEntryDtos: IJournalEntryDto[], securityContext: CallSecurityContext): Promise<string[]> {
 		this.enforcePrivilege(securityContext, Privileges.CREATE_JOURNAL_ENTRY);
 		const idsJournalEntries: string[] = []; // TODO: verify.
-		for (const journalEntry of journalEntries) {
-			idsJournalEntries.push(await this.createJournalEntry(journalEntry)); // TODO: verify.
+		for (const journalEntryDto of journalEntryDtos) {
+			idsJournalEntries.push(await this.createJournalEntry(journalEntryDto)); // TODO: verify.
 		}
 		return idsJournalEntries;
 	}
 
-	private async createJournalEntry(journalEntry: IJournalEntry): Promise<string> {
+	private async createJournalEntry(journalEntryDto: IJournalEntryDto): Promise<string> {
 		// Generate a random UUId, if needed.
-		if (journalEntry.id === undefined || journalEntry.id === null || journalEntry.id === "") {
-			journalEntry.id = Crypto.randomUUID();
+		if (journalEntryDto.id === "") {
+			journalEntryDto.id = Crypto.randomUUID();
 		}
-		JournalEntry.validateJournalEntry(journalEntry);
+		const journalEntry: JournalEntry = JournalEntry.getFromDto(journalEntryDto);
+		JournalEntry.validate(journalEntry);
 		// Check if the credited and debited accounts are the same. TODO: required?
 		if (journalEntry.creditedAccountId === journalEntry.debitedAccountId) {
 			throw new CreditedAndDebitedAccountsAreTheSameError(); // TODO: error name.
@@ -203,20 +206,27 @@ export class Aggregate {
 		return journalEntry.id;
 	}
 
-	async getAccountById(accountId: string, securityContext: CallSecurityContext): Promise<IAccount | null> {
+	async getAccountById(accountId: string, securityContext: CallSecurityContext): Promise<IAccountDto | null> {
 		this.enforcePrivilege(securityContext, Privileges.VIEW_ACCOUNT);
 		try {
-			return await this.accountsRepo.getAccountById(accountId);
+			const account: IAccount | null = await this.accountsRepo.getAccountById(accountId);
+			if (account === null) {
+				return null;
+			}
+			return Account.getDto(account);
 		} catch (e: unknown) {
 			this.logger.error(e);
 			throw e;
 		}
 	}
 
-	async getAccountsByExternalId(externalId: string, securityContext: CallSecurityContext): Promise<IAccount[]> {
+	async getAccountsByExternalId(externalId: string, securityContext: CallSecurityContext): Promise<IAccountDto[]> {
 		this.enforcePrivilege(securityContext, Privileges.VIEW_ACCOUNT);
 		try {
-			return await this.accountsRepo.getAccountsByExternalId(externalId);
+			const accounts: IAccount[] = await this.accountsRepo.getAccountsByExternalId(externalId);
+			return accounts.map(account => {
+				return Account.getDto(account);
+			});
 		} catch (e: unknown) {
 			this.logger.error(e);
 			throw e;
@@ -226,10 +236,14 @@ export class Aggregate {
 	async getJournalEntriesByAccountId(
 		accountId: string,
 		securityContext: CallSecurityContext)
-	: Promise<IJournalEntry[]> {
+	: Promise<IJournalEntryDto[]> {
 		this.enforcePrivilege(securityContext, Privileges.VIEW_JOURNAL_ENTRY);
 		try {
-			return await this.journalEntriesRepo.getJournalEntriesByAccountId(accountId);
+			const journalEntries: IJournalEntry[] =
+				await this.journalEntriesRepo.getJournalEntriesByAccountId(accountId);
+			return journalEntries.map(journalEntry => {
+				return JournalEntry.getDto(journalEntry);
+			});
 		} catch (e: unknown) {
 			this.logger.error(e);
 			throw e;

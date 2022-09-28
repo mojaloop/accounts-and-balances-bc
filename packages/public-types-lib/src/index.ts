@@ -29,18 +29,40 @@
 
 "use strict";
 
-// TODO: export everything at once.
+export interface IAccountDto {
+	id: string;
+	externalId: string | null;
+	state: AccountState;
+	type: AccountType;
+	currency: string;
+	// currencyCode: string; // https://en.wikipedia.org/wiki/ISO_4217
+	// currencyDecimals: number;
+	creditBalance: string;
+	debitBalance: string;
+	timestampLastJournalEntry: number;
+}
 
-export * from "./generic/types";
+export enum AccountState {
+	ACTIVE = "ACTIVE",
+	DELETED = "DELETED"
+}
 
-export * from "./grpc/types/AccountsAndBalancesGrpcService";
-export * from "./grpc/types/GrpcId";
-export * from "./grpc/types/GrpcIdArray";
-export * from "./grpc/types/GrpcAccount";
-export * from "./grpc/types/GrpcAccountState";
-export * from "./grpc/types/GrpcAccountType";
-export * from "./grpc/types/GrpcAccountArray";
-export * from "./grpc/types/GrpcJournalEntry";
-export * from "./grpc/types/GrpcJournalEntryArray";
-export * from "./grpc/types/accounts_and_balances";
-export * from "./grpc/utils";
+export enum AccountType {
+	POSITION = "POSITION",
+	SETTLEMENT = "SETTLEMENT",
+	FEE = "FEE"
+}
+
+export interface IJournalEntryDto {
+	id: string;
+	externalId: string | null;
+	externalCategory: string | null;
+	currency: string;
+	// TODO: currencyCode and currencyDecimals required?
+	// currencyCode: string; // https://en.wikipedia.org/wiki/ISO_4217
+	// currencyDecimals: number;
+	amount: string;
+	creditedAccountId: string;
+	debitedAccountId: string;
+	timestamp: number;
+}

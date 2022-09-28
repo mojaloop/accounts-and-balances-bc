@@ -31,6 +31,7 @@
 
 import axios, {AxiosError, AxiosInstance, AxiosResponse} from "axios";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
+import {IAccountDto, IJournalEntryDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 export class AuxiliaryAccountsAndBalancesHttpClient {
 	// Properties received through the constructor.
@@ -59,18 +60,18 @@ export class AuxiliaryAccountsAndBalancesHttpClient {
 		this.httpClient.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
 	}
 
-	async createAccount(account: any): Promise<number> {
+	async createAccount(accountDto: IAccountDto): Promise<number> {
 		try {
-			const axiosResponse: AxiosResponse = await this.httpClient.post("/accounts", account);
+			const axiosResponse: AxiosResponse = await this.httpClient.post("/accounts", accountDto);
 			return axiosResponse.status;
 		} catch (e: unknown) {
 			return (e as AxiosError).response?.status ?? -1;
 		}
 	}
 
-	async createJournalEntries(journalEntries: any[]): Promise<number> {
+	async createJournalEntries(journalEntryDtos: IJournalEntryDto[]): Promise<number> {
 		try {
-			const axiosResponse: AxiosResponse = await this.httpClient.post("/journalEntries", journalEntries);
+			const axiosResponse: AxiosResponse = await this.httpClient.post("/journalEntries", journalEntryDtos);
 			return axiosResponse.status;
 		} catch (e: unknown) {
 			return (e as AxiosError).response?.status ?? -1;

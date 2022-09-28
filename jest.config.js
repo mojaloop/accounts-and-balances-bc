@@ -1,15 +1,12 @@
 "use strict";
 
-const fullPackageName = require("./package.json").name;
-const shortPackageName = fullPackageName.replace("@mojaloop/accounts-and-balances-bc-", "");
-
 module.exports = {
   preset: "ts-jest",
   testEnvironment: "node",
   collectCoverage: true,
-  collectCoverageFrom: ["src/**/*.ts"],
+  collectCoverageFrom: ["packages/**/src/**/*.ts"],
   coverageReporters: ["json", "lcov"],
-  coverageDirectory: `../../coverage/${shortPackageName}/`,
+  coverageDirectory: "coverage/integration/",
   clearMocks: true,
   coverageThreshold: {
     "global": {

@@ -54,7 +54,7 @@ import {GrpcServer} from "./grpc_server";
 
 // General.
 const BOUNDED_CONTEXT_NAME: string = "accounts-and-balances-bc";
-const SERVICE_NAME: string = "http-svc";
+const SERVICE_NAME: string = "grpc-svc";
 const SERVICE_VERSION: string = "0.0.1";
 
 // Message broker.

@@ -29,23 +29,30 @@
 
 "use strict";
 
-export interface IAccountDTO {
+import {AccountState, AccountType} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+
+export interface IAccount {
 	id: string;
 	externalId: string | null;
-	state: "ACTIVE" | "DELETED";
-	type: "POSITION" | "SETTLEMENT" | "FEE";
-	currency: string; // https://en.wikipedia.org/wiki/ISO_4217
-	creditBalance: number;
-	debitBalance: number;
+	state: AccountState;
+	type: AccountType;
+	currency: string;
+	// currencyCode: string; // https://en.wikipedia.org/wiki/ISO_4217
+	// currencyDecimals: number;
+	creditBalance: bigint;
+	debitBalance: bigint;
 	timestampLastJournalEntry: number;
 }
 
-export interface IJournalEntryDTO {
+export interface IJournalEntry {
 	id: string;
 	externalId: string | null;
 	externalCategory: string | null;
-	currency: string; // https://en.wikipedia.org/wiki/ISO_4217
-	amount: number;
+	currency: string;
+	// TODO: currencyCode and currencyDecimals required?
+	// currencyCode: string; // https://en.wikipedia.org/wiki/ISO_4217
+	// currencyDecimals: number;
+	amount: bigint;
 	creditedAccountId: string;
 	debitedAccountId: string;
 	timestamp: number;
