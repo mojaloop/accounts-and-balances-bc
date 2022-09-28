@@ -30,7 +30,6 @@
 "use strict";
 
 import {
-	IJournalEntry,
 	IJournalEntriesRepo,
 	JournalEntryAlreadyExistsError,
 	UnableToInitRepoError,
@@ -39,19 +38,20 @@ import {
 	UnableToStoreJournalEntryError
 } from "@mojaloop/accounts-and-balances-bc-domain-lib";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
+import {IJournalEntryDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 export class MemoryJournalEntriesRepo implements IJournalEntriesRepo {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
 	// Other properties.
 	private unexpectedFailure: boolean; // TODO: should this be done?
-	private readonly journalEntries: Map<string, IJournalEntry>;
+	private readonly journalEntries: Map<string, IJournalEntryDto>;
 
 	constructor(logger: ILogger) {
 		this.logger = logger;
 
 		this.unexpectedFailure = false;
-		this.journalEntries = new Map<string, IJournalEntry>();
+		this.journalEntries = new Map<string, IJournalEntryDto>();
 	}
 
 	async init(): Promise<void> {
@@ -70,7 +70,7 @@ export class MemoryJournalEntriesRepo implements IJournalEntriesRepo {
 		return this.journalEntries.has(journalEntryId);
 	}
 
-	async storeNewJournalEntry(journalEntry: IJournalEntry): Promise<void> {
+	async storeNewJournalEntry(journalEntry: IJournalEntryDto): Promise<void> {
 		if (this.unexpectedFailure) {
 			throw new UnableToStoreJournalEntryError();
 		}
@@ -80,11 +80,11 @@ export class MemoryJournalEntriesRepo implements IJournalEntriesRepo {
 		this.journalEntries.set(journalEntry.id, journalEntry);
 	}
 
-	async getJournalEntriesByAccountId(accountId: string): Promise<IJournalEntry[]> {
+	async getJournalEntriesByAccountId(accountId: string): Promise<IJournalEntryDto[]> {
 		if (this.unexpectedFailure) {
 			throw new UnableToGetJournalEntriesError();
 		}
-		const journalEntries: IJournalEntry[] = [];
+		const journalEntries: IJournalEntryDto[] = [];
 		for (const journalEntry of this.journalEntries.values()) {
 			if (journalEntry.creditedAccountId === accountId
 				|| journalEntry.debitedAccountId === accountId) {

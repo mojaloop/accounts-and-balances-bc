@@ -42,14 +42,13 @@ import {
 	UnauthorizedError
 } from "./errors";
 import {IAccountsRepo, IJournalEntriesRepo} from "./infrastructure_interfaces";
-import {Account} from "./entities/account";
-import {JournalEntry} from "./entities/journal_entry";
+import {Account} from "./types/account";
+import {JournalEntry} from "./types/journal_entry";
 import {IAccountDto, IJournalEntryDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {IAuditClient, AuditSecurityContext} from "@mojaloop/auditing-bc-public-types-lib";
 import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
 import {Privileges} from "./privileges";
-import {IAccount, IJournalEntry} from "./types";
 
 enum AuditingActions {
 	ACCOUNT_CREATED = "ACCOUNT_CREATED"
@@ -78,12 +77,12 @@ export class Aggregate {
 	}
 
 	private enforcePrivilege(securityContext: CallSecurityContext, privilegeId: string): void {
-		for (const roleId of securityContext.rolesIds) {
+		/*for (const roleId of securityContext.rolesIds) {
 			if (this.authorizationClient.roleHasPrivilege(roleId, privilegeId)) {
 				return;
 			}
 		}
-		throw new UnauthorizedError(); // TODO: change error name.
+		throw new UnauthorizedError(); // TODO: change error name.*/
 	}
 
 	private getAuditSecurityContext(securityContext: CallSecurityContext): AuditSecurityContext {
@@ -105,7 +104,7 @@ export class Aggregate {
 		Account.validate(account);
 		// Store the account.
 		try {
-			await this.accountsRepo.storeNewAccount(account);
+			await this.accountsRepo.storeNewAccount(accountDto);
 		} catch (e: unknown) {
 			if (!(e instanceof AccountAlreadyExistsError)) {
 				this.logger.error(e);
@@ -149,20 +148,29 @@ export class Aggregate {
 		// Instead of using the repo's accountExistsById and journalEntryExistsById functions, the accounts are fetched
 		// and compared to null; this is done because some of the accounts' properties need to be consulted, so it
 		// doesn't make sense to call those functions when the accounts need to be fetched anyway.
-		let creditedAccount: Account | null;
-		let debitedAccount: Account | null;
+		let creditedAccountDto: IAccountDto | null;
+		let debitedAccountDto: IAccountDto | null;
 		try {
-			creditedAccount = await this.accountsRepo.getAccountById(journalEntry.creditedAccountId);
-			debitedAccount = await this.accountsRepo.getAccountById(journalEntry.debitedAccountId);
+			creditedAccountDto = await this.accountsRepo.getAccountById(journalEntry.creditedAccountId);
+			debitedAccountDto = await this.accountsRepo.getAccountById(journalEntry.debitedAccountId);
 		} catch (e: unknown) {
 			this.logger.error(e);
 			throw e;
 		}
-		if (creditedAccount === null) {
+		if (creditedAccountDto === null) {
 			throw new NoSuchCreditedAccountError();
 		}
-		if (debitedAccount === null) {
+		if (debitedAccountDto === null) {
 			throw new NoSuchDebitedAccountError();
+		}
+		let creditedAccount: Account;
+		let debitedAccount: Account;
+		try {
+			creditedAccount = Account.getFromDto(creditedAccountDto);
+			debitedAccount = Account.getFromDto(debitedAccountDto);
+		} catch(error: unknown) {
+			this.logger.error(error);
+			throw error;
 		}
 		// Check if the currencies of the credited and debited accounts and the journal entry match.
 		if (creditedAccount.currency !== debitedAccount.currency
@@ -175,7 +183,7 @@ export class Aggregate {
 		}
 		// Store the journal entry.
 		try {
-			await this.journalEntriesRepo.storeNewJournalEntry(journalEntry);
+			await this.journalEntriesRepo.storeNewJournalEntry(journalEntryDto);
 		} catch (e: unknown) {
 			if (!(e instanceof JournalEntryAlreadyExistsError)) {
 				this.logger.error(e);
@@ -186,7 +194,7 @@ export class Aggregate {
 		try {
 			await this.accountsRepo.updateAccountCreditBalanceById(
 				creditedAccount.id,
-				creditedAccount.creditBalance + journalEntry.amount,
+				(creditedAccount.creditBalance + journalEntry.amount).toString(),
 				journalEntry.timestamp
 			);
 		} catch (e: unknown) {
@@ -197,7 +205,7 @@ export class Aggregate {
 		try {
 			await this.accountsRepo.updateAccountDebitBalanceById(
 				debitedAccount.id,
-				debitedAccount.debitBalance + journalEntry.amount,
+				(debitedAccount.debitBalance + journalEntry.amount).toString(),
 				journalEntry.timestamp
 			);
 		} catch (e: unknown) {
@@ -211,11 +219,8 @@ export class Aggregate {
 	async getAccountById(accountId: string, securityContext: CallSecurityContext): Promise<IAccountDto | null> {
 		this.enforcePrivilege(securityContext, Privileges.VIEW_ACCOUNT);
 		try {
-			const account: IAccount | null = await this.accountsRepo.getAccountById(accountId);
-			if (account === null) {
-				return null;
-			}
-			return Account.getDto(account);
+			const accountDto: IAccountDto | null = await this.accountsRepo.getAccountById(accountId);
+			return accountDto;
 		} catch (e: unknown) {
 			this.logger.error(e);
 			throw e;
@@ -225,10 +230,8 @@ export class Aggregate {
 	async getAccountsByExternalId(externalId: string, securityContext: CallSecurityContext): Promise<IAccountDto[]> {
 		this.enforcePrivilege(securityContext, Privileges.VIEW_ACCOUNT);
 		try {
-			const accounts: IAccount[] = await this.accountsRepo.getAccountsByExternalId(externalId);
-			return accounts.map(account => {
-				return Account.getDto(account);
-			});
+			const accountDtos: IAccountDto[] = await this.accountsRepo.getAccountsByExternalId(externalId);
+			return accountDtos;
 		} catch (e: unknown) {
 			this.logger.error(e);
 			throw e;
@@ -237,15 +240,13 @@ export class Aggregate {
 
 	async getJournalEntriesByAccountId(
 		accountId: string,
-		securityContext: CallSecurityContext)
-	: Promise<IJournalEntryDto[]> {
+		securityContext: CallSecurityContext
+	): Promise<IJournalEntryDto[]> {
 		this.enforcePrivilege(securityContext, Privileges.VIEW_JOURNAL_ENTRY);
 		try {
-			const journalEntries: IJournalEntry[] =
+			const journalEntryDtos: IJournalEntryDto[] =
 				await this.journalEntriesRepo.getJournalEntriesByAccountId(accountId);
-			return journalEntries.map(journalEntry => {
-				return JournalEntry.getDto(journalEntry);
-			});
+			return journalEntryDtos;
 		} catch (e: unknown) {
 			this.logger.error(e);
 			throw e;

@@ -73,6 +73,7 @@ export class AccountsAndBalancesGrpcClient {
 				(error) => {
 					if (error) {
 						reject(error);
+						return; // TODO: return?
 					}
 					this.logger.info("gRPC client initialized 🚀");
 					resolve();

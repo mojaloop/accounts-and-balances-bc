@@ -29,22 +29,22 @@
 
 "use strict";
 
-import {IAccount, IJournalEntry} from "./types";
+import {IAccountDto, IJournalEntryDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 export interface IAccountsRepo {
 	init(): Promise<void>;
 	destroy(): Promise<void>;
 	accountExistsById(accountId: string): Promise<boolean>;
-	storeNewAccount(account: IAccount): Promise<void>; // Throws if account.id is not unique.
-	getAccountById(accountId: string): Promise<IAccount | null>;
-	getAccountsByExternalId(externalId: string): Promise<IAccount[]>;
+	storeNewAccount(account: IAccountDto): Promise<void>; // Throws if account.id is not unique.
+	getAccountById(accountId: string): Promise<IAccountDto | null>;
+	getAccountsByExternalId(externalId: string): Promise<IAccountDto[]>;
 	updateAccountCreditBalanceById(
 		accountId: string,
-		creditBalance: bigint,
+		creditBalance: string,
 		timeStampLastJournalEntry: number): Promise<void>;
 	updateAccountDebitBalanceById(
 		accountId: string,
-		debitBalance: bigint,
+		debitBalance: string,
 		timeStampLastJournalEntry: number): Promise<void>;
 }
 
@@ -52,6 +52,6 @@ export interface IJournalEntriesRepo {
 	init(): Promise<void>;
 	destroy(): Promise<void>;
 	journalEntryExistsById(journalEntryId: string): Promise<boolean>;
-	storeNewJournalEntry(journalEntry: IJournalEntry): Promise<void>; // Throws if account.id is not unique.
-	getJournalEntriesByAccountId(accountId: string): Promise<IJournalEntry[]>;
+	storeNewJournalEntry(journalEntry: IJournalEntryDto): Promise<void>; // Throws if account.id is not unique.
+	getJournalEntriesByAccountId(accountId: string): Promise<IJournalEntryDto[]>;
 }

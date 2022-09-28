@@ -76,7 +76,7 @@ describe("accounts and balances - integration tests with HTTP service", () => {
 	beforeAll(async () => {
 		const kafkaProducerOptions: MLKafkaRawProducerOptions = {
 			kafkaBrokerList: MESSAGE_BROKER_URL
-		}
+		};
 		logger = new KafkaLogger(
 			BOUNDED_CONTEXT_NAME,
 			SERVICE_NAME,

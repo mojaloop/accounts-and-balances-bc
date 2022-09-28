@@ -30,10 +30,10 @@
 "use strict";
 
 import {InvalidExternalCategoryError, InvalidExternalIdError, InvalidJournalEntryAmountError} from "../errors";
-import {IJournalEntry} from "../types";
 import {IJournalEntryDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
-export class JournalEntry implements IJournalEntry {
+// TODO: implements/extends anything?
+export class JournalEntry {
 	id: string;
 	externalId: string | null;
 	externalCategory: string | null;

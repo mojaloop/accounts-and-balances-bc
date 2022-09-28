@@ -33,15 +33,15 @@ import {
 	InvalidCreditBalanceError,
 	InvalidDebitBalanceError, InvalidExternalIdError
 } from "../errors";
-import {IAccount} from "../types";
 import {AccountState, AccountType, IAccountDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
-export class Account implements IAccount {
+// TODO: implements/extends anything?
+export class Account {
 	id: string;
 	externalId: string | null;
 	state: AccountState;
 	type: AccountType;
-	currency: string; // https://en.wikipedia.org/wiki/ISO_4217
+	currency: string;
 	creditBalance: bigint;
 	debitBalance: bigint;
 	timestampLastJournalEntry: number;
@@ -67,7 +67,8 @@ export class Account implements IAccount {
 	}
 
 	static getFromDto(accountDto: IAccountDto): Account {
-		let creditBalance: bigint, debitBalance: bigint;
+		let creditBalance: bigint;
+		let debitBalance: bigint;
 		try {
 			creditBalance = BigInt(accountDto.creditBalance);
 		} catch(error: unknown) {
