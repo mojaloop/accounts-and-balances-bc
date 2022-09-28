@@ -31,7 +31,7 @@
 
 import {LogLevel} from "@mojaloop/logging-bc-public-types-lib";
 import {KafkaLogger} from "@mojaloop/logging-bc-client-lib";
-import {MLKafkaProducerOptions} from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib";
+import {MLKafkaRawProducerOptions} from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib";
 import * as Crypto from "crypto";
 import {AccountsAndBalancesGrpcClient} from "@mojaloop/accounts-and-balances-bc-grpc-client-lib";
 import {
@@ -69,7 +69,7 @@ let accountsAndBalancesGrpcClient: AccountsAndBalancesGrpcClient;
 
 describe("accounts and balances - integration tests with gRPC service", () => {
 	beforeAll(async () => {
-		const kafkaProducerOptions: MLKafkaProducerOptions = {
+		const kafkaProducerOptions: MLKafkaRawProducerOptions = {
 			kafkaBrokerList: MESSAGE_BROKER_URL
 		};
 		logger = new KafkaLogger(
@@ -90,6 +90,7 @@ describe("accounts and balances - integration tests with gRPC service", () => {
 	});
 
 	afterAll(async () => {
+		await accountsAndBalancesGrpcClient.destroy();
 		await logger.destroy();
 	});
 

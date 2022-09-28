@@ -43,7 +43,7 @@ import {
 	KafkaAuditClientDispatcher,
 	LocalAuditClientCryptoProvider
 } from "@mojaloop/auditing-bc-client-lib";
-import {MLKafkaProducerOptions} from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib";
+import {MLKafkaRawProducerOptions} from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib";
 import {existsSync} from "fs";
 import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {AuthorizationClient, TokenHelper} from "@mojaloop/security-bc-client-lib";
@@ -116,7 +116,7 @@ export async function start(
 	_journalEntriesRepo?: IJournalEntriesRepo
 ): Promise<void> {
 	// Message producer options.
-	const kafkaProducerOptions: MLKafkaProducerOptions = {
+	const kafkaProducerOptions: MLKafkaRawProducerOptions = {
 		kafkaBrokerList: MESSAGE_BROKER_URL
 	};
 

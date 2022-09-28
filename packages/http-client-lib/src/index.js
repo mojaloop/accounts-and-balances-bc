@@ -26,42 +26,21 @@
 
  --------------
  ******/
-
 "use strict";
-
-export interface IAccountDto {
-	id: string;
-	externalId: string | null;
-	state: AccountState;
-	type: AccountType;
-	currency: string;
-	// currencyCode: string; // https://en.wikipedia.org/wiki/ISO_4217
-	// currencyDecimals: number;
-	creditBalance: string;
-	debitBalance: string;
-	timestampLastJournalEntry: number;
-}
-
-export enum AccountState {
-	ACTIVE = "ACTIVE",
-	DELETED = "DELETED"
-}
-
-export enum AccountType {
-	POSITION = "POSITION",
-	SETTLEMENT = "SETTLEMENT",
-	FEE = "FEE"
-}
-
-export interface IJournalEntryDto {
-	id: string;
-	externalId: string | null;
-	externalCategory: string | null;
-	currency: string;
-	// currencyCode: string; // https://en.wikipedia.org/wiki/ISO_4217
-	// currencyDecimals: number;
-	amount: string;
-	creditedAccountId: string;
-	debitedAccountId: string;
-	timestamp: number;
-}
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __exportStar = (this && this.__exportStar) || function(m, exports) {
+    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+__exportStar(require("./accounts_and_balances_http_client"), exports);
+__exportStar(require("./errors"), exports);

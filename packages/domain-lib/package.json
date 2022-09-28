@@ -33,8 +33,8 @@
   },
   "dependencies": {
     "@mojaloop/accounts-and-balances-bc-public-types-lib": "*",
-    "@mojaloop/auditing-bc-public-types-lib": "^0.0.7",
-    "@mojaloop/logging-bc-public-types-lib": "^0.1.10",
+    "@mojaloop/auditing-bc-public-types-lib": "^0.0.8",
+    "@mojaloop/logging-bc-public-types-lib": "^0.1.12",
     "@mojaloop/security-bc-client-lib": "^0.0.4",
     "@mojaloop/security-bc-public-types-lib": "^0.0.5"
   }

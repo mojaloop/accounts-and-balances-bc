@@ -52,7 +52,7 @@ const TIMEOUT_MS_ACCOUNTS_AND_BALANCES_HTTP_CLIENT: number = 10_000;
 let accountsAndBalancesHttpServiceMock: AccountsAndBalancesHttpServiceMock;
 let accountsAndBalancesHttpClient: AccountsAndBalancesHttpClient;
 
-describe("accounts and balances client library - unit tests", () => {
+describe("accounts and balances http client library - unit tests", () => {
 	beforeAll(async () => {
 		const logger: ILogger = new ConsoleLogger();
 		accountsAndBalancesHttpServiceMock = new AccountsAndBalancesHttpServiceMock(
