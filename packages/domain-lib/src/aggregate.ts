@@ -77,14 +77,13 @@ export class Aggregate {
 		this.journalEntriesRepo = journalEntriesRepo;
 	}
 
-	// TODO: solve!!!!!!!!!!
 	private enforcePrivilege(securityContext: CallSecurityContext, privilegeId: string): void {
-		/*for (const roleId of securityContext.rolesIds) {
+		for (const roleId of securityContext.rolesIds) {
 			if (this.authorizationClient.roleHasPrivilege(roleId, privilegeId)) {
 				return;
 			}
 		}
-		throw new UnauthorizedError(); // TODO: change error name.*/
+		throw new UnauthorizedError(); // TODO: change error name.
 	}
 
 	private getAuditSecurityContext(securityContext: CallSecurityContext): AuditSecurityContext {
@@ -123,7 +122,10 @@ export class Aggregate {
 		return account.id;
 	}
 
-	async createJournalEntries(journalEntryDtos: IJournalEntryDto[], securityContext: CallSecurityContext): Promise<string[]> {
+	async createJournalEntries(
+		journalEntryDtos: IJournalEntryDto[],
+		securityContext: CallSecurityContext
+	): Promise<string[]> {
 		this.enforcePrivilege(securityContext, Privileges.CREATE_JOURNAL_ENTRY);
 		const idsJournalEntries: string[] = []; // TODO: verify.
 		for (const journalEntryDto of journalEntryDtos) {

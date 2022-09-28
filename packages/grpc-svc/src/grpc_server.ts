@@ -55,7 +55,6 @@ export class GrpcServer {
 	private readonly HOST: string;
 	private readonly PORT_NO: number;
 	// Other properties.
-	private static readonly PROTO_FILE_PATH: string = "/home/goncalogarcia/Documents/Work/Mojaloop/vNext/BoundedContexts/accounts-and-balances-bc/packages/grpc-svc/src/accounts_and_balances.proto"; // TODO: here?
 	private readonly server: Server;
 
 	constructor(
