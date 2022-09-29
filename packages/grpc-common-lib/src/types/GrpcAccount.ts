@@ -9,7 +9,8 @@ export interface GrpcAccount {
   'externalId'?: (string);
   'state'?: (_GrpcAccountState | keyof typeof _GrpcAccountState);
   'type'?: (_GrpcAccountType | keyof typeof _GrpcAccountType);
-  'currency'?: (string);
+  'currencyCode'?: (string);
+  'currencyDecimals'?: (number);
   'creditBalance'?: (string);
   'debitBalance'?: (string);
   'timestampLastJournalEntry'?: (number | string | Long);
@@ -20,7 +21,8 @@ export interface GrpcAccount__Output {
   'externalId': (string);
   'state': (keyof typeof _GrpcAccountState);
   'type': (keyof typeof _GrpcAccountType);
-  'currency': (string);
+  'currencyCode': (string);
+  'currencyDecimals': (number);
   'creditBalance': (string);
   'debitBalance': (string);
   'timestampLastJournalEntry': (number);

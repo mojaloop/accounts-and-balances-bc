@@ -29,10 +29,7 @@
 
 "use strict";
 
-import {
-	InvalidCreditBalanceError,
-	InvalidDebitBalanceError, InvalidExternalIdError
-} from "../errors";
+import {InvalidCreditBalanceError, InvalidDebitBalanceError} from "../errors";
 import {AccountState, AccountType, IAccountDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 // TODO: implements/extends anything?
@@ -41,7 +38,8 @@ export class Account {
 	externalId: string | null;
 	state: AccountState;
 	type: AccountType;
-	currency: string;
+	currencyCode: string;
+	currencyDecimals: number;
 	creditBalance: bigint;
 	debitBalance: bigint;
 	timestampLastJournalEntry: number;
@@ -51,7 +49,8 @@ export class Account {
 		externalId: string | null,
 		state: AccountState,
 		type: AccountType,
-		currency: string,
+		currencyCode: string,
+		currencyDecimals: number,
 		creditBalance: bigint,
 		debitBalance: bigint,
 		timestampLastJournalEntry: number
@@ -60,7 +59,8 @@ export class Account {
 		this.externalId = externalId;
 		this.state = state;
 		this.type = type;
-		this.currency = currency;
+		this.currencyCode = currencyCode;
+		this.currencyDecimals = currencyDecimals;
 		this.creditBalance = creditBalance;
 		this.debitBalance = debitBalance;
 		this.timestampLastJournalEntry = timestampLastJournalEntry;
@@ -84,26 +84,12 @@ export class Account {
 			accountDto.externalId,
 			accountDto.state,
 			accountDto.type,
-			accountDto.currency,
+			accountDto.currencyCode,
+			accountDto.currencyDecimals,
 			creditBalance,
 			debitBalance,
 			accountDto.timestampLastJournalEntry
 		);
-	}
-
-	static validate(account: Account): void {
-		// External id.
-		if (account.externalId === "") {
-			throw new InvalidExternalIdError();
-		}
-		// Credit balance.
-		if (account.creditBalance < 0) {
-			throw new InvalidCreditBalanceError();
-		}
-		// Debit balance.
-		if (account.debitBalance < 0) {
-			throw new InvalidDebitBalanceError();
-		}
 	}
 
 	static getDto(account: Account): IAccountDto {
@@ -112,10 +98,15 @@ export class Account {
 			externalId: account.externalId,
 			state: account.state,
 			type: account.type,
-			currency: account.currency,
+			currencyCode: account.currencyCode,
+			currencyDecimals: account.currencyDecimals,
 			creditBalance: account.creditBalance.toString(),
 			debitBalance: account.debitBalance.toString(),
 			timestampLastJournalEntry: account.timestampLastJournalEntry
 		};
+	}
+
+	static calculateBalance(account: Account): bigint {
+		return account.creditBalance - account.debitBalance;
 	}
 }

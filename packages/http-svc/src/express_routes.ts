@@ -41,11 +41,14 @@ import {
 	CreditedAndDebitedAccountsAreTheSameError,
 	NoSuchCreditedAccountError,
 	NoSuchDebitedAccountError,
-	CurrenciesDifferError,
 	InsufficientBalanceError,
 	UnauthorizedError,
 	InvalidExternalIdError,
-	InvalidExternalCategoryError
+	InvalidExternalCategoryError,
+	CurrencyCodesDifferError,
+	CurrencyDecimalsDifferError,
+	InvalidCurrencyCodeError,
+	InvalidCurrencyDecimalsError
 } from "@mojaloop/accounts-and-balances-bc-domain-lib";
 import {TokenHelper, CallSecurityContext} from "@mojaloop/security-bc-client-lib";
 import {IAccountDto, IJournalEntryDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
@@ -186,7 +189,13 @@ export class ExpressRoutes {
 				{accountId: accountId}
 			);
 		} catch (e: unknown) {
-			if (e instanceof InvalidExternalIdError) {
+			if (e instanceof UnauthorizedError) {
+				this.sendErrorResponse(
+					res,
+					403,
+					"unauthorized" // TODO: verify.
+				);
+			} else if (e instanceof InvalidExternalIdError) {
 				this.sendErrorResponse(
 					res,
 					400,
@@ -204,17 +213,23 @@ export class ExpressRoutes {
 					400,
 					"invalid debit balance"
 				);
+			} else if (e instanceof InvalidCurrencyCodeError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid currency code"
+				);
+			} else if (e instanceof InvalidCurrencyDecimalsError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid currency decimals"
+				);
 			} else if (e instanceof AccountAlreadyExistsError) {
 				this.sendErrorResponse(
 					res,
 					409,
 					"account already exists"
-				);
-			} else if (e instanceof UnauthorizedError) {
-				this.sendErrorResponse(
-					res,
-					403,
-					"unauthorized" // TODO: verify.
 				);
 			} else {
 				this.sendErrorResponse(
@@ -236,7 +251,13 @@ export class ExpressRoutes {
 				{idsJournalEntries: idsJournalEntries}
 			);
 		} catch (e: unknown) {
-			if (e instanceof InvalidExternalIdError) {
+			if (e instanceof UnauthorizedError) {
+				this.sendErrorResponse(
+					res,
+					403,
+					"unauthorized" // TODO: verify.
+				);
+			} else if (e instanceof InvalidExternalIdError) {
 				this.sendErrorResponse(
 					res,
 					400,
@@ -272,11 +293,29 @@ export class ExpressRoutes {
 					400,
 					"no such debited account"
 				);
-			} else if (e instanceof CurrenciesDifferError) {
+			} else if (e instanceof CurrencyCodesDifferError) {
 				this.sendErrorResponse(
 					res,
 					400,
-					"currencies differ"
+					"currency codes differ"
+				);
+			} else if (e instanceof CurrencyDecimalsDifferError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"currency decimals differ"
+				);
+			} else if (e instanceof InvalidCurrencyCodeError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid currency code"
+				);
+			} else if (e instanceof InvalidCurrencyDecimalsError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid currency decimals"
 				);
 			} else if (e instanceof InsufficientBalanceError) {
 				this.sendErrorResponse(
@@ -289,12 +328,6 @@ export class ExpressRoutes {
 					res,
 					409,
 					"journal entry already exists"
-				);
-			} else if (e instanceof UnauthorizedError) {
-				this.sendErrorResponse(
-					res,
-					403,
-					"unauthorized" // TODO: verify.
 				);
 			} else {
 				this.sendErrorResponse(

@@ -29,7 +29,7 @@
 
 "use strict";
 
-import {InvalidExternalCategoryError, InvalidExternalIdError, InvalidJournalEntryAmountError} from "../errors";
+import {InvalidJournalEntryAmountError} from "../errors";
 import {IJournalEntryDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 // TODO: implements/extends anything?
@@ -37,7 +37,8 @@ export class JournalEntry {
 	id: string;
 	externalId: string | null;
 	externalCategory: string | null;
-	currency: string;
+	currencyCode: string;
+	currencyDecimals: number;
 	amount: bigint;
 	creditedAccountId: string;
 	debitedAccountId: string;
@@ -47,7 +48,8 @@ export class JournalEntry {
 		id: string,
 		externalId: string | null,
 		externalCategory: string | null,
-		currency: string,
+		currencyCode: string,
+		currencyDecimals: number,
 		amount: bigint,
 		creditedAccountId: string,
 		debitedAccountId: string,
@@ -56,7 +58,8 @@ export class JournalEntry {
 		this.id = id;
 		this.externalId = externalId;
 		this.externalCategory = externalCategory;
-		this.currency = currency;
+		this.currencyCode = currencyCode;
+		this.currencyDecimals = currencyDecimals;
 		this.amount = amount;
 		this.creditedAccountId = creditedAccountId;
 		this.debitedAccountId = debitedAccountId;
@@ -74,7 +77,8 @@ export class JournalEntry {
 			journalEntryDto.id,
 			journalEntryDto.externalId,
 			journalEntryDto.externalCategory,
-			journalEntryDto.currency,
+			journalEntryDto.currencyCode,
+			journalEntryDto.currencyDecimals,
 			amount,
 			journalEntryDto.creditedAccountId,
 			journalEntryDto.debitedAccountId,
@@ -82,27 +86,13 @@ export class JournalEntry {
 		);
 	}
 
-	static validate(journalEntry: JournalEntry): void {
-		// External id.
-		if (journalEntry.externalId === "") {
-			throw new InvalidExternalIdError();
-		}
-		// External category.
-		if (journalEntry.externalCategory === "") {
-			throw new InvalidExternalCategoryError();
-		}
-		// Amount.
-		if (journalEntry.amount < 0) {
-			throw new InvalidJournalEntryAmountError();
-		}
-	}
-
 	static getDto(journalEntry: JournalEntry): IJournalEntryDto {
 		return {
 			id: journalEntry.id,
 			externalId: journalEntry.externalId,
 			externalCategory: journalEntry.externalCategory,
-			currency: journalEntry.currency,
+			currencyCode: journalEntry.currencyCode,
+			currencyDecimals: journalEntry.currencyDecimals,
 			amount: journalEntry.amount.toString(),
 			creditedAccountId: journalEntry.creditedAccountId,
 			debitedAccountId: journalEntry.debitedAccountId,

@@ -35,13 +35,14 @@ import {
 	NoSuchCreditedAccountError,
 	NoSuchDebitedAccountError,
 	CreditedAndDebitedAccountsAreTheSameError,
-	CurrenciesDifferError, InsufficientBalanceError,
+	InsufficientBalanceError,
 	InvalidDebitBalanceError,
 	IAccountsRepo,
 	IJournalEntriesRepo,
 	Aggregate,
 	JournalEntryAlreadyExistsError,
-	InvalidCreditBalanceError, InvalidJournalEntryAmountError
+	InvalidCreditBalanceError, InvalidJournalEntryAmountError,
+	CurrencyCodesDifferError, CurrencyDecimalsDifferError
 } from "../../src";
 import {
 	IAccountDto,
@@ -97,7 +98,8 @@ describe("accounts and balances domain library - unit tests", () => {
 			externalId: null,
 			state: AccountState.ACTIVE,
 			type: AccountType.POSITION,
-			currency: "EUR",
+			currencyCode: "EUR",
+			currencyDecimals: 2,
 			creditBalance: "100",
 			debitBalance: "25",
 			timestampLastJournalEntry: 0
@@ -112,7 +114,8 @@ describe("accounts and balances domain library - unit tests", () => {
 			externalId: null,
 			state: AccountState.ACTIVE,
 			type: AccountType.POSITION,
-			currency: "EUR",
+			currencyCode: "EUR",
+			currencyDecimals: 2,
 			creditBalance: "100",
 			debitBalance: "25",
 			timestampLastJournalEntry: 0
@@ -131,7 +134,8 @@ describe("accounts and balances domain library - unit tests", () => {
 			externalId: null,
 			state: AccountState.ACTIVE,
 			type: AccountType.POSITION,
-			currency: "EUR",
+			currencyCode: "EUR",
+			currencyDecimals: 2,
 			creditBalance: "100",
 			debitBalance: "25",
 			timestampLastJournalEntry: 0
@@ -146,7 +150,8 @@ describe("accounts and balances domain library - unit tests", () => {
 			externalId: null,
 			state: AccountState.ACTIVE,
 			type: AccountType.POSITION,
-			currency: "EUR",
+			currencyCode: "EUR",
+			currencyDecimals: 2,
 			creditBalance: "-100",
 			debitBalance: "25",
 			timestampLastJournalEntry: 0
@@ -164,7 +169,8 @@ describe("accounts and balances domain library - unit tests", () => {
 			externalId: null,
 			state: AccountState.ACTIVE,
 			type: AccountType.POSITION,
-			currency: "EUR",
+			currencyCode: "EUR",
+			currencyDecimals: 2,
 			creditBalance: "100",
 			debitBalance: "-25",
 			timestampLastJournalEntry: 0
@@ -182,7 +188,8 @@ describe("accounts and balances domain library - unit tests", () => {
 			externalId: null,
 			state: AccountState.ACTIVE,
 			type: AccountType.POSITION,
-			currency: "EUR",
+			currencyCode: "EUR",
+			currencyDecimals: 2,
 			creditBalance: "100",
 			debitBalance: "-25",
 			timestampLastJournalEntry: 0
@@ -206,7 +213,8 @@ describe("accounts and balances domain library - unit tests", () => {
 			id: idJournalEntryA,
 			externalId: null,
 			externalCategory: null,
-			currency: "EUR",
+			currencyCode: "EUR",
+			currencyDecimals: 2,
 			amount: "5",
 			creditedAccountId: accountDtos[0].id,
 			debitedAccountId: accountDtos[1].id,
@@ -218,7 +226,8 @@ describe("accounts and balances domain library - unit tests", () => {
 			id: idJournalEntryB,
 			externalId: null,
 			externalCategory: null,
-			currency: "EUR",
+			currencyCode: "EUR",
+			currencyDecimals: 2,
 			amount: "5",
 			creditedAccountId: accountDtos[1].id,
 			debitedAccountId: accountDtos[0].id,
@@ -237,7 +246,8 @@ describe("accounts and balances domain library - unit tests", () => {
 			id: idJournalEntryA,
 			externalId: null,
 			externalCategory: null,
-			currency: "EUR",
+			currencyCode: "EUR",
+			currencyDecimals: 2,
 			amount: "5",
 			creditedAccountId: accountDtos[0].id,
 			debitedAccountId: accountDtos[1].id,
@@ -249,7 +259,8 @@ describe("accounts and balances domain library - unit tests", () => {
 			id: idJournalEntryB,
 			externalId: null,
 			externalCategory: null,
-			currency: "EUR",
+			currencyCode: "EUR",
+			currencyDecimals: 2,
 			amount: "5",
 			creditedAccountId: accountDtos[1].id,
 			debitedAccountId: accountDtos[0].id,
@@ -270,7 +281,8 @@ describe("accounts and balances domain library - unit tests", () => {
 			id: journalEntryId,
 			externalId: null,
 			externalCategory: null,
-			currency: "EUR",
+			currencyCode: "EUR",
+			currencyDecimals: 2,
 			amount: "5",
 			creditedAccountId: accountDtos[0].id,
 			debitedAccountId: accountDtos[1].id,
@@ -287,7 +299,8 @@ describe("accounts and balances domain library - unit tests", () => {
 			id: journalEntryId,
 			externalId: null,
 			externalCategory: null,
-			currency: "EUR",
+			currencyCode: "EUR",
+			currencyDecimals: 2,
 			amount: "5",
 			creditedAccountId: accountDtos[0].id,
 			debitedAccountId: accountDtos[0].id,
@@ -307,7 +320,8 @@ describe("accounts and balances domain library - unit tests", () => {
 			id: journalEntryId,
 			externalId: null,
 			externalCategory: null,
-			currency: "EUR",
+			currencyCode: "EUR",
+			currencyDecimals: 2,
 			amount: "5",
 			creditedAccountId: "some string",
 			debitedAccountId: accountDtos[1].id,
@@ -327,7 +341,8 @@ describe("accounts and balances domain library - unit tests", () => {
 			id: journalEntryId,
 			externalId: null,
 			externalCategory: null,
-			currency: "EUR",
+			currencyCode: "EUR",
+			currencyDecimals: 2,
 			amount: "5",
 			creditedAccountId: accountDtos[0].id,
 			debitedAccountId: "some string",
@@ -339,15 +354,16 @@ describe("accounts and balances domain library - unit tests", () => {
 			}
 		).rejects.toThrow(NoSuchDebitedAccountError);
 	});
-	test("create journal entry with different currency", async () => {
+	test("create journal entry with different currency code", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
-		const accountDtos: IAccountDto[] = await create2Accounts(); // Accounts created with EUR.
+		const accountDtos: IAccountDto[] = await create2Accounts(); // currencyCode = "EUR".
 		const journalEntryId: string = Crypto.randomUUID();
 		const journalEntry: IJournalEntryDto = {
 			id: journalEntryId,
 			externalId: null,
 			externalCategory: null,
-			currency: "USD",
+			currencyCode: "USD",
+			currencyDecimals: 2,
 			amount: "5",
 			creditedAccountId: accountDtos[0].id,
 			debitedAccountId: accountDtos[1].id,
@@ -357,7 +373,28 @@ describe("accounts and balances domain library - unit tests", () => {
 			async () => {
 				await aggregate.createJournalEntries([journalEntry], securityContext);
 			}
-		).rejects.toThrow(CurrenciesDifferError);
+		).rejects.toThrow(CurrencyCodesDifferError);
+	});
+	test("create journal entry with different currency decimals", async () => {
+		// Before creating a journal entry, the respective accounts need to be created.
+		const accountDtos: IAccountDto[] = await create2Accounts(); // currencyDecimals = 2.
+		const journalEntryId: string = Crypto.randomUUID();
+		const journalEntry: IJournalEntryDto = {
+			id: journalEntryId,
+			externalId: null,
+			externalCategory: null,
+			currencyCode: "EUR",
+			currencyDecimals: 4,
+			amount: "5",
+			creditedAccountId: accountDtos[0].id,
+			debitedAccountId: accountDtos[1].id,
+			timestamp: 0
+		};
+		await expect(
+			async () => {
+				await aggregate.createJournalEntries([journalEntry], securityContext);
+			}
+		).rejects.toThrow(CurrencyDecimalsDifferError);
 	});
 	test("create journal entry with exceeding amount", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
@@ -367,7 +404,8 @@ describe("accounts and balances domain library - unit tests", () => {
 			id: journalEntryId,
 			externalId: null,
 			externalCategory: null,
-			currency: "EUR",
+			currencyCode: "EUR",
+			currencyDecimals: 2,
 			amount: "10000",
 			creditedAccountId: accountDtos[0].id,
 			debitedAccountId: accountDtos[1].id,
@@ -387,7 +425,8 @@ describe("accounts and balances domain library - unit tests", () => {
 			id: journalEntryId,
 			externalId: null,
 			externalCategory: null,
-			currency: "EUR",
+			currencyCode: "EUR",
+			currencyDecimals: 2,
 			amount: "-5",
 			creditedAccountId: accountDtos[0].id,
 			debitedAccountId: accountDtos[1].id,
@@ -407,7 +446,8 @@ describe("accounts and balances domain library - unit tests", () => {
 			id: journalEntryId,
 			externalId: null,
 			externalCategory: null,
-			currency: "EUR",
+			currencyCode: "EUR",
+			currencyDecimals: 2,
 			amount: "5",
 			creditedAccountId: accountDtos[0].id,
 			debitedAccountId: accountDtos[1].id,
@@ -429,7 +469,8 @@ describe("accounts and balances domain library - unit tests", () => {
 			id: journalEntryId,
 			externalId: null,
 			externalCategory: null,
-			currency: "EUR",
+			currencyCode: "EUR",
+			currencyDecimals: 2,
 			amount: "5",
 			creditedAccountId: accountDtos[0].id,
 			debitedAccountId: accountDtos[1].id,
@@ -457,7 +498,8 @@ describe("accounts and balances domain library - unit tests", () => {
 			externalId: null,
 			state: AccountState.ACTIVE,
 			type: AccountType.POSITION,
-			currency: "EUR",
+			currencyCode: "EUR",
+			currencyDecimals: 2,
 			creditBalance: "100",
 			debitBalance: "25",
 			timestampLastJournalEntry: 0
@@ -515,7 +557,8 @@ describe("accounts and balances domain library - unit tests", () => {
 			id: idJournalEntryA,
 			externalId: null,
 			externalCategory: null,
-			currency: "EUR",
+			currencyCode: "EUR",
+			currencyDecimals: 2,
 			amount: "5",
 			creditedAccountId: accountDtos[0].id,
 			debitedAccountId: accountDtos[1].id,
@@ -527,7 +570,8 @@ describe("accounts and balances domain library - unit tests", () => {
 			id: idJournalEntryB,
 			externalId: null,
 			externalCategory: null,
-			currency: "EUR",
+			currencyCode: "EUR",
+			currencyDecimals: 2,
 			amount: "5",
 			creditedAccountId: accountDtos[1].id,
 			debitedAccountId: accountDtos[0].id,
@@ -561,7 +605,8 @@ async function create2Accounts(
 		externalId: externalIdAccountA,
 		state: AccountState.ACTIVE,
 		type: AccountType.POSITION,
-		currency: "EUR",
+		currencyCode: "EUR",
+		currencyDecimals: 2,
 		creditBalance: "100",
 		debitBalance: "25",
 		timestampLastJournalEntry: 0
@@ -574,7 +619,8 @@ async function create2Accounts(
 		externalId: externalIdAccountB,
 		state: AccountState.ACTIVE,
 		type: AccountType.POSITION,
-		currency: "EUR",
+		currencyCode: "EUR",
+		currencyDecimals: 2,
 		creditBalance: "100",
 		debitBalance: "25",
 		timestampLastJournalEntry: 0

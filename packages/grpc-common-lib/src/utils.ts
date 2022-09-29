@@ -32,7 +32,7 @@
 import {GrpcAccount__Output} from "./types/GrpcAccount";
 import {GrpcJournalEntry__Output} from "./types/GrpcJournalEntry";
 import {loadSync, PackageDefinition} from "@grpc/proto-loader";
-import * as path from "path";
+import {join} from "path";
 import {
 	AccountState,
 	AccountType,
@@ -41,11 +41,11 @@ import {
 } from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 const PROTO_FILE_NAME = "accounts_and_balances.proto";
-const PROTO_FILE_PATH = path.join(__dirname, PROTO_FILE_NAME);
 
 export function loadProto(): PackageDefinition {
+	const protoFilePath: string = join(__dirname, PROTO_FILE_NAME);
 	return loadSync(
-		PROTO_FILE_PATH,
+		protoFilePath,
 		{
 			longs: Number,
 			enums: String,
@@ -60,7 +60,8 @@ export function grpcAccountToAccountDto(grpcAccount: GrpcAccount__Output): IAcco
 		externalId: grpcAccount.externalId || null,
 		state: grpcAccount.state as AccountState,
 		type: grpcAccount.type as AccountType,
-		currency: grpcAccount.currency,
+		currencyCode: grpcAccount.currencyCode,
+		currencyDecimals: grpcAccount.currencyDecimals,
 		creditBalance: grpcAccount.creditBalance,
 		debitBalance: grpcAccount.debitBalance,
 		timestampLastJournalEntry: grpcAccount.timestampLastJournalEntry
@@ -73,7 +74,8 @@ export function accountDtoToGrpcAccount(accountDto: IAccountDto): GrpcAccount__O
 		externalId: accountDto.externalId || "",
 		state: accountDto.state,
 		type: accountDto.type,
-		currency: accountDto.currency,
+		currencyCode: accountDto.currencyCode,
+		currencyDecimals: accountDto.currencyDecimals,
 		creditBalance: accountDto.creditBalance,
 		debitBalance: accountDto.debitBalance,
 		timestampLastJournalEntry: accountDto.timestampLastJournalEntry
@@ -85,7 +87,8 @@ export function grpcJournalEntryToJournalEntryDto(grpcJournalEntry: GrpcJournalE
 		id: grpcJournalEntry.id,
 		externalId: grpcJournalEntry.externalId || null,
 		externalCategory: grpcJournalEntry.externalCategory || null,
-		currency: grpcJournalEntry.currency,
+		currencyCode: grpcJournalEntry.currencyCode,
+		currencyDecimals: grpcJournalEntry.currencyDecimals,
 		amount: grpcJournalEntry.amount,
 		creditedAccountId: grpcJournalEntry.creditedAccountId,
 		debitedAccountId: grpcJournalEntry.debitedAccountId,
@@ -98,7 +101,8 @@ export function journalEntryDtoToGrpcJournalEntry(journalEntryDto: IJournalEntry
 		id: journalEntryDto.id,
 		externalId: journalEntryDto.externalId || "",
 		externalCategory: journalEntryDto.externalId || "",
-		currency: journalEntryDto.currency,
+		currencyCode: journalEntryDto.currencyCode,
+		currencyDecimals: journalEntryDto.currencyDecimals,
 		amount: journalEntryDto.amount,
 		creditedAccountId: journalEntryDto.creditedAccountId,
 		debitedAccountId: journalEntryDto.debitedAccountId,

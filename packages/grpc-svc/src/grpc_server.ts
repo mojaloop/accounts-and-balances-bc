@@ -100,7 +100,6 @@ export class GrpcServer {
 					this.logger.info("gRPC server started 🚀");
 					this.logger.info(`Host: ${this.HOST}`);
 					this.logger.info(`Port: ${this.PORT_NO}`);
-					this.logger.info(`Base URL: grpc://${this.HOST}:${this.PORT_NO}`); // TODO: makes sense?
 					this.logger.info("* * * * * * * * * * * * * * * * * * * *");
 					resolve();
 				}

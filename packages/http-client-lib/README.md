@@ -24,39 +24,36 @@ npm install @mojaloop/accounts-and-balancs-bc-http-client-lib
 ### Configure
 ```
 import {ILogger, ConsoleLogger} from "@mojaloop/logging-bc-public-types-lib";
-import {
-    AccountsAndBalancesHttpClient,
-    IAccountDTO,
-    IJournalEntryDTO
-} from "@mojaloop/accounts-and-balancs-bc-http-client-lib";
+import {AccountsAndBalancesHttpClient} from "@mojaloop/accounts-and-balancs-bc-http-client-lib";
 
 const BASE_URL_ACCOUNTS_AND_BALANCES_HTTP_SERVICE: string = "http://localhost:1234";
+const TIMEOUT_MS_ACCOUNTS_AND_BALANCES_HTTP_CLIENT: number = 5_000;
 const ACCESS_TOKEN: string = "";
-const TIMEOUT_MS_ACCOUNTS_AND_BALANCES_HTTP_CLIENT: number = 10_000;
 
 const logger: ILogger = new ConsoleLogger();
 const accountsAndBalancesHttpClient: AccountsAndBalancesHttpClient = new AccountsAndBalancesHttpClient(
     logger,
     BASE_URL_ACCOUNTS_AND_BALANCES_HTTP_SERVICE,
-    ACCESS_TOKEN,
-    TIMEOUT_MS_ACCOUNTS_AND_BALANCES_HTTP_CLIENT
+    TIMEOUT_MS_ACCOUNTS_AND_BALANCES_HTTP_CLIENT,
+    ACCESS_TOKEN
 );
 ```
 
 ### Create Account
 ```
-const account: IAccountDTO = {
-	id: "a",
+const accountDto: IAccountDto = {
+    id: "a",
 	externalId: null,
-	state: "ACTIVE",
-	type: "POSITION",
-	currency: "EUR",
-	creditBalance: 100,
-	debitBalance: 25,
+	state: AccountState.ACTIVE,
+	type: AccountType.POSITION,
+	currencyCode: "EUR",
+	currencyDecimals: 2,
+	creditBalance: "100",
+	debitBalance: "25",
 	timestampLastJournalEntry: 0
-}
+};
 try {
-    const accountIdReceived: string = await accountsAndBalancesHttpClient.createAccount(account);
+    const accountIdReceived: string = await accountsAndBalancesHttpClient.createAccount(accountDto);
 } catch (e: unknown) {
     logger.error(e);
 }
@@ -66,53 +63,58 @@ try {
 ```
 // Before creating a journal entry, the respective accounts need to be created.
 // Account A.
-const accountA: IAccountDTO = {
-	id: "a",
+const accountDtoA: IAccountDto = {
+    id: "a",
 	externalId: null,
-	state: "ACTIVE",
-	type: "POSITION",
-	currency: "EUR",
-	creditBalance: 100,
-	debitBalance: 25,
+	state: AccountState.ACTIVE,
+	type: AccountType.POSITION,
+	currencyCode: "EUR",
+	currencyDecimals: 2,
+	creditBalance: "100",
+	debitBalance: "25",
 	timestampLastJournalEntry: 0
 };
-await accountsAndBalancesHttpClient.createAccount(accountA);
+await accountsAndBalancesHttpClient.createAccount(accountDtoA);
 // Account B.
-const accountB: IAccountDTO = {
-	id: "b",
+const accountDtoB: IAccountDto = {
+    id: "b",
 	externalId: null,
-	state: "ACTIVE",
-	type: "POSITION",
-	currency: "EUR",
-	creditBalance: 100,
-	debitBalance: 25,
+	state: AccountState.ACTIVE,
+	type: AccountType.POSITION,
+	currencyCode: "EUR",
+	currencyDecimals: 2,
+	creditBalance: "100",
+	debitBalance: "25",
 	timestampLastJournalEntry: 0
 };
-await accountsAndBalancesHttpClient.createAccount(accountB);
+await accountsAndBalancesHttpClient.createAccount(accountDtoB);
 // Journal entry A.
-const journalEntryA: IJournalEntryDTO = {
+const journalEntryDtoA: IJournalEntryDto = {
 	id: "a",
 	externalId: null,
 	externalCategory: null,
-	currency: "EUR",
-	amount: 5,
-	creditedAccountId: accountA.id,
-	debitedAccountId: accountB.id,
+	currencyCode: "EUR",
+	currencyDecimals: 2,
+	amount: "5",
+	creditedAccountId: "a",
+	debitedAccountId: "b",
 	timestamp: 0
-}
+};
 // Journal entry B.
-const journalEntryB: IJournalEntryDTO = {
+const journalEntryDtoA: IJournalEntryDto = {
 	id: "b",
 	externalId: null,
 	externalCategory: null,
-	currency: "EUR",
-	amount: 5,
-	creditedAccountId: accountB.id,
-	debitedAccountId: accountA.id,
+	currencyCode: "EUR",
+	currencyDecimals: 2,
+	amount: "5",
+	creditedAccountId: "b",
+	debitedAccountId: "a",
 	timestamp: 0
-}
+};
 try {
-    const idsJournalEntriesReceived: string[] = await accountsAndBalancesHttpClient.createJournalEntries([journalEntryA, journalEntryB]);
+    const idsJournalEntriesReceived: string[] =
+        await accountsAndBalancesHttpClient.createJournalEntries([journalEntryDtoA, journalEntryDtoB]);
 } catch (e: unknown) {
     logger.error(e);
 }
@@ -122,7 +124,7 @@ try {
 ```
 const accountId: string = "a";
 try {
-    const account: IAccountDTO | null = await accountsAndBalancesHttpClient.getAccountById(accountId);
+    const accountDto: IAccountDto | null = await accountsAndBalancesHttpClient.getAccountById(accountId);
 } catch (e: unknown) {
     logger.error(e);
 }
@@ -130,9 +132,9 @@ try {
 
 ### Get Accounts by External Id
 ```
-const externalId: string = Date.now().toString();
+const externalId: string = "a";
 try {
-    const accounts: IAccountDTO[] = await accountsAndBalancesHttpClient.getAccountsByExternalId(externalId);
+    const accountDtos: IAccountDto[] = await accountsAndBalancesHttpClient.getAccountsByExternalId(externalId);
 } catch (e: unknown) {
     logger.error(e);
 }
@@ -140,14 +142,14 @@ try {
 
 ### Get Journal Entries by Account Id
 ```
-const accountId: string = Date.now().toString();
+const accountId: string = "a";
 try {
-    const journalEntries: IJournalEntryDTO[] = await accountsAndBalancesHttpClient.getJournalEntriesByAccountId(accountId);
+    const journalEntryDtos: IJournalEntryDto[] =
+        await accountsAndBalancesHttpClient.getJournalEntriesByAccountId(accountId);
 } catch (e: unknown) {
     logger.error(e);
 }
 ```
 
 ## See Also
-
 - [Accounts and Balances HTTP service](https://github.com/mojaloop/accounts-and-balances-bc/tree/main/packages/http-svc)

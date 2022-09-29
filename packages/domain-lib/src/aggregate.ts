@@ -34,8 +34,13 @@ import * as Crypto from "crypto";
 import {
 	AccountAlreadyExistsError,
 	CreditedAndDebitedAccountsAreTheSameError,
-	CurrenciesDifferError,
+	CurrencyCodesDifferError,
+	CurrencyDecimalsDifferError,
 	InsufficientBalanceError,
+	InvalidCreditBalanceError,
+	InvalidCurrencyCodeError,
+	InvalidCurrencyDecimalsError, InvalidDebitBalanceError, InvalidExternalCategoryError,
+	InvalidExternalIdError, InvalidJournalEntryAmountError,
 	JournalEntryAlreadyExistsError,
 	NoSuchCreditedAccountError,
 	NoSuchDebitedAccountError,
@@ -49,6 +54,8 @@ import {IAuditClient, AuditSecurityContext} from "@mojaloop/auditing-bc-public-t
 import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
 import {Privileges} from "./privileges";
+import {join} from "path";
+import {readFileSync} from "fs";
 
 enum AuditingActions {
 	ACCOUNT_CREATED = "ACCOUNT_CREATED"
@@ -61,6 +68,9 @@ export class Aggregate {
 	private readonly auditingClient: IAuditClient;
 	private readonly accountsRepo: IAccountsRepo;
 	private readonly journalEntriesRepo: IJournalEntriesRepo;
+	private readonly currencies: {code: string, decimals: number}[]; // TODO: type.
+	// Other properties.
+	private static readonly CURRENCIES_FILE_NAME: string = "currencies.json";
 
 	constructor(
 		logger: ILogger,
@@ -74,6 +84,15 @@ export class Aggregate {
 		this.auditingClient = auditingClient;
 		this.accountsRepo = accountsRepo;
 		this.journalEntriesRepo = journalEntriesRepo;
+
+		// TODO: here?
+		const currenciesFilePath: string = join(__dirname, Aggregate.CURRENCIES_FILE_NAME);
+		try {
+			this.currencies = JSON.parse(readFileSync(currenciesFilePath, "utf-8"));
+		} catch (error: unknown) {
+			this.logger.error(error);
+			throw error;
+		}
 	}
 
 	private enforcePrivilege(securityContext: CallSecurityContext, privilegeId: string): void {
@@ -96,12 +115,22 @@ export class Aggregate {
 	// TODO: why ignore the case in which Crypto.randomUUID() generates an already existing id?
 	async createAccount(accountDto: IAccountDto, securityContext: CallSecurityContext): Promise<string> {
 		this.enforcePrivilege(securityContext, Privileges.CREATE_ACCOUNT);
-		// Generate a random UUId, if needed.
-		if (accountDto.id === "") {
-			accountDto.id = Crypto.randomUUID();
-		}
 		const account: Account = Account.getFromDto(accountDto);
-		Account.validate(account);
+		if (account.externalId === "") {
+			throw new InvalidExternalIdError();
+		}
+		if (account.creditBalance < 0) {
+			throw new InvalidCreditBalanceError();
+		}
+		if (account.debitBalance < 0) {
+			throw new InvalidDebitBalanceError();
+		}
+		this.validateCurrency(account.currencyCode, account.currencyDecimals);
+		// Generate a random UUId, if needed.
+		if (account.id === "") {
+			// The DTO is also updated because it's what's going to be stored.
+			account.id = accountDto.id = Crypto.randomUUID();
+		}
 		// Store the account.
 		try {
 			await this.accountsRepo.storeNewAccount(accountDto);
@@ -134,12 +163,16 @@ export class Aggregate {
 	}
 
 	private async createJournalEntry(journalEntryDto: IJournalEntryDto): Promise<string> {
-		// Generate a random UUId, if needed.
-		if (journalEntryDto.id === "") {
-			journalEntryDto.id = Crypto.randomUUID();
-		}
 		const journalEntry: JournalEntry = JournalEntry.getFromDto(journalEntryDto);
-		JournalEntry.validate(journalEntry);
+		if (journalEntry.externalId === "") {
+			throw new InvalidExternalIdError();
+		}
+		if (journalEntry.externalCategory === "") {
+			throw new InvalidExternalCategoryError();
+		}
+		if (journalEntry.amount < 0) {
+			throw new InvalidJournalEntryAmountError();
+		}
 		// Check if the credited and debited accounts are the same. TODO: required?
 		if (journalEntry.creditedAccountId === journalEntry.debitedAccountId) {
 			throw new CreditedAndDebitedAccountsAreTheSameError(); // TODO: error name.
@@ -172,14 +205,28 @@ export class Aggregate {
 			this.logger.error(error);
 			throw error;
 		}
-		// Check if the currencies of the credited and debited accounts and the journal entry match.
-		if (creditedAccount.currency !== debitedAccount.currency
-			|| creditedAccount.currency !== journalEntry.currency) {
-			throw new CurrenciesDifferError(); // TODO: error name.
+		// Check if the currency codes of the credited and debited accounts and the journal entry match.
+		if (creditedAccount.currencyCode !== debitedAccount.currencyCode
+			|| creditedAccount.currencyCode !== journalEntry.currencyCode) {
+			throw new CurrencyCodesDifferError();
 		}
+		// Check if the currency decimals of the credited and debited accounts and the journal entry match.
+		if (creditedAccount.currencyDecimals !== debitedAccount.currencyDecimals
+			|| creditedAccount.currencyDecimals !== journalEntry.currencyDecimals) {
+			throw new CurrencyDecimalsDifferError();
+		}
+		// TODO: check comment.
+		// Check if the currency is valid. At this point, the currency code and decimals of the credited and debited
+		// accounts and the journal entry are the same, so only one of them needs to be verified.
+		this.validateCurrency(journalEntry.currencyCode, journalEntry.currencyDecimals);
 		// Check if the balance is sufficient.
-		if (this.calculateAccountBalance(creditedAccount) - journalEntry.amount < 0n) { // TODO: verify.
-			throw new InsufficientBalanceError(); // TODO: error name.
+		if (Account.calculateBalance(creditedAccount) - journalEntry.amount < 0) { // TODO: verify.
+			throw new InsufficientBalanceError();
+		}
+		// Generate a random UUId, if needed.
+		if (journalEntry.id === "") {
+			// The DTO is also updated because it's what's going to be stored.
+			journalEntry.id = journalEntryDto.id = Crypto.randomUUID();
 		}
 		// Store the journal entry.
 		try {
@@ -253,7 +300,16 @@ export class Aggregate {
 		}
 	}
 
-	private calculateAccountBalance(account: Account): bigint {
-		return account.creditBalance - account.debitBalance;
+	// TODO: here or on the types (Account and JournalEntry)?
+	private validateCurrency(currencyCode: string, currencyDecimals: number): void {
+		const currency = this.currencies.find(currency => { // TODO: type.
+			return currency.code === currencyCode;
+		});
+		if (currency === undefined) {
+			throw new InvalidCurrencyCodeError();
+		}
+		if (currency.decimals !== currencyDecimals) {
+			throw new InvalidCurrencyDecimalsError();
+		}
 	}
 }
