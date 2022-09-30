@@ -108,7 +108,7 @@ let accountsRepo: IAccountsRepo;
 let journalEntriesRepo: IJournalEntriesRepo;
 let httpServer: ExpressHttpServer;
 
-export async function start(
+export async function startHttpService(
 	_logger?: ILogger,
 	authorizationClient?: IAuthorizationClient,
 	_auditingClient?: IAuditClient,
@@ -136,7 +136,7 @@ export async function start(
 			await (logger as KafkaLogger).init();
 		} catch (e: unknown) {
 			logger.fatal(e);
-			await stop();
+			await stopHttpService();
 			process.exit(-1); // TODO: verify code.
 		}
 	}
@@ -152,7 +152,7 @@ export async function start(
 		await tokenHelper.init();
 	} catch (e: unknown) {
 		logger.fatal(e);
-		await stop();
+		await stopHttpService();
 		process.exit(-1); // TODO: verify code.
 	}
 
@@ -196,7 +196,7 @@ export async function start(
 			await auditingClient.init();
 		} catch (e: unknown) {
 			logger.fatal(e);
-			await stop();
+			await stopHttpService();
 			process.exit(-1); // TODO: verify code.
 		}
 	}
@@ -215,7 +215,7 @@ export async function start(
 			await accountsRepo.init();
 		} catch (e: unknown) {
 			logger.fatal(e);
-			await stop();
+			await stopHttpService();
 			process.exit(-1); // TODO: verify code.
 		}
 	}
@@ -232,7 +232,7 @@ export async function start(
 			await journalEntriesRepo.init();
 		} catch (e: unknown) {
 			logger.fatal(e);
-			await stop();
+			await stopHttpService();
 			process.exit(-1); // TODO: verify code.
 		}
 	}
@@ -258,7 +258,7 @@ export async function start(
 		await httpServer.start();
 	} catch (e: unknown) {
 		logger.fatal(e);
-		await stop();
+		await stopHttpService();
 		process.exit(-1); // TODO: verify code.
 	}
 }
@@ -287,7 +287,7 @@ function addPrivileges(authorizationClient: AuthorizationClient): void {
 }
 
 // TODO: verify ifs.
-export async function stop() {
+export async function stopHttpService() {
 	if (httpServer) {
 		await httpServer.stop();
 	}
@@ -305,13 +305,13 @@ export async function stop() {
 	}
 }
 
-process.on("SIGINT", handleIntAndTermSignals.bind(this)); // Ctrl + c.
-process.on("SIGTERM", handleIntAndTermSignals.bind(this));
-async function handleIntAndTermSignals(signal: NodeJS.Signals): Promise<void> {
+process.on("SIGINT", handleSignals); // SIGINT = 2 (Ctrl + c).
+process.on("SIGTERM", handleSignals); // SIGTERM = 15.
+async function handleSignals(signal: NodeJS.Signals): Promise<void> {
 	logger.info(`${signal} received`);
-	await stop();
-	process.exit(); // TODO: required? exit code.
+	await stopHttpService();
+	process.exit();
 }
 process.on("exit", () => {
-	console.info(`${SERVICE_NAME} exited`);
+	console.info(`exiting ${SERVICE_NAME}`);
 });

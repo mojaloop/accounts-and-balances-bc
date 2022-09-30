@@ -42,9 +42,11 @@ export class AuditClientMock implements IAuditClient {
 	}
 
 	async init(): Promise<void> {
+		return;
 	}
 
 	async destroy(): Promise<void> {
+		return;
 	}
 
 	async audit(
@@ -53,5 +55,6 @@ export class AuditClientMock implements IAuditClient {
 		securityContext?: AuditSecurityContext,
 		labels?: AuditEntryLabel[]
 	): Promise<void> {
+		return;
 	}
 }

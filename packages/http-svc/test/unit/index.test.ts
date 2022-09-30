@@ -45,7 +45,7 @@ import {
 	MemoryAccountsRepo,
 	MemoryJournalEntriesRepo
 } from "@mojaloop/accounts-and-balances-bc-shared-mocks-lib";
-import {start, stop} from "../../src/service";
+import {startHttpService, stopHttpService} from "../../src/service";
 import {
 	AccountState,
 	AccountType,
@@ -54,7 +54,7 @@ import {
 } from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 const BASE_URL_ACCOUNTS_AND_BALANCES_HTTP_SERVICE: string = "http://localhost:1234";
-const TIMEOUT_MS_ACCOUNTS_AND_BALANCES_HTTP_CLIENT: number = 10_000;
+const TIMEOUT_MS_ACCOUNTS_AND_BALANCES_HTTP_CLIENT: number = 5_000;
 
 let authorizationClient: IAuthorizationClient;
 let accountsRepo: IAccountsRepo;
@@ -69,7 +69,7 @@ describe("accounts and balances http service - unit tests", () => {
 		const auditingClient: IAuditClient = new AuditClientMock(logger);
 		accountsRepo = new MemoryAccountsRepo(logger);
 		journalEntriesRepo = new MemoryJournalEntriesRepo(logger);
-		await start(
+		await startHttpService(
 			logger,
 			authorizationClient,
 			auditingClient,
@@ -85,7 +85,7 @@ describe("accounts and balances http service - unit tests", () => {
 	});
 
 	afterAll(async () => {
-		await stop();
+		//await stop();
 	});
 
 	// Create account.

@@ -63,6 +63,7 @@ export class MemoryAccountsRepo implements IAccountsRepo {
 	}
 
 	async destroy(): Promise<void> {
+		return;
 	}
 
 	async accountExistsById(accountId: string): Promise<boolean> {

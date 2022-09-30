@@ -81,6 +81,7 @@ describe("accounts and balances - integration tests with gRPC service", () => {
 			LOGGING_LEVEL
 		);
 		await logger.init();
+		// await startGrpcService(logger);
 		accountsAndBalancesGrpcClient = new AccountsAndBalancesGrpcClient(
 			logger,
 			ACCOUNTS_AND_BALANCES_GRPC_SERVICE_HOST,
@@ -91,6 +92,7 @@ describe("accounts and balances - integration tests with gRPC service", () => {
 
 	afterAll(async () => {
 		await accountsAndBalancesGrpcClient.destroy();
+		// await stopGrpcService();
 		await logger.destroy();
 	});
 

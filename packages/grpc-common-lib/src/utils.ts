@@ -65,7 +65,7 @@ export function grpcAccountToAccountDto(grpcAccount: GrpcAccount__Output): IAcco
 		creditBalance: grpcAccount.creditBalance,
 		debitBalance: grpcAccount.debitBalance,
 		timestampLastJournalEntry: grpcAccount.timestampLastJournalEntry
-	}
+	};
 }
 
 export function accountDtoToGrpcAccount(accountDto: IAccountDto): GrpcAccount__Output {
@@ -79,7 +79,7 @@ export function accountDtoToGrpcAccount(accountDto: IAccountDto): GrpcAccount__O
 		creditBalance: accountDto.creditBalance,
 		debitBalance: accountDto.debitBalance,
 		timestampLastJournalEntry: accountDto.timestampLastJournalEntry
-	}
+	};
 }
 
 export function grpcJournalEntryToJournalEntryDto(grpcJournalEntry: GrpcJournalEntry__Output): IJournalEntryDto {
@@ -93,7 +93,7 @@ export function grpcJournalEntryToJournalEntryDto(grpcJournalEntry: GrpcJournalE
 		creditedAccountId: grpcJournalEntry.creditedAccountId,
 		debitedAccountId: grpcJournalEntry.debitedAccountId,
 		timestamp: grpcJournalEntry.timestamp
-	}
+	};
 }
 
 export function journalEntryDtoToGrpcJournalEntry(journalEntryDto: IJournalEntryDto): GrpcJournalEntry__Output {
@@ -107,5 +107,5 @@ export function journalEntryDtoToGrpcJournalEntry(journalEntryDto: IJournalEntry
 		creditedAccountId: journalEntryDto.creditedAccountId,
 		debitedAccountId: journalEntryDto.debitedAccountId,
 		timestamp: journalEntryDto.timestamp
-	}
+	};
 }

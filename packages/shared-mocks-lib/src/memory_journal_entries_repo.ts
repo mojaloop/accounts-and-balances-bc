@@ -61,6 +61,7 @@ export class MemoryJournalEntriesRepo implements IJournalEntriesRepo {
 	}
 
 	async destroy(): Promise<void> {
+		return;
 	}
 
 	async journalEntryExistsById(journalEntryId: string): Promise<boolean> {

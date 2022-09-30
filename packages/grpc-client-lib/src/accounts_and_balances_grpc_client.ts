@@ -79,7 +79,7 @@ export class AccountsAndBalancesGrpcClient {
 					resolve();
 				}
 			);
-		})
+		});
 	}
 
 	async destroy(): Promise<void> {

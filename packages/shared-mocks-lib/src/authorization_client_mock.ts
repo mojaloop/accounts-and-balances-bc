@@ -46,9 +46,11 @@ export class AuthorizationClientMock implements IAuthorizationClient {
 	}
 
 	async init(): Promise<void> {
+		return;
 	}
 
 	async destroy(): Promise<void> {
+		return;
 	}
 
 	roleHasPrivilege(roleId: string, privilegeId: string): boolean {

@@ -96,12 +96,12 @@ export class Aggregate {
 	}
 
 	private enforcePrivilege(securityContext: CallSecurityContext, privilegeId: string): void {
-		/*for (const roleId of securityContext.rolesIds) {
+		for (const roleId of securityContext.rolesIds) {
 			if (this.authorizationClient.roleHasPrivilege(roleId, privilegeId)) {
 				return;
 			}
 		}
-		throw new UnauthorizedError(); // TODO: change error name.*/
+		throw new UnauthorizedError(); // TODO: change error name.
 	}
 
 	private getAuditSecurityContext(securityContext: CallSecurityContext): AuditSecurityContext {

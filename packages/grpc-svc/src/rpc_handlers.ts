@@ -64,7 +64,7 @@ export class RpcHandlers {
 		clientId: "",
 		rolesIds: [""],
 		accessToken: ""
-	}
+	};
 
 	constructor(
 		logger: ILogger,
@@ -81,7 +81,7 @@ export class RpcHandlers {
 			"GetAccountById": this.getAccountById.bind(this),
 			"GetAccountsByExternalId": this.getAccountsByExternalId.bind(this),
 			"GetJournalEntriesByAccountId": this.getJournalEntriesByAccountId.bind(this)
-		}
+		};
 	}
 
 	// TODO: error handling; verify types.

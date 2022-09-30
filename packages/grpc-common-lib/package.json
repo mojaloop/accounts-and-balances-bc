@@ -28,7 +28,7 @@
     "prebuild": "npm run gen-types",
     "build": "tsc",
     "postbuild": "cp src/accounts_and_balances.proto dist/",
-    "test:unit": "jest",
+    "test:unit": "echo \"for now, grpc-common-lib is only tested on the integration tests\"",
     "test:unit-single": "jest --coverage false -t",
     "publish": "npm version patch && npm publish --tag latest --access public"
   },

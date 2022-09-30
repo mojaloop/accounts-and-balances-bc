@@ -43,7 +43,7 @@ import {
 import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
 import {AuxiliaryAccountsAndBalancesGrpcClient} from "./auxiliary_accounts_and_balances_grpc_client";
-import {start, stop} from "../../src/service";
+import {startGrpcService, stopGrpcService} from "../../src/service";
 import {
 	AccountState,
 	AccountType,
@@ -67,7 +67,7 @@ describe("accounts and balances grpc service - unit tests", () => {
 		const auditingClient: IAuditClient = new AuditClientMock(logger);
 		accountsRepo = new MemoryAccountsRepo(logger);
 		journalEntriesRepo = new MemoryJournalEntriesRepo(logger);
-		await start(
+		await startGrpcService(
 			logger,
 			authorizationClient,
 			auditingClient,
@@ -84,7 +84,7 @@ describe("accounts and balances grpc service - unit tests", () => {
 
 	afterAll(async () => {
 		await auxiliaryAccountsAndBalancesGrpcClient.destroy();
-		await stop();
+		await stopGrpcService();
 	});
 
 	test("create non-existent account", async () => {

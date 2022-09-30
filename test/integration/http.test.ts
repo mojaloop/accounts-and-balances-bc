@@ -65,7 +65,7 @@ const LOGGING_TOPIC: string = "logs";
 // Accounts and Balances HTTP client.
 const BASE_URL_ACCOUNTS_AND_BALANCES_HTTP_SERVICE: string = "http://localhost:1234";
 const TIMEOUT_MS_ACCOUNTS_AND_BALANCES_HTTP_CLIENT: number = 10_000;
-const ACCESS_TOKEN: string = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InNSMHVoT2hpM05VbmJlMTF5SDZtOUZtcFpNN2JiRVl2czdpbGNfanN1MHMifQ.eyJ0eXAiOiJCZWFyZXIiLCJhenAiOiJzZWN1cml0eS1iYy11aSIsInJvbGVzIjpbXSwiaWF0IjoxNjYyMjE5NzQ5LCJleHAiOjQ4MTc5MTQ5NDksImF1ZCI6Im1vamFsb29wLnZuZXh0LmRlZmF1bHRfYXVkaWVuY2UiLCJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjMyMDEvIiwic3ViIjoidXNlcjo6dXNlciIsImp0aSI6ImJjYzk3OWRlLTdkNzItNGUyNC04YjIyLWM5NjlmMDAwYTg0YSJ9.py8iSYZp0KtZ1os7vXoH8oOAZFQCJyj3gWNW3EQTGl-cS8U6ErJpEv0nGrNfPGIdwNgSBe0esjlLKU7hCA-p71AnToCxA3zDqMaB6Pm7FH376AP71VTTGNa2rcWMrQivPEFzlxpvlIV-KWVrJUE2j0-SVPjlSphBnqBHybID_y3I1Ix5eoKsotZrBNeVzYqRcN7lUnbdxb7Oi5-ss5bmmo__iAB4EaW8LfdgiIL3AsYrxWoRdsBNOa1v7AJ6v7z7HcWzdJ1hF_DgG7wX2sVRHZcCnT55bL-zb614csaUbEeOpOmQ5STsR9rdSFPfN2vzpD9OX6b2uHj4digHQtuCDA";
+const ACCESS_TOKEN: string = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InNSMHVoT2hpM05VbmJlMTF5SDZtOUZtcFpNN2JiRVl2czdpbGNfanN1MHMifQ.eyJ0eXAiOiJCZWFyZXIiLCJhenAiOiJzZWN1cml0eS1iYy11aSIsInJvbGVzIjpbIiJdLCJpYXQiOjE2NjQ0OTYyNjksImV4cCI6NDgyMDE5MTQ2OSwiYXVkIjoibW9qYWxvb3Audm5leHQuZGVmYXVsdF9hdWRpZW5jZSIsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6MzIwMS8iLCJzdWIiOiJ1c2VyOjp1c2VyIiwianRpIjoiNDVlODNkNjYtMThmOS00MTVlLWE2M2QtYzkyMGZiMTM2ZTU4In0.p3k1S9Qh03Y-SpNiUrjgEiurEkNHeYy75ACQJeVrqHzt6sD2vjLQcwxp77zBVU1e8CeIk56wGPhD9dXhBxF2AteoWYUBQTLz3urqnl9NhmWaTDdJDTVgipRRX3NuFHo30HdVIek_9HCFh4E2-_r0dKAYqhQhsIsvl8HigUNfgxsaqoSXaI4imfAqvo7Sr9SegLLN4XAV0MuKPmkYZZZCwvttf_w1K7ynT2XEvSUn1pCwvF4SkgblCJlCKWpWT0GpnG_P-oNuEpDABnemNPlA7BvGAAwBXpptZKV8dBnhrzPaV-u1CsiNS-EG_3oLkuK7C8Veg1meakzlJi5g0duc-A";
 
 /* ********** Constants End ********** */
 
@@ -86,6 +86,7 @@ describe("accounts and balances - integration tests with HTTP service", () => {
 			LOGGING_LEVEL
 		);
 		await logger.init();
+		// await startHttpService(logger);
 		accountsAndBalancesHttpClient = new AccountsAndBalancesHttpClient(
 			logger,
 			BASE_URL_ACCOUNTS_AND_BALANCES_HTTP_SERVICE,
@@ -95,6 +96,7 @@ describe("accounts and balances - integration tests with HTTP service", () => {
 	});
 
 	afterAll(async () => {
+		// await stopHttpService();
 		await logger.destroy();
 	});
 
