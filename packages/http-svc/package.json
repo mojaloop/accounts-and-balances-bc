@@ -36,12 +36,12 @@
   },
   "dependencies": {
     "@mojaloop/accounts-and-balances-bc-domain-lib": "*",
-    "@mojaloop/auditing-bc-client-lib": "^0.0.7",
-    "@mojaloop/auditing-bc-public-types-lib": "^0.0.8",
+    "@mojaloop/auditing-bc-client-lib": "^0.0.9",
+    "@mojaloop/auditing-bc-public-types-lib": "^0.0.10",
     "@mojaloop/logging-bc-client-lib": "^0.1.15",
     "@mojaloop/logging-bc-public-types-lib": "^0.1.12",
-    "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib": "^0.2.0",
-    "@mojaloop/security-bc-client-lib": "^0.0.4",
+    "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib": "^0.2.1",
+    "@mojaloop/security-bc-client-lib": "^0.0.51",
     "express": "^4.18.1"
   }
 }
