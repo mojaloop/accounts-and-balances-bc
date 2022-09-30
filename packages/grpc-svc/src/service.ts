@@ -49,7 +49,7 @@ import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {AuthorizationClient, TokenHelper} from "@mojaloop/security-bc-client-lib";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
 import {GrpcServer} from "./grpc_server";
-import {stopHttpService} from "@mojaloop/accounts-and-balances-bc-http-svc/dist/service";
+
 
 /* ********** Constants Begin ********** */
 
@@ -310,7 +310,7 @@ process.on("SIGINT", handleSignals); // SIGINT = 2 (Ctrl + c).
 process.on("SIGTERM", handleSignals); // SIGTERM = 15.
 async function handleSignals(signal: NodeJS.Signals): Promise<void> {
 	logger.info(`${signal} received`);
-	await stopHttpService();
+	await stopGrpcService();
 	process.exit();
 }
 process.on("exit", () => {

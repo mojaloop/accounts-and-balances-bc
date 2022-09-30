@@ -43,7 +43,7 @@ import {
 	JournalEntryAlreadyExistsError,
 	InvalidCreditBalanceError, InvalidJournalEntryAmountError,
 	CurrencyCodesDifferError, CurrencyDecimalsDifferError
-} from "../../src";
+} from "../../dist";
 import {
 	IAccountDto,
 	IJournalEntryDto,
@@ -89,6 +89,16 @@ describe("accounts and balances domain library - unit tests", () => {
 
 	afterAll(async () => {
 	});
+
+	/***
+	*
+	* Missing the most important test
+	 * - create 2 accounts (zero balance)
+	 * - send a few journal entries
+	 * - confirm bot accounts have the correct/expected balances
+	*
+	* */
+
 
 	// Create account.
 	test("create non-existent account", async () => {

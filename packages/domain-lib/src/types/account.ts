@@ -69,6 +69,13 @@ export class Account {
 	static getFromDto(accountDto: IAccountDto): Account {
 		let creditBalance: bigint;
 		let debitBalance: bigint;
+
+		/* TODO
+		 1. SKIP FOR NOW, bad regex - validate input accountDto.creditBalance and accountDto.debitBalance strings with regex ^[-+]?(([0-9]+[.]?[0-9]*)|([.]?[0-9]+))$
+		 2. find the currency decimal points for the input currency
+		 3. convert accountDto.creditBalance and accountDto.debitBalance to ints according to the decimal points of the input currency
+		 */
+
 		try {
 			creditBalance = BigInt(accountDto.creditBalance);
 		} catch(error: unknown) {
@@ -93,6 +100,13 @@ export class Account {
 	}
 
 	static getDto(account: Account): IAccountDto {
+
+		/* TODO
+		 1. find the currency decimal points for the input currency
+		 2. convert account.creditBalance and account.debitBalance to string according to the decimal points of the currency
+		 3. SKIP FOR NOW, bad regex - maybe at the end validate the resulting strings with the regex validators above
+		 */
+
 		return {
 			id: account.id,
 			externalId: account.externalId,
