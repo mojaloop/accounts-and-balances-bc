@@ -33,6 +33,6 @@
     "@mojaloop/accounts-and-balances-bc-domain-lib": "~0.0.1",
     "@mojaloop/accounts-and-balances-bc-public-types-lib": "~0.0.1",
     "@mojaloop/logging-bc-public-types-lib": "~0.1.12",
-    "mongodb": "^4.10.0"
+    "mongodb": "~4.10.0"
   }
 }

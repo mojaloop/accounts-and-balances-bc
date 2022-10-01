@@ -30,7 +30,7 @@
 "use strict";
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import * as Crypto from "crypto";
+import {randomUUID} from "crypto";
 import {
 	AccountAlreadyExistsError,
 	CreditedAndDebitedAccountsAreTheSameError,
@@ -112,7 +112,7 @@ export class Aggregate {
 		};
 	}
 
-	// TODO: why ignore the case in which Crypto.randomUUID() generates an already existing id?
+	// TODO: why ignore the case in which randomUUID() generates an already existing id?
 	async createAccount(accountDto: IAccountDto, securityContext: CallSecurityContext): Promise<string> {
 		this.enforcePrivilege(securityContext, Privileges.CREATE_ACCOUNT);
 		const account: Account = Account.getFromDto(accountDto);
@@ -129,7 +129,7 @@ export class Aggregate {
 		// Generate a random UUId, if needed.
 		if (account.id === "") {
 			// The DTO is also updated because it's what's going to be stored.
-			account.id = accountDto.id = Crypto.randomUUID();
+			account.id = accountDto.id = randomUUID();
 		}
 		// Store the account.
 		try {
@@ -226,7 +226,7 @@ export class Aggregate {
 		// Generate a random UUId, if needed.
 		if (journalEntry.id === "") {
 			// The DTO is also updated because it's what's going to be stored.
-			journalEntry.id = journalEntryDto.id = Crypto.randomUUID();
+			journalEntry.id = journalEntryDto.id = randomUUID();
 		}
 		// Store the journal entry.
 		try {

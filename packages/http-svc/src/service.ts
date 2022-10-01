@@ -49,6 +49,7 @@ import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {AuthorizationClient, TokenHelper} from "@mojaloop/security-bc-client-lib";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
 import {ExpressHttpServer} from "./express_http_server";
+import {AuthorizationClientMock} from "@mojaloop/accounts-and-balances-bc-shared-mocks-lib";
 
 /* ********** Constants Begin ********** */
 
@@ -157,7 +158,7 @@ export async function startHttpService(
 	}
 
 	// Authorization.
-	if (authorizationClient === undefined) {
+	/*if (authorizationClient === undefined) {
 		authorizationClient = new AuthorizationClient(
 			BOUNDED_CONTEXT_NAME,
 			SERVICE_NAME,
@@ -168,7 +169,8 @@ export async function startHttpService(
 		addPrivileges(authorizationClient as AuthorizationClient);
 		await (authorizationClient as AuthorizationClient).bootstrap(true);
 		await (authorizationClient as AuthorizationClient).fetch();
-	}
+	}*/
+	authorizationClient = new AuthorizationClientMock(logger); // TODO: remove.
 
 	// Auditing.
 	if (_auditingClient !== undefined) {

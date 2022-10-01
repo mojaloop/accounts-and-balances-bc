@@ -49,7 +49,7 @@ import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {AuthorizationClient, TokenHelper} from "@mojaloop/security-bc-client-lib";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
 import {GrpcServer} from "./grpc_server";
-
+import {AuthorizationClientMock} from "@mojaloop/accounts-and-balances-bc-shared-mocks-lib";
 
 /* ********** Constants Begin ********** */
 
@@ -99,7 +99,7 @@ const JOURNAL_ENTRIES_COLLECTION_NAME: string = "journal-entries";
 
 // Server.
 const GRPC_SERVER_HOST: string = process.env.ACCOUNTS_AND_BALANCES_HTTP_SERVER_HOST || "localhost";
-const GRPC_SERVER_PORT_NO: number = parseInt(process.env.ACCOUNTS_AND_BALANCES_HTTP_SERVER_PORT_NO || "") || 1234;
+const GRPC_SERVER_PORT_NO: number = parseInt(process.env.ACCOUNTS_AND_BALANCES_HTTP_SERVER_PORT_NO || "") || 5678;
 
 /* ********** Constants End ********** */
 
@@ -158,7 +158,7 @@ export async function startGrpcService(
 	}
 
 	// Authorization.
-	if (authorizationClient === undefined) {
+	/*if (authorizationClient === undefined) {
 		authorizationClient = new AuthorizationClient(
 			BOUNDED_CONTEXT_NAME,
 			SERVICE_NAME,
@@ -169,7 +169,8 @@ export async function startGrpcService(
 		addPrivileges(authorizationClient as AuthorizationClient);
 		await (authorizationClient as AuthorizationClient).bootstrap(true);
 		await (authorizationClient as AuthorizationClient).fetch();
-	}
+	}*/
+	authorizationClient = new AuthorizationClientMock(logger); // TODO: remove.
 
 	// Auditing.
 	if (_auditingClient !== undefined) {

@@ -29,11 +29,11 @@
     "publish": "npm version patch && npm publish --tag latest --access public"
   },
   "devDependencies": {
-    "nock": "^13.2.9"
+    "nock": "~13.2.9"
   },
   "dependencies": {
-    "@mojaloop/accounts-and-balances-bc-public-types-lib": "^0.0.1",
-    "@mojaloop/logging-bc-public-types-lib": "^0.1.12",
-    "axios": "^0.27.2"
+    "@mojaloop/accounts-and-balances-bc-public-types-lib": "~0.0.1",
+    "@mojaloop/logging-bc-public-types-lib": "~0.1.12",
+    "axios": "~0.27.2"
   }
 }

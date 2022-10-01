@@ -2,6 +2,6 @@
 . "$(dirname "$0")/_/husky.sh"
 
 npm run dep:check
-npm run build
 npm run lint
+npm run build
 npm run test:unit

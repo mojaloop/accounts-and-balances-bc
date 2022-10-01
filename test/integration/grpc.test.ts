@@ -60,7 +60,7 @@ const LOGGING_TOPIC: string = "logs";
 
 // Accounts and Balances gRPC client.
 const ACCOUNTS_AND_BALANCES_GRPC_SERVICE_HOST: string = "localhost"; // TODO: change name.
-const ACCOUNTS_AND_BALANCES_GRPC_SERVICE_PORT_NO: number = 1234; // TODO: change name.
+const ACCOUNTS_AND_BALANCES_GRPC_SERVICE_PORT_NO: number = 5678; // TODO: change name.
 
 /* ********** Constants End ********** */
 

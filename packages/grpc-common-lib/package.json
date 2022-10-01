@@ -33,10 +33,10 @@
     "publish": "npm version patch && npm publish --tag latest --access public"
   },
   "devDependencies": {
+    "@grpc/grpc-js": "~1.7.1"
   },
   "dependencies": {
-    "@grpc/grpc-js": "^1.7.1",
-    "@grpc/proto-loader": "^0.7.3",
+    "@grpc/proto-loader": "~0.7.3",
     "@mojaloop/accounts-and-balances-bc-public-types-lib": "~0.0.1"
   }
 }
