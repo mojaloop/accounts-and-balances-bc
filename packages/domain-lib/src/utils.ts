@@ -32,7 +32,7 @@
 import {IInfrastructureAccountDto, IInfrastructureJournalEntryDto} from "./types/infrastructure";
 import {IAccountDto, IJournalEntryDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
-const regex: RegExp = /^([0]|([1-9][0-9]{0,17}))([.][0-9]{0,3}[0-9])?$/;
+const regex: RegExp = /^([0]|([1-9][0-9]{0,17}))([.][0-9]{0,3}[1-9])?$/;
 
 export function stringToBigint(stringValue: string, decimals: number): bigint {
 	if (!regex.test(stringValue)) {
