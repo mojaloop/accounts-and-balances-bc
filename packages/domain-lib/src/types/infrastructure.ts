@@ -29,39 +29,15 @@
 
 "use strict";
 
-import {AccountState, AccountType} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
-
-export interface IInfrastructureAccountDto {
-	id: string;
-	externalId: string | null;
-	state: AccountState;
-	type: AccountType;
-	currencyCode: string;
-	currencyDecimals: number;
-	creditBalance: string;
-	debitBalance: string;
-	timestampLastJournalEntry: number;
-}
-
-export interface IInfrastructureJournalEntryDto {
-	id: string;
-	externalId: string | null;
-	externalCategory: string | null;
-	currencyCode: string;
-	currencyDecimals: number;
-	amount: string;
-	creditedAccountId: string;
-	debitedAccountId: string;
-	timestamp: number;
-}
+import {IAccountDto, IJournalEntryDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 export interface IAccountsRepo {
 	init(): Promise<void>;
 	destroy(): Promise<void>;
 	accountExistsById(accountId: string): Promise<boolean>;
-	storeNewAccount(account: IInfrastructureAccountDto): Promise<void>; // Throws if account.id is not unique.
-	getAccountById(accountId: string): Promise<IInfrastructureAccountDto | null>;
-	getAccountsByExternalId(externalId: string): Promise<IInfrastructureAccountDto[]>;
+	storeNewAccount(account: IAccountDto): Promise<void>; // Throws if account.id is not unique.
+	getAccountById(accountId: string): Promise<IAccountDto | null>;
+	getAccountsByExternalId(externalId: string): Promise<IAccountDto[]>;
 	updateAccountCreditBalanceById(
 		accountId: string,
 		creditBalance: string,
@@ -76,6 +52,6 @@ export interface IJournalEntriesRepo {
 	init(): Promise<void>;
 	destroy(): Promise<void>;
 	journalEntryExistsById(journalEntryId: string): Promise<boolean>;
-	storeNewJournalEntry(journalEntry: IInfrastructureJournalEntryDto): Promise<void>; // Throws if account.id is not unique.
-	getJournalEntriesByAccountId(accountId: string): Promise<IInfrastructureJournalEntryDto[]>;
+	storeNewJournalEntry(journalEntry: IJournalEntryDto): Promise<void>; // Throws if account.id is not unique.
+	getJournalEntriesByAccountId(accountId: string): Promise<IJournalEntryDto[]>;
 }

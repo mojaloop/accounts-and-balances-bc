@@ -33,7 +33,7 @@ import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {randomUUID} from "crypto";
 import {
 	AccountAlreadyExistsError,
-	CreditedAndDebitedAccountsAreTheSameError,
+	SameCreditedAndDebitedAccountsError,
 	CurrencyCodesDifferError,
 	InsufficientBalanceError,
 	InvalidCreditBalanceError,
@@ -46,8 +46,6 @@ import {
 } from "./types/errors";
 import {
 	IAccountsRepo,
-	IInfrastructureAccountDto,
-	IInfrastructureJournalEntryDto,
 	IJournalEntriesRepo
 } from "./types/infrastructure";
 import {Account} from "./types/account";
@@ -60,10 +58,7 @@ import {Privileges} from "./types/privileges";
 import {join} from "path";
 import {readFileSync} from "fs";
 import {ICurrency} from "./types/currency";
-import {
-	infrastructureAccountDtoToPublicTypesAccountDto,
-	infrastructureJournalEntryDtoToPublicTypesJournalEntryDto
-} from "./utils";
+import {bigintToString} from "./utils";
 
 enum AuditingActions {
 	ACCOUNT_CREATED = "ACCOUNT_CREATED"
@@ -123,7 +118,7 @@ export class Aggregate {
 	// TODO: why ignore the case in which randomUUID() generates an already existing id?
 	async createAccount(accountDto: IAccountDto, securityContext: CallSecurityContext): Promise<string> {
 		this.enforcePrivilege(securityContext, Privileges.CREATE_ACCOUNT);
-		const account: Account = Account.getFromDto(accountDto, this.currencies);
+		const account: Account = Account.FromDto(accountDto, this.currencies);
 		if (account.externalId === "") {
 			throw new InvalidExternalIdError();
 		}
@@ -143,7 +138,7 @@ export class Aggregate {
 		// Store the account.
 		try {
 			// accountDto can't be stored because the balances might not be formatted.
-			await this.accountsRepo.storeNewAccount(Account.getInfrastructureDto(account));
+			await this.accountsRepo.storeNewAccount(Account.ToDto(account));
 		} catch (e: unknown) {
 			if (!(e instanceof AccountAlreadyExistsError)) {
 				this.logger.error(e);
@@ -173,7 +168,7 @@ export class Aggregate {
 	}
 
 	private async createJournalEntry(journalEntryDto: IJournalEntryDto): Promise<string> {
-		const journalEntry: JournalEntry = JournalEntry.getFromDto(journalEntryDto, this.currencies);
+		const journalEntry: JournalEntry = JournalEntry.FromDto(journalEntryDto, this.currencies);
 		if (journalEntry.externalId === "") {
 			throw new InvalidExternalIdError();
 		}
@@ -183,31 +178,38 @@ export class Aggregate {
 		if (journalEntry.amount < 0) {
 			throw new InvalidJournalEntryAmountError();
 		}
-		// Check if the credited and debited accounts are the same. TODO: required?
+		// Check if the credited and debited accounts are the same.
 		if (journalEntry.creditedAccountId === journalEntry.debitedAccountId) {
-			throw new CreditedAndDebitedAccountsAreTheSameError(); // TODO: error name.
+			throw new SameCreditedAndDebitedAccountsError(); // TODO: error name.
 		}
 		// Check if the credited and debited accounts exist.
 		// Instead of using the repo's accountExistsById and journalEntryExistsById functions, the accounts are fetched
 		// and compared to null; this is done because some of the accounts' properties need to be consulted, so it
 		// doesn't make sense to call those functions when the accounts need to be fetched anyway.
-		let creditedInfraAccountDto: IInfrastructureAccountDto | null;
-		let debitedInfraAccountDto: IInfrastructureAccountDto | null;
+		let creditedAccountDto: IAccountDto | null;
+		let debitedAccountDto: IAccountDto | null;
 		try {
-			creditedInfraAccountDto = await this.accountsRepo.getAccountById(journalEntry.creditedAccountId);
-			debitedInfraAccountDto = await this.accountsRepo.getAccountById(journalEntry.debitedAccountId);
+			creditedAccountDto = await this.accountsRepo.getAccountById(journalEntry.creditedAccountId);
+			debitedAccountDto = await this.accountsRepo.getAccountById(journalEntry.debitedAccountId);
 		} catch (e: unknown) {
 			this.logger.error(e);
 			throw e;
 		}
-		if (creditedInfraAccountDto === null) {
+		if (creditedAccountDto === null) {
 			throw new NoSuchCreditedAccountError();
 		}
-		if (debitedInfraAccountDto === null) {
+		if (debitedAccountDto === null) {
 			throw new NoSuchDebitedAccountError();
 		}
-		const creditedAccount: Account = Account.getFromInfrastructureDto(creditedInfraAccountDto);
-		const debitedAccount: Account = Account.getFromInfrastructureDto(debitedInfraAccountDto);
+		let creditedAccount: Account;
+		let debitedAccount: Account;
+		try {
+			creditedAccount = Account.FromDto(creditedAccountDto, this.currencies);
+			debitedAccount = Account.FromDto(debitedAccountDto, this.currencies);
+		} catch (error: unknown) { // TODO: verify.
+			this.logger.error(error);
+			throw error;
+		}
 		// Check if the currency codes of the credited and debited accounts and the journal entry match.
 		if (creditedAccount.currencyCode !== debitedAccount.currencyCode
 			|| creditedAccount.currencyCode !== journalEntry.currencyCode) {
@@ -220,7 +222,7 @@ export class Aggregate {
 			throw new Error();
 		}
 		// Check if the balance is sufficient.
-		if (Account.calculateBalance(debitedAccount) - journalEntry.amount < 0) { // TODO: verify!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		if (Account.calculateBalance(debitedAccount) - journalEntry.amount < 0) {
 			throw new InsufficientBalanceError();
 		}
 		// Generate a random UUId, if needed.
@@ -230,7 +232,7 @@ export class Aggregate {
 		// Store the journal entry.
 		try {
 			// journalEntryDto can't be stored because the amount might not be formatted.
-			await this.journalEntriesRepo.storeNewJournalEntry(JournalEntry.getInfrastructureDto(journalEntry));
+			await this.journalEntriesRepo.storeNewJournalEntry(JournalEntry.ToDto(journalEntry));
 		} catch (e: unknown) {
 			if (!(e instanceof JournalEntryAlreadyExistsError)) {
 				this.logger.error(e);
@@ -241,7 +243,7 @@ export class Aggregate {
 		try {
 			await this.accountsRepo.updateAccountCreditBalanceById(
 				creditedAccount.id,
-				(creditedAccount.creditBalance + journalEntry.amount).toString(),
+				bigintToString(creditedAccount.creditBalance + journalEntry.amount, creditedAccount.currencyDecimals),
 				journalEntry.timestamp
 			);
 		} catch (e: unknown) {
@@ -252,7 +254,7 @@ export class Aggregate {
 		try {
 			await this.accountsRepo.updateAccountDebitBalanceById(
 				debitedAccount.id,
-				(debitedAccount.debitBalance + journalEntry.amount).toString(),
+				bigintToString(debitedAccount.debitBalance + journalEntry.amount, debitedAccount.currencyDecimals),
 				journalEntry.timestamp
 			);
 		} catch (e: unknown) {
@@ -266,11 +268,8 @@ export class Aggregate {
 	async getAccountById(accountId: string, securityContext: CallSecurityContext): Promise<IAccountDto | null> {
 		this.enforcePrivilege(securityContext, Privileges.VIEW_ACCOUNT);
 		try {
-			const accountDto: IInfrastructureAccountDto | null = await this.accountsRepo.getAccountById(accountId);
-			if (accountDto === null) {
-				return null;
-			}
-			return infrastructureAccountDtoToPublicTypesAccountDto(accountDto);
+			const accountDto: IAccountDto | null = await this.accountsRepo.getAccountById(accountId);
+			return accountDto;
 		} catch (e: unknown) {
 			this.logger.error(e);
 			throw e;
@@ -280,11 +279,9 @@ export class Aggregate {
 	async getAccountsByExternalId(externalId: string, securityContext: CallSecurityContext): Promise<IAccountDto[]> {
 		this.enforcePrivilege(securityContext, Privileges.VIEW_ACCOUNT);
 		try {
-			const accountDtos: IInfrastructureAccountDto[] =
+			const accountDtos: IAccountDto[] =
 				await this.accountsRepo.getAccountsByExternalId(externalId);
-			return accountDtos.map(accountDto => {
-				return infrastructureAccountDtoToPublicTypesAccountDto(accountDto);
-			});
+			return accountDtos;
 		} catch (e: unknown) {
 			this.logger.error(e);
 			throw e;
@@ -297,11 +294,9 @@ export class Aggregate {
 	): Promise<IJournalEntryDto[]> {
 		this.enforcePrivilege(securityContext, Privileges.VIEW_JOURNAL_ENTRY);
 		try {
-			const journalEntryDtos: IInfrastructureJournalEntryDto[] =
+			const journalEntryDtos: IJournalEntryDto[] =
 				await this.journalEntriesRepo.getJournalEntriesByAccountId(accountId);
-			return journalEntryDtos.map(journalEntryDto => {
-				return infrastructureJournalEntryDtoToPublicTypesJournalEntryDto(journalEntryDto);
-			});
+			return journalEntryDtos;
 		} catch (e: unknown) {
 			this.logger.error(e);
 			throw e;

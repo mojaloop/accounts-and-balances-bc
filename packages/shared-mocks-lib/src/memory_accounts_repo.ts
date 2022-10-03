@@ -30,7 +30,6 @@
 "use strict";
 
 import {
-	IInfrastructureAccountDto,
 	IAccountsRepo,
 	UnableToInitRepoError,
 	NoSuchAccountError,
@@ -41,19 +40,20 @@ import {
 	UnableToGetAccountsError
 } from "@mojaloop/accounts-and-balances-bc-domain-lib";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
+import {IAccountDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 export class MemoryAccountsRepo implements IAccountsRepo {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
 	// Other properties.
 	private unexpectedFailure: boolean; // TODO: should this be done?
-	private readonly accounts: Map<string, IInfrastructureAccountDto>;
+	private readonly accounts: Map<string, IAccountDto>;
 
 	constructor(logger: ILogger) {
 		this.logger = logger;
 
 		this.unexpectedFailure = false;
-		this.accounts = new Map<string, IInfrastructureAccountDto>();
+		this.accounts = new Map<string, IAccountDto>();
 	}
 
 	async init(): Promise<void> {
@@ -73,7 +73,7 @@ export class MemoryAccountsRepo implements IAccountsRepo {
 		return this.accounts.has(accountId);
 	}
 
-	async storeNewAccount(account: IInfrastructureAccountDto): Promise<void> {
+	async storeNewAccount(account: IAccountDto): Promise<void> {
 		if (this.unexpectedFailure) {
 			throw new UnableToStoreAccountError();
 		}
@@ -83,18 +83,18 @@ export class MemoryAccountsRepo implements IAccountsRepo {
 		this.accounts.set(account.id, account);
 	}
 
-	async getAccountById(accountId: string): Promise<IInfrastructureAccountDto | null> {
+	async getAccountById(accountId: string): Promise<IAccountDto | null> {
 		if (this.unexpectedFailure) {
 			throw new UnableToGetAccountError();
 		}
 		return this.accounts.get(accountId) ?? null;
 	}
 
-	async getAccountsByExternalId(externalId: string): Promise<IInfrastructureAccountDto[]> {
+	async getAccountsByExternalId(externalId: string): Promise<IAccountDto[]> {
 		if (this.unexpectedFailure) {
 			throw new UnableToGetAccountsError();
 		}
-		const accounts: IInfrastructureAccountDto[] = [];
+		const accounts: IAccountDto[] = [];
 		for (const account of this.accounts.values()) {
 			if (account.externalId === externalId) {
 				accounts.push(account);
@@ -111,7 +111,7 @@ export class MemoryAccountsRepo implements IAccountsRepo {
 		if (this.unexpectedFailure) {
 			throw new UnableToUpdateAccountError();
 		}
-		const account: IInfrastructureAccountDto | undefined = this.accounts.get(accountId);
+		const account: IAccountDto | undefined = this.accounts.get(accountId);
 		if (account === undefined) {
 			throw new NoSuchAccountError();
 		}
@@ -127,7 +127,7 @@ export class MemoryAccountsRepo implements IAccountsRepo {
 		if (this.unexpectedFailure) {
 			throw new UnableToUpdateAccountError();
 		}
-		const account: IInfrastructureAccountDto | undefined = this.accounts.get(accountId);
+		const account: IAccountDto | undefined = this.accounts.get(accountId);
 		if (account === undefined) {
 			throw new NoSuchAccountError();
 		}

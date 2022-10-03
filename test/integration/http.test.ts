@@ -372,26 +372,6 @@ describe("accounts and balances - integration tests with HTTP service", () => {
 			}
 		).rejects.toThrow(UnableToCreateJournalEntriesError);
 	});
-	test("create journal entry with different currency decimals", async () => {
-		// Before creating a journal entry, the respective accounts need to be created.
-		const accountDtos: IAccountDto[] = await create2Accounts(); // currencyDecimals = 2.
-		const journalEntryId: string = Crypto.randomUUID();
-		const journalEntryDto: IJournalEntryDto = {
-			id: journalEntryId,
-			externalId: null,
-			externalCategory: null,
-			currencyCode: "EUR",
-			amount: "5",
-			creditedAccountId: accountDtos[0].id,
-			debitedAccountId: accountDtos[1].id,
-			timestamp: 0
-		};
-		await expect(
-			async () => {
-				await accountsAndBalancesHttpClient.createJournalEntries([journalEntryDto]);
-			}
-		).rejects.toThrow(UnableToCreateJournalEntriesError);
-	});
 	test("create journal entry with exceeding amount", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accountDtos: IAccountDto[] = await create2Accounts(); // Accounts created with 100 credit balance each.

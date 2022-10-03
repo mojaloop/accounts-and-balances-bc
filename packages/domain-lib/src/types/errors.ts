@@ -36,7 +36,7 @@ export class InvalidTimestampError extends Error {}
 // JournalEntry.
 export class InvalidExternalCategoryError extends Error {}
 export class InvalidJournalEntryAmountError extends Error {}
-export class CreditedAndDebitedAccountsAreTheSameError extends Error {}
+export class SameCreditedAndDebitedAccountsError extends Error {}
 export class NoSuchCreditedAccountError extends Error {}
 export class NoSuchDebitedAccountError extends Error {}
 export class CurrencyCodesDifferError extends Error {}

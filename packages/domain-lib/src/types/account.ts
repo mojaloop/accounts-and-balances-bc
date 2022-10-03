@@ -32,8 +32,7 @@
 import {InvalidCreditBalanceError, InvalidCurrencyCodeError, InvalidDebitBalanceError} from "./errors";
 import {AccountState, AccountType, IAccountDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {ICurrency} from "./currency";
-import {stringToBigint} from "../utils";
-import {IInfrastructureAccountDto} from "./infrastructure";
+import {bigintToString, stringToBigint} from "../utils";
 
 // TODO: implements/extends anything?
 export class Account {
@@ -69,8 +68,7 @@ export class Account {
 		this.timestampLastJournalEntry = timestampLastJournalEntry;
 	}
 
-	// TODO: change name.
-	static getFromDto(accountDto: IAccountDto, currencies: ICurrency[]): Account {
+	static FromDto(accountDto: IAccountDto, currencies: ICurrency[]): Account {
 		const currency: ICurrency | undefined = currencies.find(currency => {
 			return currency.code === accountDto.currencyCode;
 		});
@@ -102,38 +100,7 @@ export class Account {
 		);
 	}
 
-	// TODO: change name.
-	static getFromInfrastructureDto(infrastructureAccountDto: IInfrastructureAccountDto): Account {
-		return new Account(
-			infrastructureAccountDto.id,
-			infrastructureAccountDto.externalId,
-			infrastructureAccountDto.state,
-			infrastructureAccountDto.type,
-			infrastructureAccountDto.currencyCode,
-			infrastructureAccountDto.currencyDecimals,
-			BigInt(infrastructureAccountDto.creditBalance),
-			BigInt(infrastructureAccountDto.debitBalance),
-			infrastructureAccountDto.timestampLastJournalEntry
-		);
-	}
-
-	static getInfrastructureDto(account: Account): IInfrastructureAccountDto {
-		/*const creditBalance: string = bigintToString(account.creditBalance, account.currencyDecimals);
-		const debitBalance: string = bigintToString(account.debitBalance, account.currencyDecimals);*/
-		return {
-			id: account.id,
-			externalId: account.externalId,
-			state: account.state,
-			type: account.type,
-			currencyCode: account.currencyCode,
-			currencyDecimals: account.currencyDecimals,
-			creditBalance: account.creditBalance.toString(),
-			debitBalance: account.debitBalance.toString(),
-			timestampLastJournalEntry: account.timestampLastJournalEntry
-		};
-	}
-
-	/*static getDto(account: Account): IAccountDto {
+	static ToDto(account: Account): IAccountDto {
 		const creditBalance: string = bigintToString(account.creditBalance, account.currencyDecimals);
 		const debitBalance: string = bigintToString(account.debitBalance, account.currencyDecimals);
 		return {
@@ -146,7 +113,7 @@ export class Account {
 			debitBalance: debitBalance,
 			timestampLastJournalEntry: account.timestampLastJournalEntry
 		};
-	}*/
+	}
 
 	static calculateBalance(account: Account): bigint {
 		return account.creditBalance - account.debitBalance;

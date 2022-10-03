@@ -32,8 +32,7 @@
 import {InvalidCurrencyCodeError, InvalidJournalEntryAmountError} from "./errors";
 import {IJournalEntryDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {ICurrency} from "./currency";
-import {stringToBigint} from "../utils";
-import {IInfrastructureJournalEntryDto} from "./infrastructure";
+import {bigintToString, stringToBigint} from "../utils";
 
 // TODO: implements/extends anything?
 export class JournalEntry {
@@ -70,7 +69,7 @@ export class JournalEntry {
 	}
 
 	// TODO: change name.
-	static getFromDto(journalEntryDto: IJournalEntryDto, currencies: ICurrency[]): JournalEntry {
+	static FromDto(journalEntryDto: IJournalEntryDto, currencies: ICurrency[]): JournalEntry {
 		const currency: ICurrency | undefined = currencies.find(currency => {
 			return currency.code === journalEntryDto.currencyCode;
 		});
@@ -96,37 +95,7 @@ export class JournalEntry {
 		);
 	}
 
-	/*// TODO: change name.
-	static getFromInfrastructureDto(infrastructureJournalEntryDto: IInfrastructureJournalEntryDto): JournalEntry {
-		return new JournalEntry(
-			infrastructureJournalEntryDto.id,
-			infrastructureJournalEntryDto.externalId,
-			infrastructureJournalEntryDto.externalCategory,
-			infrastructureJournalEntryDto.currencyCode,
-			infrastructureJournalEntryDto.currencyDecimals,
-			BigInt(infrastructureJournalEntryDto.amount),
-			infrastructureJournalEntryDto.creditedAccountId,
-			infrastructureJournalEntryDto.debitedAccountId,
-			infrastructureJournalEntryDto.timestamp
-		);
-	}*/
-
-	static getInfrastructureDto(journalEntry: JournalEntry): IInfrastructureJournalEntryDto {
-		// const amount: string = bigintToString(journalEntry.amount, journalEntry.currencyDecimals);
-		return {
-			id: journalEntry.id,
-			externalId: journalEntry.externalId,
-			externalCategory: journalEntry.externalCategory,
-			currencyCode: journalEntry.currencyCode,
-			currencyDecimals: journalEntry.currencyDecimals,
-			amount: journalEntry.amount.toString(),
-			creditedAccountId: journalEntry.creditedAccountId,
-			debitedAccountId: journalEntry.debitedAccountId,
-			timestamp: journalEntry.timestamp
-		};
-	}
-
-	/*static getDto(journalEntry: JournalEntry): IJournalEntryDto {
+	static ToDto(journalEntry: JournalEntry): IJournalEntryDto {
 		const amount: string = bigintToString(journalEntry.amount, journalEntry.currencyDecimals);
 		return {
 			id: journalEntry.id,
@@ -138,5 +107,5 @@ export class JournalEntry {
 			debitedAccountId: journalEntry.debitedAccountId,
 			timestamp: journalEntry.timestamp
 		};
-	}*/
+	}
 }

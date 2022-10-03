@@ -38,7 +38,7 @@ import {
 	InvalidDebitBalanceError,
 	InvalidJournalEntryAmountError,
 	JournalEntryAlreadyExistsError,
-	CreditedAndDebitedAccountsAreTheSameError,
+	SameCreditedAndDebitedAccountsError,
 	NoSuchCreditedAccountError,
 	NoSuchDebitedAccountError,
 	InsufficientBalanceError,
@@ -274,7 +274,7 @@ export class ExpressRoutes {
 					400,
 					"invalid journal entry amount"
 				);
-			} else if (e instanceof CreditedAndDebitedAccountsAreTheSameError) {
+			} else if (e instanceof SameCreditedAndDebitedAccountsError) {
 				this.sendErrorResponse(
 					res,
 					400,

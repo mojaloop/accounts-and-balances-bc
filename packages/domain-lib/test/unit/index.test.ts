@@ -34,7 +34,7 @@ import {
 	AccountAlreadyExistsError,
 	NoSuchCreditedAccountError,
 	NoSuchDebitedAccountError,
-	CreditedAndDebitedAccountsAreTheSameError,
+	SameCreditedAndDebitedAccountsError,
 	InsufficientBalanceError,
 	InvalidDebitBalanceError,
 	IAccountsRepo,
@@ -60,6 +60,7 @@ import {
 	MemoryAccountsRepo,
 	MemoryJournalEntriesRepo
 } from "@mojaloop/accounts-and-balances-bc-shared-mocks-lib";
+import {bigintToString, stringToBigint} from "../../dist/utils";
 
 let accountsRepo: IAccountsRepo;
 let journalEntriesRepo: IJournalEntriesRepo;
@@ -415,7 +416,7 @@ describe("accounts and balances domain library - unit tests", () => {
 			async () => {
 				await aggregate.createJournalEntries([journalEntry], securityContext);
 			}
-		).rejects.toThrow(CreditedAndDebitedAccountsAreTheSameError);
+		).rejects.toThrow(SameCreditedAndDebitedAccountsError);
 	});
 	test("create journal entry with non-existent credited account", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
@@ -665,6 +666,32 @@ describe("accounts and balances domain library - unit tests", () => {
 			}
 		).rejects.toThrow(); // TODO: check for specific repo error?
 		(journalEntriesRepo as MemoryJournalEntriesRepo).setUnexpectedFailure(false); // TODO: should this be done?
+	});
+
+	test("stringtoBigInt without decimals", async () => {
+		expect(stringToBigint("100", 2)).toEqual(10000n);
+	});
+	test("stringtoBigInt with decimal part zero", async () => {
+		expect(() => {
+			stringToBigint("100.00", 2)
+		}).toThrow();
+	});
+	test("stringtoBigInt with decimal part non-zero", async () => {
+		expect(stringToBigint("100.01", 2)).toEqual(10001n);
+	});
+	test("stringtoBigInt with decimal part non-zero", async () => {
+		expect(stringToBigint("0.00", 2)).toEqual(0n);
+	});
+	test("stringtoBigInt starting with 0", async () => {
+		expect(stringToBigint("0.01", 2)).toEqual(1n);
+	});
+	test("stringtoBigInt with 6 decimals", async () => {
+		expect(() => {
+			stringToBigint("100.012345", 2)
+		}).toThrow();
+	});
+	test("bigintToString", async () => {
+		expect(bigintToString(10000n, 2)).toEqual("100");
 	});
 });
 

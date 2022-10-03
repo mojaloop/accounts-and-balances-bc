@@ -32,7 +32,6 @@
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {MongoClient, Collection, UpdateResult} from "mongodb";
 import {
-	IInfrastructureAccountDto,
 	IAccountsRepo,
 	AccountAlreadyExistsError,
 	NoSuchAccountError,
@@ -42,6 +41,7 @@ import {
 	UnableToStoreAccountError,
 	UnableToUpdateAccountError
 } from "@mojaloop/accounts-and-balances-bc-domain-lib";
+import {IAccountDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 export class MongoAccountsRepo implements IAccountsRepo{
 	// Properties received through the constructor.
@@ -94,7 +94,7 @@ export class MongoAccountsRepo implements IAccountsRepo{
 		}
 	}
 
-	async storeNewAccount(account: IInfrastructureAccountDto): Promise<void> {
+	async storeNewAccount(account: IAccountDto): Promise<void> {
 		let accountExists: boolean;
 		try {
 			accountExists = await this.accountExistsById(account.id);
@@ -112,20 +112,20 @@ export class MongoAccountsRepo implements IAccountsRepo{
 		}
 	}
 
-	async getAccountById(accountId: string): Promise<IInfrastructureAccountDto | null> {
+	async getAccountById(accountId: string): Promise<IAccountDto | null> {
 		try {
 			// findOne() doesn't throw if no item is found - null is returned.
 			const account: any = await this.accounts.findOne( // TODO: type.
 				{id: accountId},
 				{projection: {_id: 0}} // Don't return the _id field. TODO: why is _id returned without this?
 			);
-			return account as unknown as IInfrastructureAccountDto; // TODO: create schema.
+			return account as unknown as IAccountDto; // TODO: create schema.
 		} catch (e: unknown) {
 			throw new UnableToGetAccountError((e as any)?.message);
 		}
 	}
 
-	async getAccountsByExternalId(externalId: string): Promise<IInfrastructureAccountDto[]> {
+	async getAccountsByExternalId(externalId: string): Promise<IAccountDto[]> {
 		try {
 			// find() doesn't throw if no items are found.
 			const accounts: any = // TODO: type.
@@ -134,7 +134,7 @@ export class MongoAccountsRepo implements IAccountsRepo{
 					{externalId: externalId},
 					{projection: {_id: 0}}) // Don't return the _id field.
 				.toArray();
-			return accounts as unknown as IInfrastructureAccountDto[]; // TODO: create schema.
+			return accounts as unknown as IAccountDto[]; // TODO: create schema.
 		} catch (e: unknown) {
 			throw new UnableToGetAccountsError((e as any)?.message);
 		}

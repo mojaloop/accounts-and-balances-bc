@@ -29,9 +29,6 @@
 
 "use strict";
 
-import {IInfrastructureAccountDto, IInfrastructureJournalEntryDto} from "./types/infrastructure";
-import {IAccountDto, IJournalEntryDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
-
 const regex: RegExp = /^([0]|([1-9][0-9]{0,17}))([.][0-9]{0,3}[1-9])?$/;
 
 export function stringToBigint(stringValue: string, decimals: number): bigint {
@@ -64,13 +61,6 @@ export function bigintToString(bigintValue: bigint, decimals: number): string {
 	const stringValue: string = bigintValue.toString();
 	const dotIdx: number = stringValue.length - decimals;
 	const stringValueWithDot: string = stringValue.slice(0, dotIdx) + "." + stringValue.slice(dotIdx);
-	return stringValueWithDot;
-}
-
-// TODO: change name.
-export function formatString(str: string, decimals: number): string {
-	const dotIdx: number = str.length - decimals;
-	const stringValueWithDot: string = str.slice(0, dotIdx) + "." + str.slice(dotIdx);
 	let finalString: string = stringValueWithDot;
 	while (finalString[finalString.length - 1] === "0") {
 		finalString = finalString.slice(0, finalString.length - 1);
@@ -79,36 +69,4 @@ export function formatString(str: string, decimals: number): string {
 		finalString = finalString.slice(0, finalString.length - 1);
 	}
 	return finalString;
-}
-
-// TODO: change name.
-export function infrastructureAccountDtoToPublicTypesAccountDto(
-	infrastructureAccountDto: IInfrastructureAccountDto
-): IAccountDto {
-	return {
-		id: infrastructureAccountDto.id,
-		externalId: infrastructureAccountDto.externalId,
-		state: infrastructureAccountDto.state,
-		type: infrastructureAccountDto.type,
-		currencyCode: infrastructureAccountDto.currencyCode,
-		creditBalance: formatString(infrastructureAccountDto.creditBalance, infrastructureAccountDto.currencyDecimals),
-		debitBalance: formatString(infrastructureAccountDto.debitBalance, infrastructureAccountDto.currencyDecimals),
-		timestampLastJournalEntry: infrastructureAccountDto.timestampLastJournalEntry
-	};
-}
-
-// TODO: change name.
-export function infrastructureJournalEntryDtoToPublicTypesJournalEntryDto(
-	infrastructureJournalEntryDto: IInfrastructureJournalEntryDto
-): IJournalEntryDto {
-	return {
-		id: infrastructureJournalEntryDto.id,
-		externalId: infrastructureJournalEntryDto.externalId,
-		externalCategory: infrastructureJournalEntryDto.externalCategory,
-		currencyCode: infrastructureJournalEntryDto.currencyCode,
-		amount: formatString(infrastructureJournalEntryDto.amount, infrastructureJournalEntryDto.currencyDecimals),
-		creditedAccountId: infrastructureJournalEntryDto.creditedAccountId,
-		debitedAccountId: infrastructureJournalEntryDto.debitedAccountId,
-		timestamp: infrastructureJournalEntryDto.timestamp
-	};
 }
