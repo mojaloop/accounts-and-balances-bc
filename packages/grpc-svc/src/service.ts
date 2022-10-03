@@ -170,7 +170,10 @@ export async function startGrpcService(
 		await (authorizationClient as AuthorizationClient).bootstrap(true);
 		await (authorizationClient as AuthorizationClient).fetch();
 	}*/
-	authorizationClient = new AuthorizationClientMock(logger); // TODO: remove.
+	// TODO: remove.
+	if (authorizationClient === undefined) {
+		authorizationClient = new AuthorizationClientMock(logger);
+	}
 
 	// Auditing.
 	if (_auditingClient !== undefined) {
