@@ -32,6 +32,7 @@
 // Account.
 export class InvalidCreditBalanceError extends Error {}
 export class InvalidDebitBalanceError extends Error {}
+export class InvalidTimestampError extends Error {}
 // JournalEntry.
 export class InvalidExternalCategoryError extends Error {}
 export class InvalidJournalEntryAmountError extends Error {}
@@ -39,12 +40,10 @@ export class CreditedAndDebitedAccountsAreTheSameError extends Error {}
 export class NoSuchCreditedAccountError extends Error {}
 export class NoSuchDebitedAccountError extends Error {}
 export class CurrencyCodesDifferError extends Error {}
-export class CurrencyDecimalsDifferError extends Error {}
 export class InsufficientBalanceError extends Error {}
 // Common.
 export class InvalidExternalIdError extends Error {}
 export class InvalidCurrencyCodeError extends Error {}
-export class InvalidCurrencyDecimalsError extends Error {}
 // Repos.
 export class UnableToInitRepoError extends Error {}
 export class AccountAlreadyExistsError extends Error {}

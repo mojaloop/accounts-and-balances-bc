@@ -30,6 +30,7 @@
 "use strict";
 
 import {
+	IInfrastructureJournalEntryDto,
 	IJournalEntriesRepo,
 	JournalEntryAlreadyExistsError,
 	UnableToInitRepoError,
@@ -38,20 +39,19 @@ import {
 	UnableToStoreJournalEntryError
 } from "@mojaloop/accounts-and-balances-bc-domain-lib";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {IJournalEntryDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 export class MemoryJournalEntriesRepo implements IJournalEntriesRepo {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
 	// Other properties.
 	private unexpectedFailure: boolean; // TODO: should this be done?
-	private readonly journalEntries: Map<string, IJournalEntryDto>;
+	private readonly journalEntries: Map<string, IInfrastructureJournalEntryDto>;
 
 	constructor(logger: ILogger) {
 		this.logger = logger;
 
 		this.unexpectedFailure = false;
-		this.journalEntries = new Map<string, IJournalEntryDto>();
+		this.journalEntries = new Map<string, IInfrastructureJournalEntryDto>();
 	}
 
 	async init(): Promise<void> {
@@ -71,7 +71,7 @@ export class MemoryJournalEntriesRepo implements IJournalEntriesRepo {
 		return this.journalEntries.has(journalEntryId);
 	}
 
-	async storeNewJournalEntry(journalEntry: IJournalEntryDto): Promise<void> {
+	async storeNewJournalEntry(journalEntry: IInfrastructureJournalEntryDto): Promise<void> {
 		if (this.unexpectedFailure) {
 			throw new UnableToStoreJournalEntryError();
 		}
@@ -81,11 +81,11 @@ export class MemoryJournalEntriesRepo implements IJournalEntriesRepo {
 		this.journalEntries.set(journalEntry.id, journalEntry);
 	}
 
-	async getJournalEntriesByAccountId(accountId: string): Promise<IJournalEntryDto[]> {
+	async getJournalEntriesByAccountId(accountId: string): Promise<IInfrastructureJournalEntryDto[]> {
 		if (this.unexpectedFailure) {
 			throw new UnableToGetJournalEntriesError();
 		}
-		const journalEntries: IJournalEntryDto[] = [];
+		const journalEntries: IInfrastructureJournalEntryDto[] = [];
 		for (const journalEntry of this.journalEntries.values()) {
 			if (journalEntry.creditedAccountId === accountId
 				|| journalEntry.debitedAccountId === accountId) {

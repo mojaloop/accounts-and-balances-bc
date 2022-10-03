@@ -104,7 +104,6 @@ describe("accounts and balances - integration tests with gRPC service", () => {
 			state: AccountState.ACTIVE,
 			type: AccountType.POSITION,
 			currencyCode: "EUR",
-			currencyDecimals: 2,
 			creditBalance: "100",
 			debitBalance: "25",
 			timestampLastJournalEntry: 0
@@ -123,7 +122,6 @@ describe("accounts and balances - integration tests with gRPC service", () => {
 			externalId: "",
 			externalCategory: "",
 			currencyCode: "EUR",
-			currencyDecimals: 2,
 			amount: "5",
 			creditedAccountId: accountDtos[0].id,
 			debitedAccountId: accountDtos[1].id,
@@ -136,7 +134,6 @@ describe("accounts and balances - integration tests with gRPC service", () => {
 			externalId: "",
 			externalCategory: "",
 			currencyCode: "EUR",
-			currencyDecimals: 2,
 			amount: "5",
 			creditedAccountId: accountDtos[1].id,
 			debitedAccountId: accountDtos[0].id,
@@ -180,7 +177,6 @@ async function create2Accounts(
 		state: AccountState.ACTIVE,
 		type: AccountType.POSITION,
 		currencyCode: "EUR",
-		currencyDecimals: 2,
 		creditBalance: "100",
 		debitBalance: "25",
 		timestampLastJournalEntry: 0
@@ -194,7 +190,6 @@ async function create2Accounts(
 		state: AccountState.ACTIVE,
 		type: AccountType.POSITION,
 		currencyCode: "EUR",
-		currencyDecimals: 2,
 		creditBalance: "100",
 		debitBalance: "25",
 		timestampLastJournalEntry: 0

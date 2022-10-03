@@ -97,7 +97,6 @@ describe("accounts and balances http service - unit tests", () => {
 			state: AccountState.ACTIVE,
 			type: AccountType.POSITION,
 			currencyCode: "EUR",
-			currencyDecimals: 2,
 			creditBalance: "100",
 			debitBalance: "25",
 			timestampLastJournalEntry: 0
@@ -113,7 +112,6 @@ describe("accounts and balances http service - unit tests", () => {
 			state: AccountState.ACTIVE,
 			type: AccountType.POSITION,
 			currencyCode: "EUR",
-			currencyDecimals: 2,
 			creditBalance: "100",
 			debitBalance: "25",
 			timestampLastJournalEntry: 0
@@ -130,7 +128,6 @@ describe("accounts and balances http service - unit tests", () => {
 			state: AccountState.ACTIVE,
 			type: AccountType.POSITION,
 			currencyCode: "EUR",
-			currencyDecimals: 2,
 			creditBalance: "100",
 			debitBalance: "25",
 			timestampLastJournalEntry: 0
@@ -146,7 +143,6 @@ describe("accounts and balances http service - unit tests", () => {
 			state: AccountState.ACTIVE,
 			type: AccountType.POSITION,
 			currencyCode: "EUR",
-			currencyDecimals: 2,
 			creditBalance: "-100",
 			debitBalance: "25",
 			timestampLastJournalEntry: 0
@@ -162,7 +158,6 @@ describe("accounts and balances http service - unit tests", () => {
 			state: AccountState.ACTIVE,
 			type: AccountType.POSITION,
 			currencyCode: "EUR",
-			currencyDecimals: 2,
 			creditBalance: "100",
 			debitBalance: "-25",
 			timestampLastJournalEntry: 0
@@ -178,7 +173,6 @@ describe("accounts and balances http service - unit tests", () => {
 			state: AccountState.ACTIVE,
 			type: AccountType.POSITION,
 			currencyCode: "EUR",
-			currencyDecimals: 2,
 			creditBalance: "100",
 			debitBalance: "25",
 			timestampLastJournalEntry: 0
@@ -196,7 +190,6 @@ describe("accounts and balances http service - unit tests", () => {
 			state: AccountState.ACTIVE,
 			type: AccountType.POSITION,
 			currencyCode: "EUR",
-			currencyDecimals: 2,
 			creditBalance: "100",
 			debitBalance: "25",
 			timestampLastJournalEntry: 0
@@ -214,7 +207,6 @@ describe("accounts and balances http service - unit tests", () => {
 			state: AccountState.ACTIVE,
 			type: AccountType.POSITION,
 			currencyCode: "EUR",
-			currencyDecimals: 2,
 			creditBalance: "100",
 			debitBalance: "25",
 			timestampLastJournalEntry: 0
@@ -236,7 +228,6 @@ describe("accounts and balances http service - unit tests", () => {
 			externalId: null,
 			externalCategory: null,
 			currencyCode: "EUR",
-			currencyDecimals: 2,
 			amount: "5",
 			creditedAccountId: accountDtos[0].id,
 			debitedAccountId: accountDtos[1].id,
@@ -249,7 +240,6 @@ describe("accounts and balances http service - unit tests", () => {
 			externalId: null,
 			externalCategory: null,
 			currencyCode: "EUR",
-			currencyDecimals: 2,
 			amount: "5",
 			creditedAccountId: accountDtos[1].id,
 			debitedAccountId: accountDtos[0].id,
@@ -270,7 +260,6 @@ describe("accounts and balances http service - unit tests", () => {
 			externalId: null,
 			externalCategory: null,
 			currencyCode: "EUR",
-			currencyDecimals: 2,
 			amount: "5",
 			creditedAccountId: accountDtos[0].id,
 			debitedAccountId: accountDtos[1].id,
@@ -283,7 +272,6 @@ describe("accounts and balances http service - unit tests", () => {
 			externalId: null,
 			externalCategory: null,
 			currencyCode: "EUR",
-			currencyDecimals: 2,
 			amount: "5",
 			creditedAccountId: accountDtos[1].id,
 			debitedAccountId: accountDtos[0].id,
@@ -305,7 +293,6 @@ describe("accounts and balances http service - unit tests", () => {
 			externalId: null,
 			externalCategory: null,
 			currencyCode: "EUR",
-			currencyDecimals: 2,
 			amount: "5",
 			creditedAccountId: accountDtos[0].id,
 			debitedAccountId: accountDtos[1].id,
@@ -324,7 +311,6 @@ describe("accounts and balances http service - unit tests", () => {
 			externalId: null,
 			externalCategory: null,
 			currencyCode: "EUR",
-			currencyDecimals: 2,
 			amount: "5",
 			creditedAccountId: accountDtos[0].id,
 			debitedAccountId: accountDtos[0].id,
@@ -343,7 +329,6 @@ describe("accounts and balances http service - unit tests", () => {
 			externalId: null,
 			externalCategory: null,
 			currencyCode: "EUR",
-			currencyDecimals: 2,
 			amount: "5",
 			creditedAccountId: "some string",
 			debitedAccountId: accountDtos[1].id,
@@ -362,7 +347,6 @@ describe("accounts and balances http service - unit tests", () => {
 			externalId: null,
 			externalCategory: null,
 			currencyCode: "EUR",
-			currencyDecimals: 2,
 			amount: "5",
 			creditedAccountId: accountDtos[0].id,
 			debitedAccountId: "some string",
@@ -381,7 +365,6 @@ describe("accounts and balances http service - unit tests", () => {
 			externalId: null,
 			externalCategory: null,
 			currencyCode: "USD",
-			currencyDecimals: 2,
 			amount: "5",
 			creditedAccountId: accountDtos[0].id,
 			debitedAccountId: accountDtos[1].id,
@@ -400,7 +383,6 @@ describe("accounts and balances http service - unit tests", () => {
 			externalId: null,
 			externalCategory: null,
 			currencyCode: "EUR",
-			currencyDecimals: 2,
 			amount: "10000",
 			creditedAccountId: accountDtos[0].id,
 			debitedAccountId: accountDtos[1].id,
@@ -419,7 +401,6 @@ describe("accounts and balances http service - unit tests", () => {
 			externalId: null,
 			externalCategory: null,
 			currencyCode: "EUR",
-			currencyDecimals: 2,
 			amount: "-5",
 			creditedAccountId: accountDtos[0].id,
 			debitedAccountId: accountDtos[1].id,
@@ -438,7 +419,6 @@ describe("accounts and balances http service - unit tests", () => {
 			externalId: null,
 			externalCategory: null,
 			currencyCode: "EUR",
-			currencyDecimals: 2,
 			amount: "5",
 			creditedAccountId: accountDtos[0].id,
 			debitedAccountId: accountDtos[1].id,
@@ -459,7 +439,6 @@ describe("accounts and balances http service - unit tests", () => {
 			externalId: null,
 			externalCategory: null,
 			currencyCode: "EUR",
-			currencyDecimals: 2,
 			amount: "5",
 			creditedAccountId: accountDtos[0].id,
 			debitedAccountId: accountDtos[1].id,
@@ -480,7 +459,6 @@ describe("accounts and balances http service - unit tests", () => {
 			externalId: null,
 			externalCategory: null,
 			currencyCode: "EUR",
-			currencyDecimals: 2,
 			amount: "5",
 			creditedAccountId: accountDtos[0].id,
 			debitedAccountId: accountDtos[1].id,
@@ -507,7 +485,6 @@ describe("accounts and balances http service - unit tests", () => {
 			state: AccountState.ACTIVE,
 			type: AccountType.POSITION,
 			currencyCode: "EUR",
-			currencyDecimals: 2,
 			creditBalance: "100",
 			debitBalance: "25",
 			timestampLastJournalEntry: 0
@@ -564,7 +541,6 @@ describe("accounts and balances http service - unit tests", () => {
 			externalId: null,
 			externalCategory: null,
 			currencyCode: "EUR",
-			currencyDecimals: 2,
 			amount: "5",
 			creditedAccountId: accountDtos[0].id,
 			debitedAccountId: accountDtos[1].id,
@@ -577,7 +553,6 @@ describe("accounts and balances http service - unit tests", () => {
 			externalId: null,
 			externalCategory: null,
 			currencyCode: "EUR",
-			currencyDecimals: 2,
 			amount: "5",
 			creditedAccountId: accountDtos[1].id,
 			debitedAccountId: accountDtos[0].id,
@@ -605,13 +580,12 @@ async function create2Accounts(
 ): Promise<IAccountDto[]> {
 	// Account A.
 	const idAccountA: string = randomUUID();
-	const accountDtoA = {
+	const accountDtoA: IAccountDto = {
 		id: idAccountA,
 		externalId: externalIdAccountA,
 		state: AccountState.ACTIVE,
 		type: AccountType.POSITION,
 		currencyCode: "EUR",
-		currencyDecimals: 2,
 		creditBalance: "100",
 		debitBalance: "25",
 		timestampLastJournalEntry: 0
@@ -619,13 +593,12 @@ async function create2Accounts(
 	await auxiliaryAccountsAndBalancesHttpClient.createAccount(accountDtoA);
 	// Account B.
 	const idAccountB: string = idAccountA + 1;
-	const accountDtoB = {
+	const accountDtoB: IAccountDto = {
 		id: idAccountB,
 		externalId: externalIdAccountB,
 		state: AccountState.ACTIVE,
 		type: AccountType.POSITION,
 		currencyCode: "EUR",
-		currencyDecimals: 2,
 		creditBalance: "100",
 		debitBalance: "25",
 		timestampLastJournalEntry: 0

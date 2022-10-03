@@ -40,7 +40,7 @@ import {
 	IJournalEntryDto
 } from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
-const PROTO_FILE_NAME = "accounts_and_balances.proto";
+const PROTO_FILE_NAME: string = "accounts_and_balances.proto";
 
 export function loadProto(): PackageDefinition {
 	const protoFilePath: string = join(__dirname, PROTO_FILE_NAME);
@@ -61,7 +61,6 @@ export function grpcAccountToAccountDto(grpcAccount: GrpcAccount__Output): IAcco
 		state: grpcAccount.state as AccountState,
 		type: grpcAccount.type as AccountType,
 		currencyCode: grpcAccount.currencyCode,
-		currencyDecimals: grpcAccount.currencyDecimals,
 		creditBalance: grpcAccount.creditBalance,
 		debitBalance: grpcAccount.debitBalance,
 		timestampLastJournalEntry: grpcAccount.timestampLastJournalEntry
@@ -75,7 +74,6 @@ export function accountDtoToGrpcAccount(accountDto: IAccountDto): GrpcAccount__O
 		state: accountDto.state,
 		type: accountDto.type,
 		currencyCode: accountDto.currencyCode,
-		currencyDecimals: accountDto.currencyDecimals,
 		creditBalance: accountDto.creditBalance,
 		debitBalance: accountDto.debitBalance,
 		timestampLastJournalEntry: accountDto.timestampLastJournalEntry
@@ -88,7 +86,6 @@ export function grpcJournalEntryToJournalEntryDto(grpcJournalEntry: GrpcJournalE
 		externalId: grpcJournalEntry.externalId || null,
 		externalCategory: grpcJournalEntry.externalCategory || null,
 		currencyCode: grpcJournalEntry.currencyCode,
-		currencyDecimals: grpcJournalEntry.currencyDecimals,
 		amount: grpcJournalEntry.amount,
 		creditedAccountId: grpcJournalEntry.creditedAccountId,
 		debitedAccountId: grpcJournalEntry.debitedAccountId,
@@ -102,7 +99,6 @@ export function journalEntryDtoToGrpcJournalEntry(journalEntryDto: IJournalEntry
 		externalId: journalEntryDto.externalId || "",
 		externalCategory: journalEntryDto.externalId || "",
 		currencyCode: journalEntryDto.currencyCode,
-		currencyDecimals: journalEntryDto.currencyDecimals,
 		amount: journalEntryDto.amount,
 		creditedAccountId: journalEntryDto.creditedAccountId,
 		debitedAccountId: journalEntryDto.debitedAccountId,

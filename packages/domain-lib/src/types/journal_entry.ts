@@ -29,8 +29,11 @@
 
 "use strict";
 
-import {InvalidJournalEntryAmountError} from "../errors";
+import {InvalidCurrencyCodeError, InvalidJournalEntryAmountError} from "./errors";
 import {IJournalEntryDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import {ICurrency} from "./currency";
+import {stringToBigint} from "../utils";
+import {IInfrastructureJournalEntryDto} from "./infrastructure";
 
 // TODO: implements/extends anything?
 export class JournalEntry {
@@ -66,11 +69,18 @@ export class JournalEntry {
 		this.timestamp = timestamp;
 	}
 
-	static getFromDto(journalEntryDto: IJournalEntryDto): JournalEntry {
+	// TODO: change name.
+	static getFromDto(journalEntryDto: IJournalEntryDto, currencies: ICurrency[]): JournalEntry {
+		const currency: ICurrency | undefined = currencies.find(currency => {
+			return currency.code === journalEntryDto.currencyCode;
+		});
+		if (currency === undefined) {
+			throw new InvalidCurrencyCodeError();
+		}
 		let amount: bigint;
 		try {
-			amount = BigInt(journalEntryDto.amount);
-		} catch(error: unknown) {
+			amount = stringToBigint(journalEntryDto.amount, currency.decimals);
+		} catch (error: unknown) {
 			throw new InvalidJournalEntryAmountError();
 		}
 		return new JournalEntry(
@@ -78,7 +88,7 @@ export class JournalEntry {
 			journalEntryDto.externalId,
 			journalEntryDto.externalCategory,
 			journalEntryDto.currencyCode,
-			journalEntryDto.currencyDecimals,
+			currency.decimals,
 			amount,
 			journalEntryDto.creditedAccountId,
 			journalEntryDto.debitedAccountId,
@@ -86,7 +96,23 @@ export class JournalEntry {
 		);
 	}
 
-	static getDto(journalEntry: JournalEntry): IJournalEntryDto {
+	/*// TODO: change name.
+	static getFromInfrastructureDto(infrastructureJournalEntryDto: IInfrastructureJournalEntryDto): JournalEntry {
+		return new JournalEntry(
+			infrastructureJournalEntryDto.id,
+			infrastructureJournalEntryDto.externalId,
+			infrastructureJournalEntryDto.externalCategory,
+			infrastructureJournalEntryDto.currencyCode,
+			infrastructureJournalEntryDto.currencyDecimals,
+			BigInt(infrastructureJournalEntryDto.amount),
+			infrastructureJournalEntryDto.creditedAccountId,
+			infrastructureJournalEntryDto.debitedAccountId,
+			infrastructureJournalEntryDto.timestamp
+		);
+	}*/
+
+	static getInfrastructureDto(journalEntry: JournalEntry): IInfrastructureJournalEntryDto {
+		// const amount: string = bigintToString(journalEntry.amount, journalEntry.currencyDecimals);
 		return {
 			id: journalEntry.id,
 			externalId: journalEntry.externalId,
@@ -99,4 +125,18 @@ export class JournalEntry {
 			timestamp: journalEntry.timestamp
 		};
 	}
+
+	/*static getDto(journalEntry: JournalEntry): IJournalEntryDto {
+		const amount: string = bigintToString(journalEntry.amount, journalEntry.currencyDecimals);
+		return {
+			id: journalEntry.id,
+			externalId: journalEntry.externalId,
+			externalCategory: journalEntry.externalCategory,
+			currencyCode: journalEntry.currencyCode,
+			amount: amount,
+			creditedAccountId: journalEntry.creditedAccountId,
+			debitedAccountId: journalEntry.debitedAccountId,
+			timestamp: journalEntry.timestamp
+		};
+	}*/
 }

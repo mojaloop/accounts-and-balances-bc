@@ -24,7 +24,8 @@
     "test:unit": "npm -ws -p run test:unit",
     "test:integration": "jest test/integration/",
     "test:integration-http": "jest test/integration/http.test.ts",
-    "test:integration-grpc": "jest test/integration/grpc.test.ts"
+    "test:integration-grpc": "jest test/integration/grpc.test.ts",
+    "publish_npm": "npm -ws -p run publish_npm"
   },
   "devDependencies": {
     "@types/jest": "~29.1.1",

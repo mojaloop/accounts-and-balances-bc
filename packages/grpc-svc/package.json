@@ -31,8 +31,8 @@
   },
   "devDependencies": {
     "@grpc/proto-loader": "~0.7.3",
-    "@mojaloop/accounts-and-balances-bc-shared-mocks-lib": "~0.0.1",
-    "@types/node": "~18.7.23"
+    "@mojaloop/accounts-and-balances-bc-shared-mocks-lib": "~0.0.1"
+
   },
   "dependencies": {
     "@grpc/grpc-js": "~1.7.1",

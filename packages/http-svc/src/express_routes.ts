@@ -46,9 +46,8 @@ import {
 	InvalidExternalIdError,
 	InvalidExternalCategoryError,
 	CurrencyCodesDifferError,
-	CurrencyDecimalsDifferError,
 	InvalidCurrencyCodeError,
-	InvalidCurrencyDecimalsError
+	InvalidTimestampError
 } from "@mojaloop/accounts-and-balances-bc-domain-lib";
 import {TokenHelper, CallSecurityContext} from "@mojaloop/security-bc-client-lib";
 import {IAccountDto, IJournalEntryDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
@@ -213,17 +212,17 @@ export class ExpressRoutes {
 					400,
 					"invalid debit balance"
 				);
+			} else if (e instanceof InvalidTimestampError) {
+				this.sendErrorResponse(
+					res,
+					400,
+					"invalid timestamp"
+				);
 			} else if (e instanceof InvalidCurrencyCodeError) {
 				this.sendErrorResponse(
 					res,
 					400,
 					"invalid currency code"
-				);
-			} else if (e instanceof InvalidCurrencyDecimalsError) {
-				this.sendErrorResponse(
-					res,
-					400,
-					"invalid currency decimals"
 				);
 			} else if (e instanceof AccountAlreadyExistsError) {
 				this.sendErrorResponse(
@@ -299,23 +298,11 @@ export class ExpressRoutes {
 					400,
 					"currency codes differ"
 				);
-			} else if (e instanceof CurrencyDecimalsDifferError) {
-				this.sendErrorResponse(
-					res,
-					400,
-					"currency decimals differ"
-				);
 			} else if (e instanceof InvalidCurrencyCodeError) {
 				this.sendErrorResponse(
 					res,
 					400,
 					"invalid currency code"
-				);
-			} else if (e instanceof InvalidCurrencyDecimalsError) {
-				this.sendErrorResponse(
-					res,
-					400,
-					"invalid currency decimals"
 				);
 			} else if (e instanceof InsufficientBalanceError) {
 				this.sendErrorResponse(

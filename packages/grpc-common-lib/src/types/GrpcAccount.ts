@@ -10,7 +10,6 @@ export interface GrpcAccount {
   'state'?: (_GrpcAccountState | keyof typeof _GrpcAccountState);
   'type'?: (_GrpcAccountType | keyof typeof _GrpcAccountType);
   'currencyCode'?: (string);
-  'currencyDecimals'?: (number);
   'creditBalance'?: (string);
   'debitBalance'?: (string);
   'timestampLastJournalEntry'?: (number | string | Long);
@@ -22,7 +21,6 @@ export interface GrpcAccount__Output {
   'state': (keyof typeof _GrpcAccountState);
   'type': (keyof typeof _GrpcAccountType);
   'currencyCode': (string);
-  'currencyDecimals': (number);
   'creditBalance': (string);
   'debitBalance': (string);
   'timestampLastJournalEntry': (number);

@@ -32,6 +32,7 @@
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {MongoClient, Collection} from "mongodb";
 import {
+	IInfrastructureJournalEntryDto,
 	IJournalEntriesRepo,
 	JournalEntryAlreadyExistsError,
 	UnableToGetJournalEntriesError,
@@ -39,7 +40,6 @@ import {
 	UnableToInitRepoError,
 	UnableToStoreJournalEntryError
 } from "@mojaloop/accounts-and-balances-bc-domain-lib";
-import {IJournalEntryDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 export class MongoJournalEntriesRepo implements IJournalEntriesRepo {
 	// Properties received through the constructor.
@@ -89,7 +89,7 @@ export class MongoJournalEntriesRepo implements IJournalEntriesRepo {
 		}
 	}
 
-	async storeNewJournalEntry(journalEntry: IJournalEntryDto): Promise<void> {
+	async storeNewJournalEntry(journalEntry: IInfrastructureJournalEntryDto): Promise<void> {
 		let journalEntryExists: boolean;
 		try {
 			journalEntryExists = await this.journalEntryExistsById(journalEntry.id);
@@ -107,7 +107,7 @@ export class MongoJournalEntriesRepo implements IJournalEntriesRepo {
 		}
 	}
 
-	async getJournalEntriesByAccountId(accountId: string): Promise<IJournalEntryDto[]> {
+	async getJournalEntriesByAccountId(accountId: string): Promise<IInfrastructureJournalEntryDto[]> {
 		try {
 			// find() doesn't throw if no items are found.
 			const journalEntries: any = // TODO: type.
@@ -116,7 +116,7 @@ export class MongoJournalEntriesRepo implements IJournalEntriesRepo {
 					{$or: [{creditedAccountId: accountId}, {debitedAccountId: accountId}]},
 					{projection: {_id: 0}}) // Don't return the _id field.
 				.toArray();
-			return journalEntries as unknown as IJournalEntryDto[]; // TODO: create schema.
+			return journalEntries as unknown as IInfrastructureJournalEntryDto[]; // TODO: create schema.
 		} catch (e: unknown) {
 			throw new UnableToGetJournalEntriesError((e as any)?.message);
 		}

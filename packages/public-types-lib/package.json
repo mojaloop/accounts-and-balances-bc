@@ -24,7 +24,8 @@
     "audit:fix": "npm audit fix",
     "lint": "eslint src/",
     "build": "tsc",
-    "test:unit": "echo \"public-types-lib doesn't have unit tests\""
+    "test:unit": "echo \"public-types-lib doesn't have unit tests\"",
+    "publish_npm": "npm version patch && npm publish --tag latest --access public"
   },
   "devDependencies": {
   },

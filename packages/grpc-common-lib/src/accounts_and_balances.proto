@@ -26,10 +26,9 @@ message GrpcAccount {
   GrpcAccountState state = 3;
   GrpcAccountType type = 4;
 	string currencyCode = 5;
-  uint32 currencyDecimals = 6;
-	string creditBalance = 7;
-  string debitBalance = 8;
-  uint64 timestampLastJournalEntry = 9;
+	string creditBalance = 6;
+  string debitBalance = 7;
+  uint64 timestampLastJournalEntry = 8;
 }
 
 enum GrpcAccountState {
@@ -52,11 +51,10 @@ message GrpcJournalEntry {
   string externalId = 2;
 	string externalCategory = 3;
 	string currencyCode = 4;
-	uint32 currencyDecimals = 5;
-	string amount = 6;
-	string creditedAccountId = 7;
-	string debitedAccountId = 8;
-  uint64 timestamp = 9;
+	string amount = 5;
+	string creditedAccountId = 6;
+	string debitedAccountId = 7;
+  uint64 timestamp = 8;
 }
 
 message GrpcJournalEntryArray {

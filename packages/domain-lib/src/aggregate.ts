@@ -35,27 +35,35 @@ import {
 	AccountAlreadyExistsError,
 	CreditedAndDebitedAccountsAreTheSameError,
 	CurrencyCodesDifferError,
-	CurrencyDecimalsDifferError,
 	InsufficientBalanceError,
 	InvalidCreditBalanceError,
-	InvalidCurrencyCodeError,
-	InvalidCurrencyDecimalsError, InvalidDebitBalanceError, InvalidExternalCategoryError,
-	InvalidExternalIdError, InvalidJournalEntryAmountError,
+	InvalidDebitBalanceError, InvalidExternalCategoryError,
+	InvalidExternalIdError, InvalidJournalEntryAmountError, InvalidTimestampError,
 	JournalEntryAlreadyExistsError,
 	NoSuchCreditedAccountError,
 	NoSuchDebitedAccountError,
 	UnauthorizedError
-} from "./errors";
-import {IAccountsRepo, IJournalEntriesRepo} from "./infrastructure_interfaces";
+} from "./types/errors";
+import {
+	IAccountsRepo,
+	IInfrastructureAccountDto,
+	IInfrastructureJournalEntryDto,
+	IJournalEntriesRepo
+} from "./types/infrastructure";
 import {Account} from "./types/account";
 import {JournalEntry} from "./types/journal_entry";
 import {IAccountDto, IJournalEntryDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {IAuditClient, AuditSecurityContext} from "@mojaloop/auditing-bc-public-types-lib";
 import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
-import {Privileges} from "./privileges";
+import {Privileges} from "./types/privileges";
 import {join} from "path";
 import {readFileSync} from "fs";
+import {ICurrency} from "./types/currency";
+import {
+	infrastructureAccountDtoToPublicTypesAccountDto,
+	infrastructureJournalEntryDtoToPublicTypesJournalEntryDto
+} from "./utils";
 
 enum AuditingActions {
 	ACCOUNT_CREATED = "ACCOUNT_CREATED"
@@ -68,7 +76,7 @@ export class Aggregate {
 	private readonly auditingClient: IAuditClient;
 	private readonly accountsRepo: IAccountsRepo;
 	private readonly journalEntriesRepo: IJournalEntriesRepo;
-	private readonly currencies: {code: string, decimals: number}[]; // TODO: type.
+	private readonly currencies: ICurrency[];
 	// Other properties.
 	private static readonly CURRENCIES_FILE_NAME: string = "currencies.json";
 
@@ -115,7 +123,7 @@ export class Aggregate {
 	// TODO: why ignore the case in which randomUUID() generates an already existing id?
 	async createAccount(accountDto: IAccountDto, securityContext: CallSecurityContext): Promise<string> {
 		this.enforcePrivilege(securityContext, Privileges.CREATE_ACCOUNT);
-		const account: Account = Account.getFromDto(accountDto);
+		const account: Account = Account.getFromDto(accountDto, this.currencies);
 		if (account.externalId === "") {
 			throw new InvalidExternalIdError();
 		}
@@ -125,15 +133,17 @@ export class Aggregate {
 		if (account.debitBalance < 0) {
 			throw new InvalidDebitBalanceError();
 		}
-		this.validateCurrency(account.currencyCode, account.currencyDecimals);
+		if (account.timestampLastJournalEntry !== 0) {
+			throw new InvalidTimestampError();
+		}
 		// Generate a random UUId, if needed.
 		if (account.id === "") {
-			// The DTO is also updated because it's what's going to be stored.
-			account.id = accountDto.id = randomUUID();
+			account.id = randomUUID();
 		}
 		// Store the account.
 		try {
-			await this.accountsRepo.storeNewAccount(accountDto);
+			// accountDto can't be stored because the balances might not be formatted.
+			await this.accountsRepo.storeNewAccount(Account.getInfrastructureDto(account));
 		} catch (e: unknown) {
 			if (!(e instanceof AccountAlreadyExistsError)) {
 				this.logger.error(e);
@@ -163,7 +173,7 @@ export class Aggregate {
 	}
 
 	private async createJournalEntry(journalEntryDto: IJournalEntryDto): Promise<string> {
-		const journalEntry: JournalEntry = JournalEntry.getFromDto(journalEntryDto);
+		const journalEntry: JournalEntry = JournalEntry.getFromDto(journalEntryDto, this.currencies);
 		if (journalEntry.externalId === "") {
 			throw new InvalidExternalIdError();
 		}
@@ -181,30 +191,23 @@ export class Aggregate {
 		// Instead of using the repo's accountExistsById and journalEntryExistsById functions, the accounts are fetched
 		// and compared to null; this is done because some of the accounts' properties need to be consulted, so it
 		// doesn't make sense to call those functions when the accounts need to be fetched anyway.
-		let creditedAccountDto: IAccountDto | null;
-		let debitedAccountDto: IAccountDto | null;
+		let creditedInfraAccountDto: IInfrastructureAccountDto | null;
+		let debitedInfraAccountDto: IInfrastructureAccountDto | null;
 		try {
-			creditedAccountDto = await this.accountsRepo.getAccountById(journalEntry.creditedAccountId);
-			debitedAccountDto = await this.accountsRepo.getAccountById(journalEntry.debitedAccountId);
+			creditedInfraAccountDto = await this.accountsRepo.getAccountById(journalEntry.creditedAccountId);
+			debitedInfraAccountDto = await this.accountsRepo.getAccountById(journalEntry.debitedAccountId);
 		} catch (e: unknown) {
 			this.logger.error(e);
 			throw e;
 		}
-		if (creditedAccountDto === null) {
+		if (creditedInfraAccountDto === null) {
 			throw new NoSuchCreditedAccountError();
 		}
-		if (debitedAccountDto === null) {
+		if (debitedInfraAccountDto === null) {
 			throw new NoSuchDebitedAccountError();
 		}
-		let creditedAccount: Account;
-		let debitedAccount: Account;
-		try {
-			creditedAccount = Account.getFromDto(creditedAccountDto);
-			debitedAccount = Account.getFromDto(debitedAccountDto);
-		} catch(error: unknown) {
-			this.logger.error(error);
-			throw error;
-		}
+		const creditedAccount: Account = Account.getFromInfrastructureDto(creditedInfraAccountDto);
+		const debitedAccount: Account = Account.getFromInfrastructureDto(debitedInfraAccountDto);
 		// Check if the currency codes of the credited and debited accounts and the journal entry match.
 		if (creditedAccount.currencyCode !== debitedAccount.currencyCode
 			|| creditedAccount.currencyCode !== journalEntry.currencyCode) {
@@ -213,24 +216,21 @@ export class Aggregate {
 		// Check if the currency decimals of the credited and debited accounts and the journal entry match.
 		if (creditedAccount.currencyDecimals !== debitedAccount.currencyDecimals
 			|| creditedAccount.currencyDecimals !== journalEntry.currencyDecimals) {
-			throw new CurrencyDecimalsDifferError();
+			this.logger.error("currency decimals differ"); // TODO: makes sense to create a type for the svcs?
+			throw new Error();
 		}
-		// TODO: check comment.
-		// Check if the currency is valid. At this point, the currency code and decimals of the credited and debited
-		// accounts and the journal entry are the same, so only one of them needs to be verified.
-		this.validateCurrency(journalEntry.currencyCode, journalEntry.currencyDecimals);
 		// Check if the balance is sufficient.
-		if (Account.calculateBalance(creditedAccount) - journalEntry.amount < 0) { // TODO: verify.
+		if (Account.calculateBalance(debitedAccount) - journalEntry.amount < 0) { // TODO: verify!!!!!!!!!!!!!!!!!!!!!!!!!!!
 			throw new InsufficientBalanceError();
 		}
 		// Generate a random UUId, if needed.
 		if (journalEntry.id === "") {
-			// The DTO is also updated because it's what's going to be stored.
-			journalEntry.id = journalEntryDto.id = randomUUID();
+			journalEntry.id = randomUUID();
 		}
 		// Store the journal entry.
 		try {
-			await this.journalEntriesRepo.storeNewJournalEntry(journalEntryDto);
+			// journalEntryDto can't be stored because the amount might not be formatted.
+			await this.journalEntriesRepo.storeNewJournalEntry(JournalEntry.getInfrastructureDto(journalEntry));
 		} catch (e: unknown) {
 			if (!(e instanceof JournalEntryAlreadyExistsError)) {
 				this.logger.error(e);
@@ -266,8 +266,11 @@ export class Aggregate {
 	async getAccountById(accountId: string, securityContext: CallSecurityContext): Promise<IAccountDto | null> {
 		this.enforcePrivilege(securityContext, Privileges.VIEW_ACCOUNT);
 		try {
-			const accountDto: IAccountDto | null = await this.accountsRepo.getAccountById(accountId);
-			return accountDto;
+			const accountDto: IInfrastructureAccountDto | null = await this.accountsRepo.getAccountById(accountId);
+			if (accountDto === null) {
+				return null;
+			}
+			return infrastructureAccountDtoToPublicTypesAccountDto(accountDto);
 		} catch (e: unknown) {
 			this.logger.error(e);
 			throw e;
@@ -277,8 +280,11 @@ export class Aggregate {
 	async getAccountsByExternalId(externalId: string, securityContext: CallSecurityContext): Promise<IAccountDto[]> {
 		this.enforcePrivilege(securityContext, Privileges.VIEW_ACCOUNT);
 		try {
-			const accountDtos: IAccountDto[] = await this.accountsRepo.getAccountsByExternalId(externalId);
-			return accountDtos;
+			const accountDtos: IInfrastructureAccountDto[] =
+				await this.accountsRepo.getAccountsByExternalId(externalId);
+			return accountDtos.map(accountDto => {
+				return infrastructureAccountDtoToPublicTypesAccountDto(accountDto);
+			});
 		} catch (e: unknown) {
 			this.logger.error(e);
 			throw e;
@@ -291,25 +297,14 @@ export class Aggregate {
 	): Promise<IJournalEntryDto[]> {
 		this.enforcePrivilege(securityContext, Privileges.VIEW_JOURNAL_ENTRY);
 		try {
-			const journalEntryDtos: IJournalEntryDto[] =
+			const journalEntryDtos: IInfrastructureJournalEntryDto[] =
 				await this.journalEntriesRepo.getJournalEntriesByAccountId(accountId);
-			return journalEntryDtos;
+			return journalEntryDtos.map(journalEntryDto => {
+				return infrastructureJournalEntryDtoToPublicTypesJournalEntryDto(journalEntryDto);
+			});
 		} catch (e: unknown) {
 			this.logger.error(e);
 			throw e;
-		}
-	}
-
-	// TODO: here or on the types (Account and JournalEntry)?
-	private validateCurrency(currencyCode: string, currencyDecimals: number): void {
-		const currency = this.currencies.find(currency => { // TODO: type.
-			return currency.code === currencyCode;
-		});
-		if (currency === undefined) {
-			throw new InvalidCurrencyCodeError();
-		}
-		if (currency.decimals !== currencyDecimals) {
-			throw new InvalidCurrencyDecimalsError();
 		}
 	}
 }

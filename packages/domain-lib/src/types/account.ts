@@ -29,8 +29,11 @@
 
 "use strict";
 
-import {InvalidCreditBalanceError, InvalidDebitBalanceError} from "../errors";
+import {InvalidCreditBalanceError, InvalidCurrencyCodeError, InvalidDebitBalanceError} from "./errors";
 import {AccountState, AccountType, IAccountDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import {ICurrency} from "./currency";
+import {stringToBigint} from "../utils";
+import {IInfrastructureAccountDto} from "./infrastructure";
 
 // TODO: implements/extends anything?
 export class Account {
@@ -66,24 +69,24 @@ export class Account {
 		this.timestampLastJournalEntry = timestampLastJournalEntry;
 	}
 
-	static getFromDto(accountDto: IAccountDto): Account {
+	// TODO: change name.
+	static getFromDto(accountDto: IAccountDto, currencies: ICurrency[]): Account {
+		const currency: ICurrency | undefined = currencies.find(currency => {
+			return currency.code === accountDto.currencyCode;
+		});
+		if (currency === undefined) {
+			throw new InvalidCurrencyCodeError();
+		}
 		let creditBalance: bigint;
 		let debitBalance: bigint;
-
-		/* TODO
-		 1. SKIP FOR NOW, bad regex - validate input accountDto.creditBalance and accountDto.debitBalance strings with regex ^[-+]?(([0-9]+[.]?[0-9]*)|([.]?[0-9]+))$
-		 2. find the currency decimal points for the input currency
-		 3. convert accountDto.creditBalance and accountDto.debitBalance to ints according to the decimal points of the input currency
-		 */
-
 		try {
-			creditBalance = BigInt(accountDto.creditBalance);
-		} catch(error: unknown) {
+			creditBalance = stringToBigint(accountDto.creditBalance, currency.decimals);
+		} catch (error: unknown) {
 			throw new InvalidCreditBalanceError();
 		}
 		try {
-			debitBalance = BigInt(accountDto.debitBalance);
-		} catch(error: unknown) {
+			debitBalance = stringToBigint(accountDto.debitBalance, currency.decimals);
+		} catch (error: unknown) {
 			throw new InvalidDebitBalanceError();
 		}
 		return new Account(
@@ -92,21 +95,31 @@ export class Account {
 			accountDto.state,
 			accountDto.type,
 			accountDto.currencyCode,
-			accountDto.currencyDecimals,
+			currency.decimals,
 			creditBalance,
 			debitBalance,
 			accountDto.timestampLastJournalEntry
 		);
 	}
 
-	static getDto(account: Account): IAccountDto {
+	// TODO: change name.
+	static getFromInfrastructureDto(infrastructureAccountDto: IInfrastructureAccountDto): Account {
+		return new Account(
+			infrastructureAccountDto.id,
+			infrastructureAccountDto.externalId,
+			infrastructureAccountDto.state,
+			infrastructureAccountDto.type,
+			infrastructureAccountDto.currencyCode,
+			infrastructureAccountDto.currencyDecimals,
+			BigInt(infrastructureAccountDto.creditBalance),
+			BigInt(infrastructureAccountDto.debitBalance),
+			infrastructureAccountDto.timestampLastJournalEntry
+		);
+	}
 
-		/* TODO
-		 1. find the currency decimal points for the input currency
-		 2. convert account.creditBalance and account.debitBalance to string according to the decimal points of the currency
-		 3. SKIP FOR NOW, bad regex - maybe at the end validate the resulting strings with the regex validators above
-		 */
-
+	static getInfrastructureDto(account: Account): IInfrastructureAccountDto {
+		/*const creditBalance: string = bigintToString(account.creditBalance, account.currencyDecimals);
+		const debitBalance: string = bigintToString(account.debitBalance, account.currencyDecimals);*/
 		return {
 			id: account.id,
 			externalId: account.externalId,
@@ -119,6 +132,21 @@ export class Account {
 			timestampLastJournalEntry: account.timestampLastJournalEntry
 		};
 	}
+
+	/*static getDto(account: Account): IAccountDto {
+		const creditBalance: string = bigintToString(account.creditBalance, account.currencyDecimals);
+		const debitBalance: string = bigintToString(account.debitBalance, account.currencyDecimals);
+		return {
+			id: account.id,
+			externalId: account.externalId,
+			state: account.state,
+			type: account.type,
+			currencyCode: account.currencyCode,
+			creditBalance: creditBalance,
+			debitBalance: debitBalance,
+			timestampLastJournalEntry: account.timestampLastJournalEntry
+		};
+	}*/
 
 	static calculateBalance(account: Account): bigint {
 		return account.creditBalance - account.debitBalance;
