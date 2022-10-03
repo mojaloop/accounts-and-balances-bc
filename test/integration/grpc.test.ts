@@ -59,13 +59,15 @@ const LOGGING_LEVEL: LogLevel = LogLevel.INFO;
 const LOGGING_TOPIC: string = "logs";
 
 // Accounts and Balances gRPC client.
-const ACCOUNTS_AND_BALANCES_GRPC_SERVICE_HOST: string = "localhost"; // TODO: change name.
-const ACCOUNTS_AND_BALANCES_GRPC_SERVICE_PORT_NO: number = 5678; // TODO: change name.
+const ACCOUNTS_AND_BALANCES_GRPC_URL: string = "localhost:5678";
 
 /* ********** Constants End ********** */
 
 let logger: KafkaLogger;
 let accountsAndBalancesGrpcClient: AccountsAndBalancesGrpcClient;
+
+
+jest.setTimeout(20000); // 20 secs - change this to suit the test (ms)
 
 describe("accounts and balances - integration tests with gRPC service", () => {
 	beforeAll(async () => {
@@ -83,9 +85,7 @@ describe("accounts and balances - integration tests with gRPC service", () => {
 		await logger.init();
 		// await startGrpcService(logger);
 		accountsAndBalancesGrpcClient = new AccountsAndBalancesGrpcClient(
-			logger,
-			ACCOUNTS_AND_BALANCES_GRPC_SERVICE_HOST,
-			ACCOUNTS_AND_BALANCES_GRPC_SERVICE_PORT_NO
+			logger, ACCOUNTS_AND_BALANCES_GRPC_URL
 		);
 		await accountsAndBalancesGrpcClient.init();
 	});
@@ -115,6 +115,7 @@ describe("accounts and balances - integration tests with gRPC service", () => {
 	test("create non-existent journal entry", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accountDtos: IAccountDto[] = await create2Accounts();
+
 		// Journal entry A.
 		const idJournalEntryA: string = Crypto.randomUUID();
 		const journalEntryDtoA: IJournalEntryDto = {
@@ -123,8 +124,8 @@ describe("accounts and balances - integration tests with gRPC service", () => {
 			externalCategory: "",
 			currencyCode: "EUR",
 			amount: "5",
-			creditedAccountId: accountDtos[0].id,
-			debitedAccountId: accountDtos[1].id,
+			creditedAccountId: accountDtos[0].id!,
+			debitedAccountId: accountDtos[1].id!,
 			timestamp: 0
 		};
 		// Journal entry B.
@@ -135,8 +136,8 @@ describe("accounts and balances - integration tests with gRPC service", () => {
 			externalCategory: "",
 			currencyCode: "EUR",
 			amount: "5",
-			creditedAccountId: accountDtos[1].id,
-			debitedAccountId: accountDtos[0].id,
+			creditedAccountId: accountDtos[1].id!,
+			debitedAccountId: accountDtos[0].id!,
 			timestamp: 0
 		};
 		const idsJournalEntries: string[] = await accountsAndBalancesGrpcClient.createJournalEntries(

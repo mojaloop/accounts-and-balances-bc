@@ -1,6 +1,6 @@
 {
   "name": "@mojaloop/accounts-and-balances-bc-http-client-lib",
-  "version": "0.0.3",
+  "version": "0.0.2",
   "description": "Accounts and Balances BC - HTTP Client Library",
   "license": "Apache-2.0",
   "homepage": "https://github.com/mojaloop/accounts-and-balances-bc/tree/main/packages/http-client-lib",
@@ -26,7 +26,7 @@
     "build": "tsc",
     "test:unit": "jest",
     "test:unit-single": "jest --coverage false -t",
-    "publish_npm": "npm version patch && npm publish --tag latest --access public"
+    "pub": "npm version patch && npm publish --tag latest --access public"
   },
   "devDependencies": {
     "nock": "~13.2.9"

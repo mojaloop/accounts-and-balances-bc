@@ -49,59 +49,67 @@ export function loadProto(): PackageDefinition {
 		{
 			longs: Number,
 			enums: String,
-			defaults: true
+			defaults: false
 		}
 	);
 }
 
 export function grpcAccountToAccountDto(grpcAccount: GrpcAccount__Output): IAccountDto {
-	return {
-		id: grpcAccount.id,
+	const ret:IAccountDto = {
+		id: grpcAccount.id || null,
 		externalId: grpcAccount.externalId || null,
 		state: grpcAccount.state as AccountState,
 		type: grpcAccount.type as AccountType,
-		currencyCode: grpcAccount.currencyCode,
-		creditBalance: grpcAccount.creditBalance,
-		debitBalance: grpcAccount.debitBalance,
-		timestampLastJournalEntry: grpcAccount.timestampLastJournalEntry
+		currencyCode: grpcAccount.currencyCode!,
+		creditBalance: grpcAccount.creditBalance!,
+		debitBalance: grpcAccount.debitBalance!,
+		timestampLastJournalEntry: null
 	};
+
+	return ret;
 }
 
 export function accountDtoToGrpcAccount(accountDto: IAccountDto): GrpcAccount__Output {
-	return {
-		id: accountDto.id,
-		externalId: accountDto.externalId || "",
+	const ret:GrpcAccount__Output = {
+		id: accountDto.id || undefined,
+		externalId: accountDto.externalId || undefined,
 		state: accountDto.state,
 		type: accountDto.type,
 		currencyCode: accountDto.currencyCode,
 		creditBalance: accountDto.creditBalance,
 		debitBalance: accountDto.debitBalance,
-		timestampLastJournalEntry: accountDto.timestampLastJournalEntry
+		timestampLastJournalEntry: accountDto.timestampLastJournalEntry || undefined
 	};
+
+	return ret;
 }
 
 export function grpcJournalEntryToJournalEntryDto(grpcJournalEntry: GrpcJournalEntry__Output): IJournalEntryDto {
-	return {
-		id: grpcJournalEntry.id,
+	const ret:IJournalEntryDto = {
+		id: grpcJournalEntry.id || null,
 		externalId: grpcJournalEntry.externalId || null,
 		externalCategory: grpcJournalEntry.externalCategory || null,
-		currencyCode: grpcJournalEntry.currencyCode,
-		amount: grpcJournalEntry.amount,
-		creditedAccountId: grpcJournalEntry.creditedAccountId,
-		debitedAccountId: grpcJournalEntry.debitedAccountId,
-		timestamp: grpcJournalEntry.timestamp
+		currencyCode: grpcJournalEntry.currencyCode!,
+		amount: grpcJournalEntry.amount!,
+		creditedAccountId: grpcJournalEntry.creditedAccountId!,
+		debitedAccountId: grpcJournalEntry.debitedAccountId!,
+		timestamp: grpcJournalEntry.timestamp || null
 	};
+
+	return ret;
 }
 
 export function journalEntryDtoToGrpcJournalEntry(journalEntryDto: IJournalEntryDto): GrpcJournalEntry__Output {
-	return {
-		id: journalEntryDto.id,
-		externalId: journalEntryDto.externalId || "",
-		externalCategory: journalEntryDto.externalId || "",
+	const ret:GrpcJournalEntry__Output = {
+		id: journalEntryDto.id || undefined,
+		externalId: journalEntryDto.externalId || undefined,
+		externalCategory: journalEntryDto.externalId || undefined,
 		currencyCode: journalEntryDto.currencyCode,
 		amount: journalEntryDto.amount,
 		creditedAccountId: journalEntryDto.creditedAccountId,
 		debitedAccountId: journalEntryDto.debitedAccountId,
-		timestamp: journalEntryDto.timestamp
+		timestamp: journalEntryDto.timestamp || undefined
 	};
+
+	return ret
 }

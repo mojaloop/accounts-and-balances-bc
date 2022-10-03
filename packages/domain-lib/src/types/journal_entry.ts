@@ -33,6 +33,7 @@ import {InvalidCurrencyCodeError, InvalidJournalEntryAmountError} from "./errors
 import {IJournalEntryDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {ICurrency} from "./currency";
 import {bigintToString, stringToBigint} from "../utils";
+import Crypto from "crypto";
 
 // TODO: implements/extends anything?
 export class JournalEntry {
@@ -44,7 +45,7 @@ export class JournalEntry {
 	amount: bigint;
 	creditedAccountId: string;
 	debitedAccountId: string;
-	timestamp: number;
+	timestamp: number | null;
 
 	constructor(
 		id: string,
@@ -55,7 +56,7 @@ export class JournalEntry {
 		amount: bigint,
 		creditedAccountId: string,
 		debitedAccountId: string,
-		timestamp: number
+		timestamp: number | null
 	) {
 		this.id = id;
 		this.externalId = externalId;
@@ -82,8 +83,15 @@ export class JournalEntry {
 		} catch (error: unknown) {
 			throw new InvalidJournalEntryAmountError();
 		}
+
+		// if we get from the DTO a null or zero timestamp, replace with default value (now)
+		let journalEntryTimestamp = journalEntryDto.timestamp;
+		if(!journalEntryDto.timestamp || journalEntryDto.timestamp == 0){
+			journalEntryTimestamp = Date.now();
+		}
+
 		return new JournalEntry(
-			journalEntryDto.id,
+			journalEntryDto.id || Crypto.randomUUID(),
 			journalEntryDto.externalId,
 			journalEntryDto.externalCategory,
 			journalEntryDto.currencyCode,
@@ -91,7 +99,7 @@ export class JournalEntry {
 			amount,
 			journalEntryDto.creditedAccountId,
 			journalEntryDto.debitedAccountId,
-			journalEntryDto.timestamp
+			journalEntryTimestamp
 		);
 	}
 

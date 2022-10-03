@@ -2,6 +2,7 @@
 
 import type * as grpc from '@grpc/grpc-js'
 import type { MethodDefinition } from '@grpc/proto-loader'
+import type { GetAccountByIdResponse as _GetAccountByIdResponse, GetAccountByIdResponse__Output as _GetAccountByIdResponse__Output } from './GetAccountByIdResponse';
 import type { GrpcAccount as _GrpcAccount, GrpcAccount__Output as _GrpcAccount__Output } from './GrpcAccount';
 import type { GrpcAccountArray as _GrpcAccountArray, GrpcAccountArray__Output as _GrpcAccountArray__Output } from './GrpcAccountArray';
 import type { GrpcId as _GrpcId, GrpcId__Output as _GrpcId__Output } from './GrpcId';
@@ -27,14 +28,14 @@ export interface AccountsAndBalancesGrpcServiceClient extends grpc.Client {
   createJournalEntries(argument: _GrpcJournalEntryArray, options: grpc.CallOptions, callback: grpc.requestCallback<_GrpcIdArray__Output>): grpc.ClientUnaryCall;
   createJournalEntries(argument: _GrpcJournalEntryArray, callback: grpc.requestCallback<_GrpcIdArray__Output>): grpc.ClientUnaryCall;
   
-  GetAccountById(argument: _GrpcId, metadata: grpc.Metadata, options: grpc.CallOptions, callback: grpc.requestCallback<_GrpcAccount__Output>): grpc.ClientUnaryCall;
-  GetAccountById(argument: _GrpcId, metadata: grpc.Metadata, callback: grpc.requestCallback<_GrpcAccount__Output>): grpc.ClientUnaryCall;
-  GetAccountById(argument: _GrpcId, options: grpc.CallOptions, callback: grpc.requestCallback<_GrpcAccount__Output>): grpc.ClientUnaryCall;
-  GetAccountById(argument: _GrpcId, callback: grpc.requestCallback<_GrpcAccount__Output>): grpc.ClientUnaryCall;
-  getAccountById(argument: _GrpcId, metadata: grpc.Metadata, options: grpc.CallOptions, callback: grpc.requestCallback<_GrpcAccount__Output>): grpc.ClientUnaryCall;
-  getAccountById(argument: _GrpcId, metadata: grpc.Metadata, callback: grpc.requestCallback<_GrpcAccount__Output>): grpc.ClientUnaryCall;
-  getAccountById(argument: _GrpcId, options: grpc.CallOptions, callback: grpc.requestCallback<_GrpcAccount__Output>): grpc.ClientUnaryCall;
-  getAccountById(argument: _GrpcId, callback: grpc.requestCallback<_GrpcAccount__Output>): grpc.ClientUnaryCall;
+  GetAccountById(argument: _GrpcId, metadata: grpc.Metadata, options: grpc.CallOptions, callback: grpc.requestCallback<_GetAccountByIdResponse__Output>): grpc.ClientUnaryCall;
+  GetAccountById(argument: _GrpcId, metadata: grpc.Metadata, callback: grpc.requestCallback<_GetAccountByIdResponse__Output>): grpc.ClientUnaryCall;
+  GetAccountById(argument: _GrpcId, options: grpc.CallOptions, callback: grpc.requestCallback<_GetAccountByIdResponse__Output>): grpc.ClientUnaryCall;
+  GetAccountById(argument: _GrpcId, callback: grpc.requestCallback<_GetAccountByIdResponse__Output>): grpc.ClientUnaryCall;
+  getAccountById(argument: _GrpcId, metadata: grpc.Metadata, options: grpc.CallOptions, callback: grpc.requestCallback<_GetAccountByIdResponse__Output>): grpc.ClientUnaryCall;
+  getAccountById(argument: _GrpcId, metadata: grpc.Metadata, callback: grpc.requestCallback<_GetAccountByIdResponse__Output>): grpc.ClientUnaryCall;
+  getAccountById(argument: _GrpcId, options: grpc.CallOptions, callback: grpc.requestCallback<_GetAccountByIdResponse__Output>): grpc.ClientUnaryCall;
+  getAccountById(argument: _GrpcId, callback: grpc.requestCallback<_GetAccountByIdResponse__Output>): grpc.ClientUnaryCall;
   
   GetAccountsByExternalId(argument: _GrpcId, metadata: grpc.Metadata, options: grpc.CallOptions, callback: grpc.requestCallback<_GrpcAccountArray__Output>): grpc.ClientUnaryCall;
   GetAccountsByExternalId(argument: _GrpcId, metadata: grpc.Metadata, callback: grpc.requestCallback<_GrpcAccountArray__Output>): grpc.ClientUnaryCall;
@@ -61,7 +62,7 @@ export interface AccountsAndBalancesGrpcServiceHandlers extends grpc.UntypedServ
   
   CreateJournalEntries: grpc.handleUnaryCall<_GrpcJournalEntryArray__Output, _GrpcIdArray>;
   
-  GetAccountById: grpc.handleUnaryCall<_GrpcId__Output, _GrpcAccount>;
+  GetAccountById: grpc.handleUnaryCall<_GrpcId__Output, _GetAccountByIdResponse>;
   
   GetAccountsByExternalId: grpc.handleUnaryCall<_GrpcId__Output, _GrpcAccountArray>;
   
@@ -72,7 +73,7 @@ export interface AccountsAndBalancesGrpcServiceHandlers extends grpc.UntypedServ
 export interface AccountsAndBalancesGrpcServiceDefinition extends grpc.ServiceDefinition {
   CreateAccount: MethodDefinition<_GrpcAccount, _GrpcId, _GrpcAccount__Output, _GrpcId__Output>
   CreateJournalEntries: MethodDefinition<_GrpcJournalEntryArray, _GrpcIdArray, _GrpcJournalEntryArray__Output, _GrpcIdArray__Output>
-  GetAccountById: MethodDefinition<_GrpcId, _GrpcAccount, _GrpcId__Output, _GrpcAccount__Output>
+  GetAccountById: MethodDefinition<_GrpcId, _GetAccountByIdResponse, _GrpcId__Output, _GetAccountByIdResponse__Output>
   GetAccountsByExternalId: MethodDefinition<_GrpcId, _GrpcAccountArray, _GrpcId__Output, _GrpcAccountArray__Output>
   GetJournalEntriesByAccountId: MethodDefinition<_GrpcId, _GrpcJournalEntryArray, _GrpcId__Output, _GrpcJournalEntryArray__Output>
 }

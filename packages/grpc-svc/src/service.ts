@@ -88,11 +88,8 @@ const AUDITING_CERT_FILE_PATH: string =
 	process.env.ACCOUNTS_AND_BALANCES_AUDITING_CERT_FILE_PATH ?? "./auditing_cert"; // TODO: file name.
 const AUDITING_TOPIC: string = process.env.ACCOUNTS_AND_BALANCES_AUDITING_TOPIC ?? "audits";
 
-// Data base.
-const DB_HOST: string = process.env.ACCOUNTS_AND_BALANCES_DB_HOST ?? "localhost";
-const DB_PORT_NO: number =
-	parseInt(process.env.ACCOUNTS_AND_BALANCES_DB_PORT_NO ?? "") || 27017;
-const DB_URL: string = `mongodb://${DB_HOST}:${DB_PORT_NO}`;
+// Database.
+const MONGO_URL: string = process.env.MONGO_URL ?? "mongodb://localhost:27017";
 const DB_NAME: string = "accounts-and-balances";
 const ACCOUNTS_COLLECTION_NAME: string = "accounts";
 const JOURNAL_ENTRIES_COLLECTION_NAME: string = "journal-entries";
@@ -212,7 +209,7 @@ export async function startGrpcService(
 	} else {
 		accountsRepo = new MongoAccountsRepo(
 			logger,
-			DB_URL,
+			MONGO_URL,
 			DB_NAME,
 			ACCOUNTS_COLLECTION_NAME
 		);
@@ -229,7 +226,7 @@ export async function startGrpcService(
 	} else {
 		journalEntriesRepo = new MongoJournalEntriesRepo(
 			logger,
-			DB_URL,
+			MONGO_URL,
 			DB_NAME,
 			JOURNAL_ENTRIES_COLLECTION_NAME
 		);

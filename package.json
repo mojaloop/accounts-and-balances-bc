@@ -20,12 +20,15 @@
     "audit:check": "npm -ws -p run audit:check",
     "audit:fix": "npm -ws -p run audit:fix",
     "lint": "npm -ws -p run lint",
-    "build": "npm -ws -p run build",
+    "build": "npm -ws run build",
     "test:unit": "npm -ws -p run test:unit",
     "test:integration": "jest test/integration/",
     "test:integration-http": "jest test/integration/http.test.ts",
     "test:integration-grpc": "jest test/integration/grpc.test.ts",
-    "publish_npm": "npm -ws -p run publish_npm"
+    "publish:grpc-client-lib": "npm -w @mojaloop/accounts-and-balances-bc-grpc-client-lib run pub",
+    "publish:http-client-lib": "npm -w @mojaloop/accounts-and-balances-bc-http-client-lib run pub",
+    "publish:grpc-common-lib": "npm -w @mojaloop/accounts-and-balances-bc-grpc-common-lib run pub",
+    "publish:public-types-lib": "npm -w @mojaloop/accounts-and-balances-bc-public-types-lib run pub"
   },
   "devDependencies": {
     "@types/jest": "~29.1.1",
@@ -40,9 +43,9 @@
   },
   "workspaces": [
     "packages/public-types-lib",
+    "packages/grpc-common-lib",
     "packages/domain-lib",
     "packages/infrastructure-lib",
-    "packages/grpc-common-lib",
     "packages/shared-mocks-lib",
     "packages/*"
   ]

@@ -14,12 +14,12 @@ export interface GrpcJournalEntry {
 }
 
 export interface GrpcJournalEntry__Output {
-  'id': (string);
-  'externalId': (string);
-  'externalCategory': (string);
-  'currencyCode': (string);
-  'amount': (string);
-  'creditedAccountId': (string);
-  'debitedAccountId': (string);
-  'timestamp': (number);
+  'id'?: (string);
+  'externalId'?: (string);
+  'externalCategory'?: (string);
+  'currencyCode'?: (string);
+  'amount'?: (string);
+  'creditedAccountId'?: (string);
+  'debitedAccountId'?: (string);
+  'timestamp'?: (number);
 }

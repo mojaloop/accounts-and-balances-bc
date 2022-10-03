@@ -30,14 +30,14 @@
 "use strict";
 
 export interface IAccountDto {
-	id: string;
+	id: string | null;
 	externalId: string | null;
 	state: AccountState;
 	type: AccountType;
 	currencyCode: string;
 	creditBalance: string;
 	debitBalance: string;
-	timestampLastJournalEntry: number;
+	timestampLastJournalEntry: number | null;
 }
 
 export enum AccountState {
@@ -52,12 +52,12 @@ export enum AccountType {
 }
 
 export interface IJournalEntryDto {
-	id: string;
+	id: string | null;
 	externalId: string | null;
 	externalCategory: string | null;
 	currencyCode: string;
 	amount: string;
 	creditedAccountId: string;
 	debitedAccountId: string;
-	timestamp: number;
+	timestamp: number | null;
 }

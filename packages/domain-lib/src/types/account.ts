@@ -33,6 +33,7 @@ import {InvalidCreditBalanceError, InvalidCurrencyCodeError, InvalidDebitBalance
 import {AccountState, AccountType, IAccountDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {ICurrency} from "./currency";
 import {bigintToString, stringToBigint} from "../utils";
+import * as Crypto from "crypto";
 
 // TODO: implements/extends anything?
 export class Account {
@@ -44,7 +45,7 @@ export class Account {
 	currencyDecimals: number;
 	creditBalance: bigint;
 	debitBalance: bigint;
-	timestampLastJournalEntry: number;
+	timestampLastJournalEntry: number | null = null;
 
 	constructor(
 		id: string,
@@ -55,7 +56,7 @@ export class Account {
 		currencyDecimals: number,
 		creditBalance: bigint,
 		debitBalance: bigint,
-		timestampLastJournalEntry: number
+		timestampLastJournalEntry: number | null
 	) {
 		this.id = id;
 		this.externalId = externalId;
@@ -87,8 +88,9 @@ export class Account {
 		} catch (error: unknown) {
 			throw new InvalidDebitBalanceError();
 		}
+
 		return new Account(
-			accountDto.id,
+			accountDto.id || Crypto.randomUUID(),
 			accountDto.externalId,
 			accountDto.state,
 			accountDto.type,

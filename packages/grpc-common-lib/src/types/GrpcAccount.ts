@@ -16,12 +16,12 @@ export interface GrpcAccount {
 }
 
 export interface GrpcAccount__Output {
-  'id': (string);
-  'externalId': (string);
-  'state': (keyof typeof _GrpcAccountState);
-  'type': (keyof typeof _GrpcAccountType);
-  'currencyCode': (string);
-  'creditBalance': (string);
-  'debitBalance': (string);
-  'timestampLastJournalEntry': (number);
+  'id'?: (string);
+  'externalId'?: (string);
+  'state'?: (keyof typeof _GrpcAccountState);
+  'type'?: (keyof typeof _GrpcAccountType);
+  'currencyCode'?: (string);
+  'creditBalance'?: (string);
+  'debitBalance'?: (string);
+  'timestampLastJournalEntry'?: (number);
 }

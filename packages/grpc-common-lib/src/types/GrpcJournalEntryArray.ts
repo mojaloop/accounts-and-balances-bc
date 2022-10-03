@@ -7,5 +7,5 @@ export interface GrpcJournalEntryArray {
 }
 
 export interface GrpcJournalEntryArray__Output {
-  'grpcJournalEntryArray': (_GrpcJournalEntry__Output)[];
+  'grpcJournalEntryArray'?: (_GrpcJournalEntry__Output)[];
 }

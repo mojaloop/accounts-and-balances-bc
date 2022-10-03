@@ -74,6 +74,10 @@ export class MemoryAccountsRepo implements IAccountsRepo {
 	}
 
 	async storeNewAccount(account: IAccountDto): Promise<void> {
+		if(!account.id){
+			throw new UnableToStoreAccountError("Invalid account.id");
+		}
+
 		if (this.unexpectedFailure) {
 			throw new UnableToStoreAccountError();
 		}

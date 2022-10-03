@@ -31,7 +31,7 @@
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {PackageDefinition} from "@grpc/proto-loader";
-import {credentials, GrpcObject, loadPackageDefinition} from "@grpc/grpc-js";
+import {credentials, GrpcObject, InterceptingCall, loadPackageDefinition} from "@grpc/grpc-js";
 import {
 	ProtoGrpcType,
 	AccountsAndBalancesGrpcServiceClient,
@@ -44,26 +44,38 @@ import {
 	GrpcJournalEntry, grpcAccountToAccountDto, grpcJournalEntryToJournalEntryDto
 } from "@mojaloop/accounts-and-balances-bc-grpc-common-lib";
 import {IAccountDto, IJournalEntryDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import {
+	GetAccountByIdResponse,
+	GetAccountByIdResponse__Output
+} from "@mojaloop/accounts-and-balances-bc-grpc-common-lib/dist/types/GetAccountByIdResponse";
 
 export class AccountsAndBalancesGrpcClient {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
+	private readonly serverUrl: string;
 	// Other properties.
 	private readonly grpcClient: AccountsAndBalancesGrpcServiceClient;
 
 	constructor(
 		logger: ILogger,
-		host: string,
-		portNo: number
+		serverUrl:string
 	) {
 		this.logger = logger;
+		this.serverUrl = serverUrl;
+
+		// const interceptor = function(options: any, nextCall: any): any{
+		// 	return new InterceptingCall(nextCall(options));
+		// };
 
 		const packageDefinition: PackageDefinition = loadProto();
 		const grpcObject: GrpcObject = loadPackageDefinition(packageDefinition);
 		this.grpcClient = new (grpcObject as unknown as ProtoGrpcType).AccountsAndBalancesGrpcService(
-			`${host}:${portNo}`,
+			this.serverUrl,
 			credentials.createInsecure()
+				 // ,{interceptors:[ interceptor ]}
 		);
+
+
 	}
 
 	async init(): Promise<void> {
@@ -73,7 +85,7 @@ export class AccountsAndBalancesGrpcClient {
 				(error) => {
 					if (error) {
 						reject(error);
-						return; // TODO: return?
+						return; // TODO: return? pedro: yes, return, we don't want to run the code that follows this if
 					}
 					this.logger.info("gRPC client initialized 🚀");
 					resolve();
@@ -96,10 +108,14 @@ export class AccountsAndBalancesGrpcClient {
 				(error, grpcId) => {
 					if (error) {
 						reject(error);
-						return; // TODO: return?
+						return; // TODO: return? pedro: yes, return, we don't want to run the code that follows this if
 					}
-					const accountId: string = grpcId!.grpcId; // TODO: !.
-					resolve(accountId);
+					if(!grpcId || ! grpcId.grpcId){
+						reject(new Error("createAccount apparently worked but did not return an id"));
+						return;
+					}
+
+					resolve(grpcId.grpcId);
 				}
 			);
 		});
@@ -117,10 +133,15 @@ export class AccountsAndBalancesGrpcClient {
 				(error, grpcIdArray) => {
 					if (error) {
 						reject(error);
-						return; // TODO: return?
+						return; // TODO: return? pedro: yes, return, we don't want to run the code that follows this if
 					}
-					const idsJournalEntries = grpcIdArray!.grpcIdArray.map(grpcId => { // TODO: !.
-						return grpcId.grpcId;
+					if(!grpcIdArray || ! grpcIdArray.grpcIdArray || grpcIdArray.grpcIdArray.length<=0){
+						reject(new Error("createJournalEntries apparently worked but did not return a valid ids array"));
+						return;
+					}
+
+					const idsJournalEntries = grpcIdArray.grpcIdArray.map(grpcId => {
+						return grpcId.grpcId!;
 					});
 					resolve(idsJournalEntries);
 				}
@@ -134,18 +155,19 @@ export class AccountsAndBalancesGrpcClient {
 			const grpcAccountId: GrpcId = {grpcId: accountId};
 			this.grpcClient.getAccountById(
 				grpcAccountId,
-				(error, grpcAccount) => {
+				(error, grpcAccountResp) => {
 					if (error) {
 						reject(error);
-						return; // TODO: return?
+						return;
 					}
-					let accountDto: IAccountDto | null;
-					if (grpcAccount!.id === "") { // TODO: !.
-						accountDto = null;
-					} else {
-						accountDto = grpcAccountToAccountDto(grpcAccount!); // TODO: !.
+
+					if(!grpcAccountResp || !grpcAccountResp.found){
+						resolve(null);
+						return;
 					}
-					resolve(accountDto);
+
+					resolve(null);
+
 				}
 			);
 		});
@@ -160,9 +182,19 @@ export class AccountsAndBalancesGrpcClient {
 				(error, grpcAccountArray) => {
 					if (error) {
 						reject(error);
-						return; // TODO: return?
+						return; // TODO: return? pedro: yes, return, we don't want to run the code that follows this if
 					}
-					const accountDtos: IAccountDto[] = grpcAccountArray!.grpcAccountArray.map(grpcAccount => { // TODO: !.
+					if(!grpcAccountArray){
+						reject(new Error("getAccountsByExternalId apparently worked but did not return a valid grpcAccountArray"));
+						return;
+					}
+
+					if(!grpcAccountArray.grpcAccountArray){
+						resolve([]);
+						return;
+					}
+
+					const accountDtos: IAccountDto[] = grpcAccountArray.grpcAccountArray.map(grpcAccount => {
 						return grpcAccountToAccountDto(grpcAccount);
 					});
 					resolve(accountDtos);
@@ -180,10 +212,21 @@ export class AccountsAndBalancesGrpcClient {
 				(error, grpcJournalEntryArray) => {
 					if (error) {
 						reject(error);
-						return; // TODO: return?
+						return; // TODO: return? pedro: yes, return, we don't want to run the code that follows this if
 					}
+
+					if(!grpcJournalEntryArray){
+						reject(new Error("getJournalEntriesByAccountId apparently worked but did not return a valid grpcJournalEntryArray"));
+						return;
+					}
+
+					if(!grpcJournalEntryArray.grpcJournalEntryArray){
+						resolve([]);
+						return;
+					}
+
 					const journalEntryDtos: IJournalEntryDto[] =
-						grpcJournalEntryArray!.grpcJournalEntryArray.map(grpcJournalEntry => { // TODO: !.
+						grpcJournalEntryArray.grpcJournalEntryArray.map(grpcJournalEntry => {
 							return grpcJournalEntryToJournalEntryDto(grpcJournalEntry);
 					});
 					resolve(journalEntryDtos);

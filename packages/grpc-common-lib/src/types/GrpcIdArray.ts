@@ -7,5 +7,5 @@ export interface GrpcIdArray {
 }
 
 export interface GrpcIdArray__Output {
-  'grpcIdArray': (_GrpcId__Output)[];
+  'grpcIdArray'?: (_GrpcId__Output)[];
 }

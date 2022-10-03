@@ -7,5 +7,5 @@ export interface GrpcAccountArray {
 }
 
 export interface GrpcAccountArray__Output {
-  'grpcAccountArray': (_GrpcAccount__Output)[];
+  'grpcAccountArray'?: (_GrpcAccount__Output)[];
 }

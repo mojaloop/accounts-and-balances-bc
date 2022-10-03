@@ -2,7 +2,7 @@
 
 proto-loader-gen-types \
   --grpcLib @grpc/grpc-js \
-  --defaults true \
+  --defaults false \
   --enums String \
   --longs Number \
   --outDir src/types \

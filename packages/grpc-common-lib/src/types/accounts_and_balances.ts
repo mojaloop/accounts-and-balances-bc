@@ -9,6 +9,7 @@ type SubtypeConstructor<Constructor extends new (...args: any) => any, Subtype> 
 
 export interface ProtoGrpcType {
   AccountsAndBalancesGrpcService: SubtypeConstructor<typeof grpc.Client, _AccountsAndBalancesGrpcServiceClient> & { service: _AccountsAndBalancesGrpcServiceDefinition }
+  GetAccountByIdResponse: MessageTypeDefinition
   GrpcAccount: MessageTypeDefinition
   GrpcAccountArray: MessageTypeDefinition
   GrpcAccountState: EnumTypeDefinition

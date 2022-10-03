@@ -119,6 +119,10 @@ export class Aggregate {
 	async createAccount(accountDto: IAccountDto, securityContext: CallSecurityContext): Promise<string> {
 		this.enforcePrivilege(securityContext, Privileges.CREATE_ACCOUNT);
 		const account: Account = Account.FromDto(accountDto, this.currencies);
+
+		// new accounts cannot have a timestampLastJournalEntry already
+		account.timestampLastJournalEntry = null;
+
 		if (account.externalId === "") {
 			throw new InvalidExternalIdError();
 		}
@@ -128,13 +132,7 @@ export class Aggregate {
 		if (account.debitBalance < 0) {
 			throw new InvalidDebitBalanceError();
 		}
-		if (account.timestampLastJournalEntry !== 0) {
-			throw new InvalidTimestampError();
-		}
-		// Generate a random UUId, if needed.
-		if (account.id === "") {
-			account.id = randomUUID();
-		}
+
 		// Store the account.
 		try {
 			// accountDto can't be stored because the balances might not be formatted.
@@ -169,6 +167,10 @@ export class Aggregate {
 
 	private async createJournalEntry(journalEntryDto: IJournalEntryDto): Promise<string> {
 		const journalEntry: JournalEntry = JournalEntry.FromDto(journalEntryDto, this.currencies);
+
+		// timestamps are controlled by this service, force timestamp to be now
+		journalEntryDto.timestamp = Date.now();
+
 		if (journalEntry.externalId === "") {
 			throw new InvalidExternalIdError();
 		}
@@ -182,6 +184,7 @@ export class Aggregate {
 		if (journalEntry.creditedAccountId === journalEntry.debitedAccountId) {
 			throw new SameCreditedAndDebitedAccountsError(); // TODO: error name.
 		}
+
 		// Check if the credited and debited accounts exist.
 		// Instead of using the repo's accountExistsById and journalEntryExistsById functions, the accounts are fetched
 		// and compared to null; this is done because some of the accounts' properties need to be consulted, so it
@@ -225,10 +228,8 @@ export class Aggregate {
 		if (Account.calculateBalance(debitedAccount) - journalEntry.amount < 0) {
 			throw new InsufficientBalanceError();
 		}
-		// Generate a random UUId, if needed.
-		if (journalEntry.id === "") {
-			journalEntry.id = randomUUID();
-		}
+
+
 		// Store the journal entry.
 		try {
 			// journalEntryDto can't be stored because the amount might not be formatted.
@@ -239,12 +240,13 @@ export class Aggregate {
 			}
 			throw e;
 		}
+
 		// Update the accounts' balances and time stamps.
 		try {
 			await this.accountsRepo.updateAccountCreditBalanceById(
 				creditedAccount.id,
 				bigintToString(creditedAccount.creditBalance + journalEntry.amount, creditedAccount.currencyDecimals),
-				journalEntry.timestamp
+				journalEntry.timestamp! // timestamp is forced at the beggining of this function
 			);
 		} catch (e: unknown) {
 			// TODO: revert store.
@@ -255,7 +257,7 @@ export class Aggregate {
 			await this.accountsRepo.updateAccountDebitBalanceById(
 				debitedAccount.id,
 				bigintToString(debitedAccount.debitBalance + journalEntry.amount, debitedAccount.currencyDecimals),
-				journalEntry.timestamp
+				journalEntry.timestamp!
 			);
 		} catch (e: unknown) {
 			// TODO: revert store.

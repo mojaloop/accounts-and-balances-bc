@@ -1,6 +1,6 @@
 {
   "name": "@mojaloop/accounts-and-balances-bc-grpc-client-lib",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Accounts and Balances BC - gRPC Client Library",
   "license": "Apache-2.0",
   "homepage": "https://github.com/mojaloop/accounts-and-balances-bc/tree/main/packages/grpc-client-lib",
@@ -26,7 +26,7 @@
     "build": "tsc",
     "test:unit": "echo \"for now, grpc-client-lib is only tested on the integration tests\"",
     "test:unit-single": "jest --coverage false -t",
-    "publish_npm": "npm version patch && npm publish --tag latest --access public"
+    "pub": "npm version patch && npm publish --tag latest --access public"
   },
   "devDependencies": {
     "@grpc/proto-loader": "~0.7.3"

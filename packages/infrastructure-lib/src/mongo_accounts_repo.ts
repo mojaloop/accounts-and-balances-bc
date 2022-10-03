@@ -95,6 +95,10 @@ export class MongoAccountsRepo implements IAccountsRepo{
 	}
 
 	async storeNewAccount(account: IAccountDto): Promise<void> {
+		if(!account.id){
+			throw new UnableToStoreAccountError("Invalid account.id");
+		}
+
 		let accountExists: boolean;
 		try {
 			accountExists = await this.accountExistsById(account.id);

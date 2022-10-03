@@ -4,7 +4,7 @@ service AccountsAndBalancesGrpcService {
   // All unary RPCs.
   rpc CreateAccount(GrpcAccount) returns (GrpcId);
   rpc CreateJournalEntries(GrpcJournalEntryArray) returns (GrpcIdArray);
-  rpc GetAccountById(GrpcId) returns (GrpcAccount);
+  rpc GetAccountById(GrpcId) returns (GetAccountByIdResponse);
   rpc GetAccountsByExternalId(GrpcId) returns (GrpcAccountArray);
   rpc GetJournalEntriesByAccountId(GrpcId) returns (GrpcJournalEntryArray);
 }
@@ -18,6 +18,11 @@ message GrpcId {
 
 message GrpcIdArray {
   repeated GrpcId grpcIdArray = 1;
+}
+
+message GetAccountByIdResponse {
+  bool found = 1;
+  GrpcAccount account = 2;
 }
 
 message GrpcAccount {

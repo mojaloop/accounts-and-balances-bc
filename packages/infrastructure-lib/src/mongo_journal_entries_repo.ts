@@ -90,6 +90,10 @@ export class MongoJournalEntriesRepo implements IJournalEntriesRepo {
 	}
 
 	async storeNewJournalEntry(journalEntry: IJournalEntryDto): Promise<void> {
+		if(!journalEntry.id){
+			throw new UnableToStoreJournalEntryError("Invalid journalEntry.id");
+		}
+
 		let journalEntryExists: boolean;
 		try {
 			journalEntryExists = await this.journalEntryExistsById(journalEntry.id);

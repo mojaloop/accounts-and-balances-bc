@@ -72,6 +72,10 @@ export class MemoryJournalEntriesRepo implements IJournalEntriesRepo {
 	}
 
 	async storeNewJournalEntry(journalEntry: IJournalEntryDto): Promise<void> {
+		if(!journalEntry.id){
+			throw new UnableToStoreJournalEntryError("Invalid journalEntry.id");
+		}
+
 		if (this.unexpectedFailure) {
 			throw new UnableToStoreJournalEntryError();
 		}

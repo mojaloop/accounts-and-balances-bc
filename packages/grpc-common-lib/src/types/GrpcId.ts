@@ -6,5 +6,5 @@ export interface GrpcId {
 }
 
 export interface GrpcId__Output {
-  'grpcId': (string);
+  'grpcId'?: (string);
 }

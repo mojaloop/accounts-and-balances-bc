@@ -53,6 +53,9 @@ import {
 	ServerUnaryCall,
 } from "@grpc/grpc-js";
 import {IAccountDto, IJournalEntryDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import {
+	GetAccountByIdResponse
+} from "@mojaloop/accounts-and-balances-bc-grpc-common-lib/dist/types/GetAccountByIdResponse";
 
 export class RpcHandlers {
 	// Properties received through the constructor.
@@ -108,6 +111,10 @@ export class RpcHandlers {
 		call: ServerUnaryCall<GrpcJournalEntryArray__Output, GrpcIdArray>,
 		callback: sendUnaryData<GrpcIdArray>
 	): Promise<void> {
+		if(!call.request.grpcJournalEntryArray){
+			callback(new Error("Invalid grpcJournalEntryArray received in createJournalEntries"), null);
+			return;
+		}
 		const journalEntryDtos: IJournalEntryDto[] = call.request.grpcJournalEntryArray.map(grpcJournalEntry => {
 			return grpcJournalEntryToJournalEntryDto(grpcJournalEntry);
 		});
@@ -129,20 +136,28 @@ export class RpcHandlers {
 
 	private async getAccountById(
 		call: ServerUnaryCall<GrpcId__Output, GrpcAccount>,
-		callback: sendUnaryData<GrpcAccount>
+		callback: sendUnaryData<GetAccountByIdResponse>
 	): Promise<void> {
-		const accountId: string = call.request.grpcId;
 		try {
-			const accountDto: IAccountDto | null = await this.aggregate.getAccountById(accountId, this.securityContext);
+			const accountDto: IAccountDto | null = await this.aggregate.getAccountById(call.request.grpcId!, this.securityContext);
 			if (accountDto === null) {
-				callback(null, {}); // Default gRPC account is sent (fields with default values).
+				callback(null, {
+					found: false,
+					account: undefined
+				}); // Default gRPC account is sent (fields with default values). pedro: no, it must return null
 				return;
 			}
-			const grpcAccount: GrpcAccount = accountDtoToGrpcAccount(accountDto);
-			callback(null, grpcAccount);
+
+			callback(null, {
+				found: true,
+				account: accountDtoToGrpcAccount(accountDto)
+			});
 		} catch (error: unknown) {
 			if (error instanceof Error) {
-				callback(error, null);
+				callback(error, {
+					found: false,
+					account: undefined
+				});
 				return;
 			}
 			this.logger.error(error);
@@ -153,10 +168,9 @@ export class RpcHandlers {
 		call: ServerUnaryCall<GrpcId__Output, GrpcAccountArray>,
 		callback: sendUnaryData<GrpcAccountArray>
 	): Promise<void> {
-		const externalId: string = call.request.grpcId;
 		try {
 			const accountDtos: IAccountDto[] =
-				await this.aggregate.getAccountsByExternalId(externalId, this.securityContext);
+				await this.aggregate.getAccountsByExternalId(call.request.grpcId!, this.securityContext);
 			const grpcAccounts: GrpcAccount__Output[] = accountDtos.map(accountDto => {
 				return accountDtoToGrpcAccount(accountDto);
 			});
@@ -174,10 +188,13 @@ export class RpcHandlers {
 		call: ServerUnaryCall<GrpcId__Output, GrpcJournalEntryArray>,
 		callback: sendUnaryData<GrpcJournalEntryArray>
 	): Promise<void> {
-		const accountId: string = call.request.grpcId;
+		if(!call.request.grpcId){
+			callback(new Error("Invalid call.request.grpcId received in getJournalEntriesByAccountId"), null);
+			return;
+		}
 		try {
 			const journalEntryDtos: IJournalEntryDto[] =
-				await this.aggregate.getJournalEntriesByAccountId(accountId, this.securityContext);
+				await this.aggregate.getJournalEntriesByAccountId(call.request.grpcId, this.securityContext);
 			const grpcJournalEntries: GrpcJournalEntry__Output[] = journalEntryDtos.map(journalEntryDto => {
 				return journalEntryDtoToGrpcJournalEntry(journalEntryDto);
 			});
