@@ -220,9 +220,9 @@ describe("accounts and balances - integration tests with HTTP service", () => {
 			externalCategory: null,
 			currencyCode: "EUR",
 			amount: "5",
-			creditedAccountId: accountDtos[0].id,
-			debitedAccountId: accountDtos[1].id,
-			timestamp: 0
+			creditedAccountId: accountDtos[0].id!,
+			debitedAccountId: accountDtos[0].id!,
+			timestamp: null
 		};
 		// Journal entry B.
 		const idJournalEntryB: string = idJournalEntryA + 1;
@@ -232,9 +232,9 @@ describe("accounts and balances - integration tests with HTTP service", () => {
 			externalCategory: null,
 			currencyCode: "EUR",
 			amount: "5",
-			creditedAccountId: accountDtos[1].id,
-			debitedAccountId: accountDtos[0].id,
-			timestamp: 0
+			creditedAccountId: accountDtos[0].id!,
+			debitedAccountId: accountDtos[0].id!,
+			timestamp: null
 		};
 		const idsJournalEntries: string[] =
 			await accountsAndBalancesHttpClient.createJournalEntries([journalEntryDtoA, journalEntryDtoB]);
@@ -251,9 +251,9 @@ describe("accounts and balances - integration tests with HTTP service", () => {
 			externalCategory: null,
 			currencyCode: "EUR",
 			amount: "5",
-			creditedAccountId: accountDtos[0].id,
-			debitedAccountId: accountDtos[1].id,
-			timestamp: 0
+			creditedAccountId: accountDtos[0].id!,
+			debitedAccountId: accountDtos[0].id!,
+			timestamp: null
 		};
 		// Journal entry B.
 		const idJournalEntryB: string = idJournalEntryA + 1;
@@ -263,9 +263,9 @@ describe("accounts and balances - integration tests with HTTP service", () => {
 			externalCategory: null,
 			currencyCode: "EUR",
 			amount: "5",
-			creditedAccountId: accountDtos[1].id,
-			debitedAccountId: accountDtos[0].id,
-			timestamp: 0
+			creditedAccountId: accountDtos[0].id!,
+			debitedAccountId: accountDtos[0].id!,
+			timestamp: null
 		};
 		await accountsAndBalancesHttpClient.createJournalEntries([journalEntryDtoA, journalEntryDtoB]);
 		await expect(
@@ -284,9 +284,9 @@ describe("accounts and balances - integration tests with HTTP service", () => {
 			externalCategory: null,
 			currencyCode: "EUR",
 			amount: "5",
-			creditedAccountId: accountDtos[0].id,
-			debitedAccountId: accountDtos[1].id,
-			timestamp: 0
+			creditedAccountId: accountDtos[0].id!,
+			debitedAccountId: accountDtos[0].id!,
+			timestamp: null
 		};
 		const journalEntryIdReceived: string[] =
 			await accountsAndBalancesHttpClient.createJournalEntries([journalEntryDto]);
@@ -302,9 +302,9 @@ describe("accounts and balances - integration tests with HTTP service", () => {
 			externalCategory: null,
 			currencyCode: "EUR",
 			amount: "5",
-			creditedAccountId: accountDtos[0].id,
-			debitedAccountId: accountDtos[0].id,
-			timestamp: 0
+			creditedAccountId: accountDtos[0].id!,
+			debitedAccountId: accountDtos[0].id!,
+			timestamp: null
 		};
 		await expect(
 			async () => {
@@ -323,8 +323,8 @@ describe("accounts and balances - integration tests with HTTP service", () => {
 			currencyCode: "EUR",
 			amount: "5",
 			creditedAccountId: "some string",
-			debitedAccountId: accountDtos[1].id,
-			timestamp: 0
+			debitedAccountId: accountDtos[0].id!,
+			timestamp: null
 		};
 		await expect(
 			async () => {
@@ -342,9 +342,9 @@ describe("accounts and balances - integration tests with HTTP service", () => {
 			externalCategory: null,
 			currencyCode: "EUR",
 			amount: "5",
-			creditedAccountId: accountDtos[0].id,
+			creditedAccountId: accountDtos[0].id!,
 			debitedAccountId: "some string",
-			timestamp: 0
+			timestamp: null
 		};
 		await expect(
 			async () => {
@@ -362,9 +362,9 @@ describe("accounts and balances - integration tests with HTTP service", () => {
 			externalCategory: null,
 			currencyCode: "USD",
 			amount: "5",
-			creditedAccountId: accountDtos[0].id,
-			debitedAccountId: accountDtos[1].id,
-			timestamp: 0
+			creditedAccountId: accountDtos[0].id!,
+			debitedAccountId: accountDtos[0].id!,
+			timestamp: null
 		};
 		await expect(
 			async () => {
@@ -382,9 +382,9 @@ describe("accounts and balances - integration tests with HTTP service", () => {
 			externalCategory: null,
 			currencyCode: "EUR",
 			amount: "10000",
-			creditedAccountId: accountDtos[0].id,
-			debitedAccountId: accountDtos[1].id,
-			timestamp: 0
+			creditedAccountId: accountDtos[0].id!,
+			debitedAccountId: accountDtos[0].id!,
+			timestamp: null
 		};
 		await expect(
 			async () => {
@@ -402,9 +402,9 @@ describe("accounts and balances - integration tests with HTTP service", () => {
 			externalCategory: null,
 			currencyCode: "EUR",
 			amount: "-5",
-			creditedAccountId: accountDtos[0].id,
-			debitedAccountId: accountDtos[1].id,
-			timestamp: 0
+			creditedAccountId: accountDtos[0].id!,
+			debitedAccountId: accountDtos[0].id!,
+			timestamp: null
 		};
 		await expect(
 			async () => {
@@ -423,7 +423,7 @@ describe("accounts and balances - integration tests with HTTP service", () => {
 			amount: "5",
 			creditedAccountId: "a",
 			debitedAccountId: "b",
-			timestamp: 0
+			timestamp: null
 		};
 		// disable();
 		await expect(
@@ -490,9 +490,9 @@ describe("accounts and balances - integration tests with HTTP service", () => {
 			externalCategory: null,
 			currencyCode: "EUR",
 			amount: "5",
-			creditedAccountId: accountDtos[0].id,
-			debitedAccountId: accountDtos[1].id,
-			timestamp: 0
+			creditedAccountId: accountDtos[0].id!,
+			debitedAccountId: accountDtos[0].id!,
+			timestamp: null
 		};
 		// Journal entry B.
 		const idJournalEntryB: string = idJournalEntryA + 1;
@@ -502,13 +502,13 @@ describe("accounts and balances - integration tests with HTTP service", () => {
 			externalCategory: null,
 			currencyCode: "EUR",
 			amount: "5",
-			creditedAccountId: accountDtos[1].id,
-			debitedAccountId: accountDtos[0].id,
-			timestamp: 0
+			creditedAccountId: accountDtos[0].id!,
+			debitedAccountId: accountDtos[0].id!,
+			timestamp: null
 		};
 		await accountsAndBalancesHttpClient.createJournalEntries([journalEntryDtoA, journalEntryDtoB]);
 		const journalEntryDtosReceived: IJournalEntryDto[] =
-			await accountsAndBalancesHttpClient.getJournalEntriesByAccountId(accountDtos[0].id,);
+			await accountsAndBalancesHttpClient.getJournalEntriesByAccountId(accountDtos[0].id!,);
 		expect(journalEntryDtosReceived).toEqual([journalEntryDtoA, journalEntryDtoB]);
 	});
 });

@@ -29,7 +29,7 @@
 
 "use strict";
 
-import {InvalidCreditBalanceError, InvalidCurrencyCodeError, InvalidDebitBalanceError} from "./errors";
+import {InvalidCurrencyCodeError} from "./errors";
 import {AccountState, AccountType, IAccountDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {ICurrency} from "./currency";
 import {bigintToString, stringToBigint} from "../utils";
@@ -81,12 +81,12 @@ export class Account {
 		try {
 			creditBalance = stringToBigint(accountDto.creditBalance, currency.decimals);
 		} catch (error: unknown) {
-			throw new InvalidCreditBalanceError();
+			throw new Error();
 		}
 		try {
 			debitBalance = stringToBigint(accountDto.debitBalance, currency.decimals);
 		} catch (error: unknown) {
-			throw new InvalidDebitBalanceError();
+			throw new Error();
 		}
 
 		return new Account(

@@ -114,8 +114,8 @@ describe("accounts and balances grpc service - unit tests", () => {
 			externalCategory: "",
 			currencyCode: "EUR",
 			amount: "5",
-			creditedAccountId: accountDtos[0].id,
-			debitedAccountId: accountDtos[1].id,
+			creditedAccountId: accountDtos[0].id!,
+			debitedAccountId: accountDtos[1].id!,
 			timestamp: 0
 		};
 		// Journal entry B.
@@ -126,8 +126,8 @@ describe("accounts and balances grpc service - unit tests", () => {
 			externalCategory: "",
 			currencyCode: "EUR",
 			amount: "5",
-			creditedAccountId: accountDtos[1].id,
-			debitedAccountId: accountDtos[0].id,
+			creditedAccountId: accountDtos[1].id!,
+			debitedAccountId: accountDtos[0].id!,
 			timestamp: 0
 		};
 		const idsJournalEntries: string[] = await auxiliaryAccountsAndBalancesGrpcClient.createJournalEntries(

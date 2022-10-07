@@ -229,9 +229,9 @@ describe("accounts and balances http service - unit tests", () => {
 			externalCategory: null,
 			currencyCode: "EUR",
 			amount: "5",
-			creditedAccountId: accountDtos[0].id,
-			debitedAccountId: accountDtos[1].id,
-			timestamp: 0
+			creditedAccountId: accountDtos[0].id!,
+			debitedAccountId: accountDtos[1].id!,
+			timestamp: null
 		};
 		// Journal entry B.
 		const idJournalEntryB: string = idJournalEntryA + 1;
@@ -241,9 +241,9 @@ describe("accounts and balances http service - unit tests", () => {
 			externalCategory: null,
 			currencyCode: "EUR",
 			amount: "5",
-			creditedAccountId: accountDtos[1].id,
-			debitedAccountId: accountDtos[0].id,
-			timestamp: 0
+			creditedAccountId: accountDtos[1].id!,
+			debitedAccountId: accountDtos[0].id!,
+			timestamp: null
 		};
 		const statusCodeResponse: number = await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries(
 			[journalEntryDtoA, journalEntryDtoB]
@@ -261,9 +261,9 @@ describe("accounts and balances http service - unit tests", () => {
 			externalCategory: null,
 			currencyCode: "EUR",
 			amount: "5",
-			creditedAccountId: accountDtos[0].id,
-			debitedAccountId: accountDtos[1].id,
-			timestamp: 0
+			creditedAccountId: accountDtos[0].id!,
+			debitedAccountId: accountDtos[1].id!,
+			timestamp: null
 		};
 		// Journal entry B.
 		const idJournalEntryB: string = idJournalEntryA + 1;
@@ -273,9 +273,9 @@ describe("accounts and balances http service - unit tests", () => {
 			externalCategory: null,
 			currencyCode: "EUR",
 			amount: "5",
-			creditedAccountId: accountDtos[1].id,
-			debitedAccountId: accountDtos[0].id,
-			timestamp: 0
+			creditedAccountId: accountDtos[1].id!,
+			debitedAccountId: accountDtos[0].id!,
+			timestamp: null
 		};
 		await auxiliaryAccountsAndBalancesHttpClient
 			.createJournalEntries([journalEntryDtoA, journalEntryDtoB]);
@@ -294,9 +294,9 @@ describe("accounts and balances http service - unit tests", () => {
 			externalCategory: null,
 			currencyCode: "EUR",
 			amount: "5",
-			creditedAccountId: accountDtos[0].id,
-			debitedAccountId: accountDtos[1].id,
-			timestamp: 0
+			creditedAccountId: accountDtos[0].id!,
+			debitedAccountId: accountDtos[1].id!,
+			timestamp: null
 		};
 		const statusCodeResponse: number =
 			await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntryDto]);
@@ -312,9 +312,9 @@ describe("accounts and balances http service - unit tests", () => {
 			externalCategory: null,
 			currencyCode: "EUR",
 			amount: "5",
-			creditedAccountId: accountDtos[0].id,
-			debitedAccountId: accountDtos[0].id,
-			timestamp: 0
+			creditedAccountId: accountDtos[0].id!,
+			debitedAccountId: accountDtos[0].id!,
+			timestamp: null
 		};
 		const statusCodeResponse: number =
 			await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntryDto]);
@@ -331,8 +331,8 @@ describe("accounts and balances http service - unit tests", () => {
 			currencyCode: "EUR",
 			amount: "5",
 			creditedAccountId: "some string",
-			debitedAccountId: accountDtos[1].id,
-			timestamp: 0
+			debitedAccountId: accountDtos[1].id!,
+			timestamp: null
 		};
 		const statusCodeResponse: number =
 			await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntryDto]);
@@ -348,9 +348,9 @@ describe("accounts and balances http service - unit tests", () => {
 			externalCategory: null,
 			currencyCode: "EUR",
 			amount: "5",
-			creditedAccountId: accountDtos[0].id,
+			creditedAccountId: accountDtos[0].id!,
 			debitedAccountId: "some string",
-			timestamp: 0
+			timestamp: null
 		};
 		const statusCodeResponse: number =
 			await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntryDto]);
@@ -366,9 +366,9 @@ describe("accounts and balances http service - unit tests", () => {
 			externalCategory: null,
 			currencyCode: "USD",
 			amount: "5",
-			creditedAccountId: accountDtos[0].id,
-			debitedAccountId: accountDtos[1].id,
-			timestamp: 0
+			creditedAccountId: accountDtos[0].id!,
+			debitedAccountId: accountDtos[1].id!,
+			timestamp: null
 		};
 		const statusCodeResponse: number =
 			await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntryDto]);
@@ -384,9 +384,9 @@ describe("accounts and balances http service - unit tests", () => {
 			externalCategory: null,
 			currencyCode: "EUR",
 			amount: "10000",
-			creditedAccountId: accountDtos[0].id,
-			debitedAccountId: accountDtos[1].id,
-			timestamp: 0
+			creditedAccountId: accountDtos[0].id!,
+			debitedAccountId: accountDtos[1].id!,
+			timestamp: null
 		};
 		const statusCodeResponse: number =
 			await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntryDto]);
@@ -402,9 +402,9 @@ describe("accounts and balances http service - unit tests", () => {
 			externalCategory: null,
 			currencyCode: "EUR",
 			amount: "-5",
-			creditedAccountId: accountDtos[0].id,
-			debitedAccountId: accountDtos[1].id,
-			timestamp: 0
+			creditedAccountId: accountDtos[0].id!,
+			debitedAccountId: accountDtos[1].id!,
+			timestamp: null
 		};
 		const statusCodeResponse: number =
 			await auxiliaryAccountsAndBalancesHttpClient.createJournalEntries([journalEntryDto]);
@@ -420,9 +420,9 @@ describe("accounts and balances http service - unit tests", () => {
 			externalCategory: null,
 			currencyCode: "EUR",
 			amount: "5",
-			creditedAccountId: accountDtos[0].id,
-			debitedAccountId: accountDtos[1].id,
-			timestamp: 0
+			creditedAccountId: accountDtos[0].id!,
+			debitedAccountId: accountDtos[1].id!,
+			timestamp: null
 		};
 		(journalEntriesRepo as MemoryJournalEntriesRepo).setUnexpectedFailure(true); // TODO: should this be done?
 		const statusCodeResponse: number =
@@ -440,9 +440,9 @@ describe("accounts and balances http service - unit tests", () => {
 			externalCategory: null,
 			currencyCode: "EUR",
 			amount: "5",
-			creditedAccountId: accountDtos[0].id,
-			debitedAccountId: accountDtos[1].id,
-			timestamp: 0
+			creditedAccountId: accountDtos[0].id!,
+			debitedAccountId: accountDtos[1].id!,
+			timestamp: null
 		};
 		(accountsRepo as MemoryAccountsRepo).setUnexpectedFailure(true); // TODO: should this be done?
 		const statusCodeResponse: number =
@@ -460,9 +460,9 @@ describe("accounts and balances http service - unit tests", () => {
 			externalCategory: null,
 			currencyCode: "EUR",
 			amount: "5",
-			creditedAccountId: accountDtos[0].id,
-			debitedAccountId: accountDtos[1].id,
-			timestamp: 0
+			creditedAccountId: accountDtos[0].id!,
+			debitedAccountId: accountDtos[1].id!,
+			timestamp: null
 		};
 		(authorizationClient as AuthorizationClientMock).setRoleHasPrivilege(false); // TODO: should this be done?
 		const statusCodeResponse: number =
@@ -542,9 +542,9 @@ describe("accounts and balances http service - unit tests", () => {
 			externalCategory: null,
 			currencyCode: "EUR",
 			amount: "5",
-			creditedAccountId: accountDtos[0].id,
-			debitedAccountId: accountDtos[1].id,
-			timestamp: 0
+			creditedAccountId: accountDtos[0].id!,
+			debitedAccountId: accountDtos[1].id!,
+			timestamp: null
 		};
 		// Journal entry B.
 		const idJournalEntryB: string = idJournalEntryA + 1;
@@ -554,14 +554,14 @@ describe("accounts and balances http service - unit tests", () => {
 			externalCategory: null,
 			currencyCode: "EUR",
 			amount: "5",
-			creditedAccountId: accountDtos[1].id,
-			debitedAccountId: accountDtos[0].id,
-			timestamp: 0
+			creditedAccountId: accountDtos[1].id!,
+			debitedAccountId: accountDtos[0].id!,
+			timestamp: null
 		};
 		await auxiliaryAccountsAndBalancesHttpClient
 			.createJournalEntries([journalEntryDtoA, journalEntryDtoB]);
 		const statusCodeResponse: number =
-			await auxiliaryAccountsAndBalancesHttpClient.getJournalEntriesByAccountId(accountDtos[0].id);
+			await auxiliaryAccountsAndBalancesHttpClient.getJournalEntriesByAccountId(accountDtos[0].id!);
 		expect(statusCodeResponse).toEqual(200);
 	});
 	test("get journal entries by account id without privileges", async () => {

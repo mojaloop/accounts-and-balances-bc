@@ -58,6 +58,9 @@ export function stringToBigint(stringValue: string, decimals: number): bigint {
 }
 
 export function bigintToString(bigintValue: bigint, decimals: number): string {
+	if (bigintValue === 0n) {
+		return "0";
+	}
 	const stringValue: string = bigintValue.toString();
 	const dotIdx: number = stringValue.length - decimals;
 	const stringValueWithDot: string = stringValue.slice(0, dotIdx) + "." + stringValue.slice(dotIdx);

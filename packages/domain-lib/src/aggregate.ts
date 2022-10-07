@@ -36,8 +36,7 @@ import {
 	SameCreditedAndDebitedAccountsError,
 	CurrencyCodesDifferError,
 	InsufficientBalanceError,
-	InvalidCreditBalanceError,
-	InvalidDebitBalanceError, InvalidExternalCategoryError,
+	InvalidExternalCategoryError,
 	InvalidExternalIdError, InvalidJournalEntryAmountError, InvalidTimestampError,
 	JournalEntryAlreadyExistsError,
 	NoSuchCreditedAccountError,
@@ -125,12 +124,6 @@ export class Aggregate {
 
 		if (account.externalId === "") {
 			throw new InvalidExternalIdError();
-		}
-		if (account.creditBalance < 0) {
-			throw new InvalidCreditBalanceError();
-		}
-		if (account.debitBalance < 0) {
-			throw new InvalidDebitBalanceError();
 		}
 
 		// Store the account.

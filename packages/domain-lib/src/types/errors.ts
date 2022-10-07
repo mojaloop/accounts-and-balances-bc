@@ -30,8 +30,6 @@
 "use strict";
 
 // Account.
-export class InvalidCreditBalanceError extends Error {}
-export class InvalidDebitBalanceError extends Error {}
 export class InvalidTimestampError extends Error {}
 // JournalEntry.
 export class InvalidExternalCategoryError extends Error {}

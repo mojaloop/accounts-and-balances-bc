@@ -85,7 +85,9 @@ describe("accounts and balances - integration tests with gRPC service", () => {
 		await logger.init();
 		// await startGrpcService(logger);
 		accountsAndBalancesGrpcClient = new AccountsAndBalancesGrpcClient(
-			logger, ACCOUNTS_AND_BALANCES_GRPC_URL
+			logger,
+			"localhost",
+			5678
 		);
 		await accountsAndBalancesGrpcClient.init();
 	});
@@ -124,9 +126,9 @@ describe("accounts and balances - integration tests with gRPC service", () => {
 			externalCategory: "",
 			currencyCode: "EUR",
 			amount: "5",
-			creditedAccountId: accountDtos[0].id!,
-			debitedAccountId: accountDtos[1].id!,
-			timestamp: 0
+			creditedAccountId: accountDtos[0].id!!,
+			debitedAccountId: accountDtos[1].id!!!,
+			timestamp: null
 		};
 		// Journal entry B.
 		const idJournalEntryB: string = idJournalEntryA + 1;
@@ -136,9 +138,9 @@ describe("accounts and balances - integration tests with gRPC service", () => {
 			externalCategory: "",
 			currencyCode: "EUR",
 			amount: "5",
-			creditedAccountId: accountDtos[1].id!,
-			debitedAccountId: accountDtos[0].id!,
-			timestamp: 0
+			creditedAccountId: accountDtos[1].id!!!,
+			debitedAccountId: accountDtos[0].id!!,
+			timestamp: null
 		};
 		const idsJournalEntries: string[] = await accountsAndBalancesGrpcClient.createJournalEntries(
 			[journalEntryDtoA, journalEntryDtoB]
