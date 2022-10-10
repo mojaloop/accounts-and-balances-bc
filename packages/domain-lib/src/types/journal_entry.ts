@@ -29,11 +29,8 @@
 
 "use strict";
 
-import {InvalidCurrencyCodeError, InvalidJournalEntryAmountError} from "./errors";
 import {IJournalEntryDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
-import {ICurrency} from "./currency";
-import {bigintToString, stringToBigint} from "../utils";
-import Crypto from "crypto";
+import {bigintToString} from "../utils";
 
 // TODO: implements/extends anything?
 export class JournalEntry {
@@ -69,51 +66,20 @@ export class JournalEntry {
 		this.timestamp = timestamp;
 	}
 
-	// TODO: change name.
-	static FromDto(journalEntryDto: IJournalEntryDto, currencies: ICurrency[]): JournalEntry {
-		const currency: ICurrency | undefined = currencies.find(currency => {
-			return currency.code === journalEntryDto.currencyCode;
-		});
-		if (currency === undefined) {
-			throw new InvalidCurrencyCodeError();
-		}
-		let amount: bigint;
-		try {
-			amount = stringToBigint(journalEntryDto.amount, currency.decimals);
-		} catch (error: unknown) {
-			throw new InvalidJournalEntryAmountError();
-		}
+	toDto(): IJournalEntryDto {
+		const amount: string = bigintToString(this.amount, this.currencyDecimals);
 
-		// if we get from the DTO a null or zero timestamp, replace with default value (now)
-		let journalEntryTimestamp = journalEntryDto.timestamp;
-		if(!journalEntryDto.timestamp || journalEntryDto.timestamp == 0){
-			journalEntryTimestamp = Date.now();
-		}
-
-		return new JournalEntry(
-			journalEntryDto.id || Crypto.randomUUID(),
-			journalEntryDto.externalId,
-			journalEntryDto.externalCategory,
-			journalEntryDto.currencyCode,
-			currency.decimals,
-			amount,
-			journalEntryDto.creditedAccountId,
-			journalEntryDto.debitedAccountId,
-			journalEntryTimestamp
-		);
-	}
-
-	static ToDto(journalEntry: JournalEntry): IJournalEntryDto {
-		const amount: string = bigintToString(journalEntry.amount, journalEntry.currencyDecimals);
-		return {
-			id: journalEntry.id,
-			externalId: journalEntry.externalId,
-			externalCategory: journalEntry.externalCategory,
-			currencyCode: journalEntry.currencyCode,
+		const journalEntryDto: IJournalEntryDto = {
+			id: this.id,
+			externalId: this.externalId,
+			externalCategory: this.externalCategory,
+			currencyCode: this.currencyCode,
+			currencyDecimals: this.currencyDecimals,
 			amount: amount,
-			creditedAccountId: journalEntry.creditedAccountId,
-			debitedAccountId: journalEntry.debitedAccountId,
-			timestamp: journalEntry.timestamp
+			creditedAccountId: this.creditedAccountId,
+			debitedAccountId: this.debitedAccountId,
+			timestamp: this.timestamp
 		};
+		return journalEntryDto;
 	}
 }

@@ -41,7 +41,7 @@ import {
 	JournalEntryAlreadyExistsError,
 	NoSuchCreditedAccountError,
 	NoSuchDebitedAccountError,
-	UnauthorizedError
+	UnauthorizedError, InvalidIdError, InvalidCurrencyCodeError, InvalidCreditBalanceError, InvalidDebitBalanceError
 } from "./types/errors";
 import {
 	IAccountsRepo,
@@ -57,7 +57,8 @@ import {Privileges} from "./types/privileges";
 import {join} from "path";
 import {readFileSync} from "fs";
 import {ICurrency} from "./types/currency";
-import {bigintToString} from "./utils";
+import {bigintToString, stringToBigint} from "./utils";
+import Crypto from "crypto";
 
 enum AuditingActions {
 	ACCOUNT_CREATED = "ACCOUNT_CREATED"
@@ -114,28 +115,77 @@ export class Aggregate {
 		};
 	}
 
-	// TODO: why ignore the case in which randomUUID() generates an already existing id?
 	async createAccount(accountDto: IAccountDto, securityContext: CallSecurityContext): Promise<string> {
 		this.enforcePrivilege(securityContext, Privileges.CREATE_ACCOUNT);
-		const account: Account = Account.FromDto(accountDto, this.currencies);
 
-		// new accounts cannot have a timestampLastJournalEntry already
-		account.timestampLastJournalEntry = null;
+		// When creating an account, currencyDecimals is supposed to be undefined and timestampLastJournalEntry null.
+		// For consistency purposes, if this doesn't happen, errors are thrown.
+		if (accountDto.currencyDecimals !== undefined) {
+			throw new Error(); // TODO: create custom error.
+		}
+		if (accountDto.timestampLastJournalEntry !== null) {
+			throw new Error(); // TODO: create custom error.
+		}
 
-		if (account.externalId === "") {
+		// When creating an account, id and externalId are supposed to be either a non-empty string or null. For
+		// consistency purposes, if this doesn't happen, errors are thrown.
+		if (accountDto.id === "") {
+			throw new InvalidIdError();
+		}
+		if (accountDto.externalId === "") {
 			throw new InvalidExternalIdError();
 		}
 
-		// Store the account.
+		// Generate a random UUId, if needed. TODO: randomUUID() can generate an id that already exists.
+		const accountId: string = accountDto.id ?? randomUUID();
+
+		// Verify the currency code (and get the corresponding currency decimals).
+		const currency: ICurrency | undefined = this.currencies.find(currency => {
+			return currency.code === accountDto.currencyCode;
+		});
+		if (currency === undefined) {
+			throw new InvalidCurrencyCodeError();
+		}
+
+		// Convert the credit balance.
+		let creditBalance: bigint;
 		try {
-			// accountDto can't be stored because the balances might not be formatted.
-			await this.accountsRepo.storeNewAccount(Account.ToDto(account));
+			creditBalance = stringToBigint(accountDto.creditBalance, currency.decimals);
+		} catch (error: unknown) {
+			throw new InvalidCreditBalanceError();
+		}
+
+		// Convert the debit balance.
+		let debitBalance: bigint;
+		try {
+			debitBalance = stringToBigint(accountDto.debitBalance, currency.decimals);
+		} catch (error: unknown) {
+			throw new InvalidDebitBalanceError();
+		}
+
+		const account: Account = new Account(
+			accountId,
+			accountDto.externalId,
+			accountDto.state,
+			accountDto.type,
+			accountDto.currencyCode,
+			currency.decimals,
+			creditBalance,
+			debitBalance,
+			accountDto.timestampLastJournalEntry
+		);
+
+		// Store the account (accountDto can't be stored).
+		const formattedAccountDto: IAccountDto = account.toDto();
+		try {
+			await this.accountsRepo.storeNewAccount(formattedAccountDto);
 		} catch (e: unknown) {
 			if (!(e instanceof AccountAlreadyExistsError)) {
 				this.logger.error(e);
 			}
 			throw e;
 		}
+
 		// TODO: configure; try-catch.
 		await this.auditingClient.audit(
 			AuditingActions.ACCOUNT_CREATED,
@@ -143,6 +193,7 @@ export class Aggregate {
 			this.getAuditSecurityContext(securityContext),
 			[{key: "accountId", value: account.id}]
 		);
+
 		return account.id;
 	}
 
@@ -151,31 +202,78 @@ export class Aggregate {
 		securityContext: CallSecurityContext
 	): Promise<string[]> {
 		this.enforcePrivilege(securityContext, Privileges.CREATE_JOURNAL_ENTRY);
+
 		const idsJournalEntries: string[] = []; // TODO: verify.
 		for (const journalEntryDto of journalEntryDtos) {
-			idsJournalEntries.push(await this.createJournalEntry(journalEntryDto)); // TODO: verify.
+			const journalEntryId: string = await this.createJournalEntry(journalEntryDto);
+			idsJournalEntries.push(journalEntryId); // TODO: verify.
 		}
+
 		return idsJournalEntries;
 	}
 
 	private async createJournalEntry(journalEntryDto: IJournalEntryDto): Promise<string> {
-		const journalEntry: JournalEntry = JournalEntry.FromDto(journalEntryDto, this.currencies);
+		// When creating a journal entry, currencyDecimals is supposed to be undefined and timestamp null. For
+		// consistency purposes, if this doesn't happen, errors are thrown.
+		if (journalEntryDto.currencyDecimals !== undefined) {
+			throw new Error(); // TODO: create custom error.
+		}
+		if (journalEntryDto.timestamp !== null) {
+			throw new Error(); // TODO: create custom error.
+		}
 
-		// timestamps are controlled by this service, force timestamp to be now
-		journalEntryDto.timestamp = Date.now();
-
-		if (journalEntry.externalId === "") {
+		// When creating a journal entry, id, externalId and externalCategory are supposed to be either a non-empty
+		// string or null. For consistency purposes, if this doesn't happen, errors are thrown.
+		if (journalEntryDto.id === "") {
+			throw new InvalidIdError();
+		}
+		if (journalEntryDto.externalId === "") {
 			throw new InvalidExternalIdError();
 		}
-		if (journalEntry.externalCategory === "") {
+		if (journalEntryDto.externalCategory === "") {
 			throw new InvalidExternalCategoryError();
 		}
-		if (journalEntry.amount < 0) {
+
+		// Generate a random UUId, if needed. TODO: randomUUID() can generate an id that already exists.
+		const journalEntryId: string = journalEntryDto.id ?? randomUUID();
+
+		// Verify the currency code (and get the corresponding currency decimals).
+		const currency: ICurrency | undefined = this.currencies.find(currency => {
+			return currency.code === journalEntryDto.currencyCode;
+		});
+		if (currency === undefined) {
+			throw new InvalidCurrencyCodeError();
+		}
+
+		// Convert the amount and check if it's valid.
+		let amount: bigint;
+		try {
+			amount = stringToBigint(journalEntryDto.amount, currency.decimals);
+		} catch (error: unknown) {
 			throw new InvalidJournalEntryAmountError();
 		}
+		if (amount <= 0) {
+			throw new InvalidJournalEntryAmountError();
+		}
+
+		// Get a timestamp.
+		const timestamp: number = Date.now();
+
+		const journalEntry: JournalEntry = new JournalEntry(
+			journalEntryId,
+			journalEntryDto.externalId,
+			journalEntryDto.externalCategory,
+			journalEntryDto.currencyCode,
+			currency.decimals,
+			amount,
+			journalEntryDto.creditedAccountId,
+			journalEntryDto.debitedAccountId,
+			timestamp
+		);
+
 		// Check if the credited and debited accounts are the same.
 		if (journalEntry.creditedAccountId === journalEntry.debitedAccountId) {
-			throw new SameCreditedAndDebitedAccountsError(); // TODO: error name.
+			throw new SameCreditedAndDebitedAccountsError();
 		}
 
 		// Check if the credited and debited accounts exist.
@@ -200,33 +298,56 @@ export class Aggregate {
 		let creditedAccount: Account;
 		let debitedAccount: Account;
 		try {
-			creditedAccount = Account.FromDto(creditedAccountDto, this.currencies);
-			debitedAccount = Account.FromDto(debitedAccountDto, this.currencies);
-		} catch (error: unknown) { // TODO: verify.
+			creditedAccount = new Account(
+				creditedAccountDto.id!,
+				creditedAccountDto.externalId,
+				creditedAccountDto.state,
+				creditedAccountDto.type,
+				creditedAccountDto.currencyCode,
+				creditedAccountDto.currencyDecimals!,
+				stringToBigint(creditedAccountDto.creditBalance, creditedAccountDto.currencyDecimals!),
+				stringToBigint(creditedAccountDto.debitBalance, creditedAccountDto.currencyDecimals!),
+				creditedAccountDto.timestampLastJournalEntry
+			);
+			debitedAccount = new Account(
+				debitedAccountDto.id!,
+				debitedAccountDto.externalId,
+				debitedAccountDto.state,
+				debitedAccountDto.type,
+				debitedAccountDto.currencyCode,
+				debitedAccountDto.currencyDecimals!,
+				stringToBigint(debitedAccountDto.creditBalance, debitedAccountDto.currencyDecimals!),
+				stringToBigint(debitedAccountDto.debitBalance, debitedAccountDto.currencyDecimals!),
+				debitedAccountDto.timestampLastJournalEntry
+			);
+		} catch (error: unknown) {
 			this.logger.error(error);
 			throw error;
 		}
+
 		// Check if the currency codes of the credited and debited accounts and the journal entry match.
 		if (creditedAccount.currencyCode !== debitedAccount.currencyCode
 			|| creditedAccount.currencyCode !== journalEntry.currencyCode) {
 			throw new CurrencyCodesDifferError();
 		}
+
 		// Check if the currency decimals of the credited and debited accounts and the journal entry match.
 		if (creditedAccount.currencyDecimals !== debitedAccount.currencyDecimals
 			|| creditedAccount.currencyDecimals !== journalEntry.currencyDecimals) {
-			this.logger.error("currency decimals differ"); // TODO: makes sense to create a type for the svcs?
+			// TODO: does it make sense to create a custom error to be used on the services?
+			this.logger.error("currency decimals differ");
 			throw new Error();
 		}
+
 		// Check if the balance is sufficient.
-		if (Account.calculateBalance(debitedAccount) - journalEntry.amount < 0) {
+		if (debitedAccount.calculateBalance() - journalEntry.amount < 0) {
 			throw new InsufficientBalanceError();
 		}
 
-
-		// Store the journal entry.
+		// Store the journal entry (journalEntryDto can't be stored).
+		const formattedJournalEntryDto: IJournalEntryDto = journalEntry.toDto();
 		try {
-			// journalEntryDto can't be stored because the amount might not be formatted.
-			await this.journalEntriesRepo.storeNewJournalEntry(JournalEntry.ToDto(journalEntry));
+			await this.journalEntriesRepo.storeNewJournalEntry(formattedJournalEntryDto);
 		} catch (e: unknown) {
 			if (!(e instanceof JournalEntryAlreadyExistsError)) {
 				this.logger.error(e);
@@ -234,22 +355,15 @@ export class Aggregate {
 			throw e;
 		}
 
-		// Update the accounts' balances and time stamps.
+		// Update the credited account's credit balance and timestamp.
+		const updatedCreditBalance: string = bigintToString(
+			creditedAccount.creditBalance + journalEntry.amount,
+			creditedAccount.currencyDecimals
+		);
 		try {
 			await this.accountsRepo.updateAccountCreditBalanceById(
 				creditedAccount.id,
-				bigintToString(creditedAccount.creditBalance + journalEntry.amount, creditedAccount.currencyDecimals),
-				journalEntry.timestamp! // timestamp is forced at the beggining of this function
-			);
-		} catch (e: unknown) {
-			// TODO: revert store.
-			this.logger.error(e);
-			throw e;
-		}
-		try {
-			await this.accountsRepo.updateAccountDebitBalanceById(
-				debitedAccount.id,
-				bigintToString(debitedAccount.debitBalance + journalEntry.amount, debitedAccount.currencyDecimals),
+				updatedCreditBalance,
 				journalEntry.timestamp!
 			);
 		} catch (e: unknown) {
@@ -257,6 +371,24 @@ export class Aggregate {
 			this.logger.error(e);
 			throw e;
 		}
+
+		// Update the debited account's debit balance and timestamp.
+		const updatedDebitBalance: string = bigintToString(
+			debitedAccount.debitBalance + journalEntry.amount,
+			debitedAccount.currencyDecimals
+		);
+		try {
+			await this.accountsRepo.updateAccountDebitBalanceById(
+				debitedAccount.id,
+				updatedDebitBalance,
+				journalEntry.timestamp!
+			);
+		} catch (e: unknown) {
+			// TODO: revert store.
+			this.logger.error(e);
+			throw e;
+		}
+
 		return journalEntry.id;
 	}
 

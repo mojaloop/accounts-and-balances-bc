@@ -61,6 +61,9 @@ import {
 } from "@mojaloop/accounts-and-balances-bc-shared-mocks-lib";
 import {bigintToString, stringToBigint} from "../../src/utils";
 
+const ID_HUB_ACCOUNT: string = randomUUID();
+const INITIAL_CREDIT_BALANCE_HUB_ACCOUNT: string = (1_000_000).toString();
+
 let accountsRepo: IAccountsRepo;
 let journalEntriesRepo: IJournalEntriesRepo;
 let aggregate: Aggregate;
@@ -70,8 +73,6 @@ const securityContext: CallSecurityContext = {
 	rolesIds: [""],
 	accessToken: ""
 };
-const ID_HUB_ACCOUNT: string = randomUUID();
-const INITIAL_CREDIT_BALANCE_HUB_ACCOUNT: string = (1_000_000).toString();
 
 describe("accounts and balances domain library - unit tests", () => {
 	beforeAll(async () => {
@@ -95,6 +96,7 @@ describe("accounts and balances domain library - unit tests", () => {
 			state: AccountState.ACTIVE,
 			type: AccountType.POSITION,
 			currencyCode: "EUR",
+			currencyDecimals: 2,
 			creditBalance: INITIAL_CREDIT_BALANCE_HUB_ACCOUNT,
 			debitBalance: "0",
 			timestampLastJournalEntry: null
@@ -140,7 +142,7 @@ describe("accounts and balances domain library - unit tests", () => {
 		const initialCreditBalance: string = "100";
 		// Journal entry A, regarding the crediting of account A.
 		const idJournalEntryA: string = randomUUID();
-		const timestampJournalEntryA: number = Date.now();
+		const timestampJournalEntryA: null = null;
 		const journalEntryDtoA: IJournalEntryDto = {
 			id: idJournalEntryA,
 			externalId: null,
@@ -153,7 +155,7 @@ describe("accounts and balances domain library - unit tests", () => {
 		};
 		// Journal entry B, regarding the crediting of account B.
 		const idJournalEntryB: string = randomUUID();
-		const timestampJournalEntryB: number = timestampJournalEntryA + 1;
+		const timestampJournalEntryB: null = null;
 		const journalEntryDtoB: IJournalEntryDto = {
 			id: idJournalEntryB,
 			externalId: null,
@@ -172,19 +174,21 @@ describe("accounts and balances domain library - unit tests", () => {
 			await aggregate.getAccountById(idAccountA, securityContext);
 		expect(receivedAccountDtoAAfterJournalEntriesAAndB?.creditBalance).toEqual(initialCreditBalance);
 		expect(receivedAccountDtoAAfterJournalEntriesAAndB?.debitBalance).toEqual("0");
-		expect(receivedAccountDtoAAfterJournalEntriesAAndB?.timestampLastJournalEntry).toEqual(timestampJournalEntryA);
+		expect(receivedAccountDtoAAfterJournalEntriesAAndB?.timestampLastJournalEntry).not.toBeNull();
+		expect(receivedAccountDtoAAfterJournalEntriesAAndB?.timestampLastJournalEntry).not.toEqual(0);
 		// Verify account B.
 		const receivedAccountDtoBAfterJournalEntriesAAndB: IAccountDto | null =
 			await aggregate.getAccountById(idAccountB, securityContext);
 		expect(receivedAccountDtoBAfterJournalEntriesAAndB?.creditBalance).toEqual(initialCreditBalance);
 		expect(receivedAccountDtoBAfterJournalEntriesAAndB?.debitBalance).toEqual("0");
-		expect(receivedAccountDtoBAfterJournalEntriesAAndB?.timestampLastJournalEntry).toEqual(timestampJournalEntryB);
+		expect(receivedAccountDtoBAfterJournalEntriesAAndB?.timestampLastJournalEntry).not.toBeNull();
+		expect(receivedAccountDtoBAfterJournalEntriesAAndB?.timestampLastJournalEntry).not.toEqual(0);
 
 		// Transfer money from account A to B and vice-versa.
 		// Journal entry C, regarding the transfer of money from account A to B.
 		const idJournalEntryC: string = randomUUID();
 		const amountJournalEntryC: string = "5";
-		const timestampJournalEntryC: number = timestampJournalEntryB + 1;
+		const timestampJournalEntryC: null = null;
 		const journalEntryDtoC: IJournalEntryDto = {
 			id: idJournalEntryC,
 			externalId: null,
@@ -198,7 +202,7 @@ describe("accounts and balances domain library - unit tests", () => {
 		// Journal entry D, regarding the transfer of money from account B to A.
 		const idJournalEntryD: string = randomUUID();
 		const amountJournalEntryD: string = "25";
-		const timestampJournalEntryD: number = timestampJournalEntryC + 1;
+		const timestampJournalEntryD: null = null;
 		const journalEntryDtoD: IJournalEntryDto = {
 			id: idJournalEntryD,
 			externalId: null,
@@ -220,7 +224,8 @@ describe("accounts and balances domain library - unit tests", () => {
 			+ parseInt(amountJournalEntryD)
 		}`);
 		expect(receivedAccountDtoAAfterJournalEntriesCAndD?.debitBalance).toEqual(amountJournalEntryC);
-		expect(receivedAccountDtoAAfterJournalEntriesCAndD?.timestampLastJournalEntry).toEqual(timestampJournalEntryD);
+		expect(receivedAccountDtoAAfterJournalEntriesCAndD?.timestampLastJournalEntry).not.toBeNull();
+		expect(receivedAccountDtoAAfterJournalEntriesCAndD?.timestampLastJournalEntry).not.toEqual(0);
 		// Verify account B.
 		const receivedAccountDtoBAfterJournalEntriesCAndD: IAccountDto | null =
 			await aggregate.getAccountById(idAccountB, securityContext);
@@ -229,13 +234,14 @@ describe("accounts and balances domain library - unit tests", () => {
 			+ parseInt(amountJournalEntryC)
 		}`);
 		expect(receivedAccountDtoBAfterJournalEntriesCAndD?.debitBalance).toEqual(amountJournalEntryD);
-		expect(receivedAccountDtoBAfterJournalEntriesCAndD?.timestampLastJournalEntry).toEqual(timestampJournalEntryD);
+		expect(receivedAccountDtoBAfterJournalEntriesCAndD?.timestampLastJournalEntry).not.toBeNull();
+		expect(receivedAccountDtoBAfterJournalEntriesCAndD?.timestampLastJournalEntry).not.toEqual(0);
 
 		// Transfer money from account A to B again.
-		// Journal entry C, regarding the transfer of money from account A to B.
+		// Journal entry E, regarding the transfer of money from account A to B.
 		const idJournalEntryE: string = randomUUID();
 		const amountJournalEntryE: string = "10";
-		const timestampJournalEntryE: number = timestampJournalEntryD + 1;
+		const timestampJournalEntryE: null = null;
 		const journalEntryDtoE: IJournalEntryDto = {
 			id: idJournalEntryE,
 			externalId: null,
@@ -260,7 +266,8 @@ describe("accounts and balances domain library - unit tests", () => {
 			parseInt(amountJournalEntryC)
 			+ parseInt(amountJournalEntryE)
 		}`);
-		expect(receivedAccountDtoAAfterJournalEntryE?.timestampLastJournalEntry).toEqual(timestampJournalEntryE);
+		expect(receivedAccountDtoAAfterJournalEntryE?.timestampLastJournalEntry).not.toBeNull();
+		expect(receivedAccountDtoAAfterJournalEntryE?.timestampLastJournalEntry).not.toEqual(0);
 		// Verify account B.
 		const receivedAccountDtoBAfterJournalEntryE: IAccountDto | null =
 			await aggregate.getAccountById(idAccountB, securityContext);
@@ -270,7 +277,8 @@ describe("accounts and balances domain library - unit tests", () => {
 			+ parseInt(amountJournalEntryE)
 		}`);
 		expect(receivedAccountDtoBAfterJournalEntryE?.debitBalance).toEqual(amountJournalEntryD);
-		expect(receivedAccountDtoBAfterJournalEntryE?.timestampLastJournalEntry).toEqual(timestampJournalEntryE);
+		expect(receivedAccountDtoBAfterJournalEntryE?.timestampLastJournalEntry).not.toBeNull();
+		expect(receivedAccountDtoBAfterJournalEntryE?.timestampLastJournalEntry).not.toEqual(0);
 	});
 
 	/* Create account. */
@@ -324,7 +332,8 @@ describe("accounts and balances domain library - unit tests", () => {
 			timestampLastJournalEntry: null
 		};
 		const accountIdReceived: string = await aggregate.createAccount(accountDto, securityContext);
-		expect(accountIdReceived).not.toEqual(accountId);
+		expect(accountIdReceived).not.toBeNull();
+		expect(accountIdReceived).not.toEqual("");
 	});
 
 	// TODO: change failure implementation.
@@ -364,7 +373,7 @@ describe("accounts and balances domain library - unit tests", () => {
 			amount: "5",
 			creditedAccountId: accountDtos[0].id!,
 			debitedAccountId: accountDtos[1].id!,
-			timestamp: Date.now()
+			timestamp: null
 		};
 		// Journal entry B.
 		const idJournalEntryB: string = idJournalEntryA + 1;
@@ -376,7 +385,7 @@ describe("accounts and balances domain library - unit tests", () => {
 			amount: "5",
 			creditedAccountId: accountDtos[1].id!,
 			debitedAccountId: accountDtos[0].id!,
-			timestamp: Date.now()
+			timestamp: null
 		};
 		const idsJournalEntriesReceived: string[] =
 			await aggregate.createJournalEntries([journalEntryDtoA, journalEntryDtoB], securityContext);
@@ -396,7 +405,7 @@ describe("accounts and balances domain library - unit tests", () => {
 			amount: "5",
 			creditedAccountId: accountDtos[0].id!,
 			debitedAccountId: accountDtos[1].id!,
-			timestamp: Date.now()
+			timestamp: null
 		};
 		// Journal entry B.
 		const idJournalEntryB: string = idJournalEntryA + 1;
@@ -408,7 +417,7 @@ describe("accounts and balances domain library - unit tests", () => {
 			amount: "5",
 			creditedAccountId: accountDtos[1].id!,
 			debitedAccountId: accountDtos[0].id!,
-			timestamp: Date.now()
+			timestamp: null
 		};
 		await aggregate.createJournalEntries([journalEntryDtoA, journalEntryDtoB], securityContext);
 		await expect(
@@ -433,11 +442,12 @@ describe("accounts and balances domain library - unit tests", () => {
 			amount: "5",
 			creditedAccountId: accountDtos[0].id!,
 			debitedAccountId: accountDtos[1].id!,
-			timestamp: Date.now()
+			timestamp: null
 		};
 		const journalEntryIdReceived: string[] =
 			await aggregate.createJournalEntries([journalEntryDto], securityContext);
-		expect(journalEntryIdReceived).not.toEqual(journalEntryId);
+		expect(journalEntryIdReceived).not.toBeNull();
+		expect(journalEntryIdReceived).not.toEqual("");
 	});
 
 	test("create journal entry with same credited and debited accounts", async () => {
@@ -452,7 +462,7 @@ describe("accounts and balances domain library - unit tests", () => {
 			amount: "5",
 			creditedAccountId: accountDtos[0].id!,
 			debitedAccountId: accountDtos[0].id!,
-			timestamp: Date.now()
+			timestamp: null
 		};
 		await expect(
 			async () => {
@@ -473,7 +483,7 @@ describe("accounts and balances domain library - unit tests", () => {
 			amount: "5",
 			creditedAccountId: "",
 			debitedAccountId: accountDtos[1].id!,
-			timestamp: Date.now()
+			timestamp: null
 		};
 		await expect(
 			async () => {
@@ -494,7 +504,7 @@ describe("accounts and balances domain library - unit tests", () => {
 			amount: "5",
 			creditedAccountId: accountDtos[0].id!,
 			debitedAccountId: "",
-			timestamp: Date.now()
+			timestamp: null
 		};
 		await expect(
 			async () => {
@@ -515,7 +525,7 @@ describe("accounts and balances domain library - unit tests", () => {
 			amount: "5",
 			creditedAccountId: accountDtos[0].id!,
 			debitedAccountId: accountDtos[1].id!,
-			timestamp: Date.now()
+			timestamp: null
 		};
 		await expect(
 			async () => {
@@ -536,7 +546,7 @@ describe("accounts and balances domain library - unit tests", () => {
 			amount: "-5",
 			creditedAccountId: accountDtos[0].id!,
 			debitedAccountId: accountDtos[1].id!,
-			timestamp: Date.now()
+			timestamp: null
 		};
 		await expect(
 			async () => {
@@ -557,7 +567,7 @@ describe("accounts and balances domain library - unit tests", () => {
 			amount: "1000",
 			creditedAccountId: accountDtos[0].id!,
 			debitedAccountId: accountDtos[1].id!,
-			timestamp: Date.now()
+			timestamp: null
 		};
 		await expect(
 			async () => {
@@ -579,7 +589,7 @@ describe("accounts and balances domain library - unit tests", () => {
 			amount: "5",
 			creditedAccountId: accountDtos[0].id!,
 			debitedAccountId: accountDtos[1].id!,
-			timestamp: Date.now()
+			timestamp: null
 		};
 		(journalEntriesRepo as MemoryJournalEntriesRepo).setUnexpectedFailure(true);
 		await expect(
@@ -603,7 +613,7 @@ describe("accounts and balances domain library - unit tests", () => {
 			amount: "5",
 			creditedAccountId: accountDtos[0].id!,
 			debitedAccountId: accountDtos[1].id!,
-			timestamp: Date.now()
+			timestamp: null
 		};
 		(accountsRepo as MemoryAccountsRepo).setUnexpectedFailure(true);
 		await expect(
@@ -636,7 +646,14 @@ describe("accounts and balances domain library - unit tests", () => {
 		};
 		await aggregate.createAccount(accountDto, securityContext);
 		const accountDtoReceived: IAccountDto | null = await aggregate.getAccountById(accountId, securityContext);
-		expect(accountDtoReceived).toEqual(accountDto);
+		expect(accountDtoReceived?.id).toEqual(accountDto.id);
+		expect(accountDtoReceived?.externalId).toEqual(accountDto.externalId);
+		expect(accountDtoReceived?.state).toEqual(accountDto.state);
+		expect(accountDtoReceived?.type).toEqual(accountDto.type);
+		expect(accountDtoReceived?.currencyCode).toEqual(accountDto.currencyCode);
+		expect(accountDtoReceived?.creditBalance).toEqual(accountDto.creditBalance);
+		expect(accountDtoReceived?.debitBalance).toEqual(accountDto.debitBalance);
+		expect(accountDtoReceived?.timestampLastJournalEntry).toEqual(accountDto.timestampLastJournalEntry);
 	});
 
 	// TODO: change failure implementation.
@@ -738,7 +755,7 @@ describe("accounts and balances domain library - unit tests", () => {
 			amount: "100",
 			creditedAccountId: idAccountA,
 			debitedAccountId: ID_HUB_ACCOUNT,
-			timestamp: Date.now()
+			timestamp: null
 		};
 		// Journal entry B.
 		const idJournalEntryB: string = randomUUID();
@@ -750,7 +767,7 @@ describe("accounts and balances domain library - unit tests", () => {
 			amount: "100",
 			creditedAccountId: idAccountB,
 			debitedAccountId: ID_HUB_ACCOUNT,
-			timestamp: Date.now()
+			timestamp: null
 		};
 		// Journal entry C.
 		const idJournalEntryC: string = randomUUID();
@@ -762,7 +779,7 @@ describe("accounts and balances domain library - unit tests", () => {
 			amount: "5",
 			creditedAccountId: idAccountA,
 			debitedAccountId: idAccountB,
-			timestamp: Date.now()
+			timestamp: null
 		};
 		// Journal entry D.
 		const idJournalEntryD: string = idJournalEntryA + 1;
@@ -774,7 +791,7 @@ describe("accounts and balances domain library - unit tests", () => {
 			amount: "5",
 			creditedAccountId: idAccountB,
 			debitedAccountId: idAccountA,
-			timestamp: Date.now()
+			timestamp: null
 		};
 		await aggregate.createJournalEntries(
 			[journalEntryDtoA, journalEntryDtoB, journalEntryDtoC, journalEntryDtoD],
@@ -783,14 +800,71 @@ describe("accounts and balances domain library - unit tests", () => {
 
 		const journalEntryDtosReceivedIdAccountA: IJournalEntryDto[] =
 			await aggregate.getJournalEntriesByAccountId(idAccountA, securityContext);
-		expect(journalEntryDtosReceivedIdAccountA).toEqual(
-			[journalEntryDtoA, journalEntryDtoC, journalEntryDtoD]
-		);
+		// TODO: simplify.
+		// journalEntryDtoA.
+		expect(journalEntryDtosReceivedIdAccountA[0].id).toEqual(journalEntryDtoA.id);
+		expect(journalEntryDtosReceivedIdAccountA[0].externalId).toEqual(journalEntryDtoA.externalId);
+		expect(journalEntryDtosReceivedIdAccountA[0].externalCategory).toEqual(journalEntryDtoA.externalCategory);
+		expect(journalEntryDtosReceivedIdAccountA[0].currencyCode).toEqual(journalEntryDtoA.currencyCode);
+		expect(journalEntryDtosReceivedIdAccountA[0].amount).toEqual(journalEntryDtoA.amount);
+		expect(journalEntryDtosReceivedIdAccountA[0].creditedAccountId).toEqual(journalEntryDtoA.creditedAccountId);
+		expect(journalEntryDtosReceivedIdAccountA[0].debitedAccountId).toEqual(journalEntryDtoA.debitedAccountId);
+		expect(journalEntryDtosReceivedIdAccountA[0].timestamp).not.toBeNull();
+		expect(journalEntryDtosReceivedIdAccountA[0].timestamp).not.toEqual(0);
+		// journalEntryDtoC.
+		expect(journalEntryDtosReceivedIdAccountA[1].id).toEqual(journalEntryDtoC.id);
+		expect(journalEntryDtosReceivedIdAccountA[1].externalId).toEqual(journalEntryDtoC.externalId);
+		expect(journalEntryDtosReceivedIdAccountA[1].externalCategory).toEqual(journalEntryDtoC.externalCategory);
+		expect(journalEntryDtosReceivedIdAccountA[1].currencyCode).toEqual(journalEntryDtoC.currencyCode);
+		expect(journalEntryDtosReceivedIdAccountA[1].amount).toEqual(journalEntryDtoC.amount);
+		expect(journalEntryDtosReceivedIdAccountA[1].creditedAccountId).toEqual(journalEntryDtoC.creditedAccountId);
+		expect(journalEntryDtosReceivedIdAccountA[1].debitedAccountId).toEqual(journalEntryDtoC.debitedAccountId);
+		expect(journalEntryDtosReceivedIdAccountA[1].timestamp).not.toBeNull();
+		expect(journalEntryDtosReceivedIdAccountA[1].timestamp).not.toEqual(0);
+		// journalEntryDtoD.
+		expect(journalEntryDtosReceivedIdAccountA[2].id).toEqual(journalEntryDtoD.id);
+		expect(journalEntryDtosReceivedIdAccountA[2].externalId).toEqual(journalEntryDtoD.externalId);
+		expect(journalEntryDtosReceivedIdAccountA[2].externalCategory).toEqual(journalEntryDtoD.externalCategory);
+		expect(journalEntryDtosReceivedIdAccountA[2].currencyCode).toEqual(journalEntryDtoD.currencyCode);
+		expect(journalEntryDtosReceivedIdAccountA[2].amount).toEqual(journalEntryDtoD.amount);
+		expect(journalEntryDtosReceivedIdAccountA[2].creditedAccountId).toEqual(journalEntryDtoD.creditedAccountId);
+		expect(journalEntryDtosReceivedIdAccountA[2].debitedAccountId).toEqual(journalEntryDtoD.debitedAccountId);
+		expect(journalEntryDtosReceivedIdAccountA[2].timestamp).not.toBeNull();
+		expect(journalEntryDtosReceivedIdAccountA[2].timestamp).not.toEqual(0);
+
 		const journalEntryDtosReceivedIdAccountB: IJournalEntryDto[] =
 			await aggregate.getJournalEntriesByAccountId(idAccountB, securityContext);
-		expect(journalEntryDtosReceivedIdAccountB).toEqual(
-			[journalEntryDtoB, journalEntryDtoC, journalEntryDtoD]
-		);
+		// TODO: simplify.
+		// journalEntryDtoB.
+		expect(journalEntryDtosReceivedIdAccountB[0].id).toEqual(journalEntryDtoB.id);
+		expect(journalEntryDtosReceivedIdAccountB[0].externalId).toEqual(journalEntryDtoB.externalId);
+		expect(journalEntryDtosReceivedIdAccountB[0].externalCategory).toEqual(journalEntryDtoB.externalCategory);
+		expect(journalEntryDtosReceivedIdAccountB[0].currencyCode).toEqual(journalEntryDtoB.currencyCode);
+		expect(journalEntryDtosReceivedIdAccountB[0].amount).toEqual(journalEntryDtoB.amount);
+		expect(journalEntryDtosReceivedIdAccountB[0].creditedAccountId).toEqual(journalEntryDtoB.creditedAccountId);
+		expect(journalEntryDtosReceivedIdAccountB[0].debitedAccountId).toEqual(journalEntryDtoB.debitedAccountId);
+		expect(journalEntryDtosReceivedIdAccountB[0].timestamp).not.toBeNull();
+		expect(journalEntryDtosReceivedIdAccountB[0].timestamp).not.toEqual(0);
+		// journalEntryDtoC.
+		expect(journalEntryDtosReceivedIdAccountB[1].id).toEqual(journalEntryDtoC.id);
+		expect(journalEntryDtosReceivedIdAccountB[1].externalId).toEqual(journalEntryDtoC.externalId);
+		expect(journalEntryDtosReceivedIdAccountB[1].externalCategory).toEqual(journalEntryDtoC.externalCategory);
+		expect(journalEntryDtosReceivedIdAccountB[1].currencyCode).toEqual(journalEntryDtoC.currencyCode);
+		expect(journalEntryDtosReceivedIdAccountB[1].amount).toEqual(journalEntryDtoC.amount);
+		expect(journalEntryDtosReceivedIdAccountB[1].creditedAccountId).toEqual(journalEntryDtoC.creditedAccountId);
+		expect(journalEntryDtosReceivedIdAccountB[1].debitedAccountId).toEqual(journalEntryDtoC.debitedAccountId);
+		expect(journalEntryDtosReceivedIdAccountB[1].timestamp).not.toBeNull();
+		expect(journalEntryDtosReceivedIdAccountB[1].timestamp).not.toEqual(0);
+		// journalEntryDtoD.
+		expect(journalEntryDtosReceivedIdAccountB[2].id).toEqual(journalEntryDtoD.id);
+		expect(journalEntryDtosReceivedIdAccountB[2].externalId).toEqual(journalEntryDtoD.externalId);
+		expect(journalEntryDtosReceivedIdAccountB[2].externalCategory).toEqual(journalEntryDtoD.externalCategory);
+		expect(journalEntryDtosReceivedIdAccountB[2].currencyCode).toEqual(journalEntryDtoD.currencyCode);
+		expect(journalEntryDtosReceivedIdAccountB[2].amount).toEqual(journalEntryDtoD.amount);
+		expect(journalEntryDtosReceivedIdAccountB[2].creditedAccountId).toEqual(journalEntryDtoD.creditedAccountId);
+		expect(journalEntryDtosReceivedIdAccountB[2].debitedAccountId).toEqual(journalEntryDtoD.debitedAccountId);
+		expect(journalEntryDtosReceivedIdAccountB[2].timestamp).not.toBeNull();
+		expect(journalEntryDtosReceivedIdAccountB[2].timestamp).not.toEqual(0);
 	});
 
 	// TODO: change failure implementation.
@@ -808,7 +882,7 @@ describe("accounts and balances domain library - unit tests", () => {
 			amount: "5",
 			creditedAccountId: idAccountA,
 			debitedAccountId: idAccountB,
-			timestamp: Date.now()
+			timestamp: null
 		};
 		await aggregate.createJournalEntries([journalEntryDto], securityContext);
 		(journalEntriesRepo as MemoryJournalEntriesRepo).setUnexpectedFailure(true);
@@ -903,7 +977,7 @@ async function createAndCredit2Accounts(
 		amount: creditBalance,
 		creditedAccountId: idAccountA,
 		debitedAccountId: ID_HUB_ACCOUNT,
-		timestamp: Date.now()
+		timestamp: null
 	};
 	// Journal entry B, regarding the crediting of account B.
 	const idJournalEntryB: string = randomUUID();
@@ -915,7 +989,7 @@ async function createAndCredit2Accounts(
 		amount: creditBalance,
 		creditedAccountId: idAccountB,
 		debitedAccountId: ID_HUB_ACCOUNT,
-		timestamp: Date.now()
+		timestamp: null
 	};
 	await aggregate.createJournalEntries([journalEntryDtoA, journalEntryDtoB], securityContext);
 

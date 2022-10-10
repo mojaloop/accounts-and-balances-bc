@@ -29,11 +29,8 @@
 
 "use strict";
 
-import {InvalidCurrencyCodeError} from "./errors";
 import {AccountState, AccountType, IAccountDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
-import {ICurrency} from "./currency";
-import {bigintToString, stringToBigint} from "../utils";
-import * as Crypto from "crypto";
+import {bigintToString} from "../utils";
 
 // TODO: implements/extends anything?
 export class Account {
@@ -45,7 +42,7 @@ export class Account {
 	currencyDecimals: number;
 	creditBalance: bigint;
 	debitBalance: bigint;
-	timestampLastJournalEntry: number | null = null;
+	timestampLastJournalEntry: number | null;
 
 	constructor(
 		id: string,
@@ -69,55 +66,26 @@ export class Account {
 		this.timestampLastJournalEntry = timestampLastJournalEntry;
 	}
 
-	static FromDto(accountDto: IAccountDto, currencies: ICurrency[]): Account {
-		const currency: ICurrency | undefined = currencies.find(currency => {
-			return currency.code === accountDto.currencyCode;
-		});
-		if (currency === undefined) {
-			throw new InvalidCurrencyCodeError();
-		}
-		let creditBalance: bigint;
-		let debitBalance: bigint;
-		try {
-			creditBalance = stringToBigint(accountDto.creditBalance, currency.decimals);
-		} catch (error: unknown) {
-			throw new Error();
-		}
-		try {
-			debitBalance = stringToBigint(accountDto.debitBalance, currency.decimals);
-		} catch (error: unknown) {
-			throw new Error();
-		}
+	toDto(): IAccountDto {
+		const creditBalance: string = bigintToString(this.creditBalance, this.currencyDecimals);
+		const debitBalance: string = bigintToString(this.debitBalance, this.currencyDecimals);
 
-		return new Account(
-			accountDto.id || Crypto.randomUUID(),
-			accountDto.externalId,
-			accountDto.state,
-			accountDto.type,
-			accountDto.currencyCode,
-			currency.decimals,
-			creditBalance,
-			debitBalance,
-			accountDto.timestampLastJournalEntry
-		);
-	}
-
-	static ToDto(account: Account): IAccountDto {
-		const creditBalance: string = bigintToString(account.creditBalance, account.currencyDecimals);
-		const debitBalance: string = bigintToString(account.debitBalance, account.currencyDecimals);
-		return {
-			id: account.id,
-			externalId: account.externalId,
-			state: account.state,
-			type: account.type,
-			currencyCode: account.currencyCode,
+		const accountDto: IAccountDto = {
+			id: this.id,
+			externalId: this.externalId,
+			state: this.state,
+			type: this.type,
+			currencyCode: this.currencyCode,
+			currencyDecimals: this.currencyDecimals,
 			creditBalance: creditBalance,
 			debitBalance: debitBalance,
-			timestampLastJournalEntry: account.timestampLastJournalEntry
+			timestampLastJournalEntry: this.timestampLastJournalEntry
 		};
+		return accountDto;
 	}
 
-	static calculateBalance(account: Account): bigint {
-		return account.creditBalance - account.debitBalance;
+	calculateBalance(): bigint {
+		const balance: bigint = this.creditBalance - this.debitBalance;
+		return balance;
 	}
 }
