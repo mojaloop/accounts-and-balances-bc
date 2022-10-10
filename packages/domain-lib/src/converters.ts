@@ -29,47 +29,51 @@
 
 "use strict";
 
-const regex: RegExp = /^([0]|([1-9][0-9]{0,17}))([.][0-9]{0,3}[1-9])?$/;
+const REGEX: RegExp = /^([0]|([1-9][0-9]{0,17}))([.][0-9]{0,3}[1-9])?$/;
 
+// Can be optimized.
 export function stringToBigint(stringValue: string, decimals: number): bigint {
-	if (!regex.test(stringValue)) {
+	if (!REGEX.test(stringValue)) {
 		throw new Error();
 	}
 
-	let existingDecimals: number = 0;
-	if (stringValue.indexOf(".") > -1) {
-		existingDecimals = stringValue.split(".")[1].length;
-	}
+	// Count the decimals on the received string.
+	const stringValueSplitted: string[] = stringValue.split(".");
+	const existingDecimals: number = stringValueSplitted[1]?.length ?? 0;
 	if (existingDecimals > decimals) {
 		throw new Error();
 	}
-	const bigIntStr: string =
+
+	// Format the received string according to the decimals.
+	const stringValueFormatted: string =
 		stringValue.replace(".", "")
 		+ "0".repeat(decimals - existingDecimals);
 
-	let bigintValue: bigint;
-	try {
-		bigintValue = BigInt(bigIntStr);
-	} catch(error: unknown) {
-		throw new Error();
-	}
-
+	const bigintValue: bigint = BigInt(stringValueFormatted);
 	return bigintValue;
 }
 
+// Can be optimized.
 export function bigintToString(bigintValue: bigint, decimals: number): string {
 	if (bigintValue === 0n) {
 		return "0";
 	}
-	const stringValue: string = bigintValue.toString();
-	const dotIdx: number = stringValue.length - decimals;
-	const stringValueWithDot: string = stringValue.slice(0, dotIdx) + "." + stringValue.slice(dotIdx);
-	let finalString: string = stringValueWithDot;
-	while (finalString[finalString.length - 1] === "0") {
-		finalString = finalString.slice(0, finalString.length - 1);
+
+	// Get the string corresponding to the bigint and insert a dot according to the decimals.
+	const bigintValueToString: string = bigintValue.toString();
+	const dotIdx: number = bigintValueToString.length - decimals;
+	const bigintValueToStringWithDot: string =
+		bigintValueToString.slice(0, dotIdx) + "." + bigintValueToString.slice(dotIdx);
+
+	let finalString: string = bigintValueToStringWithDot;
+	// Remove trailing zeros, if necessary.
+	while (finalString.endsWith("0")) {
+		finalString = finalString.slice(0, -1);
 	}
-	if (finalString[finalString.length - 1] === ".") {
-		finalString = finalString.slice(0, finalString.length - 1);
+	// Remove dot, if necessary.
+	if (finalString.endsWith(".")) {
+		finalString = finalString.slice(0, -1);
 	}
+
 	return finalString;
 }

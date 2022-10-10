@@ -1,15 +1,16 @@
-"use strict";
-
-const fullPackageName = require("./package.json").name;
-const shortPackageName = fullPackageName.replace("@mojaloop/accounts-and-balances-bc-", "");
+const { name } = require("./package.json");
+let packageName = name.replace("@mojaloop", "");
 
 module.exports = {
   preset: "ts-jest",
   testEnvironment: "node",
+  testMatch: ["**/test/unit/**/*.test.ts"],
+  passWithNoTests: true,
   collectCoverage: true,
-  collectCoverageFrom: ["src/**/*.ts"],
-  coverageReporters: ["json", "lcov"],
-  coverageDirectory: `../../coverage/${shortPackageName}/`,
+  collectCoverageFrom: ["./src/**/*.ts"],
+  coveragePathIgnorePatterns: ["./src/tmp_files"],
+  coverageReporters: ["text", ["json", {file: `../../../coverage/${packageName}-final.json`}]],
+  //coverageDirectory: "../../coverage/",
   clearMocks: true,
   coverageThreshold: {
     "global": {

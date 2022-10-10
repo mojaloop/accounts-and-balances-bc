@@ -30,7 +30,7 @@
 "use strict";
 
 import {IJournalEntryDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
-import {bigintToString} from "../utils";
+import {bigintToString} from "../converters";
 
 // TODO: implements/extends anything?
 export class JournalEntry {

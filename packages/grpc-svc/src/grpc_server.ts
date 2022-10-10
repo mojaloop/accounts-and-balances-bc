@@ -64,7 +64,7 @@ export class GrpcServer {
 		host: string,
 		portNo: number
 	) {
-		this.logger = logger;
+		this.logger = logger.createChild((this as any).constructor.name);
 		this.HOST = host;
 		this.PORT_NO = portNo;
 
@@ -94,6 +94,7 @@ export class GrpcServer {
 				(error) => {
 					if (error) {
 						reject(error);
+						return;
 					}
 					this.server.start();
 					this.logger.info("* * * * * * * * * * * * * * * * * * * *");

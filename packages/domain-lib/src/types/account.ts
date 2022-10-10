@@ -30,7 +30,7 @@
 "use strict";
 
 import {AccountState, AccountType, IAccountDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
-import {bigintToString} from "../utils";
+import {bigintToString} from "../converters";
 
 // TODO: implements/extends anything?
 export class Account {

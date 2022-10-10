@@ -30,7 +30,6 @@
 "use strict";
 
 // Account.
-export class InvalidTimestampError extends Error {}
 export class InvalidCreditBalanceError extends Error {}
 export class InvalidDebitBalanceError extends Error {}
 // JournalEntry.
@@ -45,6 +44,8 @@ export class InsufficientBalanceError extends Error {}
 export class InvalidIdError extends Error {}
 export class InvalidExternalIdError extends Error {}
 export class InvalidCurrencyCodeError extends Error {}
+export class InvalidCurrencyDecimalsError extends Error {}
+export class InvalidTimestampError extends Error {}
 // Repos.
 export class UnableToInitRepoError extends Error {}
 export class AccountAlreadyExistsError extends Error {}

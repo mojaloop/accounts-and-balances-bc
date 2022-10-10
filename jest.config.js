@@ -1,12 +1,16 @@
-"use strict";
+// root level jest.config.js
+
+"use strict"
 
 module.exports = {
   preset: "ts-jest",
   testEnvironment: "node",
+  testMatch: ["<rootDir>/test/integration/**/*.test.ts"],
+  passWithNoTests: true,
   collectCoverage: true,
-  collectCoverageFrom: ["packages/**/src/**/*.ts"],
-  coverageReporters: ["json", "lcov"],
-  coverageDirectory: "coverage/integration/",
+  collectCoverageFrom: ["**/src/**/*.ts"],
+  coverageReporters: ["text", ["json", {file: "integration-final.json"}]],
+  coverageDirectory: "./coverage/",
   clearMocks: true,
   coverageThreshold: {
     "global": {

@@ -35,7 +35,7 @@ export interface IAccountDto {
 	state: AccountState;
 	type: AccountType;
 	currencyCode: string;
-	currencyDecimals?: number;
+	currencyDecimals: number | null;
 	creditBalance: string;
 	debitBalance: string;
 	timestampLastJournalEntry: number | null;
@@ -57,7 +57,7 @@ export interface IJournalEntryDto {
 	externalId: string | null;
 	externalCategory: string | null;
 	currencyCode: string;
-	currencyDecimals?: number;
+	currencyDecimals: number | null;
 	amount: string;
 	creditedAccountId: string;
 	debitedAccountId: string;

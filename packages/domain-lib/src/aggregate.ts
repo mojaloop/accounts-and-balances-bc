@@ -37,11 +37,18 @@ import {
 	CurrencyCodesDifferError,
 	InsufficientBalanceError,
 	InvalidExternalCategoryError,
-	InvalidExternalIdError, InvalidJournalEntryAmountError, InvalidTimestampError,
+	InvalidExternalIdError,
+	InvalidJournalEntryAmountError,
+	InvalidTimestampError,
 	JournalEntryAlreadyExistsError,
 	NoSuchCreditedAccountError,
 	NoSuchDebitedAccountError,
-	UnauthorizedError, InvalidIdError, InvalidCurrencyCodeError, InvalidCreditBalanceError, InvalidDebitBalanceError
+	UnauthorizedError,
+	InvalidIdError,
+	InvalidCurrencyCodeError,
+	InvalidCreditBalanceError,
+	InvalidDebitBalanceError,
+	InvalidCurrencyDecimalsError
 } from "./types/errors";
 import {
 	IAccountsRepo,
@@ -57,8 +64,7 @@ import {Privileges} from "./types/privileges";
 import {join} from "path";
 import {readFileSync} from "fs";
 import {ICurrency} from "./types/currency";
-import {bigintToString, stringToBigint} from "./utils";
-import Crypto from "crypto";
+import {bigintToString, stringToBigint} from "./converters";
 
 enum AuditingActions {
 	ACCOUNT_CREATED = "ACCOUNT_CREATED"
@@ -118,17 +124,25 @@ export class Aggregate {
 	async createAccount(accountDto: IAccountDto, securityContext: CallSecurityContext): Promise<string> {
 		this.enforcePrivilege(securityContext, Privileges.CREATE_ACCOUNT);
 
-		// When creating an account, currencyDecimals is supposed to be undefined and timestampLastJournalEntry null.
-		// For consistency purposes, if this doesn't happen, errors are thrown.
-		if (accountDto.currencyDecimals !== undefined) {
-			throw new Error(); // TODO: create custom error.
+		// When creating an account, currencyDecimals and timestampLastJournalEntry are supposed to be null and
+		// creditBalance and debitBalance 0. For consistency purposes and to make sure whoever calls this function
+		// knows that, if those values aren't respected, errors are thrown.
+		if (accountDto.currencyDecimals !== null) {
+			throw new InvalidCurrencyDecimalsError();
 		}
 		if (accountDto.timestampLastJournalEntry !== null) {
-			throw new Error(); // TODO: create custom error.
+			throw new InvalidTimestampError();
+		}
+		if (parseInt(accountDto.creditBalance) !== 0) {
+			throw new InvalidCreditBalanceError();
+		}
+		if (parseInt(accountDto.debitBalance) !== 0) {
+			throw new InvalidDebitBalanceError();
 		}
 
 		// When creating an account, id and externalId are supposed to be either a non-empty string or null. For
-		// consistency purposes, if this doesn't happen, errors are thrown.
+		// consistency purposes and to make sure whoever calls this function knows that, if those values aren't
+		// respected, errors are thrown.
 		if (accountDto.id === "") {
 			throw new InvalidIdError();
 		}
@@ -147,22 +161,6 @@ export class Aggregate {
 			throw new InvalidCurrencyCodeError();
 		}
 
-		// Convert the credit balance.
-		let creditBalance: bigint;
-		try {
-			creditBalance = stringToBigint(accountDto.creditBalance, currency.decimals);
-		} catch (error: unknown) {
-			throw new InvalidCreditBalanceError();
-		}
-
-		// Convert the debit balance.
-		let debitBalance: bigint;
-		try {
-			debitBalance = stringToBigint(accountDto.debitBalance, currency.decimals);
-		} catch (error: unknown) {
-			throw new InvalidDebitBalanceError();
-		}
-
 		const account: Account = new Account(
 			accountId,
 			accountDto.externalId,
@@ -170,9 +168,9 @@ export class Aggregate {
 			accountDto.type,
 			accountDto.currencyCode,
 			currency.decimals,
-			creditBalance,
-			debitBalance,
-			accountDto.timestampLastJournalEntry
+			0n,
+			0n,
+			null
 		);
 
 		// Store the account (accountDto can't be stored).
@@ -213,17 +211,19 @@ export class Aggregate {
 	}
 
 	private async createJournalEntry(journalEntryDto: IJournalEntryDto): Promise<string> {
-		// When creating a journal entry, currencyDecimals is supposed to be undefined and timestamp null. For
-		// consistency purposes, if this doesn't happen, errors are thrown.
-		if (journalEntryDto.currencyDecimals !== undefined) {
-			throw new Error(); // TODO: create custom error.
+		// When creating a journal entry, currencyDecimals and timestamp are supposed to be null. For consistency
+		// purposes and to make sure whoever calls this function knows that, if those values aren't respected, errors
+		// are thrown.
+		if (journalEntryDto.currencyDecimals !== null) {
+			throw new InvalidCurrencyDecimalsError();
 		}
 		if (journalEntryDto.timestamp !== null) {
-			throw new Error(); // TODO: create custom error.
+			throw new InvalidTimestampError();
 		}
 
 		// When creating a journal entry, id, externalId and externalCategory are supposed to be either a non-empty
-		// string or null. For consistency purposes, if this doesn't happen, errors are thrown.
+		// string or null. For consistency purposes and to make sure whoever calls this function knows that, if those
+		// values aren't respected, errors are thrown.
 		if (journalEntryDto.id === "") {
 			throw new InvalidIdError();
 		}
@@ -252,7 +252,7 @@ export class Aggregate {
 		} catch (error: unknown) {
 			throw new InvalidJournalEntryAmountError();
 		}
-		if (amount <= 0) {
+		if (amount <= 0n) {
 			throw new InvalidJournalEntryAmountError();
 		}
 
@@ -340,7 +340,7 @@ export class Aggregate {
 		}
 
 		// Check if the balance is sufficient.
-		if (debitedAccount.calculateBalance() - journalEntry.amount < 0) {
+		if (debitedAccount.calculateBalance() - journalEntry.amount < 0n) {
 			throw new InsufficientBalanceError();
 		}
 
