@@ -31,7 +31,6 @@
 
 import {
 	IAccountsRepo,
-	UnableToInitRepoError,
 	NoSuchAccountError,
 	AccountAlreadyExistsError,
 	UnableToStoreAccountError,
@@ -46,20 +45,16 @@ export class MemoryAccountsRepo implements IAccountsRepo {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
 	// Other properties.
-	private unexpectedFailure: boolean; // TODO: should this be done?
-	private readonly accounts: Map<string, IAccountDto>;
+	readonly accounts: Map<string, IAccountDto>;
 
 	constructor(logger: ILogger) {
 		this.logger = logger;
 
-		this.unexpectedFailure = false;
 		this.accounts = new Map<string, IAccountDto>();
 	}
 
 	async init(): Promise<void> {
-		if (this.unexpectedFailure) {
-			throw new UnableToInitRepoError();
-		}
+		return;
 	}
 
 	async destroy(): Promise<void> {
@@ -67,79 +62,90 @@ export class MemoryAccountsRepo implements IAccountsRepo {
 	}
 
 	async accountExistsById(accountId: string): Promise<boolean> {
-		if (this.unexpectedFailure) {
-			throw new UnableToGetAccountError();
+		try {
+			const accountExists: boolean = this.accounts.has(accountId);
+			return accountExists;
+		} catch (error: unknown) {
+			throw new UnableToGetAccountError((error as any)?.message);
 		}
-		return this.accounts.has(accountId);
 	}
 
-	async storeNewAccount(account: IAccountDto): Promise<void> {
-		if(!account.id){
-			throw new UnableToStoreAccountError("Invalid account.id");
+	async storeNewAccount(accountDto: IAccountDto): Promise<void> {
+		if (accountDto.id === null || accountDto.currencyDecimals === null) {
+			throw new UnableToStoreAccountError("account id or currency decimals null"); // TODO: error message.
 		}
-
-		if (this.unexpectedFailure) {
-			throw new UnableToStoreAccountError();
+		let accountExists: boolean;
+		try {
+			accountExists = this.accounts.has(accountDto.id);
+		} catch (error: unknown) {
+			throw new UnableToStoreAccountError((error as any)?.message);
 		}
-		if (await this.accountExistsById(account.id)) {
+		if (accountExists) {
 			throw new AccountAlreadyExistsError();
 		}
-		this.accounts.set(account.id, account);
+		try {
+			this.accounts.set(accountDto.id, accountDto);
+		} catch (error: unknown) {
+			throw new UnableToStoreAccountError((error as any)?.message);
+		}
 	}
 
 	async getAccountById(accountId: string): Promise<IAccountDto | null> {
-		if (this.unexpectedFailure) {
-			throw new UnableToGetAccountError();
+		try {
+			const accountDto: IAccountDto | null = this.accounts.get(accountId) ?? null;
+			return accountDto;
+		} catch (error: unknown) {
+			throw new UnableToGetAccountError((error as any)?.message);
 		}
-		return this.accounts.get(accountId) ?? null;
 	}
 
 	async getAccountsByExternalId(externalId: string): Promise<IAccountDto[]> {
-		if (this.unexpectedFailure) {
-			throw new UnableToGetAccountsError();
-		}
-		const accounts: IAccountDto[] = [];
-		for (const account of this.accounts.values()) {
-			if (account.externalId === externalId) {
-				accounts.push(account);
+		const accountDtos: IAccountDto[] = [];
+		try {
+			for (const accountDto of this.accounts.values()) {
+				if (accountDto.externalId === externalId) {
+					accountDtos.push(accountDto);
+				}
 			}
+		} catch (error: unknown) {
+			throw new UnableToGetAccountsError((error as any)?.message);
 		}
-		return accounts;
+		return accountDtos;
 	}
 
-	async updateAccountCreditBalanceById(
+	async updateAccountCreditBalanceAndTimestampById(
 		accountId: string,
 		creditBalance: string,
 		timeStampLastJournalEntry: number
 	): Promise<void> {
-		if (this.unexpectedFailure) {
-			throw new UnableToUpdateAccountError();
+		let accountDto: IAccountDto | undefined;
+		try {
+			accountDto = this.accounts.get(accountId);
+		} catch (error: unknown) {
+			throw new UnableToUpdateAccountError((error as any)?.message);
 		}
-		const account: IAccountDto | undefined = this.accounts.get(accountId);
-		if (account === undefined) {
+		if (accountDto === undefined) {
 			throw new NoSuchAccountError();
 		}
-		account.creditBalance = creditBalance;
-		account.timestampLastJournalEntry = timeStampLastJournalEntry;
+		accountDto.creditBalance = creditBalance;
+		accountDto.timestampLastJournalEntry = timeStampLastJournalEntry;
 	}
 
-	async updateAccountDebitBalanceById(
+	async updateAccountDebitBalanceAndTimestampById(
 		accountId: string,
 		debitBalance: string,
 		timeStampLastJournalEntry: number
 	): Promise<void> {
-		if (this.unexpectedFailure) {
-			throw new UnableToUpdateAccountError();
+		let accountDto: IAccountDto | undefined;
+		try {
+			accountDto = this.accounts.get(accountId);
+		} catch (error: unknown) {
+			throw new UnableToUpdateAccountError((error as any)?.message);
 		}
-		const account: IAccountDto | undefined = this.accounts.get(accountId);
-		if (account === undefined) {
+		if (accountDto === undefined) {
 			throw new NoSuchAccountError();
 		}
-		account.debitBalance = debitBalance;
-		account.timestampLastJournalEntry = timeStampLastJournalEntry;
-	}
-
-	setUnexpectedFailure(unexpectedFailure: boolean) {
-		this.unexpectedFailure = unexpectedFailure;
+		accountDto.debitBalance = debitBalance;
+		accountDto.timestampLastJournalEntry = timeStampLastJournalEntry;
 	}
 }

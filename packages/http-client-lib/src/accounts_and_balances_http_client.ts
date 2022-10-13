@@ -73,7 +73,7 @@ export class AccountsAndBalancesHttpClient {
 		try {
 			const axiosResponse: AxiosResponse = await this.httpClient.post("/accounts", accountDto);
 			return axiosResponse.data.accountId;
-		} catch (e: unknown) {
+		} catch (error: unknown) {
 			if (axios.isAxiosError(e)) {
 				const axiosError: AxiosError = e as AxiosError;
 				if (axiosError.response !== undefined) {
@@ -89,7 +89,7 @@ export class AccountsAndBalancesHttpClient {
 		try {
 			const axiosResponse: AxiosResponse = await this.httpClient.post("/journalEntries", journalEntryDtos);
 			return axiosResponse.data.idsJournalEntries;
-		} catch (e: unknown) {
+		} catch (error: unknown) {
 			if (axios.isAxiosError(e)) {
 				const axiosError: AxiosError = e as AxiosError;
 				if (axiosError.response !== undefined) {
@@ -115,7 +115,7 @@ export class AccountsAndBalancesHttpClient {
 				return null;
 			}
 			return axiosResponse.data.account;
-		} catch (e: unknown) {
+		} catch (error: unknown) {
 			if (axios.isAxiosError(e)) {
 				const axiosError: AxiosError = e as AxiosError;
 				if (axiosError.response !== undefined) {
@@ -141,7 +141,7 @@ export class AccountsAndBalancesHttpClient {
 				return [];
 			}
 			return axiosResponse.data.accounts;
-		} catch (e: unknown) {
+		} catch (error: unknown) {
 			if (axios.isAxiosError(e)) {
 				const axiosError: AxiosError = e as AxiosError;
 				if (axiosError.response !== undefined) {
@@ -167,7 +167,7 @@ export class AccountsAndBalancesHttpClient {
 				return [];
 			}
 			return axiosResponse.data.journalEntries;
-		} catch (e: unknown) {
+		} catch (error: unknown) {
 			if (axios.isAxiosError(e)) {
 				const axiosError: AxiosError = e as AxiosError;
 				if (axiosError.response !== undefined) {

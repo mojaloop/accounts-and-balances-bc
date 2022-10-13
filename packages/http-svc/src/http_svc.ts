@@ -48,7 +48,7 @@ import {existsSync} from "fs";
 import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {AuthorizationClient, TokenHelper} from "@mojaloop/security-bc-client-lib";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
-import {ExpressHttpServer} from "./express_http_server";
+import {ExpressHttpServer} from "./http_server/express_http_server";
 import {AuthorizationClientMock} from "@mojaloop/accounts-and-balances-bc-shared-mocks-lib";
 
 /* ********** Constants Begin ********** */
@@ -135,8 +135,8 @@ export async function startHttpService(
 		);
 		try {
 			await (logger as KafkaLogger).init();
-		} catch (e: unknown) {
-			logger.fatal(e);
+		} catch (error: unknown) {
+			logger.fatal(error);
 			await stopHttpService();
 			process.exit(-1); // TODO: verify code.
 		}
@@ -151,8 +151,8 @@ export async function startHttpService(
 	);
 	try {
 		await tokenHelper.init();
-	} catch (e: unknown) {
-		logger.fatal(e);
+	} catch (error: unknown) {
+		logger.fatal(error);
 		await stopHttpService();
 		process.exit(-1); // TODO: verify code.
 	}
@@ -199,8 +199,8 @@ export async function startHttpService(
 		);
 		try {
 			await auditingClient.init();
-		} catch (e: unknown) {
-			logger.fatal(e);
+		} catch (error: unknown) {
+			logger.fatal(error);
 			await stopHttpService();
 			process.exit(-1); // TODO: verify code.
 		}
@@ -218,8 +218,8 @@ export async function startHttpService(
 		);
 		try {
 			await accountsRepo.init();
-		} catch (e: unknown) {
-			logger.fatal(e);
+		} catch (error: unknown) {
+			logger.fatal(error);
 			await stopHttpService();
 			process.exit(-1); // TODO: verify code.
 		}
@@ -235,8 +235,8 @@ export async function startHttpService(
 		);
 		try {
 			await journalEntriesRepo.init();
-		} catch (e: unknown) {
-			logger.fatal(e);
+		} catch (error: unknown) {
+			logger.fatal(error);
 			await stopHttpService();
 			process.exit(-1); // TODO: verify code.
 		}
@@ -260,9 +260,14 @@ export async function startHttpService(
 		HTTP_SERVER_PORT_NO
 	);
 	try {
+		await httpServer.stop();
+		await httpServer.stop();
 		await httpServer.start();
-	} catch (e: unknown) {
-		logger.fatal(e);
+		await httpServer.start();
+		await httpServer.stop();
+		await httpServer.stop();
+	} catch (error: unknown) {
+		logger.fatal(error);
 		await stopHttpService();
 		process.exit(-1); // TODO: verify code.
 	}

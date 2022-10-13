@@ -64,7 +64,7 @@ export class AuxiliaryAccountsAndBalancesHttpClient {
 		try {
 			const axiosResponse: AxiosResponse = await this.httpClient.post("/accounts", accountDto);
 			return axiosResponse.status;
-		} catch (e: unknown) {
+		} catch (error: unknown) {
 			return (e as AxiosError).response?.status ?? -1;
 		}
 	}
@@ -73,7 +73,7 @@ export class AuxiliaryAccountsAndBalancesHttpClient {
 		try {
 			const axiosResponse: AxiosResponse = await this.httpClient.post("/journalEntries", journalEntryDtos);
 			return axiosResponse.status;
-		} catch (e: unknown) {
+		} catch (error: unknown) {
 			return (e as AxiosError).response?.status ?? -1;
 		}
 	}
@@ -82,7 +82,7 @@ export class AuxiliaryAccountsAndBalancesHttpClient {
 		try {
 			const axiosResponse: AxiosResponse = await this.httpClient.get(`/accounts?id=${accountId}`);
 			return axiosResponse.status;
-		} catch (e: unknown) {
+		} catch (error: unknown) {
 			return (e as AxiosError).response?.status ?? -1;
 		}
 	}
@@ -91,7 +91,7 @@ export class AuxiliaryAccountsAndBalancesHttpClient {
 		try {
 			const axiosResponse: AxiosResponse = await this.httpClient.get(`/accounts?externalId=${externalId}`);
 			return axiosResponse.status;
-		} catch (e: unknown) {
+		} catch (error: unknown) {
 			return (e as AxiosError).response?.status ?? -1;
 		}
 	}
@@ -100,7 +100,7 @@ export class AuxiliaryAccountsAndBalancesHttpClient {
 		try {
 			const axiosResponse: AxiosResponse = await this.httpClient.get(`/journalEntries?accountId=${accountId}`);
 			return axiosResponse.status;
-		} catch (e: unknown) {
+		} catch (error: unknown) {
 			return (e as AxiosError).response?.status ?? -1;
 		}
 	}

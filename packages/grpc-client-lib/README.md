@@ -53,7 +53,7 @@ const accountDto: IAccountDto = {
 };
 try {
     const accountIdReceived: string = await accountsAndBalancesGrpcClient.createAccount(accountDto);
-} catch (e: unknown) {
+} catch (error: unknown) {
     logger.error(e);
 }
 ```
@@ -114,7 +114,7 @@ const journalEntryDtoA: IJournalEntryDto = {
 try {
     const idsJournalEntriesReceived: string[] =
         await accountsAndBalancesGrpcClient.createJournalEntries([journalEntryDtoA, journalEntryDtoB]);
-} catch (e: unknown) {
+} catch (error: unknown) {
     logger.error(e);
 }
 ```
@@ -124,7 +124,7 @@ try {
 const accountId: string = "a";
 try {
     const accountDto: IAccountDto | null = await accountsAndBalancesGrpcClient.getAccountById(accountId);
-} catch (e: unknown) {
+} catch (error: unknown) {
     logger.error(e);
 }
 ```
@@ -134,7 +134,7 @@ try {
 const externalId: string = "a";
 try {
     const accountDtos: IAccountDto[] = await accountsAndBalancesGrpcClient.getAccountsByExternalId(externalId);
-} catch (e: unknown) {
+} catch (error: unknown) {
     logger.error(e);
 }
 ```
@@ -145,7 +145,7 @@ const accountId: string = "a";
 try {
     const journalEntryDtos: IJournalEntryDto[] =
         await accountsAndBalancesGrpcClient.getJournalEntriesByAccountId(accountId);
-} catch (e: unknown) {
+} catch (error: unknown) {
     logger.error(e);
 }
 ```

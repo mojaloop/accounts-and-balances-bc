@@ -29,6 +29,6 @@
 
 "use strict";
 
-import {startHttpService} from "./service";
+import {startHttpService} from "./http_svc";
 
 startHttpService();

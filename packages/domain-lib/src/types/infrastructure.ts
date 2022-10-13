@@ -38,11 +38,11 @@ export interface IAccountsRepo {
 	storeNewAccount(account: IAccountDto): Promise<void>; // Throws if account.id is not unique.
 	getAccountById(accountId: string): Promise<IAccountDto | null>;
 	getAccountsByExternalId(externalId: string): Promise<IAccountDto[]>;
-	updateAccountCreditBalanceById(
+	updateAccountCreditBalanceAndTimestampById(
 		accountId: string,
 		creditBalance: string,
 		timeStampLastJournalEntry: number): Promise<void>;
-	updateAccountDebitBalanceById(
+	updateAccountDebitBalanceAndTimestampById(
 		accountId: string,
 		debitBalance: string,
 		timeStampLastJournalEntry: number): Promise<void>;

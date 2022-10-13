@@ -104,6 +104,23 @@ describe("accounts and balances http service - unit tests", () => {
 		const statusCodeResponse: number = await auxiliaryAccountsAndBalancesHttpClient.createAccount(accountDto);
 		expect(statusCodeResponse).toEqual(201);
 	});
+
+	test("create non-existent account", async () => {
+		const accountId: string = randomUUID();
+		const accountDto: IAccountDto = {
+			id: accountId,
+			externalId: null,
+			state: AccountState.ACTIVE,
+			type: AccountType.POSITION,
+			currencyCode: "EUR",
+			creditBalance: "100",
+			debitBalance: "25",
+			timestampLastJournalEntry: 0
+		};
+		const statusCodeResponse: number = await auxiliaryAccountsAndBalancesHttpClient.createAccount(accountDto);
+		expect(statusCodeResponse).toEqual(201);
+	});
+
 	test("create existent account", async () => {
 		const accountId: string = randomUUID();
 		const accountDto: IAccountDto = {

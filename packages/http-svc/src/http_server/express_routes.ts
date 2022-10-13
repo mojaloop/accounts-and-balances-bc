@@ -128,8 +128,8 @@ export class ExpressRoutes {
 		let verified: boolean;
 		try {
 			verified = await this.tokenHelper.verifyToken(bearerToken);
-		} catch (e: unknown) {
-			this.logger.error(e);
+		} catch (error: unknown) {
+			this.logger.error(error);
 			this.sendErrorResponse(
 				res,
 				403,
@@ -187,44 +187,44 @@ export class ExpressRoutes {
 				201,
 				{accountId: accountId}
 			);
-		} catch (e: unknown) {
-			if (e instanceof UnauthorizedError) {
+		} catch (error: unknown) {
+			if (error instanceof UnauthorizedError) {
 				this.sendErrorResponse(
 					res,
 					403,
 					"unauthorized" // TODO: verify.
 				);
-			} else if (e instanceof InvalidExternalIdError) {
+			} else if (error instanceof InvalidExternalIdError) {
 				this.sendErrorResponse(
 					res,
 					400,
 					"invalid external id"
 				);
-			} else if (e instanceof InvalidCreditBalanceError) {
+			} else if (error instanceof InvalidCreditBalanceError) {
 				this.sendErrorResponse(
 					res,
 					400,
 					"invalid credit balance"
 				);
-			} else if (e instanceof InvalidDebitBalanceError) {
+			} else if (error instanceof InvalidDebitBalanceError) {
 				this.sendErrorResponse(
 					res,
 					400,
 					"invalid debit balance"
 				);
-			} else if (e instanceof InvalidTimestampError) {
+			} else if (error instanceof InvalidTimestampError) {
 				this.sendErrorResponse(
 					res,
 					400,
 					"invalid timestamp"
 				);
-			} else if (e instanceof InvalidCurrencyCodeError) {
+			} else if (error instanceof InvalidCurrencyCodeError) {
 				this.sendErrorResponse(
 					res,
 					400,
 					"invalid currency code"
 				);
-			} else if (e instanceof AccountAlreadyExistsError) {
+			} else if (error instanceof AccountAlreadyExistsError) {
 				this.sendErrorResponse(
 					res,
 					409,
@@ -249,68 +249,68 @@ export class ExpressRoutes {
 				201,
 				{idsJournalEntries: idsJournalEntries}
 			);
-		} catch (e: unknown) {
-			if (e instanceof UnauthorizedError) {
+		} catch (error: unknown) {
+			if (error instanceof UnauthorizedError) {
 				this.sendErrorResponse(
 					res,
 					403,
 					"unauthorized" // TODO: verify.
 				);
-			} else if (e instanceof InvalidExternalIdError) {
+			} else if (error instanceof InvalidExternalIdError) {
 				this.sendErrorResponse(
 					res,
 					400,
 					"invalid external id"
 				);
-			} else if (e instanceof InvalidExternalCategoryError) {
+			} else if (error instanceof InvalidExternalCategoryError) {
 				this.sendErrorResponse(
 					res,
 					400,
 					"invalid external category"
 				);
-			} else if (e instanceof InvalidJournalEntryAmountError) {
+			} else if (error instanceof InvalidJournalEntryAmountError) {
 				this.sendErrorResponse(
 					res,
 					400,
 					"invalid journal entry amount"
 				);
-			} else if (e instanceof SameCreditedAndDebitedAccountsError) {
+			} else if (error instanceof SameCreditedAndDebitedAccountsError) {
 				this.sendErrorResponse(
 					res,
 					400,
 					"credited and debited accounts are the same"
 				);
-			} else if (e instanceof NoSuchCreditedAccountError) {
+			} else if (error instanceof NoSuchCreditedAccountError) {
 				this.sendErrorResponse(
 					res,
 					400,
 					"no such credited account"
 				);
-			} else if (e instanceof NoSuchDebitedAccountError) {
+			} else if (error instanceof NoSuchDebitedAccountError) {
 				this.sendErrorResponse(
 					res,
 					400,
 					"no such debited account"
 				);
-			} else if (e instanceof CurrencyCodesDifferError) {
+			} else if (error instanceof CurrencyCodesDifferError) {
 				this.sendErrorResponse(
 					res,
 					400,
 					"currency codes differ"
 				);
-			} else if (e instanceof InvalidCurrencyCodeError) {
+			} else if (error instanceof InvalidCurrencyCodeError) {
 				this.sendErrorResponse(
 					res,
 					400,
 					"invalid currency code"
 				);
-			} else if (e instanceof InsufficientBalanceError) {
+			} else if (error instanceof InsufficientBalanceError) {
 				this.sendErrorResponse(
 					res,
 					400,
 					"insufficient balance"
 				);
-			} else if (e instanceof JournalEntryAlreadyExistsError) {
+			} else if (error instanceof JournalEntryAlreadyExistsError) {
 				this.sendErrorResponse(
 					res,
 					409,
@@ -374,8 +374,8 @@ export class ExpressRoutes {
 				200,
 				{account: accountDto}
 			);
-		} catch (e: unknown) {
-			if (e instanceof UnauthorizedError) {
+		} catch (error: unknown) {
+			if (error instanceof UnauthorizedError) {
 				this.sendErrorResponse(
 					res,
 					403,
@@ -409,8 +409,8 @@ export class ExpressRoutes {
 				200,
 				{accounts: accountDtos}
 			);
-		} catch (e: unknown) {
-			if (e instanceof UnauthorizedError) {
+		} catch (error: unknown) {
+			if (error instanceof UnauthorizedError) {
 				this.sendErrorResponse(
 					res,
 					403,
@@ -445,8 +445,8 @@ export class ExpressRoutes {
 				200,
 				{journalEntries: journalEntryDtos}
 			);
-		} catch (e: unknown) {
-			if (e instanceof UnauthorizedError) {
+		} catch (error: unknown) {
+			if (error instanceof UnauthorizedError) {
 				this.sendErrorResponse(
 					res,
 					403,

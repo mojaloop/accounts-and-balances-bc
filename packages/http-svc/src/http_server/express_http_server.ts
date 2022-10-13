@@ -31,30 +31,19 @@
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {Aggregate} from "@mojaloop/accounts-and-balances-bc-domain-lib";
-// import grpc, {GrpcObject, ServiceDefinition} from "@grpc/grpc-js";
-// import protoLoader, {PackageDefinition} from "@grpc/proto-loader";
-import {
-	GrpcObject,
-	loadPackageDefinition,
-	Server,
-	ServerCredentials,
-	ServiceDefinition
-} from "@grpc/grpc-js";
-import {PackageDefinition} from "@grpc/proto-loader";
-import {
-	ProtoGrpcType,
-	AccountsAndBalancesGrpcServiceHandlers,
-	loadProto
-} from "@mojaloop/accounts-and-balances-bc-grpc-common-lib";
+import {ExpressRoutes} from "./express_routes";
+import express, {Express, json, urlencoded} from "express";
 import {TokenHelper} from "@mojaloop/security-bc-client-lib";
-import {RpcHandlers} from "./rpc_handlers";
+import {createServer, Server} from "http";
 
-export class GrpcServer {
+export class ExpressHttpServer {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
 	private readonly HOST: string;
 	private readonly PORT_NO: number;
+
 	// Other properties.
+	private static readonly ROUTER_PATH: string = "/"; // TODO: here?
 	private readonly server: Server;
 
 	constructor(
@@ -64,44 +53,45 @@ export class GrpcServer {
 		host: string,
 		portNo: number
 	) {
-		this.logger = logger.createChild((this as any).constructor.name);
+		this.logger = logger;
 		this.HOST = host;
 		this.PORT_NO = portNo;
 
-		const packageDefinition: PackageDefinition = loadProto();
-		const grpcObject: GrpcObject = loadPackageDefinition(packageDefinition);
-		const serviceDefinition: ServiceDefinition =
-			(grpcObject as unknown as ProtoGrpcType).AccountsAndBalancesGrpcService.service;
-
-		const rpcHandlers: RpcHandlers = new RpcHandlers(
+		const routes: ExpressRoutes = new ExpressRoutes(
 			this.logger,
+			tokenHelper,
 			aggregate
 		);
-		const serviceImplementation: AccountsAndBalancesGrpcServiceHandlers = rpcHandlers.getHandlers();
 
-		this.server = new Server();
-		this.server.addService(
-			serviceDefinition,
-			serviceImplementation
-		);
+		const app: Express = express();
+		app.use(json()); // For parsing application/json.
+		app.use(urlencoded({extended: true})); // For parsing application/x-www-form-urlencoded.
+		app.use(ExpressHttpServer.ROUTER_PATH, routes.router);
+
+		this.server = createServer(app);
 	}
 
 	async start(): Promise<void> {
 		return new Promise((resolve, reject) => {
-			this.server.bindAsync(
-				`${this.HOST}:${this.PORT_NO}`,
-				ServerCredentials.createInsecure(),
-				(error) => {
-					if (error) {
-						reject(error);
-						return;
-					}
-					this.server.start();
+			function listenErrorHandler(error: Error) {
+				reject(error);
+			}
+
+			this.server.once("error", listenErrorHandler);
+
+			this.server.listen(
+				this.PORT_NO,
+				this.HOST,
+				() => {
 					this.logger.info("* * * * * * * * * * * * * * * * * * * *");
-					this.logger.info("gRPC server started 🚀");
+					this.logger.info("HTTP server started 🚀");
 					this.logger.info(`Host: ${this.HOST}`);
 					this.logger.info(`Port: ${this.PORT_NO}`);
+					this.logger.info(`Base URL: http://${this.HOST}:${this.PORT_NO}`);
 					this.logger.info("* * * * * * * * * * * * * * * * * * * *");
+
+					this.server.removeListener("error", listenErrorHandler);
+
 					resolve();
 				}
 			);
@@ -110,16 +100,20 @@ export class GrpcServer {
 
 	async stop(): Promise<void> {
 		return new Promise((resolve) => {
-			// TODO: is this the right function to use?
-			this.server.tryShutdown(() => {
+			this.server.close((error) => {
+				// According to the documentation, only when close() is called on a server that is not running will the
+				// callback's error be defined.
+				if (error !== undefined) {
+					this.logger.info("HTTP server not running - nothing to stop"); // TODO: info or error? improve message.
+					resolve(); // TODO: resolve or reject?
+					return;
+				}
+
 				this.logger.info("* * * * * * * * * * * * * * * * * * * *");
-				this.logger.info("gRPC server stopped 🏁");
+				this.logger.info("HTTP server stopped 🏁");
 				this.logger.info("* * * * * * * * * * * * * * * * * * * *");
 				resolve();
 			});
-			// this.grpcServer.forceShutdown();
-			// this.grpcServer.removeService();
-			// this.grpcServer.unregister();
 		});
 	}
 }

@@ -32,7 +32,6 @@
 import {
 	IJournalEntriesRepo,
 	JournalEntryAlreadyExistsError,
-	UnableToInitRepoError,
 	UnableToGetJournalEntriesError,
 	UnableToGetJournalEntryError,
 	UnableToStoreJournalEntryError
@@ -44,20 +43,16 @@ export class MemoryJournalEntriesRepo implements IJournalEntriesRepo {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
 	// Other properties.
-	private unexpectedFailure: boolean; // TODO: should this be done?
-	private readonly journalEntries: Map<string, IJournalEntryDto>;
+	readonly journalEntries: Map<string, IJournalEntryDto>;
 
 	constructor(logger: ILogger) {
 		this.logger = logger;
 
-		this.unexpectedFailure = false;
 		this.journalEntries = new Map<string, IJournalEntryDto>();
 	}
 
 	async init(): Promise<void> {
-		if (this.unexpectedFailure) {
-			throw new UnableToInitRepoError();
-		}
+		return;
 	}
 
 	async destroy(): Promise<void> {
@@ -65,41 +60,50 @@ export class MemoryJournalEntriesRepo implements IJournalEntriesRepo {
 	}
 
 	async journalEntryExistsById(journalEntryId: string): Promise<boolean> {
-		if (this.unexpectedFailure) {
+		try {
+			const journalEntryExists: boolean = this.journalEntries.has(journalEntryId);
+			return journalEntryExists;
+		} catch (error: unknown) {
 			throw new UnableToGetJournalEntryError();
 		}
-		return this.journalEntries.has(journalEntryId);
 	}
 
-	async storeNewJournalEntry(journalEntry: IJournalEntryDto): Promise<void> {
-		if(!journalEntry.id){
-			throw new UnableToStoreJournalEntryError("Invalid journalEntry.id");
+	async storeNewJournalEntry(journalEntryDto: IJournalEntryDto): Promise<void> {
+		if (
+			journalEntryDto.id === null
+			|| journalEntryDto.currencyDecimals === null
+			|| journalEntryDto.timestamp === null
+		) {
+			throw new UnableToStoreJournalEntryError("journal entry id or currency decimals or timestamp null"); // TODO: error message.
 		}
-
-		if (this.unexpectedFailure) {
+		let journalEntryExists: boolean;
+		try {
+			journalEntryExists = this.journalEntries.has(journalEntryDto.id);
+		} catch (error: unknown) {
 			throw new UnableToStoreJournalEntryError();
 		}
-		if (await this.journalEntryExistsById(journalEntry.id)) {
+		if (journalEntryExists) {
 			throw new JournalEntryAlreadyExistsError();
 		}
-		this.journalEntries.set(journalEntry.id, journalEntry);
+		try {
+			this.journalEntries.set(journalEntryDto.id, journalEntryDto);
+		} catch (error: unknown) {
+			throw new UnableToStoreJournalEntryError();
+		}
 	}
 
 	async getJournalEntriesByAccountId(accountId: string): Promise<IJournalEntryDto[]> {
-		if (this.unexpectedFailure) {
+		const journalEntryDtos: IJournalEntryDto[] = [];
+		try {
+			for (const journalEntryDto of this.journalEntries.values()) {
+				if (journalEntryDto.creditedAccountId === accountId
+					|| journalEntryDto.debitedAccountId === accountId) {
+					journalEntryDtos.push(journalEntryDto);
+				}
+			}
+		} catch (error: unknown) {
 			throw new UnableToGetJournalEntriesError();
 		}
-		const journalEntries: IJournalEntryDto[] = [];
-		for (const journalEntry of this.journalEntries.values()) {
-			if (journalEntry.creditedAccountId === accountId
-				|| journalEntry.debitedAccountId === accountId) {
-				journalEntries.push(journalEntry);
-			}
-		}
-		return journalEntries;
-	}
-
-	setUnexpectedFailure(unexpectedFailure: boolean) {
-		this.unexpectedFailure = unexpectedFailure;
+		return journalEntryDtos;
 	}
 }

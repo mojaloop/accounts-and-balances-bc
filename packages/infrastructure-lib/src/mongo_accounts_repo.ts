@@ -43,7 +43,7 @@ import {
 } from "@mojaloop/accounts-and-balances-bc-domain-lib";
 import {IAccountDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
-export class MongoAccountsRepo implements IAccountsRepo{
+export class MongoAccountsRepo implements IAccountsRepo {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
 	private readonly DB_URL: string;
@@ -73,8 +73,8 @@ export class MongoAccountsRepo implements IAccountsRepo{
 	async init(): Promise<void> {
 		try {
 			await this.mongoClient.connect(); // Throws if the repo is unreachable.
-		} catch (e: unknown) {
-			throw new UnableToInitRepoError((e as any)?.message);
+		} catch (error: unknown) {
+			throw new UnableToInitRepoError((error as any)?.message);
 		}
 		// The following doesn't throw if the repo is unreachable, nor if the db or collection don't exist.
 		this.accounts = this.mongoClient.db(this.DB_NAME).collection(this.COLLECTION_NAME);
@@ -89,30 +89,29 @@ export class MongoAccountsRepo implements IAccountsRepo{
 			// findOne() doesn't throw if no item is found - null is returned.
 			const account: any = await this.accounts.findOne({id: accountId}); // TODO: type.
 			return account !== null;
-		} catch (e: unknown) {
-			throw new UnableToGetAccountError((e as any)?.message);
+		} catch (error: unknown) {
+			throw new UnableToGetAccountError((error as any)?.message);
 		}
 	}
 
-	async storeNewAccount(account: IAccountDto): Promise<void> {
-		if(!account.id){
-			throw new UnableToStoreAccountError("Invalid account.id");
+	async storeNewAccount(accountDto: IAccountDto): Promise<void> {
+		if (accountDto.id === null || accountDto.currencyDecimals === null) {
+			throw new Error(); // TODO: create custom error.
 		}
-
 		let accountExists: boolean;
 		try {
-			accountExists = await this.accountExistsById(account.id);
-		} catch (e: unknown) {
-			throw new UnableToStoreAccountError((e as any)?.message);
+			accountExists = await this.accountExistsById(accountDto.id);
+		} catch (error: unknown) {
+			throw new UnableToStoreAccountError((error as any)?.message);
 		}
 		if (accountExists) {
 			throw new AccountAlreadyExistsError();
 		}
 		try {
 			// insertOne() allows for duplicates.
-			await this.accounts.insertOne(account);
-		} catch (e: unknown) {
-			throw new UnableToStoreAccountError((e as any)?.message);
+			await this.accounts.insertOne(accountDto);
+		} catch (error: unknown) {
+			throw new UnableToStoreAccountError((error as any)?.message);
 		}
 	}
 
@@ -124,8 +123,8 @@ export class MongoAccountsRepo implements IAccountsRepo{
 				{projection: {_id: 0}} // Don't return the _id field. TODO: why is _id returned without this?
 			);
 			return account as unknown as IAccountDto; // TODO: create schema.
-		} catch (e: unknown) {
-			throw new UnableToGetAccountError((e as any)?.message);
+		} catch (error: unknown) {
+			throw new UnableToGetAccountError((error as any)?.message);
 		}
 	}
 
@@ -139,12 +138,12 @@ export class MongoAccountsRepo implements IAccountsRepo{
 					{projection: {_id: 0}}) // Don't return the _id field.
 				.toArray();
 			return accounts as unknown as IAccountDto[]; // TODO: create schema.
-		} catch (e: unknown) {
-			throw new UnableToGetAccountsError((e as any)?.message);
+		} catch (error: unknown) {
+			throw new UnableToGetAccountsError((error as any)?.message);
 		}
 	}
 
-	async updateAccountCreditBalanceById(
+	async updateAccountCreditBalanceAndTimestampById(
 		accountId: string,
 		creditBalance: string,
 		timeStampLastJournalEntry: number): Promise<void> {
@@ -155,15 +154,15 @@ export class MongoAccountsRepo implements IAccountsRepo{
 				{id: accountId},
 				{$set: {creditBalance: creditBalance, timeStampLastJournalEntry: timeStampLastJournalEntry}}
 			);
-		} catch (e: unknown) {
-			throw new UnableToUpdateAccountError((e as any)?.message);
+		} catch (error: unknown) {
+			throw new UnableToUpdateAccountError((error as any)?.message);
 		}
 		if (updateResult.modifiedCount === 0) {
 			throw new NoSuchAccountError();
 		}
 	}
 
-	async updateAccountDebitBalanceById(
+	async updateAccountDebitBalanceAndTimestampById(
 		accountId: string,
 		debitBalance: string,
 		timeStampLastJournalEntry: number): Promise<void> {
@@ -174,8 +173,8 @@ export class MongoAccountsRepo implements IAccountsRepo{
 				{id: accountId},
 				{$set: {debitBalance: debitBalance, timeStampLastJournalEntry: timeStampLastJournalEntry}}
 			);
-		} catch (e: unknown) {
-			throw new UnableToUpdateAccountError((e as any)?.message);
+		} catch (error: unknown) {
+			throw new UnableToUpdateAccountError((error as any)?.message);
 		}
 		if (updateResult.modifiedCount === 0) {
 			throw new NoSuchAccountError();

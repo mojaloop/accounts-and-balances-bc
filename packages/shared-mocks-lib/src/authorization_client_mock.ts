@@ -36,13 +36,9 @@ import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 export class AuthorizationClientMock implements IAuthorizationClient {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
-	// Other properties.
-	private _roleHasPrivilege: boolean; // TODO: should this be done?
 
 	constructor(logger: ILogger) {
 		this.logger = logger;
-
-		this._roleHasPrivilege = true;
 	}
 
 	async init(): Promise<void> {
@@ -54,10 +50,6 @@ export class AuthorizationClientMock implements IAuthorizationClient {
 	}
 
 	roleHasPrivilege(roleId: string, privilegeId: string): boolean {
-		return this._roleHasPrivilege;
-	}
-
-	setRoleHasPrivilege(roleHasPrivilege: boolean) {
-		this._roleHasPrivilege = roleHasPrivilege;
+		return true;
 	}
 }

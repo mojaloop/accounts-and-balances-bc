@@ -31,19 +31,32 @@
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {Aggregate} from "@mojaloop/accounts-and-balances-bc-domain-lib";
-import {ExpressRoutes} from "./express_routes";
-import express, {Express, json, urlencoded} from "express";
+// import grpc, {GrpcObject, ServiceDefinition} from "@grpc/grpc-js";
+// import protoLoader, {PackageDefinition} from "@grpc/proto-loader";
+import {
+	GrpcObject,
+	loadPackageDefinition,
+	Server,
+	ServerCredentials,
+	ServiceDefinition
+} from "@grpc/grpc-js";
+import {PackageDefinition} from "@grpc/proto-loader";
+import {
+	ProtoGrpcType,
+	AccountsAndBalancesGrpcServiceHandlers,
+	loadProto
+} from "@mojaloop/accounts-and-balances-bc-grpc-common-lib";
 import {TokenHelper} from "@mojaloop/security-bc-client-lib";
-import {createServer, Server} from "http";
+import {RpcHandlers} from "./rpc_handlers";
 
-export class ExpressHttpServer {
+export class GrpcServer {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
 	private readonly HOST: string;
 	private readonly PORT_NO: number;
+
 	// Other properties.
-	private static readonly ROUTER_PATH: string = "/"; // TODO: here?
-	private server: Server;
+	private readonly server: Server;
 
 	constructor(
 		logger: ILogger,
@@ -56,43 +69,60 @@ export class ExpressHttpServer {
 		this.HOST = host;
 		this.PORT_NO = portNo;
 
-		const routes: ExpressRoutes = new ExpressRoutes(
+		const packageDefinition: PackageDefinition = loadProto();
+		const grpcObject: GrpcObject = loadPackageDefinition(packageDefinition);
+		const serviceDefinition: ServiceDefinition =
+			(grpcObject as unknown as ProtoGrpcType).AccountsAndBalancesGrpcService.service;
+
+		const rpcHandlers: RpcHandlers = new RpcHandlers(
 			this.logger,
-			tokenHelper,
 			aggregate
 		);
-		const app: Express = express();
-		app.use(json()); // For parsing application/json.
-		app.use(urlencoded({extended: true})); // For parsing application/x-www-form-urlencoded.
-		app.use(ExpressHttpServer.ROUTER_PATH, routes.router);
-		this.server = createServer(app);
+		const serviceImplementation: AccountsAndBalancesGrpcServiceHandlers = rpcHandlers.getHandlers();
+
+		this.server = new Server();
+		this.server.addService(
+			serviceDefinition,
+			serviceImplementation
+		);
 	}
 
 	async start(): Promise<void> {
 		return new Promise((resolve, reject) => {
-			this.server.listen(
-				this.PORT_NO,
-				this.HOST,
-				() => {
+			this.server.bindAsync(
+				`${this.HOST}:${this.PORT_NO}`,
+				ServerCredentials.createInsecure(),
+				(error) => {
+					if (error !== null) {
+						reject(error);
+						return;
+					}
+
+					this.server.start();
 					this.logger.info("* * * * * * * * * * * * * * * * * * * *");
-					this.logger.info("HTTP server started 🚀");
+					this.logger.info("gRPC server started 🚀");
 					this.logger.info(`Host: ${this.HOST}`);
 					this.logger.info(`Port: ${this.PORT_NO}`);
-					this.logger.info(`Base URL: http://${this.HOST}:${this.PORT_NO}`);
 					this.logger.info("* * * * * * * * * * * * * * * * * * * *");
 					resolve();
 				}
-			).on("error", (error: Error) => {
-				reject(error);
-			});
+			);
 		});
 	}
 
 	async stop(): Promise<void> {
-		return new Promise((resolve) => {
-			this.server.close(() => {
+		return new Promise((resolve, reject) => {
+			this.server.tryShutdown((error) => {
+				// When tryShutdown() is called on a server that is not running, the callback's error is not defined.
+				// The documentation doesn't specify in what cases the callback's error will be defined, nor if
+				// forceShutdown() should be called on error. TODO: investigate.
+				if (error !== undefined) {
+					reject();
+					return;
+				}
+
 				this.logger.info("* * * * * * * * * * * * * * * * * * * *");
-				this.logger.info("HTTP server stopped 🏁");
+				this.logger.info("gRPC server stopped 🏁");
 				this.logger.info("* * * * * * * * * * * * * * * * * * * *");
 				resolve();
 			});

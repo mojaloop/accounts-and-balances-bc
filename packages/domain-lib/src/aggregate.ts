@@ -177,11 +177,11 @@ export class Aggregate {
 		const formattedAccountDto: IAccountDto = account.toDto();
 		try {
 			await this.accountsRepo.storeNewAccount(formattedAccountDto);
-		} catch (e: unknown) {
-			if (!(e instanceof AccountAlreadyExistsError)) {
-				this.logger.error(e);
+		} catch (error: unknown) {
+			if (!(error instanceof AccountAlreadyExistsError)) {
+				this.logger.error(error);
 			}
-			throw e;
+			throw error;
 		}
 
 		// TODO: configure; try-catch.
@@ -285,9 +285,9 @@ export class Aggregate {
 		try {
 			creditedAccountDto = await this.accountsRepo.getAccountById(journalEntry.creditedAccountId);
 			debitedAccountDto = await this.accountsRepo.getAccountById(journalEntry.debitedAccountId);
-		} catch (e: unknown) {
-			this.logger.error(e);
-			throw e;
+		} catch (error: unknown) {
+			this.logger.error(error);
+			throw error;
 		}
 		if (creditedAccountDto === null) {
 			throw new NoSuchCreditedAccountError();
@@ -348,11 +348,11 @@ export class Aggregate {
 		const formattedJournalEntryDto: IJournalEntryDto = journalEntry.toDto();
 		try {
 			await this.journalEntriesRepo.storeNewJournalEntry(formattedJournalEntryDto);
-		} catch (e: unknown) {
-			if (!(e instanceof JournalEntryAlreadyExistsError)) {
-				this.logger.error(e);
+		} catch (error: unknown) {
+			if (!(error instanceof JournalEntryAlreadyExistsError)) {
+				this.logger.error(error);
 			}
-			throw e;
+			throw error;
 		}
 
 		// Update the credited account's credit balance and timestamp.
@@ -361,15 +361,15 @@ export class Aggregate {
 			creditedAccount.currencyDecimals
 		);
 		try {
-			await this.accountsRepo.updateAccountCreditBalanceById(
+			await this.accountsRepo.updateAccountCreditBalanceAndTimestampById(
 				creditedAccount.id,
 				updatedCreditBalance,
 				journalEntry.timestamp!
 			);
-		} catch (e: unknown) {
+		} catch (error: unknown) {
 			// TODO: revert store.
-			this.logger.error(e);
-			throw e;
+			this.logger.error(error);
+			throw error;
 		}
 
 		// Update the debited account's debit balance and timestamp.
@@ -378,15 +378,15 @@ export class Aggregate {
 			debitedAccount.currencyDecimals
 		);
 		try {
-			await this.accountsRepo.updateAccountDebitBalanceById(
+			await this.accountsRepo.updateAccountDebitBalanceAndTimestampById(
 				debitedAccount.id,
 				updatedDebitBalance,
 				journalEntry.timestamp!
 			);
-		} catch (e: unknown) {
+		} catch (error: unknown) {
 			// TODO: revert store.
-			this.logger.error(e);
-			throw e;
+			this.logger.error(error);
+			throw error;
 		}
 
 		return journalEntry.id;
@@ -397,9 +397,9 @@ export class Aggregate {
 		try {
 			const accountDto: IAccountDto | null = await this.accountsRepo.getAccountById(accountId);
 			return accountDto;
-		} catch (e: unknown) {
-			this.logger.error(e);
-			throw e;
+		} catch (error: unknown) {
+			this.logger.error(error);
+			throw error;
 		}
 	}
 
@@ -409,9 +409,9 @@ export class Aggregate {
 			const accountDtos: IAccountDto[] =
 				await this.accountsRepo.getAccountsByExternalId(externalId);
 			return accountDtos;
-		} catch (e: unknown) {
-			this.logger.error(e);
-			throw e;
+		} catch (error: unknown) {
+			this.logger.error(error);
+			throw error;
 		}
 	}
 
@@ -424,9 +424,9 @@ export class Aggregate {
 			const journalEntryDtos: IJournalEntryDto[] =
 				await this.journalEntriesRepo.getJournalEntriesByAccountId(accountId);
 			return journalEntryDtos;
-		} catch (e: unknown) {
-			this.logger.error(e);
-			throw e;
+		} catch (error: unknown) {
+			this.logger.error(error);
+			throw error;
 		}
 	}
 }

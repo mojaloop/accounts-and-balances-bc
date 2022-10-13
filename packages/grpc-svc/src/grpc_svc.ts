@@ -48,7 +48,7 @@ import {existsSync} from "fs";
 import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {AuthorizationClient, TokenHelper} from "@mojaloop/security-bc-client-lib";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
-import {GrpcServer} from "./grpc_server";
+import {GrpcServer} from "./grpc_server/grpc_server";
 import {AuthorizationClientMock} from "@mojaloop/accounts-and-balances-bc-shared-mocks-lib";
 
 /* ********** Constants Begin ********** */
@@ -132,8 +132,8 @@ export async function startGrpcService(
 		);
 		try {
 			await (logger as KafkaLogger).init();
-		} catch (e: unknown) {
-			logger.fatal(e);
+		} catch (error: unknown) {
+			logger.fatal(error);
 			await stopGrpcService();
 			process.exit(-1); // TODO: verify code.
 		}
@@ -148,8 +148,8 @@ export async function startGrpcService(
 	);
 	try {
 		await tokenHelper.init();
-	} catch (e: unknown) {
-		logger.fatal(e);
+	} catch (error: unknown) {
+		logger.fatal(error);
 		await stopGrpcService();
 		process.exit(-1); // TODO: verify code.
 	}
@@ -196,8 +196,8 @@ export async function startGrpcService(
 		);
 		try {
 			await auditingClient.init();
-		} catch (e: unknown) {
-			logger.fatal(e);
+		} catch (error: unknown) {
+			logger.fatal(error);
 			await stopGrpcService();
 			process.exit(-1); // TODO: verify code.
 		}
@@ -215,8 +215,8 @@ export async function startGrpcService(
 		);
 		try {
 			await accountsRepo.init();
-		} catch (e: unknown) {
-			logger.fatal(e);
+		} catch (error: unknown) {
+			logger.fatal(error);
 			await stopGrpcService();
 			process.exit(-1); // TODO: verify code.
 		}
@@ -232,8 +232,8 @@ export async function startGrpcService(
 		);
 		try {
 			await journalEntriesRepo.init();
-		} catch (e: unknown) {
-			logger.fatal(e);
+		} catch (error: unknown) {
+			logger.fatal(error);
 			await stopGrpcService();
 			process.exit(-1); // TODO: verify code.
 		}
@@ -257,9 +257,13 @@ export async function startGrpcService(
 		GRPC_SERVER_PORT_NO
 	);
 	try {
+		await grpcServer.stop();
+		await grpcServer.stop();
 		await grpcServer.start();
-	} catch (e: unknown) {
-		logger.fatal(e);
+		await grpcServer.stop();
+		await grpcServer.stop();
+	} catch (error: unknown) {
+		logger.fatal(error);
 		await stopGrpcService();
 		process.exit(-1); // TODO: verify code.
 	}

@@ -89,6 +89,7 @@ describe("accounts and balances domain library - unit tests", () => {
 		const auditingClient: IAuditClient = new AuditClientMock(logger);
 		accountsRepo = new MemoryAccountsRepo(logger);
 		journalEntriesRepo = new MemoryJournalEntriesRepo(logger);
+
 		aggregate = new Aggregate(
 			logger,
 			authorizationClient,
@@ -97,7 +98,7 @@ describe("accounts and balances domain library - unit tests", () => {
 			journalEntriesRepo
 		);
 
-		// Create the hub account that will credit other accounts.
+		// Create the hub account, used to credit other accounts.
 		const hubAccountDto: IAccountDto = {
 			id: ID_HUB_ACCOUNT,
 			externalId: null,
@@ -350,13 +351,15 @@ describe("accounts and balances domain library - unit tests", () => {
 			debitBalance: "0",
 			timestampLastJournalEntry: null
 		};
-		(authorizationClient as AuthorizationClientMock).setRoleHasPrivilege(false);
+		// TODO: should this be done?
+		jest.spyOn(authorizationClient, "roleHasPrivilege").mockImplementationOnce(() => {
+			return false;
+		});
 		await expect(
 			async () => {
 				await aggregate.createAccount(accountDto, securityContext);
 			}
 		).rejects.toThrow(UnauthorizedError);
-		(authorizationClient as AuthorizationClientMock).setRoleHasPrivilege(true);
 	});
 
 	test("create account with non-null currencyDecimals", async () => {
@@ -505,14 +508,15 @@ describe("accounts and balances domain library - unit tests", () => {
 			debitBalance: "0",
 			timestampLastJournalEntry: null
 		};
-		(accountsRepo as MemoryAccountsRepo).setUnexpectedFailure(true);
+		jest.spyOn((accountsRepo as MemoryAccountsRepo).accounts, "has").mockImplementationOnce(() => {
+			throw new Error();
+		});
 		let errorName: string | undefined;
 		try {
 			await aggregate.createAccount(accountDto, securityContext);
 		} catch (error: any) {
 			errorName = error?.constructor?.name; // TODO: constructor.name vs name.
 		}
-		(accountsRepo as MemoryAccountsRepo).setUnexpectedFailure(false);
 		expect(errorName).toEqual(UnableToStoreAccountError.name);
 	});
 
@@ -880,14 +884,15 @@ describe("accounts and balances domain library - unit tests", () => {
 			debitedAccountId: accountDtos[1].id!,
 			timestamp: null
 		};
-		(accountsRepo as MemoryAccountsRepo).setUnexpectedFailure(true);
+		jest.spyOn((accountsRepo as MemoryAccountsRepo).accounts, "get").mockImplementationOnce(() => {
+			throw new Error();
+		});
 		let errorName: string | undefined;
 		try {
 			await aggregate.createJournalEntries([journalEntryDto], securityContext);
 		} catch (error: any) {
 			errorName = error?.constructor?.name; // TODO: constructor.name vs name.
 		}
-		(accountsRepo as MemoryAccountsRepo).setUnexpectedFailure(false);
 		expect(errorName).toEqual(UnableToGetAccountError.name);
 	});
 
@@ -906,14 +911,16 @@ describe("accounts and balances domain library - unit tests", () => {
 			debitedAccountId: accountDtos[1].id!,
 			timestamp: null
 		};
-		(journalEntriesRepo as MemoryJournalEntriesRepo).setUnexpectedFailure(true);
+		jest.spyOn((journalEntriesRepo as MemoryJournalEntriesRepo).journalEntries, "has")
+			.mockImplementationOnce(() => {
+				throw new Error();
+			});
 		let errorName: string | undefined;
 		try {
 			await aggregate.createJournalEntries([journalEntryDto], securityContext);
 		} catch (error: any) {
 			errorName = error?.constructor?.name; // TODO: constructor.name vs name.
 		}
-		(journalEntriesRepo as MemoryJournalEntriesRepo).setUnexpectedFailure(false);
 		expect(errorName).toEqual(UnableToStoreJournalEntryError.name);
 	});
 
@@ -964,14 +971,19 @@ describe("accounts and balances domain library - unit tests", () => {
 			timestampLastJournalEntry: null
 		};
 		const accountId: string = await aggregate.createAccount(accountDto, securityContext);
-		(accountsRepo as MemoryAccountsRepo).setUnexpectedFailure(true);
+		jest.spyOn((accountsRepo as MemoryAccountsRepo).accounts, "get").mockImplementationOnce(() => {
+			throw new Error();
+		});
+		// TODO: should this be done?
+		/*jest.spyOn(accountsRepo, "getAccountById").mockImplementationOnce(() => {
+			throw new UnableToGetAccountError();
+		});*/
 		let errorName: string | undefined;
 		try {
 			await aggregate.getAccountById(accountId, securityContext);
 		} catch (error: any) {
 			errorName = error?.constructor?.name; // TODO: constructor.name vs name.
 		}
-		(accountsRepo as MemoryAccountsRepo).setUnexpectedFailure(false);
 		expect(errorName).toEqual(UnableToGetAccountError.name);
 	});
 
@@ -994,14 +1006,15 @@ describe("accounts and balances domain library - unit tests", () => {
 	test("get existent accounts by external id with unexpected accounts repo failure", async () => {
 		const externalId: string = randomUUID();
 		const accountDtos: IAccountDto[] = await createAndCredit2Accounts(externalId, externalId);
-		(accountsRepo as MemoryAccountsRepo).setUnexpectedFailure(true);
+		jest.spyOn((accountsRepo as MemoryAccountsRepo).accounts, "values").mockImplementationOnce(() => {
+			throw new Error();
+		});
 		let errorName: string | undefined;
 		try {
 			await aggregate.getAccountsByExternalId(externalId, securityContext);
 		} catch (error: any) {
 			errorName = error?.constructor?.name; // TODO: constructor.name vs name.
 		}
-		(accountsRepo as MemoryAccountsRepo).setUnexpectedFailure(false);
 		expect(errorName).toEqual(UnableToGetAccountsError.name);
 	});
 
@@ -1195,14 +1208,16 @@ describe("accounts and balances domain library - unit tests", () => {
 			timestamp: null
 		};
 		await aggregate.createJournalEntries([journalEntryDto], securityContext);
-		(journalEntriesRepo as MemoryJournalEntriesRepo).setUnexpectedFailure(true);
+		jest.spyOn((journalEntriesRepo as MemoryJournalEntriesRepo).journalEntries, "values")
+		.mockImplementationOnce(() => {
+			throw new Error();
+		});
 		let errorName: string | undefined;
 		try {
 			await aggregate.getJournalEntriesByAccountId(idAccountA, securityContext);
 		} catch (error: any) {
 			errorName = error?.constructor?.name; // TODO: constructor.name vs name.
 		}
-		(journalEntriesRepo as MemoryJournalEntriesRepo).setUnexpectedFailure(false);
 		expect(errorName).toEqual(UnableToGetJournalEntriesError.name);
 	});
 

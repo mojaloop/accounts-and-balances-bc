@@ -68,8 +68,8 @@ export class MongoJournalEntriesRepo implements IJournalEntriesRepo {
 	async init(): Promise<void> {
 		try {
 			await this.mongoClient.connect(); // Throws if the repo is unreachable.
-		} catch (e: unknown) {
-			throw new UnableToInitRepoError((e as any)?.message);
+		} catch (error: unknown) {
+			throw new UnableToInitRepoError((error as any)?.message);
 		}
 		// The following doesn't throw if the repo is unreachable, nor if the db or collection don't exist.
 		this.journalEntries = this.mongoClient.db(this.DB_NAME).collection(this.COLLECTION_NAME);
@@ -84,8 +84,8 @@ export class MongoJournalEntriesRepo implements IJournalEntriesRepo {
 			// findOne() doesn't throw if no item is found - null is returned.
 			const journalEntry: any = await this.journalEntries.findOne({id: journalEntryId}); // TODO: type.
 			return journalEntry !== null;
-		} catch (e: unknown) {
-			throw new UnableToGetJournalEntryError((e as any)?.message);
+		} catch (error: unknown) {
+			throw new UnableToGetJournalEntryError((error as any)?.message);
 		}
 	}
 
@@ -97,8 +97,8 @@ export class MongoJournalEntriesRepo implements IJournalEntriesRepo {
 		let journalEntryExists: boolean;
 		try {
 			journalEntryExists = await this.journalEntryExistsById(journalEntry.id);
-		} catch (e: unknown) {
-			throw new UnableToStoreJournalEntryError((e as any)?.message);
+		} catch (error: unknown) {
+			throw new UnableToStoreJournalEntryError((error as any)?.message);
 		}
 		if (journalEntryExists) {
 			throw new JournalEntryAlreadyExistsError();
@@ -106,8 +106,8 @@ export class MongoJournalEntriesRepo implements IJournalEntriesRepo {
 		try {
 			// insertOne() allows for duplicates.
 			await this.journalEntries.insertOne(journalEntry);
-		} catch (e: unknown) {
-			throw new UnableToStoreJournalEntryError((e as any)?.message);
+		} catch (error: unknown) {
+			throw new UnableToStoreJournalEntryError((error as any)?.message);
 		}
 	}
 
@@ -121,8 +121,8 @@ export class MongoJournalEntriesRepo implements IJournalEntriesRepo {
 					{projection: {_id: 0}}) // Don't return the _id field.
 				.toArray();
 			return journalEntries as unknown as IJournalEntryDto[]; // TODO: create schema.
-		} catch (e: unknown) {
-			throw new UnableToGetJournalEntriesError((e as any)?.message);
+		} catch (error: unknown) {
+			throw new UnableToGetJournalEntriesError((error as any)?.message);
 		}
 	}
 }
