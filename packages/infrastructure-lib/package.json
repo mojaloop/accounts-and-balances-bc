@@ -18,20 +18,20 @@
     "/dist"
   ],
   "scripts": {
-    "clean:dist": "rm -rf dist",
-    "clean:node-modules": "rm -rf node_modules",
-    "clean:dist-and-node-modules": "rm -rf dist node_modules",
-    "clean": "npm run clean:dist",
+    "clean:dist": "rm -fr dist/",
     "dep:check": "ncu -e 2",
-    "lint": "eslint ./src",
+    "dep:upgrade": "ncu -u",
+    "audit:check": "npm audit",
+    "audit:fix": "npm audit fix",
+    "lint": "eslint src/",
     "build": "tsc",
-    "test:unit": "echo 'this code will only be tested with integration tests'"
+    "test:unit": "echo \"infrastructure-lib doesn't have unit tests - it's only tested on the integration tests\""
   },
   "devDependencies": {
-    "@mojaloop/logging-bc-public-types-lib": "^0.0.3"
   },
   "dependencies": {
-    "@mojaloop/accounts-and-balances-bc-domain-lib": "*",
-    "mongodb": "^4.8.1"
+    "@mojaloop/accounts-and-balances-bc-domain-lib": "~0.0.1",
+    "@mojaloop/logging-bc-public-types-lib": "~0.1.12",
+    "mongodb": "~4.10.0"
   }
 }

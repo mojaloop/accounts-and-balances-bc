@@ -1,22 +1,25 @@
 {
-  "plugins": [
-	"@typescript-eslint"
-  ],
   "extends": [
 	"eslint:recommended",
 	"plugin:@typescript-eslint/recommended"
+  ],
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+	"project": [
+	  "./tsconfig.json"
+	],
+	"sourceType": "module"
+  },
+  "plugins": [
+	"@typescript-eslint"
   ],
   "rules": {
 	"semi": [
 	  "warn"
 	],
-	"@typescript-eslint/no-inferrable-types": ["off"], // TODO.
-	"@typescript-eslint/no-explicit-any": ["off"] // TODO.
-  },
-  "parser": "@typescript-eslint/parser",
-  "parserOptions": {
-	"sourceType": "module",
-	"project": "./tsconfig.json"
+	"@typescript-eslint/no-inferrable-types": [
+	  "off"
+	]
   },
   "ignorePatterns": [
 	"**/*.d.ts",
@@ -25,12 +28,12 @@
   ],
   "overrides": [
 	{
-	  "files": [ // TODO.
+	  "files": [
 		"**/*.test.ts",
 		"test/**/*.ts"
 	  ],
 	  "rules": {
-		"@typescript-eslint/explicit-function-return-type": "off"
+		"@typescript-eslint/explicit-function-return-type": ["off"]
 	  }
 	}
   ]

@@ -30,25 +30,41 @@
 "use strict";
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import * as uuid from "uuid";
+import {randomUUID} from "crypto";
 import {
 	AccountAlreadyExistsError,
-	CreditedAndDebitedAccountsAreTheSameError,
-	CurrenciesDifferError,
+	SameCreditedAndDebitedAccountsError,
+	CurrencyCodesDifferError,
 	InsufficientBalanceError,
+	InvalidExternalCategoryError,
+	InvalidExternalIdError,
+	InvalidJournalEntryAmountError,
+	InvalidTimestampError,
 	JournalEntryAlreadyExistsError,
 	NoSuchCreditedAccountError,
 	NoSuchDebitedAccountError,
-	UnauthorizedError
-} from "./errors";
-import {IAccountsRepo, IJournalEntriesRepo} from "./infrastructure_interfaces";
-import {Account} from "./entities/account";
-import {JournalEntry} from "./entities/journal_entry";
-import {IAccount, IJournalEntry} from "./types";
+	UnauthorizedError,
+	InvalidIdError,
+	InvalidCurrencyCodeError,
+	InvalidCreditBalanceError,
+	InvalidDebitBalanceError,
+	InvalidCurrencyDecimalsError
+} from "./types/errors";
+import {
+	IAccountsRepo,
+	IJournalEntriesRepo
+} from "./types/infrastructure";
+import {Account} from "./types/account";
+import {JournalEntry} from "./types/journal_entry";
+import {IAccountDto, IJournalEntryDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {IAuditClient, AuditSecurityContext} from "@mojaloop/auditing-bc-public-types-lib";
 import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
-import {Privileges} from "./privileges";
+import {Privileges} from "./types/privileges";
+import {join} from "path";
+import {readFileSync} from "fs";
+import {ICurrency} from "./types/currency";
+import {bigintToString, stringToBigint} from "./converters";
 
 enum AuditingActions {
 	ACCOUNT_CREATED = "ACCOUNT_CREATED"
@@ -61,6 +77,9 @@ export class Aggregate {
 	private readonly auditingClient: IAuditClient;
 	private readonly accountsRepo: IAccountsRepo;
 	private readonly journalEntriesRepo: IJournalEntriesRepo;
+	private readonly currencies: ICurrency[];
+	// Other properties.
+	private static readonly CURRENCIES_FILE_NAME: string = "currencies.json";
 
 	constructor(
 		logger: ILogger,
@@ -74,32 +93,24 @@ export class Aggregate {
 		this.auditingClient = auditingClient;
 		this.accountsRepo = accountsRepo;
 		this.journalEntriesRepo = journalEntriesRepo;
-	}
 
-	async init(): Promise<void> {
+		// TODO: here?
+		const currenciesFilePath: string = join(__dirname, Aggregate.CURRENCIES_FILE_NAME);
 		try {
-			await this.auditingClient.init();
-			await this.accountsRepo.init();
-			await this.journalEntriesRepo.init();
-		} catch (e: unknown) {
-			this.logger.fatal(e);
-			throw e;
+			this.currencies = JSON.parse(readFileSync(currenciesFilePath, "utf-8"));
+		} catch (error: unknown) {
+			this.logger.error(error);
+			throw error;
 		}
-	}
-
-	async destroy(): Promise<void> {
-		await this.accountsRepo.destroy();
-		await this.journalEntriesRepo.destroy();
-		await this.auditingClient.destroy();
 	}
 
 	private enforcePrivilege(securityContext: CallSecurityContext, privilegeId: string): void {
-		for (const roleId of securityContext.rolesIds) { // TODO: of?
+		for (const roleId of securityContext.rolesIds) {
 			if (this.authorizationClient.roleHasPrivilege(roleId, privilegeId)) {
 				return;
 			}
-			throw new UnauthorizedError(); // TODO: change error name.
 		}
+		throw new UnauthorizedError(); // TODO: change error name.
 	}
 
 	private getAuditSecurityContext(securityContext: CallSecurityContext): AuditSecurityContext {
@@ -110,23 +121,69 @@ export class Aggregate {
 		};
 	}
 
-	// TODO: why ignore the case in which uuid.v4() generates an already existing id?
-	async createAccount(account: IAccount, securityContext: CallSecurityContext): Promise<string> {
+	async createAccount(accountDto: IAccountDto, securityContext: CallSecurityContext): Promise<string> {
 		this.enforcePrivilege(securityContext, Privileges.CREATE_ACCOUNT);
-		// Generate a random UUId, if needed.
-		if (account.id === undefined || account.id === null || account.id === "") {
-			account.id = uuid.v4();
+
+		// When creating an account, currencyDecimals and timestampLastJournalEntry are supposed to be null and
+		// creditBalance and debitBalance 0. For consistency purposes and to make sure whoever calls this function
+		// knows that, if those values aren't respected, errors are thrown.
+		if (accountDto.currencyDecimals !== null) {
+			throw new InvalidCurrencyDecimalsError();
 		}
-		Account.validateAccount(account);
-		// Store the account.
+		if (accountDto.timestampLastJournalEntry !== null) {
+			throw new InvalidTimestampError();
+		}
+		if (parseInt(accountDto.creditBalance) !== 0) {
+			throw new InvalidCreditBalanceError();
+		}
+		if (parseInt(accountDto.debitBalance) !== 0) {
+			throw new InvalidDebitBalanceError();
+		}
+
+		// When creating an account, id and externalId are supposed to be either a non-empty string or null. For
+		// consistency purposes and to make sure whoever calls this function knows that, if those values aren't
+		// respected, errors are thrown.
+		if (accountDto.id === "") {
+			throw new InvalidIdError();
+		}
+		if (accountDto.externalId === "") {
+			throw new InvalidExternalIdError();
+		}
+
+		// Generate a random UUId, if needed. TODO: randomUUID() can generate an id that already exists.
+		const accountId: string = accountDto.id ?? randomUUID();
+
+		// Verify the currency code (and get the corresponding currency decimals).
+		const currency: ICurrency | undefined = this.currencies.find(currency => {
+			return currency.code === accountDto.currencyCode;
+		});
+		if (currency === undefined) {
+			throw new InvalidCurrencyCodeError();
+		}
+
+		const account: Account = new Account(
+			accountId,
+			accountDto.externalId,
+			accountDto.state,
+			accountDto.type,
+			accountDto.currencyCode,
+			currency.decimals,
+			0n,
+			0n,
+			null
+		);
+
+		// Store the account (accountDto can't be stored).
+		const formattedAccountDto: IAccountDto = account.toDto();
 		try {
-			await this.accountsRepo.storeNewAccount(account);
-		} catch (e: unknown) {
-			if (!(e instanceof AccountAlreadyExistsError)) {
-				this.logger.error(e);
+			await this.accountsRepo.storeNewAccount(formattedAccountDto);
+		} catch (error: unknown) {
+			if (!(error instanceof AccountAlreadyExistsError)) {
+				this.logger.error(error);
 			}
-			throw e;
+			throw error;
 		}
+
 		// TODO: configure; try-catch.
 		await this.auditingClient.audit(
 			AuditingActions.ACCOUNT_CREATED,
@@ -134,125 +191,242 @@ export class Aggregate {
 			this.getAuditSecurityContext(securityContext),
 			[{key: "accountId", value: account.id}]
 		);
+
 		return account.id;
 	}
 
-	async createJournalEntries(journalEntries: IJournalEntry[], securityContext: CallSecurityContext): Promise<string[]> {
+	async createJournalEntries(
+		journalEntryDtos: IJournalEntryDto[],
+		securityContext: CallSecurityContext
+	): Promise<string[]> {
 		this.enforcePrivilege(securityContext, Privileges.CREATE_JOURNAL_ENTRY);
+
 		const idsJournalEntries: string[] = []; // TODO: verify.
-		for (const journalEntry of journalEntries) { // TODO: of?
-			idsJournalEntries.push(await this.createJournalEntry(journalEntry)); // TODO: verify.
+		for (const journalEntryDto of journalEntryDtos) {
+			const journalEntryId: string = await this.createJournalEntry(journalEntryDto);
+			idsJournalEntries.push(journalEntryId); // TODO: verify.
 		}
+
 		return idsJournalEntries;
 	}
 
-	private async createJournalEntry(journalEntry: IJournalEntry): Promise<string> {
-		// Generate a random UUId, if needed.
-		if (journalEntry.id === undefined || journalEntry.id === null || journalEntry.id === "") {
-			journalEntry.id = uuid.v4();
+	private async createJournalEntry(journalEntryDto: IJournalEntryDto): Promise<string> {
+		// When creating a journal entry, currencyDecimals and timestamp are supposed to be null. For consistency
+		// purposes and to make sure whoever calls this function knows that, if those values aren't respected, errors
+		// are thrown.
+		if (journalEntryDto.currencyDecimals !== null) {
+			throw new InvalidCurrencyDecimalsError();
 		}
-		JournalEntry.validateJournalEntry(journalEntry);
-		// Check if the credited and debited accounts are the same. TODO: required?
+		if (journalEntryDto.timestamp !== null) {
+			throw new InvalidTimestampError();
+		}
+
+		// When creating a journal entry, id, externalId and externalCategory are supposed to be either a non-empty
+		// string or null. For consistency purposes and to make sure whoever calls this function knows that, if those
+		// values aren't respected, errors are thrown.
+		if (journalEntryDto.id === "") {
+			throw new InvalidIdError();
+		}
+		if (journalEntryDto.externalId === "") {
+			throw new InvalidExternalIdError();
+		}
+		if (journalEntryDto.externalCategory === "") {
+			throw new InvalidExternalCategoryError();
+		}
+
+		// Generate a random UUId, if needed. TODO: randomUUID() can generate an id that already exists.
+		const journalEntryId: string = journalEntryDto.id ?? randomUUID();
+
+		// Verify the currency code (and get the corresponding currency decimals).
+		const currency: ICurrency | undefined = this.currencies.find(currency => {
+			return currency.code === journalEntryDto.currencyCode;
+		});
+		if (currency === undefined) {
+			throw new InvalidCurrencyCodeError();
+		}
+
+		// Convert the amount and check if it's valid.
+		let amount: bigint;
+		try {
+			amount = stringToBigint(journalEntryDto.amount, currency.decimals);
+		} catch (error: unknown) {
+			throw new InvalidJournalEntryAmountError();
+		}
+		if (amount <= 0n) {
+			throw new InvalidJournalEntryAmountError();
+		}
+
+		// Get a timestamp.
+		const timestamp: number = Date.now();
+
+		const journalEntry: JournalEntry = new JournalEntry(
+			journalEntryId,
+			journalEntryDto.externalId,
+			journalEntryDto.externalCategory,
+			journalEntryDto.currencyCode,
+			currency.decimals,
+			amount,
+			journalEntryDto.creditedAccountId,
+			journalEntryDto.debitedAccountId,
+			timestamp
+		);
+
+		// Check if the credited and debited accounts are the same.
 		if (journalEntry.creditedAccountId === journalEntry.debitedAccountId) {
-			throw new CreditedAndDebitedAccountsAreTheSameError(); // TODO: error name.
+			throw new SameCreditedAndDebitedAccountsError();
 		}
+
 		// Check if the credited and debited accounts exist.
 		// Instead of using the repo's accountExistsById and journalEntryExistsById functions, the accounts are fetched
 		// and compared to null; this is done because some of the accounts' properties need to be consulted, so it
 		// doesn't make sense to call those functions when the accounts need to be fetched anyway.
-		let creditedAccount: Account | null;
-		let debitedAccount: Account | null;
+		let creditedAccountDto: IAccountDto | null;
+		let debitedAccountDto: IAccountDto | null;
 		try {
-			creditedAccount = await this.accountsRepo.getAccountById(journalEntry.creditedAccountId);
-			debitedAccount = await this.accountsRepo.getAccountById(journalEntry.debitedAccountId);
-		} catch (e: unknown) {
-			this.logger.error(e);
-			throw e;
+			creditedAccountDto = await this.accountsRepo.getAccountById(journalEntry.creditedAccountId);
+			debitedAccountDto = await this.accountsRepo.getAccountById(journalEntry.debitedAccountId);
+		} catch (error: unknown) {
+			this.logger.error(error);
+			throw error;
 		}
-		if (creditedAccount === null) {
+		if (creditedAccountDto === null) {
 			throw new NoSuchCreditedAccountError();
 		}
-		if (debitedAccount === null) {
+		if (debitedAccountDto === null) {
 			throw new NoSuchDebitedAccountError();
 		}
-		// Check if the currencies of the credited and debited accounts and the journal entry match.
-		if (creditedAccount.currency !== debitedAccount.currency
-			|| creditedAccount.currency !== journalEntry.currency) {
-			throw new CurrenciesDifferError(); // TODO: error name.
+		let creditedAccount: Account;
+		let debitedAccount: Account;
+		try {
+			creditedAccount = new Account(
+				creditedAccountDto.id!,
+				creditedAccountDto.externalId,
+				creditedAccountDto.state,
+				creditedAccountDto.type,
+				creditedAccountDto.currencyCode,
+				creditedAccountDto.currencyDecimals!,
+				stringToBigint(creditedAccountDto.creditBalance, creditedAccountDto.currencyDecimals!),
+				stringToBigint(creditedAccountDto.debitBalance, creditedAccountDto.currencyDecimals!),
+				creditedAccountDto.timestampLastJournalEntry
+			);
+			debitedAccount = new Account(
+				debitedAccountDto.id!,
+				debitedAccountDto.externalId,
+				debitedAccountDto.state,
+				debitedAccountDto.type,
+				debitedAccountDto.currencyCode,
+				debitedAccountDto.currencyDecimals!,
+				stringToBigint(debitedAccountDto.creditBalance, debitedAccountDto.currencyDecimals!),
+				stringToBigint(debitedAccountDto.debitBalance, debitedAccountDto.currencyDecimals!),
+				debitedAccountDto.timestampLastJournalEntry
+			);
+		} catch (error: unknown) {
+			this.logger.error(error);
+			throw error;
 		}
+
+		// Check if the currency codes of the credited and debited accounts and the journal entry match.
+		if (creditedAccount.currencyCode !== debitedAccount.currencyCode
+			|| creditedAccount.currencyCode !== journalEntry.currencyCode) {
+			throw new CurrencyCodesDifferError();
+		}
+
+		// Check if the currency decimals of the credited and debited accounts and the journal entry match.
+		if (creditedAccount.currencyDecimals !== debitedAccount.currencyDecimals
+			|| creditedAccount.currencyDecimals !== journalEntry.currencyDecimals) {
+			// TODO: does it make sense to create a custom error to be used on the services?
+			this.logger.error("currency decimals differ");
+			throw new Error();
+		}
+
 		// Check if the balance is sufficient.
-		if (this.calculateAccountBalance(creditedAccount) - journalEntry.amount < 0n) { // TODO: verify.
-			throw new InsufficientBalanceError(); // TODO: error name.
+		if (debitedAccount.calculateBalance() - journalEntry.amount < 0n) {
+			throw new InsufficientBalanceError();
 		}
-		// Store the journal entry.
+
+		// Store the journal entry (journalEntryDto can't be stored).
+		const formattedJournalEntryDto: IJournalEntryDto = journalEntry.toDto();
 		try {
-			await this.journalEntriesRepo.storeNewJournalEntry(journalEntry);
-		} catch (e: unknown) {
-			if (!(e instanceof JournalEntryAlreadyExistsError)) {
-				this.logger.error(e);
+			await this.journalEntriesRepo.storeNewJournalEntry(formattedJournalEntryDto);
+		} catch (error: unknown) {
+			if (!(error instanceof JournalEntryAlreadyExistsError)) {
+				this.logger.error(error);
 			}
-			throw e;
+			throw error;
 		}
-		// Update the accounts' balances and time stamps.
+
+		// Update the credited account's credit balance and timestamp.
+		const updatedCreditBalance: string = bigintToString(
+			creditedAccount.creditBalance + journalEntry.amount,
+			creditedAccount.currencyDecimals
+		);
 		try {
-			await this.accountsRepo.updateAccountCreditBalanceById(
+			await this.accountsRepo.updateAccountCreditBalanceAndTimestampById(
 				creditedAccount.id,
-				creditedAccount.creditBalance + journalEntry.amount,
-				journalEntry.timestamp
+				updatedCreditBalance,
+				journalEntry.timestamp!
 			);
-		} catch (e: unknown) {
+		} catch (error: unknown) {
 			// TODO: revert store.
-			this.logger.error(e);
-			throw e;
+			this.logger.error(error);
+			throw error;
 		}
+
+		// Update the debited account's debit balance and timestamp.
+		const updatedDebitBalance: string = bigintToString(
+			debitedAccount.debitBalance + journalEntry.amount,
+			debitedAccount.currencyDecimals
+		);
 		try {
-			await this.accountsRepo.updateAccountDebitBalanceById(
+			await this.accountsRepo.updateAccountDebitBalanceAndTimestampById(
 				debitedAccount.id,
-				debitedAccount.debitBalance + journalEntry.amount,
-				journalEntry.timestamp
+				updatedDebitBalance,
+				journalEntry.timestamp!
 			);
-		} catch (e: unknown) {
+		} catch (error: unknown) {
 			// TODO: revert store.
-			this.logger.error(e);
-			throw e;
+			this.logger.error(error);
+			throw error;
 		}
+
 		return journalEntry.id;
 	}
 
-	async getAccountById(accountId: string, securityContext: CallSecurityContext): Promise<IAccount | null> {
+	async getAccountById(accountId: string, securityContext: CallSecurityContext): Promise<IAccountDto | null> {
 		this.enforcePrivilege(securityContext, Privileges.VIEW_ACCOUNT);
 		try {
-			return await this.accountsRepo.getAccountById(accountId);
-		} catch (e: unknown) {
-			this.logger.error(e);
-			throw e;
+			const accountDto: IAccountDto | null = await this.accountsRepo.getAccountById(accountId);
+			return accountDto;
+		} catch (error: unknown) {
+			this.logger.error(error);
+			throw error;
 		}
 	}
 
-	async getAccountsByExternalId(externalId: string, securityContext: CallSecurityContext): Promise<IAccount[]> {
+	async getAccountsByExternalId(externalId: string, securityContext: CallSecurityContext): Promise<IAccountDto[]> {
 		this.enforcePrivilege(securityContext, Privileges.VIEW_ACCOUNT);
 		try {
-			return await this.accountsRepo.getAccountsByExternalId(externalId);
-		} catch (e: unknown) {
-			this.logger.error(e);
-			throw e;
+			const accountDtos: IAccountDto[] =
+				await this.accountsRepo.getAccountsByExternalId(externalId);
+			return accountDtos;
+		} catch (error: unknown) {
+			this.logger.error(error);
+			throw error;
 		}
 	}
 
 	async getJournalEntriesByAccountId(
 		accountId: string,
-		securityContext: CallSecurityContext)
-	: Promise<IJournalEntry[]> {
+		securityContext: CallSecurityContext
+	): Promise<IJournalEntryDto[]> {
 		this.enforcePrivilege(securityContext, Privileges.VIEW_JOURNAL_ENTRY);
 		try {
-			return await this.journalEntriesRepo.getJournalEntriesByAccountId(accountId);
-		} catch (e: unknown) {
-			this.logger.error(e);
-			throw e;
+			const journalEntryDtos: IJournalEntryDto[] =
+				await this.journalEntriesRepo.getJournalEntriesByAccountId(accountId);
+			return journalEntryDtos;
+		} catch (error: unknown) {
+			this.logger.error(error);
+			throw error;
 		}
-	}
-
-	private calculateAccountBalance(account: Account): bigint {
-		return account.creditBalance - account.debitBalance;
 	}
 }

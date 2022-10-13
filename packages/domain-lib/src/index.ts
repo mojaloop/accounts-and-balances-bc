@@ -33,6 +33,6 @@
 "use strict";
 
 export * from "./aggregate";
-export * from "./types";
-export * from "./errors";
-export * from "./infrastructure_interfaces";
+export * from "./types/errors";
+export * from "./types/infrastructure";
+export * from "./types/privileges";
