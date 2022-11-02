@@ -29,4 +29,5 @@
 
 "use strict";
 
-export * from "./accounts_and_balances_grpc_client";
+export * from "./grpc_client";
+export * from "./errors";

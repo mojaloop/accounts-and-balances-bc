@@ -31,14 +31,14 @@
 
 // TODO: export everything at once.
 
+export * from "./types/accounts_and_balances";
 export * from "./types/AccountsAndBalancesGrpcService";
+export * from "./types/GrpcAccount";
+export * from "./types/GrpcGetAccountByIdResponse";
+export * from "./types/GrpcGetAccountsByExternalIdResponse";
+export * from "./types/GrpcGetJournalEntriesByAccountIdResponse";
 export * from "./types/GrpcId";
 export * from "./types/GrpcIdArray";
-export * from "./types/GrpcAccount";
-export * from "./types/GrpcAccountState";
-export * from "./types/GrpcAccountType";
-export * from "./types/GrpcAccountArray";
 export * from "./types/GrpcJournalEntry";
 export * from "./types/GrpcJournalEntryArray";
-export * from "./types/accounts_and_balances";
 export * from "./utils";

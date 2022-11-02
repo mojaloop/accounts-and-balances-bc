@@ -12,147 +12,164 @@ It allows for the following operations:
 - **Create journal entries**: create 1 or more journal entries.
 - **Get account by id**: get an account by id.
 - **Get accounts by external id**: get all the accounts with a specific external id.
-- **Get journal entries by account id**: get all the journal entries with a specific account id - either the credited account id or the debited account id.
+- **Get journal entries by account id**: get all the journal entries with a specific account id - either the debited account id or the credited account id.
 
 ## Install
-```
-npm install @mojaloop/accounts-and-balancs-bc-grpc-client-lib
+```shell
+$ npm install @mojaloop/accounts-and-balances-bc-grpc-client-lib @mojaloop/logging-bc-client-lib
 ```
 
 ## Usage
 
-### Configure
-```
-import {ILogger, ConsoleLogger} from "@mojaloop/logging-bc-public-types-lib";
-import {AccountsAndBalancesGrpcClient} from "@mojaloop/accounts-and-balancs-bc-grpc-client-lib";
+### Configure and Initialize
+```typescript
+import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
+import {DefaultLogger} from "@mojaloop/logging-bc-client-lib";
+import {GrpcClient} from "@mojaloop/accounts-and-balances-bc-grpc-client-lib";
 
-const HOST_ACCOUNTS_AND_BALANCES_GRPC_SERVICE: string = "localhost";
-const PORT_NO_ACCOUNTS_AND_BALANCES_GRPC_SERVICE: number = 1234;
+const BOUNDED_CONTEXT_NAME: string = "some-bc";
+const SERVICE_NAME: string = "some-svc";
+const SERVICE_VERSION: string = "0.0.1";
+const ACCOUNTS_AND_BALANCES_GRPC_SERVICE_HOST: string = "localhost";
+const ACCOUNTS_AND_BALANCES_GRPC_SERVICE_PORT_NO: number = 5678;
+const ACCOUNTS_AND_BALANCES_GRPC_CLIENT_TIMEOUT_MS: number = 5000;
 
-const logger: ILogger = new ConsoleLogger();
-const accountsAndBalancesGrpcClient: AccountsAndBalancesGrpcClient = new AccountsAndBalancesGrpcClient(
+const logger: ILogger = new DefaultLogger(BOUNDED_CONTEXT_NAME, SERVICE_NAME, SERVICE_VERSION);
+
+const grpcClient: GrpcClient = new GrpcClient(
     logger,
-    HOST_ACCOUNTS_AND_BALANCES_GRPC_SERVICE,
-    PORT_NO_ACCOUNTS_AND_BALANCES_GRPC_SERVICE
+    ACCOUNTS_AND_BALANCES_GRPC_SERVICE_HOST,
+    ACCOUNTS_AND_BALANCES_GRPC_SERVICE_PORT_NO,
+    ACCOUNTS_AND_BALANCES_GRPC_CLIENT_TIMEOUT_MS
 );
-await accountsAndBalancesGrpcClient.init();
+
+await grpcClient.init();
+```
+
+### Destroy
+```typescript
+await grpcClient.destroy();
 ```
 
 ### Create Account
-```
+```typescript
 const accountDto: IAccountDto = {
-    id: "a",
-	externalId: null,
-	state: AccountState.ACTIVE,
-	type: AccountType.POSITION,
-	currencyCode: "EUR",
-	currencyDecimals: 2,
-	creditBalance: "100",
-	debitBalance: "25",
-	timestampLastJournalEntry: 0
+    id: null,
+    externalId: null,
+    state: AccountState.ACTIVE,
+    type: AccountType.POSITION,
+    currencyCode: "EUR",
+    currencyDecimals: null,
+    debitBalance: "0",
+    creditBalance: "0",
+    timestampLastJournalEntry: null
 };
+
 try {
-    const accountIdReceived: string = await accountsAndBalancesGrpcClient.createAccount(accountDto);
+    const accountId: string = await grpcClient.createAccount(accountDto);
 } catch (error: unknown) {
-    logger.error(e);
+    logger.error(error);
 }
 ```
 
 ### Create Journal Entries
-```
+```typescript
 // Before creating a journal entry, the respective accounts need to be created.
+
 // Account A.
 const accountDtoA: IAccountDto = {
-    id: "a",
-	externalId: null,
-	state: AccountState.ACTIVE,
-	type: AccountType.POSITION,
-	currencyCode: "EUR",
-	currencyDecimals: 2,
-	creditBalance: "100",
-	debitBalance: "25",
-	timestampLastJournalEntry: 0
+    id: null,
+    externalId: null,
+    state: AccountState.ACTIVE,
+    type: AccountType.POSITION,
+    currencyCode: "EUR",
+    currencyDecimals: null,
+    debitBalance: "0",
+    creditBalance: "0",
+    timestampLastJournalEntry: null
 };
-await accountsAndBalancesGrpcClient.createAccount(accountDtoA);
+const idAccountA: string = await grpcClient.createAccount(accountDtoA);
+
 // Account B.
 const accountDtoB: IAccountDto = {
-    id: "b",
-	externalId: null,
-	state: AccountState.ACTIVE,
-	type: AccountType.POSITION,
-	currencyCode: "EUR",
-	currencyDecimals: 2,
-	creditBalance: "100",
-	debitBalance: "25",
-	timestampLastJournalEntry: 0
+    id: null,
+    externalId: null,
+    state: AccountState.ACTIVE,
+    type: AccountType.POSITION,
+    currencyCode: "EUR",
+    currencyDecimals: null,
+    debitBalance: "0",
+    creditBalance: "0",
+    timestampLastJournalEntry: null
 };
-await accountsAndBalancesGrpcClient.createAccount(accountDtoB);
+const idAccountB: string = await grpcClient.createAccount(accountDtoB);
+
+// TODO: credit accounts A and B with an hub account.
+
 // Journal entry A.
 const journalEntryDtoA: IJournalEntryDto = {
-	id: "a",
-	externalId: null,
-	externalCategory: null,
-	currencyCode: "EUR",
-	currencyDecimals: 2,
-	amount: "5",
-	creditedAccountId: "a",
-	debitedAccountId: "b",
-	timestamp: 0
+    id: null,
+    externalId: null,
+    externalCategory: null,
+    currencyCode: "EUR",
+    currencyDecimals: null,
+    amount: "5",
+    debitedAccountId: idAccountA,
+    creditedAccountId: idAccountB,
+    timestamp: null
 };
+
 // Journal entry B.
-const journalEntryDtoA: IJournalEntryDto = {
-	id: "b",
-	externalId: null,
-	externalCategory: null,
-	currencyCode: "EUR",
-	currencyDecimals: 2,
-	amount: "5",
-	creditedAccountId: "b",
-	debitedAccountId: "a",
-	timestamp: 0
+const journalEntryDtoB: IJournalEntryDto = {
+    id: null,
+    externalId: null,
+    externalCategory: null,
+    currencyCode: "EUR",
+    currencyDecimals: null,
+    amount: "5",
+    debitedAccountId: idAccountB,
+    creditedAccountId: idAccountA,
+    timestamp: null
 };
+
 try {
-    const idsJournalEntriesReceived: string[] =
-        await accountsAndBalancesGrpcClient.createJournalEntries([journalEntryDtoA, journalEntryDtoB]);
+    const idsJournalEntries: string[] = await grpcClient.createJournalEntries([journalEntryDtoA, journalEntryDtoB]);
 } catch (error: unknown) {
-    logger.error(e);
+    logger.error(error);
 }
 ```
 
 ### Get Account by Id
-```
+```typescript
 const accountId: string = "a";
+
 try {
-    const accountDto: IAccountDto | null = await accountsAndBalancesGrpcClient.getAccountById(accountId);
+    const accountDto: IAccountDto | null = await grpcClient.getAccountById(accountId);
 } catch (error: unknown) {
-    logger.error(e);
+    logger.error(error);
 }
 ```
 
 ### Get Accounts by External Id
-```
+```typescript
 const externalId: string = "a";
+
 try {
-    const accountDtos: IAccountDto[] = await accountsAndBalancesGrpcClient.getAccountsByExternalId(externalId);
+    const accountDtos: IAccountDto[] = await grpcClient.getAccountsByExternalId(externalId);
 } catch (error: unknown) {
-    logger.error(e);
+    logger.error(error);
 }
 ```
 
 ### Get Journal Entries by Account Id
-```
+```typescript
 const accountId: string = "a";
-try {
-    const journalEntryDtos: IJournalEntryDto[] =
-        await accountsAndBalancesGrpcClient.getJournalEntriesByAccountId(accountId);
-} catch (error: unknown) {
-    logger.error(e);
-}
-```
 
-### Terminate
-```
-await accountsAndBalancesGrpcClient.destroy();
+try {
+    const journalEntryDtos: IJournalEntryDto[] = await grpcClient.getJournalEntriesByAccountId(accountId);
+} catch (error: unknown) {
+    logger.error(error);
+}
 ```
 
 ## See Also

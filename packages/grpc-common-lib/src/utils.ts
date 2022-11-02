@@ -29,9 +29,9 @@
 
 "use strict";
 
-import {GrpcAccount__Output} from "./types/GrpcAccount";
-import {GrpcJournalEntry__Output} from "./types/GrpcJournalEntry";
-import {loadSync, PackageDefinition} from "@grpc/proto-loader";
+import {GrpcAccount, GrpcAccount__Output} from "./types/GrpcAccount";
+import {GrpcJournalEntry, GrpcJournalEntry__Output} from "./types/GrpcJournalEntry";
+import {loadSync, Options, PackageDefinition} from "@grpc/proto-loader";
 import {join} from "path";
 import {
 	AccountState,
@@ -41,75 +41,93 @@ import {
 } from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 const PROTO_FILE_NAME: string = "accounts_and_balances.proto";
+const LOAD_PROTO_OPTIONS: Options = {
+	longs: Number
+};
 
 export function loadProto(): PackageDefinition {
-	const protoFilePath: string = join(__dirname, PROTO_FILE_NAME);
-	return loadSync(
-		protoFilePath,
-		{
-			longs: Number,
-			enums: String,
-			defaults: false
-		}
-	);
+	const protoFileAbsolutePath: string = join(__dirname, PROTO_FILE_NAME);
+	const packageDefinition: PackageDefinition = loadSync(protoFileAbsolutePath, LOAD_PROTO_OPTIONS);
+	return packageDefinition;
 }
 
-export function grpcAccountToAccountDto(grpcAccount: GrpcAccount__Output): IAccountDto {
-	const ret:IAccountDto = {
-		id: grpcAccount.id || null,
-		externalId: grpcAccount.externalId || null,
-		state: grpcAccount.state as AccountState,
-		type: grpcAccount.type as AccountType,
-		currencyCode: grpcAccount.currencyCode!,
-		creditBalance: grpcAccount.creditBalance!,
-		debitBalance: grpcAccount.debitBalance!,
-		timestampLastJournalEntry: null
-	};
-
-	return ret;
-}
-
-export function accountDtoToGrpcAccount(accountDto: IAccountDto): GrpcAccount__Output {
-	const ret:GrpcAccount__Output = {
-		id: accountDto.id || undefined,
-		externalId: accountDto.externalId || undefined,
+export function accountDtoToGrpcAccount(accountDto: IAccountDto): GrpcAccount {
+	const grpcAccount: GrpcAccount = {
+		id: accountDto.id ?? undefined,
+		externalId: accountDto.externalId ?? undefined,
 		state: accountDto.state,
 		type: accountDto.type,
 		currencyCode: accountDto.currencyCode,
-		creditBalance: accountDto.creditBalance,
+		currencyDecimals: accountDto.currencyDecimals ?? undefined,
 		debitBalance: accountDto.debitBalance,
-		timestampLastJournalEntry: accountDto.timestampLastJournalEntry || undefined
+		creditBalance: accountDto.creditBalance,
+		timestampLastJournalEntry: accountDto.timestampLastJournalEntry ?? undefined
 	};
-
-	return ret;
+	return grpcAccount;
 }
 
-export function grpcJournalEntryToJournalEntryDto(grpcJournalEntry: GrpcJournalEntry__Output): IJournalEntryDto {
-	const ret:IJournalEntryDto = {
-		id: grpcJournalEntry.id || null,
-		externalId: grpcJournalEntry.externalId || null,
-		externalCategory: grpcJournalEntry.externalCategory || null,
-		currencyCode: grpcJournalEntry.currencyCode!,
-		amount: grpcJournalEntry.amount!,
-		creditedAccountId: grpcJournalEntry.creditedAccountId!,
-		debitedAccountId: grpcJournalEntry.debitedAccountId!,
-		timestamp: grpcJournalEntry.timestamp || null
-	};
+export function grpcAccountOutputToAccountDto(grpcAccountOutput: GrpcAccount__Output): IAccountDto {
+	if (
+		grpcAccountOutput.state === undefined
+		|| grpcAccountOutput.type === undefined
+		|| grpcAccountOutput.currencyCode === undefined
+		|| grpcAccountOutput.debitBalance === undefined
+		|| grpcAccountOutput.creditBalance === undefined
+	) {
+		throw new Error(); // TODO: message?
+	}
 
-	return ret;
+	const accountDto: IAccountDto = {
+		id: grpcAccountOutput.id ?? null,
+		externalId: grpcAccountOutput.externalId ?? null,
+		state: grpcAccountOutput.state as AccountState,
+		type: grpcAccountOutput.type as AccountType,
+		currencyCode: grpcAccountOutput.currencyCode,
+		currencyDecimals: grpcAccountOutput.currencyDecimals ?? null,
+		debitBalance: grpcAccountOutput.debitBalance,
+		creditBalance: grpcAccountOutput.creditBalance,
+		timestampLastJournalEntry: grpcAccountOutput.timestampLastJournalEntry ?? null
+	};
+	return accountDto;
 }
 
-export function journalEntryDtoToGrpcJournalEntry(journalEntryDto: IJournalEntryDto): GrpcJournalEntry__Output {
-	const ret:GrpcJournalEntry__Output = {
-		id: journalEntryDto.id || undefined,
-		externalId: journalEntryDto.externalId || undefined,
-		externalCategory: journalEntryDto.externalId || undefined,
+export function journalEntryDtoToGrpcJournalEntry(journalEntryDto: IJournalEntryDto): GrpcJournalEntry {
+	const grpcJournalEntry: GrpcJournalEntry = {
+		id: journalEntryDto.id ?? undefined,
+		externalId: journalEntryDto.externalId ?? undefined,
+		externalCategory: journalEntryDto.externalId ?? undefined,
 		currencyCode: journalEntryDto.currencyCode,
+		currencyDecimals: journalEntryDto.currencyDecimals ?? undefined,
 		amount: journalEntryDto.amount,
-		creditedAccountId: journalEntryDto.creditedAccountId,
 		debitedAccountId: journalEntryDto.debitedAccountId,
-		timestamp: journalEntryDto.timestamp || undefined
+		creditedAccountId: journalEntryDto.creditedAccountId,
+		timestamp: journalEntryDto.timestamp ?? undefined
 	};
+	return grpcJournalEntry;
+}
 
-	return ret
+export function grpcJournalEntryOutputToJournalEntryDto(
+	grpcJournalEntryOutput: GrpcJournalEntry__Output
+): IJournalEntryDto {
+	if (
+		grpcJournalEntryOutput.currencyCode === undefined
+		|| grpcJournalEntryOutput.amount === undefined
+		|| grpcJournalEntryOutput.debitedAccountId === undefined
+		|| grpcJournalEntryOutput.creditedAccountId === undefined
+	) {
+		throw new Error(); // TODO: message?
+	}
+
+	const journalEntryDto: IJournalEntryDto = {
+		id: grpcJournalEntryOutput.id ?? null,
+		externalId: grpcJournalEntryOutput.externalId ?? null,
+		externalCategory: grpcJournalEntryOutput.externalCategory ?? null,
+		currencyCode: grpcJournalEntryOutput.currencyCode,
+		currencyDecimals: grpcJournalEntryOutput.currencyDecimals ?? null,
+		amount: grpcJournalEntryOutput.amount,
+		debitedAccountId: grpcJournalEntryOutput.debitedAccountId,
+		creditedAccountId: grpcJournalEntryOutput.creditedAccountId,
+		timestamp: grpcJournalEntryOutput.timestamp ?? null
+	};
+	return journalEntryDto;
 }

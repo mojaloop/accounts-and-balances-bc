@@ -29,15 +29,15 @@
 
 "use strict";
 
-export interface IAccountDto {
+export type IAccountDto = {
 	id: string | null;
 	externalId: string | null;
 	state: AccountState;
 	type: AccountType;
 	currencyCode: string;
 	currencyDecimals: number | null;
-	creditBalance: string;
 	debitBalance: string;
+	creditBalance: string;
 	timestampLastJournalEntry: number | null;
 }
 
@@ -45,21 +45,23 @@ export enum AccountState {
 	ACTIVE = "ACTIVE",
 	DELETED = "DELETED"
 }
+// export type AccountState = "ACTIVE" | "DELETED";
 
 export enum AccountType {
 	POSITION = "POSITION",
 	SETTLEMENT = "SETTLEMENT",
 	FEE = "FEE"
 }
+// export type AccountType = "POSITION" | "SETTLEMENT" | "FEE";
 
-export interface IJournalEntryDto {
+export type IJournalEntryDto = {
 	id: string | null;
 	externalId: string | null;
 	externalCategory: string | null;
 	currencyCode: string;
 	currencyDecimals: number | null;
 	amount: string;
-	creditedAccountId: string;
 	debitedAccountId: string;
+	creditedAccountId: string;
 	timestamp: number | null;
 }

@@ -31,8 +31,6 @@
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {Aggregate} from "@mojaloop/accounts-and-balances-bc-domain-lib";
-// import grpc, {GrpcObject, ServiceDefinition} from "@grpc/grpc-js";
-// import protoLoader, {PackageDefinition} from "@grpc/proto-loader";
 import {
 	GrpcObject,
 	loadPackageDefinition,
@@ -47,7 +45,7 @@ import {
 	loadProto
 } from "@mojaloop/accounts-and-balances-bc-grpc-common-lib";
 import {TokenHelper} from "@mojaloop/security-bc-client-lib";
-import {RpcHandlers} from "./rpc_handlers";
+import {GrpcHandlers} from "./grpc_handlers";
 
 export class GrpcServer {
 	// Properties received through the constructor.
@@ -65,7 +63,7 @@ export class GrpcServer {
 		host: string,
 		portNo: number
 	) {
-		this.logger = logger;
+		this.logger = logger.createChild(this.constructor.name);
 		this.HOST = host;
 		this.PORT_NO = portNo;
 
@@ -74,11 +72,11 @@ export class GrpcServer {
 		const serviceDefinition: ServiceDefinition =
 			(grpcObject as unknown as ProtoGrpcType).AccountsAndBalancesGrpcService.service;
 
-		const rpcHandlers: RpcHandlers = new RpcHandlers(
+		const grpcHandlers: GrpcHandlers = new GrpcHandlers(
 			this.logger,
 			aggregate
 		);
-		const serviceImplementation: AccountsAndBalancesGrpcServiceHandlers = rpcHandlers.getHandlers();
+		const serviceImplementation: AccountsAndBalancesGrpcServiceHandlers = grpcHandlers.getHandlers();
 
 		this.server = new Server();
 		this.server.addService(
@@ -117,7 +115,7 @@ export class GrpcServer {
 				// The documentation doesn't specify in what cases the callback's error will be defined, nor if
 				// forceShutdown() should be called on error. TODO: investigate.
 				if (error !== undefined) {
-					reject();
+					reject(error);
 					return;
 				}
 

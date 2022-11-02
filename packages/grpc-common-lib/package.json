@@ -3,9 +3,12 @@
   "version": "0.0.3",
   "description": "Accounts and Balances BC - gRPC Common Library",
   "license": "Apache-2.0",
-  "homepage": "https://github.com/mojaloop/accounts-and-balances-bc/tree/main/packages/grpc-common-lib",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mojaloop/accounts-and-balances-bc/tree/main/packages/grpc-common-lib"
+  },
   "bugs": {
-    "url": "https://github.com/mojaloop/accounts-and-balances-bc/issues#readme"
+    "url": "https://github.com/mojaloop/accounts-and-balances-bc/issues"
   },
   "contributors": [
     "Gonçalo Garcia <goncalogarcia99@gmail.com>",
@@ -14,29 +17,30 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
-    "/dist"
+    "./dist/"
   ],
   "scripts": {
-    "clean:dist": "rm -fr dist/",
-    "clean:types": "rm -fr src/types/",
+    "clean:dist": "rm -fr ./dist/",
+    "clean:types": "rm -fr ./src/types/",
     "dep:check": "ncu -e 2",
     "dep:upgrade": "ncu -u",
     "audit:check": "npm audit",
     "audit:fix": "npm audit fix",
-    "lint": "eslint src/",
-    "gen-types": "sh gen-types.sh",
+    "lint": "eslint ./src/",
+    "gen-types": "sh ./gen-types.sh",
     "prebuild": "npm run gen-types",
     "build": "tsc",
-    "postbuild": "cp src/accounts_and_balances.proto dist/",
-    "test:unit": "echo \"for now, grpc-common-lib is only tested on the integration tests\"",
+    "postbuild": "cp ./src/accounts_and_balances.proto ./dist/",
+    "test:unit": "jest",
     "test:unit-single": "jest --coverage false -t",
     "pub": "npm version patch && npm publish --tag latest --access public"
   },
   "devDependencies": {
-    "@grpc/grpc-js": "~1.7.1"
+    "@grpc/grpc-js": "~1.7.3"
   },
   "dependencies": {
     "@grpc/proto-loader": "~0.7.3",
-    "@mojaloop/accounts-and-balances-bc-public-types-lib": "~0.0.1"
+    "@mojaloop/accounts-and-balances-bc-public-types-lib": "~0.0.3",
+    "@types/node": "~18.11.8"
   }
 }

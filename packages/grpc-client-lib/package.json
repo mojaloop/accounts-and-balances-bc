@@ -3,9 +3,12 @@
   "version": "0.0.3",
   "description": "Accounts and Balances BC - gRPC Client Library",
   "license": "Apache-2.0",
-  "homepage": "https://github.com/mojaloop/accounts-and-balances-bc/tree/main/packages/grpc-client-lib",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mojaloop/accounts-and-balances-bc/tree/main/packages/grpc-client-lib"
+  },
   "bugs": {
-    "url": "https://github.com/mojaloop/accounts-and-balances-bc/issues#readme"
+    "url": "https://github.com/mojaloop/accounts-and-balances-bc/issues"
   },
   "contributors": [
     "Gonçalo Garcia <goncalogarcia99@gmail.com>",
@@ -14,17 +17,17 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
-    "/dist"
+    "./dist/"
   ],
   "scripts": {
-    "clean:dist": "rm -fr dist/",
+    "clean:dist": "rm -fr ./dist/",
     "dep:check": "ncu -e 2",
     "dep:upgrade": "ncu -u",
     "audit:check": "npm audit",
     "audit:fix": "npm audit fix",
-    "lint": "eslint src/",
+    "lint": "eslint ./src/",
     "build": "tsc",
-    "test:unit": "echo \"for now, grpc-client-lib is only tested on the integration tests\"",
+    "test:unit": "echo \"for now, grpc-client-lib doesn't have unit tests\"",
     "test:unit-single": "jest --coverage false -t",
     "pub": "npm version patch && npm publish --tag latest --access public"
   },
@@ -32,9 +35,9 @@
     "@grpc/proto-loader": "~0.7.3"
   },
   "dependencies": {
-    "@grpc/grpc-js": "~1.7.1",
-    "@mojaloop/accounts-and-balances-bc-grpc-common-lib": "~0.0.1",
-    "@mojaloop/accounts-and-balances-bc-public-types-lib": "~0.0.1",
+    "@grpc/grpc-js": "~1.7.3",
+    "@mojaloop/accounts-and-balances-bc-grpc-common-lib": "~0.0.3",
+    "@mojaloop/accounts-and-balances-bc-public-types-lib": "~0.0.3",
     "@mojaloop/logging-bc-public-types-lib": "~0.1.12"
   }
 }

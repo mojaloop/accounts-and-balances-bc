@@ -4,9 +4,9 @@ service AccountsAndBalancesGrpcService {
   // All unary RPCs.
   rpc CreateAccount(GrpcAccount) returns (GrpcId);
   rpc CreateJournalEntries(GrpcJournalEntryArray) returns (GrpcIdArray);
-  rpc GetAccountById(GrpcId) returns (GetAccountByIdResponse);
-  rpc GetAccountsByExternalId(GrpcId) returns (GrpcAccountArray);
-  rpc GetJournalEntriesByAccountId(GrpcId) returns (GrpcJournalEntryArray);
+  rpc GetAccountById(GrpcId) returns (GrpcGetAccountByIdResponse);
+  rpc GetAccountsByExternalId(GrpcId) returns (GrpcGetAccountsByExternalIdResponse);
+  rpc GetJournalEntriesByAccountId(GrpcId) returns (GrpcGetJournalEntriesByAccountIdResponse);
 }
 
 // TODO: check types; names starting with Grpc?
@@ -20,35 +20,26 @@ message GrpcIdArray {
   repeated GrpcId grpcIdArray = 1;
 }
 
-message GetAccountByIdResponse {
-  bool found = 1;
-  GrpcAccount account = 2;
-}
-
 message GrpcAccount {
   string id = 1;
 	string externalId = 2;
-  GrpcAccountState state = 3;
-  GrpcAccountType type = 4;
+  string state = 3;
+  string type = 4;
 	string currencyCode = 5;
-	string creditBalance = 6;
+  uint32 currencyDecimals = 6;
   string debitBalance = 7;
-  uint64 timestampLastJournalEntry = 8;
+  string creditBalance = 8;
+  uint64 timestampLastJournalEntry = 9;
 }
 
-enum GrpcAccountState {
-  ACTIVE = 0;
-  DELETED = 1;
+message GrpcGetAccountByIdResponse {
+  bool accountFound = 1;
+  GrpcAccount grpcAccount = 2;
 }
 
-enum GrpcAccountType {
-  POSITION = 0;
-  SETTLEMENT = 1;
-  FEE = 2;
-}
-
-message GrpcAccountArray {
-  repeated GrpcAccount grpcAccountArray = 1;
+message GrpcGetAccountsByExternalIdResponse {
+  bool accountsFound = 1;
+  repeated GrpcAccount grpcAccounts = 2;
 }
 
 message GrpcJournalEntry {
@@ -56,12 +47,18 @@ message GrpcJournalEntry {
   string externalId = 2;
 	string externalCategory = 3;
 	string currencyCode = 4;
-	string amount = 5;
-	string creditedAccountId = 6;
+  uint32 currencyDecimals = 5;
+	string amount = 6;
 	string debitedAccountId = 7;
-  uint64 timestamp = 8;
+  string creditedAccountId = 8;
+  uint64 timestamp = 9;
 }
 
 message GrpcJournalEntryArray {
   repeated GrpcJournalEntry grpcJournalEntryArray = 1;
+}
+
+message GrpcGetJournalEntriesByAccountIdResponse {
+  bool journalEntriesFound = 1;
+  repeated GrpcJournalEntry grpcJournalEntries = 2;
 }

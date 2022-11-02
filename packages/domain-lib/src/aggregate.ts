@@ -33,7 +33,7 @@ import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {randomUUID} from "crypto";
 import {
 	AccountAlreadyExistsError,
-	SameCreditedAndDebitedAccountsError,
+	SameDebitedAndCreditedAccountsError,
 	CurrencyCodesDifferError,
 	InsufficientBalanceError,
 	InvalidExternalCategoryError,
@@ -48,22 +48,27 @@ import {
 	InvalidCurrencyCodeError,
 	InvalidCreditBalanceError,
 	InvalidDebitBalanceError,
-	InvalidCurrencyDecimalsError
-} from "./types/errors";
+	InvalidCurrencyDecimalsError, InvalidAccountStateError, InvalidAccountTypeError
+} from "./errors";
 import {
 	IAccountsRepo,
 	IJournalEntriesRepo
-} from "./types/infrastructure";
-import {Account} from "./types/account";
-import {JournalEntry} from "./types/journal_entry";
-import {IAccountDto, IJournalEntryDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+} from "./infrastructure";
+import {Account} from "./account";
+import {JournalEntry} from "./journal_entry";
+import {
+	AccountState,
+	AccountType,
+	IAccountDto,
+	IJournalEntryDto
+} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {IAuditClient, AuditSecurityContext} from "@mojaloop/auditing-bc-public-types-lib";
 import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
-import {Privileges} from "./types/privileges";
+import {Privileges} from "./privileges";
 import {join} from "path";
 import {readFileSync} from "fs";
-import {ICurrency} from "./types/currency";
+import {ICurrency} from "./currency";
 import {bigintToString, stringToBigint} from "./converters";
 
 enum AuditingActions {
@@ -88,16 +93,16 @@ export class Aggregate {
 		accountsRepo: IAccountsRepo,
 		journalEntriesRepo: IJournalEntriesRepo
 	) {
-		this.logger = logger;
+		this.logger = logger.createChild(this.constructor.name);
 		this.authorizationClient = authorizationClient;
 		this.auditingClient = auditingClient;
 		this.accountsRepo = accountsRepo;
 		this.journalEntriesRepo = journalEntriesRepo;
 
 		// TODO: here?
-		const currenciesFilePath: string = join(__dirname, Aggregate.CURRENCIES_FILE_NAME);
+		const currenciesFileAbsolutePath: string = join(__dirname, Aggregate.CURRENCIES_FILE_NAME);
 		try {
-			this.currencies = JSON.parse(readFileSync(currenciesFilePath, "utf-8"));
+			this.currencies = JSON.parse(readFileSync(currenciesFileAbsolutePath, "utf-8"));
 		} catch (error: unknown) {
 			this.logger.error(error);
 			throw error;
@@ -125,7 +130,7 @@ export class Aggregate {
 		this.enforcePrivilege(securityContext, Privileges.CREATE_ACCOUNT);
 
 		// When creating an account, currencyDecimals and timestampLastJournalEntry are supposed to be null and
-		// creditBalance and debitBalance 0. For consistency purposes and to make sure whoever calls this function
+		// debitBalance and creditBalance 0. For consistency purposes and to make sure whoever calls this function
 		// knows that, if those values aren't respected, errors are thrown.
 		if (accountDto.currencyDecimals !== null) {
 			throw new InvalidCurrencyDecimalsError();
@@ -133,11 +138,11 @@ export class Aggregate {
 		if (accountDto.timestampLastJournalEntry !== null) {
 			throw new InvalidTimestampError();
 		}
-		if (parseInt(accountDto.creditBalance) !== 0) {
-			throw new InvalidCreditBalanceError();
-		}
 		if (parseInt(accountDto.debitBalance) !== 0) {
 			throw new InvalidDebitBalanceError();
+		}
+		if (parseInt(accountDto.creditBalance) !== 0) {
+			throw new InvalidCreditBalanceError();
 		}
 
 		// When creating an account, id and externalId are supposed to be either a non-empty string or null. For
@@ -152,6 +157,14 @@ export class Aggregate {
 
 		// Generate a random UUId, if needed. TODO: randomUUID() can generate an id that already exists.
 		const accountId: string = accountDto.id ?? randomUUID();
+
+		// Verify the account state and type.
+		if (!Object.values(AccountState).includes(accountDto.state)) {
+			throw new InvalidAccountStateError();
+		}
+		if (!Object.values(AccountType).includes(accountDto.type)) {
+			throw new InvalidAccountTypeError();
+		}
 
 		// Verify the currency code (and get the corresponding currency decimals).
 		const currency: ICurrency | undefined = this.currencies.find(currency => {
@@ -266,77 +279,84 @@ export class Aggregate {
 			journalEntryDto.currencyCode,
 			currency.decimals,
 			amount,
-			journalEntryDto.creditedAccountId,
 			journalEntryDto.debitedAccountId,
+			journalEntryDto.creditedAccountId,
 			timestamp
 		);
 
-		// Check if the credited and debited accounts are the same.
-		if (journalEntry.creditedAccountId === journalEntry.debitedAccountId) {
-			throw new SameCreditedAndDebitedAccountsError();
+		// Check if the debited and credited accounts are the same.
+		if (journalEntry.debitedAccountId === journalEntry.creditedAccountId) {
+			throw new SameDebitedAndCreditedAccountsError();
 		}
 
-		// Check if the credited and debited accounts exist.
+		// Check if the debited and credited accounts exist.
 		// Instead of using the repo's accountExistsById and journalEntryExistsById functions, the accounts are fetched
 		// and compared to null; this is done because some of the accounts' properties need to be consulted, so it
 		// doesn't make sense to call those functions when the accounts need to be fetched anyway.
-		let creditedAccountDto: IAccountDto | null;
 		let debitedAccountDto: IAccountDto | null;
+		let creditedAccountDto: IAccountDto | null;
 		try {
-			creditedAccountDto = await this.accountsRepo.getAccountById(journalEntry.creditedAccountId);
 			debitedAccountDto = await this.accountsRepo.getAccountById(journalEntry.debitedAccountId);
+			creditedAccountDto = await this.accountsRepo.getAccountById(journalEntry.creditedAccountId);
 		} catch (error: unknown) {
 			this.logger.error(error);
 			throw error;
-		}
-		if (creditedAccountDto === null) {
-			throw new NoSuchCreditedAccountError();
 		}
 		if (debitedAccountDto === null) {
 			throw new NoSuchDebitedAccountError();
 		}
-		let creditedAccount: Account;
+		if (creditedAccountDto === null) {
+			throw new NoSuchCreditedAccountError();
+		}
+		// null checks to avoid non-null assertions when calling Account().
+		if (
+			debitedAccountDto.id === null || debitedAccountDto.currencyDecimals === null
+			|| creditedAccountDto.id === null || creditedAccountDto.currencyDecimals === null
+		) {
+			throw new Error(); // TODO: message?
+		}
 		let debitedAccount: Account;
+		let creditedAccount: Account;
 		try {
-			creditedAccount = new Account(
-				creditedAccountDto.id!,
-				creditedAccountDto.externalId,
-				creditedAccountDto.state,
-				creditedAccountDto.type,
-				creditedAccountDto.currencyCode,
-				creditedAccountDto.currencyDecimals!,
-				stringToBigint(creditedAccountDto.creditBalance, creditedAccountDto.currencyDecimals!),
-				stringToBigint(creditedAccountDto.debitBalance, creditedAccountDto.currencyDecimals!),
-				creditedAccountDto.timestampLastJournalEntry
-			);
 			debitedAccount = new Account(
-				debitedAccountDto.id!,
+				debitedAccountDto.id,
 				debitedAccountDto.externalId,
 				debitedAccountDto.state,
 				debitedAccountDto.type,
 				debitedAccountDto.currencyCode,
-				debitedAccountDto.currencyDecimals!,
-				stringToBigint(debitedAccountDto.creditBalance, debitedAccountDto.currencyDecimals!),
-				stringToBigint(debitedAccountDto.debitBalance, debitedAccountDto.currencyDecimals!),
+				debitedAccountDto.currencyDecimals,
+				stringToBigint(debitedAccountDto.debitBalance, debitedAccountDto.currencyDecimals),
+				stringToBigint(debitedAccountDto.creditBalance, debitedAccountDto.currencyDecimals),
 				debitedAccountDto.timestampLastJournalEntry
+			);
+			creditedAccount = new Account(
+				creditedAccountDto.id,
+				creditedAccountDto.externalId,
+				creditedAccountDto.state,
+				creditedAccountDto.type,
+				creditedAccountDto.currencyCode,
+				creditedAccountDto.currencyDecimals,
+				stringToBigint(creditedAccountDto.debitBalance, creditedAccountDto.currencyDecimals),
+				stringToBigint(creditedAccountDto.creditBalance, creditedAccountDto.currencyDecimals),
+				creditedAccountDto.timestampLastJournalEntry
 			);
 		} catch (error: unknown) {
 			this.logger.error(error);
 			throw error;
 		}
 
-		// Check if the currency codes of the credited and debited accounts and the journal entry match.
-		if (creditedAccount.currencyCode !== debitedAccount.currencyCode
-			|| creditedAccount.currencyCode !== journalEntry.currencyCode) {
+		// Check if the currency codes of the debited and credited accounts and the journal entry match.
+		if (debitedAccount.currencyCode !== creditedAccount.currencyCode
+			|| debitedAccount.currencyCode !== journalEntry.currencyCode) {
 			throw new CurrencyCodesDifferError();
 		}
 
-		// Check if the currency decimals of the credited and debited accounts and the journal entry match.
-		if (creditedAccount.currencyDecimals !== debitedAccount.currencyDecimals
-			|| creditedAccount.currencyDecimals !== journalEntry.currencyDecimals) {
+		// Check if the currency decimals of the debited and credited accounts and the journal entry match.
+		if (debitedAccount.currencyDecimals !== creditedAccount.currencyDecimals
+			|| debitedAccount.currencyDecimals !== journalEntry.currencyDecimals) {
 			// TODO: does it make sense to create a custom error to be used on the services?
 			this.logger.error("currency decimals differ");
-			throw new Error();
+			throw new Error("currency decimals differ");
 		}
 
 		// Check if the balance is sufficient.
@@ -355,21 +375,9 @@ export class Aggregate {
 			throw error;
 		}
 
-		// Update the credited account's credit balance and timestamp.
-		const updatedCreditBalance: string = bigintToString(
-			creditedAccount.creditBalance + journalEntry.amount,
-			creditedAccount.currencyDecimals
-		);
-		try {
-			await this.accountsRepo.updateAccountCreditBalanceAndTimestampById(
-				creditedAccount.id,
-				updatedCreditBalance,
-				journalEntry.timestamp!
-			);
-		} catch (error: unknown) {
-			// TODO: revert store.
-			this.logger.error(error);
-			throw error;
+		// null check to avoid non-null assertions when calling the updateAccount functions.
+		if (journalEntry.timestamp === null) {
+			throw new Error(); // TODO: message?
 		}
 
 		// Update the debited account's debit balance and timestamp.
@@ -381,10 +389,27 @@ export class Aggregate {
 			await this.accountsRepo.updateAccountDebitBalanceAndTimestampById(
 				debitedAccount.id,
 				updatedDebitBalance,
-				journalEntry.timestamp!
+				journalEntry.timestamp
 			);
 		} catch (error: unknown) {
 			// TODO: revert store.
+			this.logger.error(error);
+			throw error;
+		}
+
+		// Update the credited account's credit balance and timestamp.
+		const updatedCreditBalance: string = bigintToString(
+			creditedAccount.creditBalance + journalEntry.amount,
+			creditedAccount.currencyDecimals
+		);
+		try {
+			await this.accountsRepo.updateAccountCreditBalanceAndTimestampById(
+				creditedAccount.id,
+				updatedCreditBalance,
+				journalEntry.timestamp
+			);
+		} catch (error: unknown) {
+			// TODO: revert store and update.
 			this.logger.error(error);
 			throw error;
 		}

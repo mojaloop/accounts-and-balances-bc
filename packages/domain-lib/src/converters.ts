@@ -34,14 +34,14 @@ const REGEX: RegExp = /^([0]|([1-9][0-9]{0,17}))([.][0-9]{0,3}[1-9])?$/;
 // Can be optimized.
 export function stringToBigint(stringValue: string, decimals: number): bigint {
 	if (!REGEX.test(stringValue)) {
-		throw new Error();
+		throw new Error("stringToBigint() - regex test failed");
 	}
 
 	// Count the decimals on the received string.
 	const stringValueSplitted: string[] = stringValue.split(".");
 	const existingDecimals: number = stringValueSplitted[1]?.length ?? 0;
 	if (existingDecimals > decimals) {
-		throw new Error();
+		throw new Error("stringToBigint() - existingDecimals > decimals");
 	}
 
 	// Format the received string according to the decimals.

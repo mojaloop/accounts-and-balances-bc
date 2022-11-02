@@ -7,9 +7,10 @@ export interface GrpcJournalEntry {
   'externalId'?: (string);
   'externalCategory'?: (string);
   'currencyCode'?: (string);
+  'currencyDecimals'?: (number);
   'amount'?: (string);
-  'creditedAccountId'?: (string);
   'debitedAccountId'?: (string);
+  'creditedAccountId'?: (string);
   'timestamp'?: (number | string | Long);
 }
 
@@ -18,8 +19,9 @@ export interface GrpcJournalEntry__Output {
   'externalId'?: (string);
   'externalCategory'?: (string);
   'currencyCode'?: (string);
+  'currencyDecimals'?: (number);
   'amount'?: (string);
-  'creditedAccountId'?: (string);
   'debitedAccountId'?: (string);
+  'creditedAccountId'?: (string);
   'timestamp'?: (number);
 }

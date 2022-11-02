@@ -125,3 +125,5 @@ devspace*
 # Gedit backups.
 *~
 
+# Certificates.
+*.crt

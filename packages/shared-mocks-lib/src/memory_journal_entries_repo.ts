@@ -46,7 +46,7 @@ export class MemoryJournalEntriesRepo implements IJournalEntriesRepo {
 	readonly journalEntries: Map<string, IJournalEntryDto>;
 
 	constructor(logger: ILogger) {
-		this.logger = logger;
+		this.logger = logger.createChild(this.constructor.name);
 
 		this.journalEntries = new Map<string, IJournalEntryDto>();
 	}
@@ -96,8 +96,8 @@ export class MemoryJournalEntriesRepo implements IJournalEntriesRepo {
 		const journalEntryDtos: IJournalEntryDto[] = [];
 		try {
 			for (const journalEntryDto of this.journalEntries.values()) {
-				if (journalEntryDto.creditedAccountId === accountId
-					|| journalEntryDto.debitedAccountId === accountId) {
+				if (journalEntryDto.debitedAccountId === accountId
+					|| journalEntryDto.creditedAccountId === accountId) {
 					journalEntryDtos.push(journalEntryDto);
 				}
 			}

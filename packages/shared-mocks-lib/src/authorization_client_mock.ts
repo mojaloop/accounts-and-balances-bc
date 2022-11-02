@@ -38,7 +38,7 @@ export class AuthorizationClientMock implements IAuthorizationClient {
 	private readonly logger: ILogger;
 
 	constructor(logger: ILogger) {
-		this.logger = logger;
+		this.logger = logger.createChild(this.constructor.name);
 	}
 
 	async init(): Promise<void> {
@@ -51,5 +51,13 @@ export class AuthorizationClientMock implements IAuthorizationClient {
 
 	roleHasPrivilege(roleId: string, privilegeId: string): boolean {
 		return true;
+	}
+
+	addPrivilege(privId: string, labelName: string, description: string): void {
+		return;
+	}
+
+	addPrivilegesArray(privsArray: { privId: string; labelName: string; description: string }[]): void {
+		return;
 	}
 }

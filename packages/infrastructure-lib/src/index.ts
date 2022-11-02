@@ -32,5 +32,7 @@
 
 "use strict";
 
-export * from "./mongo_accounts_repo";
-export * from "./mongo_journal_entries_repo";
+export * from "./elasticsearch/elastic_accounts_repo";
+export * from "./elasticsearch/elastic_journal_entries_repo";
+export * from "./mongodb/mongo_accounts_repo";
+export * from "./mongodb/mongo_journal_entries_repo";

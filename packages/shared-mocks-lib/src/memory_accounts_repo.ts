@@ -48,7 +48,7 @@ export class MemoryAccountsRepo implements IAccountsRepo {
 	readonly accounts: Map<string, IAccountDto>;
 
 	constructor(logger: ILogger) {
-		this.logger = logger;
+		this.logger = logger.createChild(this.constructor.name);
 
 		this.accounts = new Map<string, IAccountDto>();
 	}
@@ -113,24 +113,6 @@ export class MemoryAccountsRepo implements IAccountsRepo {
 		return accountDtos;
 	}
 
-	async updateAccountCreditBalanceAndTimestampById(
-		accountId: string,
-		creditBalance: string,
-		timeStampLastJournalEntry: number
-	): Promise<void> {
-		let accountDto: IAccountDto | undefined;
-		try {
-			accountDto = this.accounts.get(accountId);
-		} catch (error: unknown) {
-			throw new UnableToUpdateAccountError((error as any)?.message);
-		}
-		if (accountDto === undefined) {
-			throw new NoSuchAccountError();
-		}
-		accountDto.creditBalance = creditBalance;
-		accountDto.timestampLastJournalEntry = timeStampLastJournalEntry;
-	}
-
 	async updateAccountDebitBalanceAndTimestampById(
 		accountId: string,
 		debitBalance: string,
@@ -146,6 +128,24 @@ export class MemoryAccountsRepo implements IAccountsRepo {
 			throw new NoSuchAccountError();
 		}
 		accountDto.debitBalance = debitBalance;
+		accountDto.timestampLastJournalEntry = timeStampLastJournalEntry;
+	}
+
+	async updateAccountCreditBalanceAndTimestampById(
+		accountId: string,
+		creditBalance: string,
+		timeStampLastJournalEntry: number
+	): Promise<void> {
+		let accountDto: IAccountDto | undefined;
+		try {
+			accountDto = this.accounts.get(accountId);
+		} catch (error: unknown) {
+			throw new UnableToUpdateAccountError((error as any)?.message);
+		}
+		if (accountDto === undefined) {
+			throw new NoSuchAccountError();
+		}
+		accountDto.creditBalance = creditBalance;
 		accountDto.timestampLastJournalEntry = timeStampLastJournalEntry;
 	}
 }

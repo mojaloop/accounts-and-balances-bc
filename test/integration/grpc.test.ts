@@ -31,172 +31,261 @@
 
 import {LogLevel} from "@mojaloop/logging-bc-public-types-lib";
 import {KafkaLogger} from "@mojaloop/logging-bc-client-lib";
-import {MLKafkaRawProducerOptions} from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib";
-import * as Crypto from "crypto";
-import {AccountsAndBalancesGrpcClient} from "@mojaloop/accounts-and-balances-bc-grpc-client-lib";
+import {GrpcClient} from "@mojaloop/accounts-and-balances-bc-grpc-client-lib";
 import {
 	AccountState,
 	AccountType,
 	IAccountDto,
 	IJournalEntryDto
 } from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import {randomUUID} from "crypto";
+import {IAccountsRepo} from "@mojaloop/accounts-and-balances-bc-domain-lib";
+import {MongoAccountsRepo} from "@mojaloop/accounts-and-balances-bc-infrastructure-lib";
+import {GrpcService} from "../../packages/grpc-svc/src/grpc_service";
+import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
+import {AuthorizationClientMock} from "@mojaloop/accounts-and-balances-bc-shared-mocks-lib";
 
 /* ********** Constants Begin ********** */
 
 // General.
 const BOUNDED_CONTEXT_NAME: string = "accounts-and-balances-bc";
-const SERVICE_NAME: string = "integration-tests-grpc";
+const SERVICE_NAME: string = "grpc-integration-tests";
 const SERVICE_VERSION: string = "0.0.1";
 
-// Message broker.
-const MESSAGE_BROKER_HOST: string = process.env.ACCOUNTS_AND_BALANCES_MESSAGE_BROKER_HOST ?? "localhost";
-const MESSAGE_BROKER_PORT_NO: number =
-	parseInt(process.env.ACCOUNTS_AND_BALANCES_MESSAGE_BROKER_PORT_NO ?? "") || 9092;
-const MESSAGE_BROKER_URL: string = `${MESSAGE_BROKER_HOST}:${MESSAGE_BROKER_PORT_NO}`;
+// Event streamer.
+const EVENT_STREAMER_HOST: string = "localhost";
+const EVENT_STREAMER_PORT_NO: number = 9092;
 
 // Logging.
 const LOGGING_LEVEL: LogLevel = LogLevel.INFO;
 const LOGGING_TOPIC: string = "logs";
 
+// Repo.
+const MONGO_HOST: string = "localhost";
+const MONGO_PORT_NO: number = 27017;
+const MONGO_TIMEOUT_MS: number = 5000;
+const MONGO_USERNAME: string = "accounts-and-balances-bc";
+const MONGO_PASSWORD: string = "123456789";
+const MONGO_DB_NAME: string = "accounts_and_balances_bc";
+const MONGO_ACCOUNTS_COLLECTION_NAME: string = "accounts";
+
 // Accounts and Balances gRPC client.
-const ACCOUNTS_AND_BALANCES_GRPC_URL: string = "localhost:5678";
+const ACCOUNTS_AND_BALANCES_GRPC_SERVICE_HOST: string = "localhost";
+const ACCOUNTS_AND_BALANCES_GRPC_SERVICE_PORT_NO: number = 5678;
+const ACCOUNTS_AND_BALANCES_GRPC_CLIENT_TIMEOUT_MS: number = 5000;
+
+// Hub account.
+const HUB_ACCOUNT_ID: string = randomUUID();
+const HUB_ACCOUNT_INITIAL_CREDIT_BALANCE: string = (1_000_000).toString();
 
 /* ********** Constants End ********** */
 
-let logger: KafkaLogger;
-let accountsAndBalancesGrpcClient: AccountsAndBalancesGrpcClient;
-
-
-jest.setTimeout(20000); // 20 secs - change this to suit the test (ms)
+let grpcClient: GrpcClient;
 
 describe("accounts and balances - integration tests with gRPC service", () => {
 	beforeAll(async () => {
-		const kafkaProducerOptions: MLKafkaRawProducerOptions = {
-			kafkaBrokerList: MESSAGE_BROKER_URL
-		};
-		logger = new KafkaLogger(
+		const logger: KafkaLogger = new KafkaLogger(
 			BOUNDED_CONTEXT_NAME,
 			SERVICE_NAME,
 			SERVICE_VERSION,
-			kafkaProducerOptions,
+			{kafkaBrokerList: `${EVENT_STREAMER_HOST}:${EVENT_STREAMER_PORT_NO}`},
 			LOGGING_TOPIC,
 			LOGGING_LEVEL
 		);
 		await logger.init();
-		// await startGrpcService(logger);
-		accountsAndBalancesGrpcClient = new AccountsAndBalancesGrpcClient(
+
+		const authorizationClient: IAuthorizationClient = new AuthorizationClientMock(logger);
+
+		const accountsRepo: IAccountsRepo = new MongoAccountsRepo(
 			logger,
-			"localhost",
-			5678
+			MONGO_HOST,
+			MONGO_PORT_NO,
+			MONGO_TIMEOUT_MS,
+			MONGO_USERNAME,
+			MONGO_PASSWORD,
+			MONGO_DB_NAME,
+			MONGO_ACCOUNTS_COLLECTION_NAME
 		);
-		await accountsAndBalancesGrpcClient.init();
-	});
+		await accountsRepo.init();
 
-	afterAll(async () => {
-		await accountsAndBalancesGrpcClient.destroy();
-		// await stopGrpcService();
-		await logger.destroy();
-	});
-
-	test("create non-existent account", async () => {
-		const accountId: string = Crypto.randomUUID();
-		const accountDto: IAccountDto = {
-			id: accountId,
+		// Create the hub account, used to credit other accounts.
+		const hubAccountDto: IAccountDto = {
+			id: HUB_ACCOUNT_ID,
 			externalId: null,
 			state: AccountState.ACTIVE,
 			type: AccountType.POSITION,
 			currencyCode: "EUR",
-			creditBalance: "100",
-			debitBalance: "25",
-			timestampLastJournalEntry: 0
+			currencyDecimals: 2,
+			debitBalance: "0",
+			creditBalance: HUB_ACCOUNT_INITIAL_CREDIT_BALANCE,
+			timestampLastJournalEntry: null
 		};
-		const accountIdReceived: string = await accountsAndBalancesGrpcClient.createAccount(accountDto);
-		expect(accountIdReceived).toEqual(accountId);
-	});
+		await accountsRepo.storeNewAccount(hubAccountDto);
 
-	test("create non-existent journal entry", async () => {
-		// Before creating a journal entry, the respective accounts need to be created.
-		const accountDtos: IAccountDto[] = await create2Accounts();
+		await GrpcService.start(logger, authorizationClient, undefined, accountsRepo);
 
-		// Journal entry A.
-		const idJournalEntryA: string = Crypto.randomUUID();
-		const journalEntryDtoA: IJournalEntryDto = {
-			id: idJournalEntryA,
-			externalId: "",
-			externalCategory: "",
-			currencyCode: "EUR",
-			amount: "5",
-			creditedAccountId: accountDtos[0].id!!,
-			debitedAccountId: accountDtos[1].id!!!,
-			timestamp: null
-		};
-		// Journal entry B.
-		const idJournalEntryB: string = idJournalEntryA + 1;
-		const journalEntryDtoB: IJournalEntryDto = {
-			id: idJournalEntryB,
-			externalId: "",
-			externalCategory: "",
-			currencyCode: "EUR",
-			amount: "5",
-			creditedAccountId: accountDtos[1].id!!!,
-			debitedAccountId: accountDtos[0].id!!,
-			timestamp: null
-		};
-		const idsJournalEntries: string[] = await accountsAndBalancesGrpcClient.createJournalEntries(
-			[journalEntryDtoA, journalEntryDtoB]
+		grpcClient = new GrpcClient(
+			logger,
+			ACCOUNTS_AND_BALANCES_GRPC_SERVICE_HOST,
+			ACCOUNTS_AND_BALANCES_GRPC_SERVICE_PORT_NO,
+			ACCOUNTS_AND_BALANCES_GRPC_CLIENT_TIMEOUT_MS
 		);
-		expect(idsJournalEntries).toEqual([idJournalEntryA, idJournalEntryB]);
+		await grpcClient.init();
 	});
+
+	afterAll(async () => {
+		await grpcClient.destroy();
+		await GrpcService.stop();
+	});
+
+	/* createAccount() */
+
+	test("create non-existent account", async () => {
+		const accountDto: IAccountDto = {
+			id: null,
+			externalId: null,
+			state: AccountState.ACTIVE,
+			type: AccountType.POSITION,
+			currencyCode: "EUR",
+			currencyDecimals: null,
+			debitBalance: "0",
+			creditBalance: "0",
+			timestampLastJournalEntry: null
+		};
+
+		const accountId: string = await grpcClient.createAccount(accountDto);
+		expect(accountId).not.toBeNull();
+		expect(accountId).not.toEqual("");
+	});
+
+	/* createJournalEntries() */
+
+	test("create non-existent journal entries", async () => {
+		// Before creating a journal entry, the respective accounts need to be created.
+		const accountDtos: IAccountDto[] = await createAndCredit2Accounts();
+
+		const journalEntryDtoA: IJournalEntryDto = {
+			id: null,
+			externalId: null,
+			externalCategory: null,
+			currencyCode: "EUR",
+			currencyDecimals: null,
+			amount: "5",
+			debitedAccountId: accountDtos[0].id!,
+			creditedAccountId: accountDtos[1].id!,
+			timestamp: null
+		};
+
+		const journalEntryDtoB: IJournalEntryDto = {
+			id: null,
+			externalId: null,
+			externalCategory: null,
+			currencyCode: "EUR",
+			currencyDecimals: null,
+			amount: "5",
+			debitedAccountId: accountDtos[1].id!,
+			creditedAccountId: accountDtos[0].id!,
+			timestamp: null
+		};
+
+		const idsJournalEntries: string[] = await grpcClient
+			.createJournalEntries([journalEntryDtoA, journalEntryDtoB]);
+		expect(idsJournalEntries[0]).not.toBeNull();
+		expect(idsJournalEntries[0]).not.toEqual("");
+		expect(idsJournalEntries[1]).not.toBeNull();
+		expect(idsJournalEntries[1]).not.toEqual("");
+	});
+
+	/* getAccountById() */
 
 	test("get non-existent account by id", async () => {
-		const accountId: string = Crypto.randomUUID();
-		const accountDto: IAccountDto | null = await accountsAndBalancesGrpcClient.getAccountById(accountId);
-		expect(accountDto).toEqual(null);
+		const accountId: string = randomUUID();
+		const accountDto: IAccountDto | null = await grpcClient.getAccountById(accountId);
+		expect(accountDto).toBeNull();
 	});
 
+	/* getAccountsByExternalId() */
+
 	test("get non-existent accounts by external id", async () => {
-		const externalId: string = Crypto.randomUUID();
-		const accountDtos: IAccountDto[] = await accountsAndBalancesGrpcClient.getAccountsByExternalId(externalId);
+		const externalId: string = randomUUID();
+		const accountDtos: IAccountDto[] = await grpcClient.getAccountsByExternalId(externalId);
 		expect(accountDtos).toEqual([]);
 	});
 
+	/* getJournalEntriesByAccountId() */
+
 	test("get non-existent journal entries by account id", async () => {
-		const accountId: string = Crypto.randomUUID();
+		const accountId: string = randomUUID();
 		const journalEntryDtos: IJournalEntryDto[] =
-			await accountsAndBalancesGrpcClient.getJournalEntriesByAccountId(accountId);
+			await grpcClient.getJournalEntriesByAccountId(accountId);
 		expect(journalEntryDtos).toEqual([]);
 	});
 });
 
-async function create2Accounts(
-	externalIdAccountA: string = "",
-	externalIdAccountB: string = ""
+async function createAndCredit2Accounts(
+	externalIdAccountA: string | null = null,
+	externalIdAccountB: string | null = null,
+	creditBalance: string = "100",
 ): Promise<IAccountDto[]> {
 	// Account A.
-	const idAccountA: string = Crypto.randomUUID();
-	const accountDtoA: IAccountDto = {
-		id: idAccountA,
+	const accountDtoABeforeCrediting: IAccountDto = {
+		id: null,
 		externalId: externalIdAccountA,
 		state: AccountState.ACTIVE,
 		type: AccountType.POSITION,
 		currencyCode: "EUR",
-		creditBalance: "100",
-		debitBalance: "25",
-		timestampLastJournalEntry: 0
+		currencyDecimals: null,
+		debitBalance: "0",
+		creditBalance: "0",
+		timestampLastJournalEntry: null
 	};
-	await accountsAndBalancesGrpcClient.createAccount(accountDtoA);
+	const idAccountA: string = await grpcClient.createAccount(accountDtoABeforeCrediting);
+
 	// Account B.
-	const idAccountB: string = idAccountA + 1;
-	const accountDtoB: IAccountDto = {
-		id: idAccountB,
+	const accountDtoBBeforeCrediting: IAccountDto = {
+		id: null,
 		externalId: externalIdAccountB,
 		state: AccountState.ACTIVE,
 		type: AccountType.POSITION,
 		currencyCode: "EUR",
-		creditBalance: "100",
-		debitBalance: "25",
-		timestampLastJournalEntry: 0
+		currencyDecimals: null,
+		debitBalance: "0",
+		creditBalance: "0",
+		timestampLastJournalEntry: null
 	};
-	await accountsAndBalancesGrpcClient.createAccount(accountDtoB);
-	return [accountDtoA, accountDtoB];
+	const idAccountB: string = await grpcClient.createAccount(accountDtoBBeforeCrediting);
+
+	// Journal entry A, regarding the crediting of account A.
+	const journalEntryDtoA: IJournalEntryDto = {
+		id: null,
+		externalId: null,
+		externalCategory: null,
+		currencyCode: "EUR",
+		currencyDecimals: null,
+		amount: creditBalance,
+		debitedAccountId: HUB_ACCOUNT_ID,
+		creditedAccountId: idAccountA,
+		timestamp: null
+	};
+
+	// Journal entry B, regarding the crediting of account B.
+	const journalEntryDtoB: IJournalEntryDto = {
+		id: null,
+		externalId: null,
+		externalCategory: null,
+		currencyCode: "EUR",
+		currencyDecimals: null,
+		amount: creditBalance,
+		debitedAccountId: HUB_ACCOUNT_ID,
+		creditedAccountId: idAccountB,
+		timestamp: null
+	};
+
+	await grpcClient.createJournalEntries([journalEntryDtoA, journalEntryDtoB]);
+
+	const accountDtoAAfterCrediting: IAccountDto | null =
+		await grpcClient.getAccountById(idAccountA);
+	const accountDtoBAfterCrediting: IAccountDto | null =
+		await grpcClient.getAccountById(idAccountB);
+	return [accountDtoAAfterCrediting!, accountDtoBAfterCrediting!];
 }
