@@ -29,8 +29,6 @@
 
 "use strict";
 
-// TODO: here?
-
 export const MONGO_ACCOUNT_SCHEMA: any = {
 	bsonType: "object",
 	title: "Mongo Account Schema",

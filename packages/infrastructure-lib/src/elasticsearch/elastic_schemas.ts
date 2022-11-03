@@ -30,7 +30,6 @@
 "use strict";
 
 // TODO:
-//  - here?
 //  - verify if the id can be part of the schema;
 //  - investigate default values and nulls;
 //  - make properties required (maybe they already are, with default values);
