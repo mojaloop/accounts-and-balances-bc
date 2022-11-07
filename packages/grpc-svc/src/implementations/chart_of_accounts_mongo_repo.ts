@@ -19,39 +19,42 @@
  their names indented and be marked with a '-'. Email address can be added
  optionally within square brackets <email>.
 
+ * Gates Foundation
+ - Name Surname <name.surname@gatesfoundation.com>
+
  * Crosslake
  - Pedro Sousa Barreto <pedrob@crosslaketech.com>
-
- * Gonçalo Garcia <goncalogarcia99@gmail.com>
 
  --------------
  ******/
 
 "use strict";
 
-export type AccountState = "ACTIVE" | "DELETED";
+import {
+    ChartOfAccountsEntry,
+    IChartOfAccountsRepo
+} from "..domain/chart_of_accounts_repo_interface";
 
-export type AccountType = "POSITION" | "SETTLEMENT" | "FEE";
+export class ChartOfAccountsMongoRepo implements IChartOfAccountsRepo{
 
-export type IAccountDto = {
-	id: string | null;
-	ownerId: string | null;
-	state: AccountState;
-	type: AccountType;
-	currencyCode: string;			// ex: "USD"
-	debitBalance: string; 			// ex: "100.55"
-	creditBalance: string;
-	balance: string;
-	timestampLastJournalEntry: number | null;
-}
+    getAccountyById(internalAccountId: string): Promise<ChartOfAccountsEntry | null> {
+        throw new Error("Not implemented");
+    }
 
-export type IJournalEntryDto = {
-	id: string | null;
-	ownerId: string | null;
-	//externalCategory: string | null; // do we need this, if not for now, then let's not have it??
-	currencyCode: string;			// ex: "USD"
-	amount: string; 				// ex: "100.55"
-	debitedAccountId: string;
-	creditedAccountId: string;
-	timestamp: number | null;
+    getEntriesByOwnerId(ownerId: string): Promise<ChartOfAccountsEntry[]> {
+        throw new Error("Not implemented");
+    }
+
+    getEntryByLedgerId(ledgerAccountID: string): Promise<ChartOfAccountsEntry | null> {
+        throw new Error("Not implemented");
+    }
+
+    init(): Promise<void> {
+        throw new Error("Not implemented");
+    }
+
+    storeEntries(accounts: ChartOfAccountsEntry[]): Promise<void> {
+        throw new Error("Not implemented");
+    }
+
 }

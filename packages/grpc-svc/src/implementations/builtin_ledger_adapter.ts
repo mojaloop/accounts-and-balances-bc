@@ -19,39 +19,48 @@
  their names indented and be marked with a '-'. Email address can be added
  optionally within square brackets <email>.
 
+ * Gates Foundation
+ - Name Surname <name.surname@gatesfoundation.com>
+
  * Crosslake
  - Pedro Sousa Barreto <pedrob@crosslaketech.com>
-
- * Gonçalo Garcia <goncalogarcia99@gmail.com>
 
  --------------
  ******/
 
 "use strict";
 
-export type AccountState = "ACTIVE" | "DELETED";
+import {ILedgerAccount, ILedgerAdapter, ILedgerJournalEntry} from "../domain/ledger_adapter_interfaces";
 
-export type AccountType = "POSITION" | "SETTLEMENT" | "FEE";
+export class BuiltinLedgerAdapter implements ILedgerAdapter{
 
-export type IAccountDto = {
-	id: string | null;
-	ownerId: string | null;
-	state: AccountState;
-	type: AccountType;
-	currencyCode: string;			// ex: "USD"
-	debitBalance: string; 			// ex: "100.55"
-	creditBalance: string;
-	balance: string;
-	timestampLastJournalEntry: number | null;
-}
+    constructor(){
+        // TODO this class should wrap the builtin-ledger-grpc-client-lib
+    }
 
-export type IJournalEntryDto = {
-	id: string | null;
-	ownerId: string | null;
-	//externalCategory: string | null; // do we need this, if not for now, then let's not have it??
-	currencyCode: string;			// ex: "USD"
-	amount: string; 				// ex: "100.55"
-	debitedAccountId: string;
-	creditedAccountId: string;
-	timestamp: number | null;
+    createAccounts(accObjs: ILedgerAccount[]): string[] {
+        // transform/adapt and call corresponding builtin-ledger-grpc-client-lib method
+        throw new Error("Not implemented");
+    }
+
+    createJournalEntries(entryObjs: ILedgerJournalEntry[]): string[] {
+        // transform/adapt and call corresponding builtin-ledger-grpc-client-lib method
+        throw new Error("Not implemented");
+    }
+
+    getAccountsByIds(ids: string[]): ILedgerAccount[] {
+        // transform/adapt and call corresponding builtin-ledger-grpc-client-lib method
+        throw new Error("Not implemented");
+    }
+
+    getJournalEntries(ids: string[]): ILedgerJournalEntry {
+        // transform/adapt and call corresponding builtin-ledger-grpc-client-lib method
+        throw new Error("Not implemented");
+    }
+
+    setCurrencies(currencyList: { code: string; decimals: number }[]): void {
+        // transform/adapt and call corresponding builtin-ledger-grpc-client-lib method
+        throw new Error("Not implemented");
+    }
+
 }

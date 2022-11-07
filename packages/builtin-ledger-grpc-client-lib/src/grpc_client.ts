@@ -56,7 +56,7 @@ import {
 	UnableToGetJournalEntriesError
 } from "./errors";
 
-export class GrpcClient {
+export class BuiltinLedgerGrpcClient {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
 	private readonly TIMEOUT_MS: number;

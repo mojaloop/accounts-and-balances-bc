@@ -19,39 +19,20 @@
  their names indented and be marked with a '-'. Email address can be added
  optionally within square brackets <email>.
 
+ * Gates Foundation
+ - Name Surname <name.surname@gatesfoundation.com>
+
+ - Gonçalo Garcia <goncalogarcia99@gmail.com>
+
  * Crosslake
  - Pedro Sousa Barreto <pedrob@crosslaketech.com>
-
- * Gonçalo Garcia <goncalogarcia99@gmail.com>
 
  --------------
  ******/
 
 "use strict";
 
-export type AccountState = "ACTIVE" | "DELETED";
-
-export type AccountType = "POSITION" | "SETTLEMENT" | "FEE";
-
-export type IAccountDto = {
-	id: string | null;
-	ownerId: string | null;
-	state: AccountState;
-	type: AccountType;
-	currencyCode: string;			// ex: "USD"
-	debitBalance: string; 			// ex: "100.55"
-	creditBalance: string;
-	balance: string;
-	timestampLastJournalEntry: number | null;
-}
-
-export type IJournalEntryDto = {
-	id: string | null;
-	ownerId: string | null;
-	//externalCategory: string | null; // do we need this, if not for now, then let's not have it??
-	currencyCode: string;			// ex: "USD"
-	amount: string; 				// ex: "100.55"
-	debitedAccountId: string;
-	creditedAccountId: string;
-	timestamp: number | null;
-}
+export * from "packages/ledger-grpc-svc/src/domain/aggregate";
+export * from "packages/ledger-grpc-svc/src/domain/errors";
+export * from "packages/ledger-grpc-svc/src/domain/infrastructure";
+export * from "packages/ledger-grpc-svc/src/domain/privileges";

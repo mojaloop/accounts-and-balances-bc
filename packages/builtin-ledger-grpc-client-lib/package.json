@@ -1,11 +1,11 @@
 {
-  "name": "@mojaloop/accounts-and-balances-bc-grpc-svc",
+  "name": "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-client-lib",
   "version": "0.0.3",
-  "description": "Accounts and Balances BC - gRPC service",
+  "description": "Accounts and Balances BC - gRPC Client Library",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/mojaloop/accounts-and-balances-bc/tree/main/packages/accounts-and-balances-grpc-svc"
+    "url": "https://github.com/mojaloop/accounts-and-balances-bc/tree/main/packages/builtin-ledger-grpc-client-lib"
   },
   "bugs": {
     "url": "https://github.com/mojaloop/accounts-and-balances-bc/issues"
@@ -40,7 +40,6 @@
   },
   "dependencies": {
     "@grpc/grpc-js": "~1.7.3",
-    "@mojaloop/logging-bc-public-types-lib": "~0.1.12",
-    "@mojaloop/logging-bc-client-lib": "~0.1.15"
+    "@mojaloop/logging-bc-public-types-lib": "~0.1.12"
   }
 }

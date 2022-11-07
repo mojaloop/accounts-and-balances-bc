@@ -1,7 +1,7 @@
 "use strict";
 
 const fullPackageName = require("./package.json").name;
-const shortPackageName = fullPackageName.replace("@mojaloop/accounts-and-balances-bc-", "");
+const shortPackageName = fullPackageName.replace("@mojaloop/", "");
 
 const config = {
 	preset: "ts-jest",

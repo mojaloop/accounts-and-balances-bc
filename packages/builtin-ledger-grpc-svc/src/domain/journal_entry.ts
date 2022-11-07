@@ -29,29 +29,57 @@
 
 "use strict";
 
-export type AccountState = "ACTIVE" | "DELETED";
+import {IJournalEntryDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import {bigintToString} from "packages/ledger-grpc-svc/src/domain/converters";
 
-export type AccountType = "POSITION" | "SETTLEMENT" | "FEE";
-
-export type IAccountDto = {
-	id: string | null;
-	ownerId: string | null;
-	state: AccountState;
-	type: AccountType;
-	currencyCode: string;			// ex: "USD"
-	debitBalance: string; 			// ex: "100.55"
-	creditBalance: string;
-	balance: string;
-	timestampLastJournalEntry: number | null;
-}
-
-export type IJournalEntryDto = {
-	id: string | null;
-	ownerId: string | null;
-	//externalCategory: string | null; // do we need this, if not for now, then let's not have it??
-	currencyCode: string;			// ex: "USD"
-	amount: string; 				// ex: "100.55"
+// TODO: implements/extends anything?
+export class JournalEntry {
+	id: string;
+	externalId: string | null;
+	externalCategory: string | null;
+	currencyCode: string;
+	currencyDecimals: number;
+	amount: bigint;
 	debitedAccountId: string;
 	creditedAccountId: string;
 	timestamp: number | null;
+
+	constructor(
+		id: string,
+		externalId: string | null,
+		externalCategory: string | null,
+		currencyCode: string,
+		currencyDecimals: number,
+		amount: bigint,
+		debitedAccountId: string,
+		creditedAccountId: string,
+		timestamp: number | null
+	) {
+		this.id = id;
+		this.externalId = externalId;
+		this.externalCategory = externalCategory;
+		this.currencyCode = currencyCode;
+		this.currencyDecimals = currencyDecimals;
+		this.amount = amount;
+		this.debitedAccountId = debitedAccountId;
+		this.creditedAccountId = creditedAccountId;
+		this.timestamp = timestamp;
+	}
+
+	toDto(): IJournalEntryDto {
+		const amount: string = bigintToString(this.amount, this.currencyDecimals);
+
+		const journalEntryDto: IJournalEntryDto = {
+			id: this.id,
+			externalId: this.externalId,
+			externalCategory: this.externalCategory,
+			currencyCode: this.currencyCode,
+			currencyDecimals: this.currencyDecimals,
+			amount: amount,
+			debitedAccountId: this.debitedAccountId,
+			creditedAccountId: this.creditedAccountId,
+			timestamp: this.timestamp
+		};
+		return journalEntryDto;
+	}
 }

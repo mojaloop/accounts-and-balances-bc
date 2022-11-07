@@ -54,10 +54,10 @@
     "typescript": "~4.8.4"
   },
   "workspaces": [
-    "./packages/public-types-lib/",
-    "./packages/domain-lib/",
-    "./packages/infrastructure-lib/",
-    "./packages/grpc-common-lib/",
-    "./packages/*"
+    "packages/public-types-lib/",
+    "packages/domain-lib/",
+    "packages/infrastructure-lib/",
+    "packages/grpc-common-lib/",
+    "packages/*"
   ]
 }
