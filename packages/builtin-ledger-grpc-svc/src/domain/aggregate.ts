@@ -70,6 +70,12 @@ import {join} from "path";
 import {readFileSync} from "fs";
 import {ICurrency} from "packages/ledger-grpc-svc/src/domain/currency";
 import {bigintToString, stringToBigint} from "packages/ledger-grpc-svc/src/domain/converters";
+import {LedgerAccount} from "@mojaloop/accounts-and-balances-bc-grpc-svc";
+import {
+	GrpcAccount,
+	GrpcAccount__Output, GrpcJournalEntry,
+	GrpcJournalEntry__Output
+} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-client-lib";
 
 enum AuditingActions {
 	ACCOUNT_CREATED = "ACCOUNT_CREATED"
@@ -126,7 +132,11 @@ export class Aggregate {
 		};
 	}
 
-	async createAccount(accountDto: IAccountDto, securityContext: CallSecurityContext): Promise<string> {
+	// TODO: receive GrpcAccount__Output[]?
+	async createAccounts(
+		grpcAccountsOutput: GrpcAccount__Output[],
+		securityContext: CallSecurityContext
+	): Promise<string[]> {
 		this.enforcePrivilege(securityContext, Privileges.CREATE_ACCOUNT);
 
 		// When creating an account, currencyDecimals and timestampLastJournalEntry are supposed to be null and
@@ -208,8 +218,9 @@ export class Aggregate {
 		return account.id;
 	}
 
+	// TODO: receive GrpcJournalEntry__Output[]?
 	async createJournalEntries(
-		journalEntryDtos: IJournalEntryDto[],
+		grpcJournalEntriesOutput: GrpcJournalEntry__Output[],
 		securityContext: CallSecurityContext
 	): Promise<string[]> {
 		this.enforcePrivilege(securityContext, Privileges.CREATE_JOURNAL_ENTRY);
@@ -417,38 +428,30 @@ export class Aggregate {
 		return journalEntry.id;
 	}
 
-	async getAccountById(accountId: string, securityContext: CallSecurityContext): Promise<IAccountDto | null> {
+	// TODO: receive string[] and return GrpcAccount[]?
+	async getAccountsByIds(accountIds: string[], securityContext: CallSecurityContext): Promise<GrpcAccount[]> {
 		this.enforcePrivilege(securityContext, Privileges.VIEW_ACCOUNT);
+
 		try {
-			const accountDto: IAccountDto | null = await this.accountsRepo.getAccountById(accountId);
-			return accountDto;
+			const grpcAccounts: GrpcAccount[] = await this.accountsRepo.getAccountsByIds(accountIds);
+			return grpcAccounts;
 		} catch (error: unknown) {
 			this.logger.error(error);
 			throw error;
 		}
 	}
 
-	async getAccountsByExternalId(externalId: string, securityContext: CallSecurityContext): Promise<IAccountDto[]> {
-		this.enforcePrivilege(securityContext, Privileges.VIEW_ACCOUNT);
-		try {
-			const accountDtos: IAccountDto[] =
-				await this.accountsRepo.getAccountsByExternalId(externalId);
-			return accountDtos;
-		} catch (error: unknown) {
-			this.logger.error(error);
-			throw error;
-		}
-	}
-
+	// TODO: receive string[] and return GrpcJournalEntry[]?
 	async getJournalEntriesByAccountId(
 		accountId: string,
 		securityContext: CallSecurityContext
-	): Promise<IJournalEntryDto[]> {
+	): Promise<GrpcJournalEntry[]> {
 		this.enforcePrivilege(securityContext, Privileges.VIEW_JOURNAL_ENTRY);
+
 		try {
-			const journalEntryDtos: IJournalEntryDto[] =
+			const grpcJournalEntries: GrpcJournalEntry[] =
 				await this.journalEntriesRepo.getJournalEntriesByAccountId(accountId);
-			return journalEntryDtos;
+			return grpcJournalEntries;
 		} catch (error: unknown) {
 			this.logger.error(error);
 			throw error;

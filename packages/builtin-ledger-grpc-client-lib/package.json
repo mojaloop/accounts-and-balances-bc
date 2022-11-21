@@ -19,6 +19,7 @@
   "files": [
     "./dist/"
   ],
+  "private": true,
   "scripts": {
     "clean:dist": "rm -fr dist",
     "clean:types": "rm -fr ./src/types/",

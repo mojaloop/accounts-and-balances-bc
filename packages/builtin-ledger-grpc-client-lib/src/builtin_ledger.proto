@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-service GrpcAccountsAndBalances {
+service GrpcBuiltinLedger {
   // All unary RPCs.
   rpc CreateAccounts(GrpcAccountArray) returns (GrpcIdArray);
   rpc CreateJournalEntries(GrpcJournalEntryArray) returns (GrpcIdArray);
@@ -24,7 +24,7 @@ message GrpcAccount {
   string id = 1;
   string state = 2;
   string type = 3;
-  string currencyCode = 4;
+	string currencyCode = 4;
   string debitBalance = 5;
   string creditBalance = 6;
   string balance = 7;
@@ -39,9 +39,9 @@ message GrpcAccountArray {
 
 message GrpcJournalEntry {
   string id = 1;
-  string currencyCode = 2;
-  string amount = 3;
-  string debitedAccountId = 4;
+	string currencyCode = 2;
+	string amount = 3;
+	string debitedAccountId = 4;
   string creditedAccountId = 5;
   uint64 timestamp = 6;
 }

@@ -30,46 +30,23 @@
 "use strict";
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
-import {
-	AccountAlreadyExistsError,
-	Aggregate,
-	CurrencyCodesDifferError,
-	InsufficientBalanceError, InvalidAccountStateError, InvalidAccountTypeError,
-	InvalidCreditBalanceError,
-	InvalidCurrencyCodeError,
-	InvalidCurrencyDecimalsError,
-	InvalidDebitBalanceError,
-	InvalidExternalCategoryError,
-	InvalidExternalIdError,
-	InvalidIdError,
-	InvalidJournalEntryAmountError,
-	InvalidTimestampError,
-	JournalEntryAlreadyExistsError,
-	NoSuchCreditedAccountError,
-	NoSuchDebitedAccountError,
-	SameDebitedAndCreditedAccountsError,
-	UnauthorizedError
-} from "@mojaloop/accounts-and-balances-bc-domain-lib";
+import {ServerUnaryCall, sendUnaryData, status} from "@grpc/grpc-js";
 import {
 	GrpcAccount,
-	GrpcAccount__Output,
+	GrpcAccount__Output, GrpcAccountArray,
+	GrpcAccountArray__Output,
+	GrpcBuiltinLedgerHandlers,
 	GrpcId,
 	GrpcId__Output,
-	GrpcJournalEntryArray__Output,
 	GrpcIdArray,
-	AccountsAndBalancesGrpcServiceHandlers,
-	GrpcGetAccountByIdResponse,
-	grpcAccountOutputToAccountDto,
-	grpcJournalEntryOutputToJournalEntryDto,
-	accountDtoToGrpcAccount,
-	journalEntryDtoToGrpcJournalEntry,
+	GrpcIdArray__Output,
 	GrpcJournalEntry,
-	GrpcGetAccountsByExternalIdResponse,
-	GrpcGetJournalEntriesByAccountIdResponse, GrpcJournalEntry__Output,
-} from "@mojaloop/accounts-and-balances-bc-grpc-common-lib";
-import {ServerUnaryCall, sendUnaryData, status} from "@grpc/grpc-js";
-import {IAccountDto, IJournalEntryDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+	GrpcJournalEntry__Output, GrpcJournalEntryArray,
+	GrpcJournalEntryArray__Output
+} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-client-lib";
+import {UnauthorizedError} from "../../domain/errors";
+import {Aggregate} from "../../domain/aggregate";
+import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
 
 export class GrpcHandlers {
 	// Properties received through the constructor.
@@ -77,7 +54,7 @@ export class GrpcHandlers {
 	private readonly aggregate: Aggregate;
 	// Other properties.
 	private static readonly UNKNOWN_ERROR_MESSAGE: string = "unknown error";
-	private securityContext: CallSecurityContext = {
+	private readonly securityContext: CallSecurityContext = {
 		username: "",
 		clientId: "",
 		rolesIds: [""],
@@ -92,203 +69,59 @@ export class GrpcHandlers {
 		this.aggregate = aggregate;
 	}
 
-	getHandlers(): AccountsAndBalancesGrpcServiceHandlers {
+	getHandlers(): GrpcBuiltinLedgerHandlers {
 		return {
-			"CreateAccount": this.createAccount.bind(this),
+			"CreateAccounts": this.createAccounts.bind(this),
 			"CreateJournalEntries": this.createJournalEntries.bind(this),
-			"GetAccountById": this.getAccountById.bind(this),
-			"GetAccountsByExternalId": this.getAccountsByExternalId.bind(this),
+			"GetAccountsByIds": this.getAccountsByIds.bind(this),
 			"GetJournalEntriesByAccountId": this.getJournalEntriesByAccountId.bind(this)
 		};
 	}
 
-	private async createAccount(
-		call: ServerUnaryCall<GrpcAccount__Output, GrpcId>,
-		callback: sendUnaryData<GrpcId>
+	private async createAccounts(
+		call: ServerUnaryCall<GrpcAccountArray__Output, GrpcIdArray>,
+		callback: sendUnaryData<GrpcIdArray>
 	): Promise<void> {
-		const grpcAccountOutput: GrpcAccount__Output = call.request;
-		let accountDto: IAccountDto;
-		try {
-			accountDto = grpcAccountOutputToAccountDto(grpcAccountOutput);
-		} catch (error: unknown) {
-			callback(
-				{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE}, // TODO: unknown error?
-				null
-			);
-			return;
-		}
+		const grpcAccountsOutput: GrpcAccount__Output[] = call.request.grpcAccountArray || []; // TODO: assume that there's no error?
 
+		let accountIds: string[];
 		try {
-			const accountId: string = await this.aggregate.createAccount(accountDto, this.securityContext);
-			const grpcAccountId: GrpcId = {grpcId: accountId};
-			callback(null, grpcAccountId);
+			accountIds = await this.aggregate.createAccounts(grpcAccountsOutput, this.securityContext);
 		} catch (error: unknown) {
 			if (error instanceof UnauthorizedError) {
 				callback(
 					{code: status.PERMISSION_DENIED, details: error.message},
 					null
 				);
-			} else if (error instanceof InvalidCurrencyDecimalsError) {
-				callback(
-					{code: status.INVALID_ARGUMENT, details: error.message},
-					null
-				);
-			} else if (error instanceof InvalidTimestampError) {
-				callback(
-					{code: status.INVALID_ARGUMENT, details: error.message},
-					null
-				);
-			} else if (error instanceof InvalidDebitBalanceError) {
-				callback(
-					{code: status.INVALID_ARGUMENT, details: error.message},
-					null
-				);
-			} else if (error instanceof InvalidCreditBalanceError) {
-				callback(
-					{code: status.INVALID_ARGUMENT, details: error.message},
-					null
-				);
-			} else if (error instanceof InvalidIdError) {
-				callback(
-					{code: status.INVALID_ARGUMENT, details: error.message},
-					null
-				);
-			} else if (error instanceof InvalidExternalIdError) {
-				callback(
-					{code: status.INVALID_ARGUMENT, details: error.message},
-					null
-				);
-			} else if (error instanceof InvalidAccountStateError) {
-				callback(
-					{code: status.INVALID_ARGUMENT, details: error.message},
-					null
-				);
-			} else if (error instanceof InvalidAccountTypeError) {
-				callback(
-					{code: status.INVALID_ARGUMENT, details: error.message},
-					null
-				);
-			} else if (error instanceof InvalidCurrencyCodeError) {
-				callback(
-					{code: status.INVALID_ARGUMENT, details: error.message},
-					null
-				);
-			} else if (error instanceof AccountAlreadyExistsError) {
-				callback(
-					{code: status.ALREADY_EXISTS, details: error.message},
-					null
-				);
 			} else {
 				callback(
 					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
-					null);
+					null
+				);
 			}
+			return;
 		}
+
+		const grpcAccountIds: GrpcId[] = accountIds.map((accountId) => {
+			return {grpcId: accountId}; // TODO: return object directly?
+		});
+		// const grpcIdArray: GrpcIdArray = {grpcIdArray: grpcAccountIds};
+		callback(null, {grpcIdArray: grpcAccountIds}); // TODO: pass object directly?
 	}
 
 	private async createJournalEntries(
 		call: ServerUnaryCall<GrpcJournalEntryArray__Output, GrpcIdArray>,
 		callback: sendUnaryData<GrpcIdArray>
 	): Promise<void> {
-		const grpcJournalEntriesOutput: GrpcJournalEntry__Output[] | undefined = call.request.grpcJournalEntryArray;
-		if (grpcJournalEntriesOutput === undefined) {
-			callback(
-				{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE}, // TODO: unknown error?
-				null
-			);
-			return;
-		}
+		const grpcJournalEntriesOutput: GrpcJournalEntry__Output[] = call.request.grpcJournalEntryArray || []; // TODO: assume that there's no error?
 
-		let journalEntryDtos: IJournalEntryDto[];
+		let journalEntryIds: string[];
 		try {
-			journalEntryDtos = grpcJournalEntriesOutput.map((grpcJournalEntryOutput) => {
-				return grpcJournalEntryOutputToJournalEntryDto(grpcJournalEntryOutput);
-			});
-		} catch (error: unknown) {
-			callback(
-				{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE}, // TODO: unknown error?
-				null
-			);
-			return;
-		}
-
-		try {
-			const idsJournalEntries: string[] =
-				await this.aggregate.createJournalEntries(journalEntryDtos, this.securityContext);
-			const grpcIdsJournalEntries: GrpcId[] = idsJournalEntries.map((journalEntryId) => {
-				return {grpcId: journalEntryId};
-			});
-			const grpcIdArray: GrpcIdArray = {grpcIdArray: grpcIdsJournalEntries};
-			callback(null, grpcIdArray);
+			journalEntryIds = await this.aggregate.createJournalEntries(grpcJournalEntriesOutput, this.securityContext);
 		} catch (error: unknown) {
 			if (error instanceof UnauthorizedError) {
 				callback(
 					{code: status.PERMISSION_DENIED, details: error.message},
-					null
-				);
-			} else if (error instanceof InvalidCurrencyDecimalsError) {
-				callback(
-					{code: status.INVALID_ARGUMENT, details: error.message},
-					null
-				);
-			} else if (error instanceof InvalidTimestampError) {
-				callback(
-					{code: status.INVALID_ARGUMENT, details: error.message},
-					null
-				);
-			} else if (error instanceof InvalidIdError) {
-				callback(
-					{code: status.INVALID_ARGUMENT, details: error.message},
-					null
-				);
-			} else if (error instanceof InvalidExternalIdError) {
-				callback(
-					{code: status.INVALID_ARGUMENT, details: error.message},
-					null
-				);
-			} else if (error instanceof InvalidExternalCategoryError) {
-				callback(
-					{code: status.INVALID_ARGUMENT, details: error.message},
-					null
-				);
-			} else if (error instanceof InvalidCurrencyCodeError) {
-				callback(
-					{code: status.INVALID_ARGUMENT, details: error.message},
-					null
-				);
-			} else if (error instanceof InvalidJournalEntryAmountError) {
-				callback(
-					{code: status.INVALID_ARGUMENT, details: error.message},
-					null
-				);
-			} else if (error instanceof SameDebitedAndCreditedAccountsError) {
-				callback(
-					{code: status.INVALID_ARGUMENT, details: error.message},
-					null
-				);
-			} else if (error instanceof NoSuchDebitedAccountError) {
-				callback(
-					{code: status.INVALID_ARGUMENT, details: error.message},
-					null
-				);
-			} else if (error instanceof NoSuchCreditedAccountError) {
-				callback(
-					{code: status.INVALID_ARGUMENT, details: error.message},
-					null
-				);
-			} else if (error instanceof CurrencyCodesDifferError) {
-				callback(
-					{code: status.INVALID_ARGUMENT, details: error.message},
-					null
-				);
-			} else if (error instanceof InsufficientBalanceError) {
-				callback(
-					{code: status.INVALID_ARGUMENT, details: error.message},
-					null
-				);
-			} else if (error instanceof JournalEntryAlreadyExistsError) {
-				callback(
-					{code: status.ALREADY_EXISTS, details: error.message},
 					null
 				);
 			} else {
@@ -297,42 +130,38 @@ export class GrpcHandlers {
 					null
 				);
 			}
+			return;
 		}
+
+		const grpcJournalEntryIds: GrpcId[] = journalEntryIds.map((journalEntryId) => {
+			return {grpcId: journalEntryId}; // TODO: return object directly?
+		});
+		// const grpcIdArray: GrpcIdArray = {grpcIdArray: grpcJournalEntryIds};
+		callback(null, {grpcIdArray: grpcJournalEntryIds}); // TODO: pass object directly?
 	}
 
-	private async getAccountById(
-		call: ServerUnaryCall<GrpcId__Output, GrpcGetAccountByIdResponse>,
-		callback: sendUnaryData<GrpcGetAccountByIdResponse>
+	private async getAccountsByIds(
+		call: ServerUnaryCall<GrpcIdArray__Output, GrpcAccountArray>,
+		callback: sendUnaryData<GrpcAccountArray>
 	): Promise<void> {
-		const accountId: string | undefined = call.request.grpcId;
-		if (accountId === undefined) {
-			callback(
-				{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE}, // TODO: unknown error?
-				null
-			);
-			return;
-		}
+		const grpcAccountIdsOutput: GrpcId__Output[] = call.request.grpcIdArray || []; // TODO: assume that there's no error?
 
-		try {
-			const accountDto: IAccountDto | null = await this.aggregate.getAccountById(accountId, this.securityContext);
-
-			let grpcGetAccountByIdResponse: GrpcGetAccountByIdResponse;
-
-			if (accountDto === null) {
-				grpcGetAccountByIdResponse = {
-					accountFound: false,
-					grpcAccount: null // This doesn't matter - to the client, it'll be undefined.
-				};
-				callback(null, grpcGetAccountByIdResponse);
+		const accountIds: string[] = [];
+		for (const grpcAccountIdOutput of grpcAccountIdsOutput) {
+			// const accountId: string | undefined = grpcAccountIdOutput.grpcId;
+			if (!grpcAccountIdOutput.grpcId) { // TODO: handle this case? use accountId aux variable?
+				callback(
+					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE}, // TODO: unknown error?
+					null
+				);
 				return;
 			}
+			accountIds.push(grpcAccountIdOutput.grpcId);
+		}
 
-			const grpcAccount: GrpcAccount = accountDtoToGrpcAccount(accountDto);
-			grpcGetAccountByIdResponse = {
-				accountFound: true,
-				grpcAccount: grpcAccount
-			};
-			callback(null, grpcGetAccountByIdResponse);
+		let grpcAccounts: GrpcAccount[];
+		try {
+			grpcAccounts = await this.aggregate.getAccountsByIds(accountIds, this.securityContext);
 		} catch (error: unknown) {
 			if (error instanceof UnauthorizedError) {
 				callback(
@@ -345,66 +174,18 @@ export class GrpcHandlers {
 					null
 				);
 			}
-		}
-	}
-
-	private async getAccountsByExternalId(
-		call: ServerUnaryCall<GrpcId__Output, GrpcGetAccountsByExternalIdResponse>,
-		callback: sendUnaryData<GrpcGetAccountsByExternalIdResponse>
-	): Promise<void> {
-		const externalId: string | undefined = call.request.grpcId;
-		if (externalId === undefined) {
-			callback(
-				{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE}, // TODO: unknown error?
-				null
-			);
 			return;
 		}
 
-		try {
-			const accountDtos: IAccountDto[] =
-				await this.aggregate.getAccountsByExternalId(externalId, this.securityContext);
-
-			let grpcGetAccountsByExternalIdResponse: GrpcGetAccountsByExternalIdResponse;
-
-			if (accountDtos.length === 0) {
-				grpcGetAccountsByExternalIdResponse = {
-					accountsFound: false,
-					grpcAccounts: [] // This doesn't matter - to the client, it'll be undefined.
-				};
-				callback(null, grpcGetAccountsByExternalIdResponse);
-				return;
-			}
-
-			const grpcAccounts: GrpcAccount[] = accountDtos.map((accountDto) => {
-				return accountDtoToGrpcAccount(accountDto);
-			});
-			grpcGetAccountsByExternalIdResponse = {
-				accountsFound: true,
-				grpcAccounts: grpcAccounts
-			};
-			callback(null, grpcGetAccountsByExternalIdResponse);
-		} catch (error: unknown) {
-			if (error instanceof UnauthorizedError) {
-				callback(
-					{code: status.PERMISSION_DENIED, details: error.message},
-					null
-				);
-			} else {
-				callback(
-					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
-					null
-				);
-			}
-		}
+		callback(null, {grpcAccountArray: grpcAccounts}); // TODO: pass object directly?
 	}
 
 	private async getJournalEntriesByAccountId(
-		call: ServerUnaryCall<GrpcId__Output, GrpcGetJournalEntriesByAccountIdResponse>,
-		callback: sendUnaryData<GrpcGetJournalEntriesByAccountIdResponse>
+		call: ServerUnaryCall<GrpcId__Output, GrpcJournalEntryArray>,
+		callback: sendUnaryData<GrpcJournalEntryArray>
 	): Promise<void> {
 		const accountId: string | undefined = call.request.grpcId;
-		if (accountId === undefined) {
+		if (!accountId) { // TODO: handle this case?
 			callback(
 				{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE}, // TODO: unknown error?
 				null
@@ -412,29 +193,9 @@ export class GrpcHandlers {
 			return;
 		}
 
+		let grpcJournalEntries: GrpcJournalEntry[];
 		try {
-			const journalEntryDtos: IJournalEntryDto[] =
-				await this.aggregate.getJournalEntriesByAccountId(accountId, this.securityContext);
-
-			let grpcGetJournalEntriesByAccountIdResponse: GrpcGetJournalEntriesByAccountIdResponse;
-
-			if (journalEntryDtos.length === 0) {
-				grpcGetJournalEntriesByAccountIdResponse = {
-					journalEntriesFound: false,
-					grpcJournalEntries: [] // This doesn't matter - to the client, it'll be undefined.
-				};
-				callback(null, grpcGetJournalEntriesByAccountIdResponse);
-				return;
-			}
-
-			const grpcJournalEntries: GrpcJournalEntry[] = journalEntryDtos.map((journalEntryDto) => {
-				return journalEntryDtoToGrpcJournalEntry(journalEntryDto);
-			});
-			grpcGetJournalEntriesByAccountIdResponse = {
-				journalEntriesFound: true,
-				grpcJournalEntries: grpcJournalEntries
-			};
-			callback(null, grpcGetJournalEntriesByAccountIdResponse);
+			grpcJournalEntries = await this.aggregate.getJournalEntriesByAccountId(accountId, this.securityContext);
 		} catch (error: unknown) {
 			if (error instanceof UnauthorizedError) {
 				callback(
@@ -447,6 +208,9 @@ export class GrpcHandlers {
 					null
 				);
 			}
+			return;
 		}
+
+		callback(null, {grpcJournalEntryArray: grpcJournalEntries}); // TODO: pass object directly?
 	}
 }

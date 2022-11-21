@@ -1,14 +1,13 @@
-// Original file: src/accounts_and_balances.proto
+// Original file: src/builtin_ledger.proto
 
 import type { Long } from '@grpc/proto-loader';
 
 export interface GrpcAccount {
   'id'?: (string);
-  'externalId'?: (string);
   'state'?: (string);
   'type'?: (string);
   'currencyCode'?: (string);
-  'currencyDecimals'?: (number);
+  'balance'?: (string);
   'debitBalance'?: (string);
   'creditBalance'?: (string);
   'timestampLastJournalEntry'?: (number | string | Long);
@@ -16,11 +15,10 @@ export interface GrpcAccount {
 
 export interface GrpcAccount__Output {
   'id'?: (string);
-  'externalId'?: (string);
   'state'?: (string);
   'type'?: (string);
   'currencyCode'?: (string);
-  'currencyDecimals'?: (number);
+  'balance'?: (string);
   'debitBalance'?: (string);
   'creditBalance'?: (string);
   'timestampLastJournalEntry'?: (number);

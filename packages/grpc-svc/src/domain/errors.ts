@@ -19,43 +19,19 @@
  their names indented and be marked with a '-'. Email address can be added
  optionally within square brackets <email>.
 
- * Gates Foundation
- - Name Surname <name.surname@gatesfoundation.com>
-
  * Crosslake
  - Pedro Sousa Barreto <pedrob@crosslaketech.com>
+
+ * Gonçalo Garcia <goncalogarcia99@gmail.com>
 
  --------------
  ******/
 
 "use strict";
 
-import {ILedgerAccount, ILedgerAdapter, ILedgerJournalEntry} from "../domain/ledger_adapter_interfaces";
-
-export class TigerBeelteLedgerAdapter implements ILedgerAdapter{
-
-    constructor() {
-        // TODO this class should wrap the TigerBeetle TS client - see https://github.com/mojaloop/participants-bc/blob/main/packages/participants-svc/src/infrastructure/tb_acc_bal_adapter.ts
-    }
-
-    createAccounts(accObjs: ILedgerAccount[]): string[] {
-        throw new Error("Not implemented");
-    }
-
-    createJournalEntries(entryObjs: ILedgerJournalEntry[]): string[] {
-        throw new Error("Not implemented");
-    }
-
-    getAccountsByIds(ids: string[]): ILedgerAccount[] {
-        throw new Error("Not implemented");
-    }
-
-    getJournalEntries(ids: string[]): ILedgerJournalEntry {
-        throw new Error("Not implemented");
-    }
-
-    setCurrencies(currencyList: { code: string; decimals: number }[]): void {
-        throw new Error("Not implemented");
-    }
-
-}
+export class AccountAlreadyExistsError extends Error {}
+export class AccountNotFoundError extends Error {}
+// Repo-only.
+export class UnableToInitRepoError extends Error {}
+export class UnableToGetAccountsError extends Error {}
+export class UnableToStoreAccountsError extends Error {}

@@ -19,38 +19,23 @@
  their names indented and be marked with a '-'. Email address can be added
  optionally within square brackets <email>.
 
- * Gates Foundation
- - Name Surname <name.surname@gatesfoundation.com>
-
  * Crosslake
  - Pedro Sousa Barreto <pedrob@crosslaketech.com>
+
+ * Gonçalo Garcia <goncalogarcia99@gmail.com>
 
  --------------
  ******/
 
 "use strict";
 
-import {AccountState, AccountType} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+describe("accounts and balances gRPC service - unit tests", () => {
+	beforeAll(async () => {
+	});
 
-export declare type ChartOfAccountsEntry = {
-    accountId:string;                                  //vnext internal account Id
-    ledgerAccountID:string;                     //id of the account on the external ledger
+	afterAll(async () => {
+	});
 
-    ownerId:string;                             //old externalId
-
-    state: AccountState;                        //(from publicTypes lib)
-    type: AccountType;                          //(from publicTypes lib)
-    currencyCode: string;
-    currencyDecimals: number;
-}
-
-export interface IChartOfAccountsRepo{
-    init():Promise<void>;
-    
-    getAccountyById(internalAccountId:string): Promise<ChartOfAccountsEntry|null>;
-    getEntryByLedgerId(ledgerAccountID:string): Promise<ChartOfAccountsEntry|null>;
-
-    getEntriesByOwnerId(ownerId:string): Promise<ChartOfAccountsEntry[]>;
-
-    storeEntries(accounts: ChartOfAccountsEntry[]):Promise<void>;
-}
+	test("", async () => {
+	});
+});

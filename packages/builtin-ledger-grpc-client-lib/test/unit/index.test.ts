@@ -29,23 +29,7 @@
 
 "use strict";
 
-import {
-	IAccountDto,
-	AccountState,
-	AccountType,
-	IJournalEntryDto
-} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
-import {
-	loadProto,
-	GrpcAccount,
-	GrpcAccount__Output,
-	GrpcJournalEntry,
-	GrpcJournalEntry__Output,
-	accountDtoToGrpcAccount,
-	grpcAccountOutputToAccountDto,
-	journalEntryDtoToGrpcJournalEntry,
-	grpcJournalEntryOutputToJournalEntryDto
-} from "packages/ledger-grpc-common-lib/src/index";
+import {loadProto} from "../../src";
 
 describe("accounts and balances gRPC common lib - unit tests", () => {
 	beforeAll(async () => {
@@ -62,7 +46,7 @@ describe("accounts and balances gRPC common lib - unit tests", () => {
 		).not.toThrow();
 	});
 
-	test("accountDtoToGrpcAccount()", async () => {
+	/*test("accountDtoToGrpcAccount()", async () => {
 		const accountDto: IAccountDto = {
 			id: null,
 			externalId: null,
@@ -212,5 +196,5 @@ describe("accounts and balances gRPC common lib - unit tests", () => {
 				grpcJournalEntryOutputToJournalEntryDto(grpcJournalEntryOutput);
 			}
 		).toThrow();
-	});
+	});*/
 });

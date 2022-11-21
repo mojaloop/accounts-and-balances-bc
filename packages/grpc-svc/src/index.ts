@@ -29,37 +29,4 @@
 
 "use strict";
 
-// TODO:
-//  - verify if the id can be part of the schema;
-//  - investigate default values and nulls;
-//  - make properties required (maybe they already are, with default values);
-//  - investigate keyword type.
-
-export const ELASTIC_ACCOUNT_SCHEMA: any = {
-	dynamic: "strict",
-	properties: {
-		// Numeric properties can be null.
-		externalId: {type: "text"}, // Or null.
-		state: {type: "text"},
-		type: {type: "text"},
-		currencyCode: {type: "text"},
-		currencyDecimals: {type: "byte"},
-		debitBalance: {type: "text"},
-		creditBalance: {type: "text"},
-		timestampLastJournalEntry: {type: "unsigned_long"} // Or null.
-	}
-};
-
-export const ELASTIC_JOURNAL_ENTRY_SCHEMA: any = {
-	dynamic: "strict",
-	properties: {
-		externalId: {type: "text"}, // Or null.
-		externalCategory: {type: "text"}, // Or null.
-		currencyCode: {type: "text"},
-		currencyDecimals: {type: "byte"},
-		amount: {type: "text"},
-		debitedAccountId: {type: "text"},
-		creditedAccountId: {type: "text"},
-		timestamp: {type: "unsigned_long"} // Or null.
-	}
-};
+export * from "./application";

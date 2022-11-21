@@ -1,4 +1,4 @@
-// Original file: src/accounts_and_balances.proto
+// Original file: src/builtin_ledger.proto
 
 
 export interface GrpcId {

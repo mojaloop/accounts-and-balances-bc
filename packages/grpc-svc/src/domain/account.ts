@@ -29,8 +29,14 @@
 
 "use strict";
 
-export * from "./service";
+import {AccountState, AccountType} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
-import {Service} from "./service";
-
-Service.start();
+export type Account = { // TODO: change to a better name.
+	internalId: string; // TODO: change to a better name.
+	externalId: string; // TODO: change to a better name.
+	ownerId: string | null;
+	state: AccountState;
+	type: AccountType;
+	currencyCode: string;
+	currencyDecimals: number;
+}

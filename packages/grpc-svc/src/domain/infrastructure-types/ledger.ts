@@ -29,8 +29,35 @@
 
 "use strict";
 
-export * from "./service";
+export type LedgerAccount = {
+    id: string | null;
+    state: string; // TODO: change type to AccountState?
+    type: string; // TODO: change type to AccountType?
+    currencyCode: string;
+    debitBalance: string;
+    creditBalance: string;
+    balance: string;
+    timestampLastJournalEntry: number | null;
+}
 
-import {Service} from "./service";
+export type LedgerJournalEntry = {
+    id: string | null;
+    currencyCode: string;
+    amount: string;
+    debitedAccountId: string;
+    creditedAccountId: string;
+    timestamp: number | null;
+}
 
-Service.start();
+export interface ILedgerAdapter {
+    init(): Promise<void>;
+    destroy(): Promise<void>;
+
+    setCurrencies(currencies: {code: string, decimals: number}[]): Promise<void>;
+
+    createAccounts(ledgerAccounts: LedgerAccount[]): Promise<string[]>;
+    createJournalEntries(ledgerJournalEntries: LedgerJournalEntry[]): Promise<string[]>;
+
+    getAccountsByIds(accountIds: string[]): Promise<LedgerAccount[]>;
+    getJournalEntriesByAccountId(accountId: string): Promise<LedgerJournalEntry[]>;
+}

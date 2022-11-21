@@ -19,11 +19,10 @@
  their names indented and be marked with a '-'. Email address can be added
  optionally within square brackets <email>.
 
- * Gates Foundation
- - Name Surname <name.surname@gatesfoundation.com>
-
  * Crosslake
  - Pedro Sousa Barreto <pedrob@crosslaketech.com>
+
+ * Gonçalo Garcia <goncalogarcia99@gmail.com>
 
  --------------
  ******/
@@ -31,56 +30,171 @@
 "use strict";
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {IChartOfAccountsRepo} from "./chart_of_accounts_repo_interface";
-import {ILedgerAdapter} from "./ledger_adapter_interfaces";
-import {IAccountDto, IJournalEntryDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import {ILedgerAdapter, LedgerAccount, LedgerJournalEntry} from "./infrastructure-types/ledger";
+import {
+	AccountDto,
+	AccountState,
+	AccountType,
+	JournalEntryDto
+} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import {IAccountsRepo} from "./infrastructure-types/accounts_repo";
+import {Account} from "./account";
+import {AccountAlreadyExistsError, AccountNotFoundError} from "./errors";
 
-export class AccountsAndBalancesAggregate{
-    private _logger:ILogger;
-    private _repo:IChartOfAccountsRepo;
-    private _ledgerAdapter:ILedgerAdapter;
+export class AccountsAndBalancesAggregate {
+	// Properties received through the constructor.
+	private logger: ILogger;
+	private accountsRepo: IAccountsRepo;
+	private ledgerAdapter: ILedgerAdapter;
 
-    constructor(repo:IChartOfAccountsRepo, ledgerAdapter:ILedgerAdapter, logger:ILogger) {
-        this._logger = logger.createChild(this.constructor.name);
-        this._repo = repo;
-        this._ledgerAdapter = ledgerAdapter
-    }
+	constructor(
+		logger: ILogger,
+		accountsRepo: IAccountsRepo,
+		ledgerAdapter: ILedgerAdapter
+	) {
+		this.logger = logger.createChild(this.constructor.name);
+		this.accountsRepo = accountsRepo;
+		this.ledgerAdapter = ledgerAdapter;
+	}
 
-    createAccounts(accountDtos:IAccountDto[]):Promise<string[]>{
-        // TODO apply privileges
+	async createAccounts(accountDtos: AccountDto[]): Promise<string[]> {
+		const accountIds: string[] = [];
+		accountDtos.forEach((accountDto) => {
+			if (accountDto.id) {
+				accountIds.push(accountDto.id);
+			}
+		});
 
-        /* TODO
-            1. verify inputs (accountDtos)
-            2. get repo.accountById to make sure we don't have duplicates
-            3. call ledgerAdapter.createAccount() and get the ledgerAccountIds of the created accounts
-            4. if ok -> store the new account maps on the CoA.repo
-            5. return to caller with the ids of the CoA, not the external ledgerAccountIds
-         */
-    }
+		const accountsExist: boolean = await this.accountsRepo.accountsExistByInternalIds(accountIds);
+		if (accountsExist) {
+			throw new AccountAlreadyExistsError();
+		}
 
-    getAccounts(accountIds:string[]):Promise<IAccountDto[]>{
-        // TODO apply privileges
+		const ledgerAccounts: LedgerAccount[] = accountDtos.map((accountDto) => {
+			const ledgerAccount: LedgerAccount = {
+				id: accountDto.id,
+				state: accountDto.state,
+				type: accountDto.type,
+				currencyCode: accountDto.currencyCode,
+				debitBalance: accountDto.debitBalance || "0", // TODO: should this be done? should LedgerAccount be changed?
+				creditBalance: accountDto.creditBalance || "0", // TODO: should this be done? should LedgerAccount be changed?
+				balance: accountDto.balance || "0", // TODO: should this be done? should LedgerAccount be changed?
+				timestampLastJournalEntry: accountDto.timestampLastJournalEntry
+			};
+			return ledgerAccount; // TODO: return object directly instead?
+		});
 
-        /* TODO
-        1. get account from CoA.repo
-        2. if found, get ledger account from ledgerAdapter using the ledgerAccountID
-        */
+		const ledgerAccountIds: string[] = await this.ledgerAdapter.createAccounts(ledgerAccounts);
 
-    }
+		const accounts: Account[] = [];
+		for (let i = 0; i < accountDtos.length; i++) {
+			const account: Account = {
+				internalId: accountIds[i],
+				externalId: ledgerAccountIds[i],
+				ownerId: accountDtos[i].ownerId,
+				state: accountDtos[i].state,
+				type: accountDtos[i].type,
+				currencyCode: accountDtos[i].currencyCode,
+				currencyDecimals: 0 // TODO: get the currency decimals.
+			};
+			accounts.push(account); // TODO: push object directly instead?
+		}
 
-    createEntries(entryDtos:IJournalEntryDto[]):Promise<string[]>{
-        // TODO apply privileges
+		await this.accountsRepo.storeAccounts(accounts);
 
-        /* TODO
-        1. make sure the accounts exist in the CoA.repo, its' states are ok and the currencies match
-        2. if ok, call the ledger adapter to create the entries, using the ledgerAccountIDs
-        3. return to caller with the ids of the CoA, not the external ledgerAccountIds
-        */
-    }
+		return accountIds;
+	}
 
-    getEntries(entryIds:string[]):Promise<IJournalEntryDto[]>{
-        // TODO apply privileges
+	async createJournalEntries(journalEntryDtos: JournalEntryDto[]): Promise<string[]> {
+		const ledgerJournalEntries: LedgerJournalEntry[] = journalEntryDtos.map((journalEntryDto) => {
+			const ledgerJournalEntry: LedgerJournalEntry = {
+				id: journalEntryDto.id,
+				currencyCode: journalEntryDto.currencyCode,
+				amount: journalEntryDto.amount,
+				debitedAccountId: journalEntryDto.debitedAccountId,
+				creditedAccountId: journalEntryDto.creditedAccountId,
+				timestamp: journalEntryDto.timestamp
+			};
+			return ledgerJournalEntry; // TODO: return object directly instead?
+		});
 
-        // same logic as the getAccounts
-    }
+		const ledgerJournalEntryIds: string[] = await this.ledgerAdapter.createJournalEntries(ledgerJournalEntries);
+		return ledgerJournalEntryIds;
+	}
+
+	async getAccountsByIds(idsAccounts: string[]): Promise<AccountDto[]> {
+		const accounts: Account[] = await this.accountsRepo.getAccountsByInternalIds(idsAccounts);
+
+		const idsLedgerAccounts: string[] = accounts.map((account) => {
+			return account.externalId;
+		});
+
+		const ledgerAccounts: LedgerAccount[] = await this.ledgerAdapter.getAccountsByIds(idsLedgerAccounts);
+
+		const accountDtos: AccountDto[] = ledgerAccounts.map((ledgerAccount) => {
+			const accountDto: AccountDto = {
+				id: ledgerAccount.id,
+				ownerId: "", // TODO: get the ownerId.
+				state: ledgerAccount.state as AccountState, // TODO: remove cast.
+				type: ledgerAccount.type as AccountType, // TODO: remove cast.
+				currencyCode: ledgerAccount.currencyCode,
+				debitBalance: ledgerAccount.debitBalance,
+				creditBalance: ledgerAccount.creditBalance,
+				balance: ledgerAccount.balance,
+				timestampLastJournalEntry: ledgerAccount.timestampLastJournalEntry
+			};
+			return accountDto;
+		});
+		return accountDtos;
+	}
+
+	async getAccountsByOwnerId(ownerId: string): Promise<AccountDto[]> {
+		const accounts: Account[] = await this.accountsRepo.getAccountsByOwnerId(ownerId);
+
+		const idsLedgerAccounts: string[] = accounts.map((account) => {
+			return account.externalId;
+		});
+
+		const ledgerAccounts: LedgerAccount[] = await this.ledgerAdapter.getAccountsByIds(idsLedgerAccounts);
+
+		const accountDtos: AccountDto[] = ledgerAccounts.map((ledgerAccount) => {
+			const accountDto: AccountDto = {
+				id: ledgerAccount.id,
+				ownerId: "", // TODO: get the ownerId.
+				state: ledgerAccount.state as AccountState, // TODO: remove cast.
+				type: ledgerAccount.type as AccountType, // TODO: remove cast.
+				currencyCode: ledgerAccount.currencyCode,
+				debitBalance: ledgerAccount.debitBalance,
+				creditBalance: ledgerAccount.creditBalance,
+				balance: ledgerAccount.balance,
+				timestampLastJournalEntry: ledgerAccount.timestampLastJournalEntry
+			};
+			return accountDto; // TODO: return object directly instead?
+		});
+		return accountDtos;
+	}
+
+	async getJournalEntriesByAccountId(accountId: string): Promise<JournalEntryDto[]> {
+		const accountExists: boolean = await this.accountsRepo.accountsExistByInternalIds([accountId]);
+		if (!accountExists) {
+			throw new AccountNotFoundError();
+		}
+
+		const ledgerJournalEntries: LedgerJournalEntry[] =
+			await this.ledgerAdapter.getJournalEntriesByAccountId(accountId);
+
+		const journalEntryDtos: JournalEntryDto[] = ledgerJournalEntries.map((ledgerJournalEntry) => {
+			const journalEntryDto: JournalEntryDto = {
+				id: ledgerJournalEntry.id,
+				ownerId: "", // TODO: get the ownerId.
+				currencyCode: ledgerJournalEntry.currencyCode,
+				amount: ledgerJournalEntry.amount,
+				debitedAccountId: ledgerJournalEntry.debitedAccountId,
+				creditedAccountId: ledgerJournalEntry.creditedAccountId,
+				timestamp: ledgerJournalEntry.timestamp
+			};
+			return journalEntryDto; // TODO: return object directly instead?
+		});
+		return journalEntryDtos;
+	}
 }

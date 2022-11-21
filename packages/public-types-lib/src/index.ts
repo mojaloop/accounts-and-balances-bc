@@ -29,28 +29,27 @@
 
 "use strict";
 
-export type AccountState = "ACTIVE" | "DELETED";
+export type AccountState = "ACTIVE" | "DELETED" | "INACTIVE";
 
-export type AccountType = "POSITION" | "SETTLEMENT" | "FEE";
+export type AccountType = "FEE" | "MULTILATERAL" | "POSITION" | "RECON" | "SETTLEMENT";
 
-export type IAccountDto = {
+export type AccountDto = {
 	id: string | null;
-	ownerId: string | null;
+	ownerId: string;
 	state: AccountState;
 	type: AccountType;
-	currencyCode: string;			// ex: "USD"
-	debitBalance: string; 			// ex: "100.55"
-	creditBalance: string;
-	balance: string;
+	currencyCode: string;
+	debitBalance: string | null;
+	creditBalance: string | null;
+	balance: string | null;
 	timestampLastJournalEntry: number | null;
 }
 
-export type IJournalEntryDto = {
+export type JournalEntryDto = {
 	id: string | null;
 	ownerId: string | null;
-	//externalCategory: string | null; // do we need this, if not for now, then let's not have it??
-	currencyCode: string;			// ex: "USD"
-	amount: string; 				// ex: "100.55"
+	currencyCode: string;
+	amount: string;
 	debitedAccountId: string;
 	creditedAccountId: string;
 	timestamp: number | null;

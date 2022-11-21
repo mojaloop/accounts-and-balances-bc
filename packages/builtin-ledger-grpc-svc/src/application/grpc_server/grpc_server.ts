@@ -30,7 +30,6 @@
 "use strict";
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {Aggregate} from "@mojaloop/accounts-and-balances-bc-domain-lib";
 import {
 	GrpcObject,
 	loadPackageDefinition,
@@ -38,22 +37,27 @@ import {
 	ServerCredentials,
 	ServiceDefinition
 } from "@grpc/grpc-js";
-import {PackageDefinition} from "@grpc/proto-loader";
-import {
-	ProtoGrpcType,
-	AccountsAndBalancesGrpcServiceHandlers,
-	loadProto
-} from "@mojaloop/accounts-and-balances-bc-grpc-common-lib";
+import {loadSync, Options, PackageDefinition} from "@grpc/proto-loader";
+
 import {TokenHelper} from "@mojaloop/security-bc-client-lib";
-import {GrpcHandlers} from "packages/builtin-ledger-grpc-svc/src/application/grpc_server/grpc_handlers";
+import {Aggregate} from "../../domain/aggregate";
+import {
+	GrpcBuiltinLedgerHandlers,
+	ProtoGrpcType
+} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-client-lib";
+import {GrpcHandlers} from "./grpc_handlers";
 
 export class GrpcServer {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
 	private readonly HOST: string;
 	private readonly PORT_NO: number;
-
 	// Other properties.
+	private static readonly PROTO_FILE_RELATIVE_PATH: string =
+		"../../../builtin-ledger-grpc-client-lib/src/builtin_ledger.proto";
+	private static readonly LOAD_PROTO_OPTIONS: Options = {
+		longs: Number
+	};
 	private readonly server: Server;
 
 	constructor(
@@ -67,16 +71,19 @@ export class GrpcServer {
 		this.HOST = host;
 		this.PORT_NO = portNo;
 
-		const packageDefinition: PackageDefinition = loadProto();
+		const packageDefinition: PackageDefinition = loadSync(
+			GrpcServer.PROTO_FILE_RELATIVE_PATH,
+			GrpcServer.LOAD_PROTO_OPTIONS
+		);
 		const grpcObject: GrpcObject = loadPackageDefinition(packageDefinition);
 		const serviceDefinition: ServiceDefinition =
-			(grpcObject as unknown as ProtoGrpcType).AccountsAndBalancesGrpcService.service;
+			(grpcObject as unknown as ProtoGrpcType).GrpcBuiltinLedger.service;
 
 		const grpcHandlers: GrpcHandlers = new GrpcHandlers(
 			this.logger,
 			aggregate
 		);
-		const serviceImplementation: AccountsAndBalancesGrpcServiceHandlers = grpcHandlers.getHandlers();
+		const serviceImplementation: GrpcBuiltinLedgerHandlers = grpcHandlers.getHandlers();
 
 		this.server = new Server();
 		this.server.addService(

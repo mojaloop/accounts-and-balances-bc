@@ -29,10 +29,10 @@
 
 "use strict";
 
-// Accounts.
-export class UnableToCreateAccountError extends Error{}
-export class UnableToGetAccountError extends Error{}
-export class UnableToGetAccountsError extends Error{}
-// Journal entries.
+export class UnableToSetCurrenciesError extends Error{}
+
+export class UnableToCreateAccountsError extends Error{}
 export class UnableToCreateJournalEntriesError extends Error{}
+
+export class UnableToGetAccountsError extends Error{}
 export class UnableToGetJournalEntriesError extends Error{}

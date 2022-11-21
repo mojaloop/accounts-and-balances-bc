@@ -29,8 +29,8 @@
 
 "use strict";
 
-export * from "packages/builtin-ledger-grpc-svc/src/application/grpc_service";
+export * from "./grpc_service";
 
-import {GrpcService} from "packages/builtin-ledger-grpc-svc/src/application/grpc_service";
+import {GrpcService} from "./grpc_service";
 
 GrpcService.start();

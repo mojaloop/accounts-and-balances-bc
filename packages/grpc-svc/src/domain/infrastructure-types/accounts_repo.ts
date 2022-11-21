@@ -19,42 +19,26 @@
  their names indented and be marked with a '-'. Email address can be added
  optionally within square brackets <email>.
 
- * Gates Foundation
- - Name Surname <name.surname@gatesfoundation.com>
-
  * Crosslake
  - Pedro Sousa Barreto <pedrob@crosslaketech.com>
+
+ * Gonçalo Garcia <goncalogarcia99@gmail.com>
 
  --------------
  ******/
 
 "use strict";
 
-import {
-    ChartOfAccountsEntry,
-    IChartOfAccountsRepo
-} from "..domain/chart_of_accounts_repo_interface";
+import {Account} from "../account";
 
-export class ChartOfAccountsMongoRepo implements IChartOfAccountsRepo{
+export interface IAccountsRepo {
+    init(): Promise<void>;
+    destroy(): Promise<void>;
 
-    getAccountyById(internalAccountId: string): Promise<ChartOfAccountsEntry | null> {
-        throw new Error("Not implemented");
-    }
+    accountsExistByInternalIds(internalIds: string[]): Promise<boolean>;
 
-    getEntriesByOwnerId(ownerId: string): Promise<ChartOfAccountsEntry[]> {
-        throw new Error("Not implemented");
-    }
+    storeAccounts(accounts: Account[]): Promise<void>;
 
-    getEntryByLedgerId(ledgerAccountID: string): Promise<ChartOfAccountsEntry | null> {
-        throw new Error("Not implemented");
-    }
-
-    init(): Promise<void> {
-        throw new Error("Not implemented");
-    }
-
-    storeEntries(accounts: ChartOfAccountsEntry[]): Promise<void> {
-        throw new Error("Not implemented");
-    }
-
+    getAccountsByInternalIds(internalIds: string[]): Promise<Account[]>;
+    getAccountsByOwnerId(ownerId: string): Promise<Account[]>;
 }

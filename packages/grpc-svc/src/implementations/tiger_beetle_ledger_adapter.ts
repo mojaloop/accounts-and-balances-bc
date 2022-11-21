@@ -19,20 +19,15 @@
  their names indented and be marked with a '-'. Email address can be added
  optionally within square brackets <email>.
 
- * Gates Foundation
- - Name Surname <name.surname@gatesfoundation.com>
-
- - Gonçalo Garcia <goncalogarcia99@gmail.com>
-
  * Crosslake
  - Pedro Sousa Barreto <pedrob@crosslaketech.com>
+
+ * Gonçalo Garcia <goncalogarcia99@gmail.com>
 
  --------------
  ******/
 
 "use strict";
 
-export * from "./elasticsearch/elastic_accounts_repo";
-export * from "./elasticsearch/elastic_journal_entries_repo";
-export * from "./mongodb/mongo_accounts_repo";
-export * from "./mongodb/mongo_journal_entries_repo";
+// setCurrencies saves currencies in memory.
+// currency conversion happens here.
