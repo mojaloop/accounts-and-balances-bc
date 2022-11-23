@@ -29,35 +29,16 @@
 
 "use strict";
 
-export type LedgerAccount = {
-    id: string | null;
-    state: string; // TODO: change type to AccountState?
-    type: string; // TODO: change type to AccountType?
-    currencyCode: string;
-    debitBalance: string;
-    creditBalance: string;
-    balance: string;
-    timestampLastJournalEntry: number | null;
-}
+import {AccountState, AccountType} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
-export type LedgerJournalEntry = {
-    id: string | null;
-    currencyCode: string;
-    amount: string;
-    debitedAccountId: string;
-    creditedAccountId: string;
-    timestamp: number | null;
-}
-
-export interface ILedgerAdapter {
-    init(): Promise<void>;
-    destroy(): Promise<void>;
-
-    setCurrencies(currencies: {code: string, decimals: number}[]): Promise<void>;
-
-    createAccounts(ledgerAccounts: LedgerAccount[]): Promise<string[]>;
-    createJournalEntries(ledgerJournalEntries: LedgerJournalEntry[]): Promise<string[]>;
-
-    getAccountsByIds(accountIds: string[]): Promise<LedgerAccount[]>;
-    getJournalEntriesByAccountId(accountId: string): Promise<LedgerJournalEntry[]>;
+// Chart of Accounts' Account.
+export type CoaAccount = {
+	internalId: string;
+	externalId: string;
+	ownerId: string;
+	state: AccountState;
+	type: AccountType;
+	currencyCode: string;
+	currencyDecimals: number;
+	// TODO: no timestamp?
 }

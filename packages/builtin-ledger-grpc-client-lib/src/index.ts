@@ -33,11 +33,10 @@ export * from "./grpc_client";
 export * from "./errors";
 
 export * from "./types/builtin_ledger";
-export * from "./types/GrpcAccount";
-export * from "./types/GrpcAccountArray";
+export * from "./types/BuiltinLedgerGrpcAccount";
+export * from "./types/BuiltinLedgerGrpcAccountArray";
+export * from "./types/BuiltinLedgerGrpcId";
+export * from "./types/BuiltinLedgerGrpcIdArray";
+export * from "./types/BuiltinLedgerGrpcJournalEntry";
+export * from "./types/BuiltinLedgerGrpcJournalEntryArray";
 export * from "./types/GrpcBuiltinLedger";
-export * from "./types/GrpcId";
-export * from "./types/GrpcIdArray";
-export * from "./types/GrpcJournalEntry";
-export * from "./types/GrpcJournalEntryArray";
-export * from "./utils";

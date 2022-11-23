@@ -2,7 +2,7 @@
 
 import type { Long } from '@grpc/proto-loader';
 
-export interface GrpcJournalEntry {
+export interface BuiltinLedgerGrpcJournalEntry {
   'id'?: (string);
   'currencyCode'?: (string);
   'amount'?: (string);
@@ -11,7 +11,7 @@ export interface GrpcJournalEntry {
   'timestamp'?: (number | string | Long);
 }
 
-export interface GrpcJournalEntry__Output {
+export interface BuiltinLedgerGrpcJournalEntry__Output {
   'id'?: (string);
   'currencyCode'?: (string);
   'amount'?: (string);

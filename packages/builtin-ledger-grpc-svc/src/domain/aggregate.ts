@@ -56,12 +56,6 @@ import {
 } from "packages/ledger-grpc-svc/src/domain/infrastructure";
 import {Account} from "packages/ledger-grpc-svc/src/domain/account";
 import {JournalEntry} from "packages/ledger-grpc-svc/src/domain/journal_entry";
-import {
-	AccountState,
-	AccountType,
-	IAccountDto,
-	IJournalEntryDto
-} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {IAuditClient, AuditSecurityContext} from "@mojaloop/auditing-bc-public-types-lib";
 import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
@@ -70,18 +64,14 @@ import {join} from "path";
 import {readFileSync} from "fs";
 import {ICurrency} from "packages/ledger-grpc-svc/src/domain/currency";
 import {bigintToString, stringToBigint} from "packages/ledger-grpc-svc/src/domain/converters";
-import {LedgerAccount} from "@mojaloop/accounts-and-balances-bc-grpc-svc";
-import {
-	GrpcAccount,
-	GrpcAccount__Output, GrpcJournalEntry,
-	GrpcJournalEntry__Output
-} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-client-lib";
+import {BuiltinLedgerAccount} from "./builtin_ledger_account";
+import {BuiltinLedgerJournalEntry} from "./builtin_ledger_journal_entry";
 
 enum AuditingActions {
 	ACCOUNT_CREATED = "ACCOUNT_CREATED"
 }
 
-export class Aggregate {
+export class BuiltinLedgerAggregate {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
 	private readonly authorizationClient: IAuthorizationClient;
@@ -106,7 +96,7 @@ export class Aggregate {
 		this.journalEntriesRepo = journalEntriesRepo;
 
 		// TODO: here?
-		const currenciesFileAbsolutePath: string = join(__dirname, Aggregate.CURRENCIES_FILE_NAME);
+		const currenciesFileAbsolutePath: string = join(__dirname, BuiltinLedgerAggregate.CURRENCIES_FILE_NAME);
 		try {
 			this.currencies = JSON.parse(readFileSync(currenciesFileAbsolutePath, "utf-8"));
 		} catch (error: unknown) {
@@ -132,9 +122,8 @@ export class Aggregate {
 		};
 	}
 
-	// TODO: receive GrpcAccount__Output[]?
 	async createAccounts(
-		grpcAccountsOutput: GrpcAccount__Output[],
+		builtinLedgerAccounts: BuiltinLedgerAccount[],
 		securityContext: CallSecurityContext
 	): Promise<string[]> {
 		this.enforcePrivilege(securityContext, Privileges.CREATE_ACCOUNT);
@@ -218,9 +207,8 @@ export class Aggregate {
 		return account.id;
 	}
 
-	// TODO: receive GrpcJournalEntry__Output[]?
 	async createJournalEntries(
-		grpcJournalEntriesOutput: GrpcJournalEntry__Output[],
+		builtinLedgerJournalEntries: BuiltinLedgerJournalEntry[],
 		securityContext: CallSecurityContext
 	): Promise<string[]> {
 		this.enforcePrivilege(securityContext, Privileges.CREATE_JOURNAL_ENTRY);
@@ -234,7 +222,7 @@ export class Aggregate {
 		return idsJournalEntries;
 	}
 
-	private async createJournalEntry(journalEntryDto: IJournalEntryDto): Promise<string> {
+	private async createJournalEntry(builtinLedgerJournalEntry: BuiltinLedgerJournalEntry): Promise<string> {
 		// When creating a journal entry, currencyDecimals and timestamp are supposed to be null. For consistency
 		// purposes and to make sure whoever calls this function knows that, if those values aren't respected, errors
 		// are thrown.
@@ -428,8 +416,10 @@ export class Aggregate {
 		return journalEntry.id;
 	}
 
-	// TODO: receive string[] and return GrpcAccount[]?
-	async getAccountsByIds(accountIds: string[], securityContext: CallSecurityContext): Promise<GrpcAccount[]> {
+	async getAccountsByIds(
+		accountIds: string[],
+		securityContext: CallSecurityContext
+	): Promise<BuiltinLedgerAccount[]> {
 		this.enforcePrivilege(securityContext, Privileges.VIEW_ACCOUNT);
 
 		try {
@@ -441,11 +431,10 @@ export class Aggregate {
 		}
 	}
 
-	// TODO: receive string[] and return GrpcJournalEntry[]?
 	async getJournalEntriesByAccountId(
 		accountId: string,
 		securityContext: CallSecurityContext
-	): Promise<GrpcJournalEntry[]> {
+	): Promise<BuiltinLedgerJournalEntry[]> {
 		this.enforcePrivilege(securityContext, Privileges.VIEW_JOURNAL_ENTRY);
 
 		try {

@@ -29,20 +29,23 @@
 
 "use strict";
 
-import {ILedgerAdapter} from "../domain/infrastructure-types/ledger";
+import {
+    ILedgerAdapter,
+    LedgerAdapterAccount,
+    LedgerAdapterJournalEntry
+} from "../domain/infrastructure-types/ledger_adapter";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {
-    BuiltinLedgerGrpcClient,
-    GrpcAccount, GrpcAccount__Output,
-    GrpcJournalEntry, GrpcJournalEntry__Output
+    BuiltinLedgerGrpcAccount, BuiltinLedgerGrpcAccount__Output, BuiltinLedgerGrpcClient, BuiltinLedgerGrpcId,
+    BuiltinLedgerGrpcJournalEntry, BuiltinLedgerGrpcJournalEntry__Output
 } from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-client-lib";
-import {LedgerAccount, LedgerJournalEntry} from "../domain/infrastructure-types/ledger";
+import {AccountState, AccountType} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 export class BuiltinLedgerAdapter implements ILedgerAdapter {
     // Properties received through the constructor.
     private readonly logger: ILogger;
     // Other properties.
-    private readonly client: BuiltinLedgerGrpcClient;
+    private readonly builtinLedgerClient: BuiltinLedgerGrpcClient;
 
     constructor(
         logger: ILogger,
@@ -52,7 +55,7 @@ export class BuiltinLedgerAdapter implements ILedgerAdapter {
     ) {
         this.logger = logger.createChild(this.constructor.name);
 
-        this.client = new BuiltinLedgerGrpcClient(
+        this.builtinLedgerClient = new BuiltinLedgerGrpcClient(
             logger,
             host,
             portNo,
@@ -61,11 +64,11 @@ export class BuiltinLedgerAdapter implements ILedgerAdapter {
     }
 
     async init(): Promise<void> {
-        await this.client.init();
+        await this.builtinLedgerClient.init();
     }
 
     async destroy(): Promise<void> {
-        await this.client.destroy();
+        await this.builtinLedgerClient.destroy();
     }
 
     async setCurrencies(currencies: {code: string, decimals: number}[]): Promise<void> {
@@ -73,103 +76,107 @@ export class BuiltinLedgerAdapter implements ILedgerAdapter {
         return;
     }
 
-    async createAccounts(ledgerAccounts: LedgerAccount[]): Promise<string[]> {
-        const grpcAccounts: GrpcAccount[] = ledgerAccounts.map((ledgerAccount) => {
-            const grpcAccount: GrpcAccount = {
-                id: ledgerAccount.id ?? undefined,
-                state: ledgerAccount.state,
-                type: ledgerAccount.type,
-                currencyCode: ledgerAccount.currencyCode,
-                debitBalance: ledgerAccount.debitBalance,
-                creditBalance: ledgerAccount.creditBalance,
-                balance: ledgerAccount.balance,
-                timestampLastJournalEntry: ledgerAccount.timestampLastJournalEntry ?? undefined
+    async createAccounts(ledgerAdapterAccounts: LedgerAdapterAccount[]): Promise<string[]> {
+        const builtinLedgerGrpcAccounts: BuiltinLedgerGrpcAccount[]
+            = ledgerAdapterAccounts.map((ledgerAdapterAccount) => {
+            const builtinLedgerGrpcAccount: BuiltinLedgerGrpcAccount = {
+                id: ledgerAdapterAccount.id ?? undefined, // TODO: ?? or ||?
+                state: ledgerAdapterAccount.state,
+                type: ledgerAdapterAccount.type,
+                currencyCode: ledgerAdapterAccount.currencyCode,
+                debitBalance: ledgerAdapterAccount.debitBalance ?? undefined, // TODO: ?? or ||?
+                creditBalance: ledgerAdapterAccount.creditBalance ?? undefined, // TODO: ?? or ||?
+                timestampLastJournalEntry: ledgerAdapterAccount.timestampLastJournalEntry ?? undefined // TODO: ?? or ||?
             };
-            return grpcAccount; // TODO: return object directly instead?
+            return builtinLedgerGrpcAccount;
         });
 
-        const accountIds: string[] = await this.client.createAccounts({grpcAccountArray: grpcAccounts});
+        const accountIds: string[] = await this.builtinLedgerClient.createAccounts(
+            {builtinLedgerGrpcAccountArray: builtinLedgerGrpcAccounts}
+        );
         return accountIds;
     }
 
-    async createJournalEntries(ledgerJournalEntries: LedgerJournalEntry[]): Promise<string[]> {
-        const grpcJournalEntries: GrpcJournalEntry[] = ledgerJournalEntries.map((ledgerJournalEntry) => {
-            const grpcJournalEntry: GrpcJournalEntry = {
-                id: ledgerJournalEntry.id ?? undefined,
-                currencyCode: ledgerJournalEntry.currencyCode,
-                amount: ledgerJournalEntry.amount,
-                debitedAccountId: ledgerJournalEntry.debitedAccountId,
-                creditedAccountId: ledgerJournalEntry.creditedAccountId,
-                timestamp: ledgerJournalEntry.timestamp ?? undefined
+    async createJournalEntries(ledgerAdapterJournalEntries: LedgerAdapterJournalEntry[]): Promise<string[]> {
+        const builtinLedgerGrpcJournalEntries: BuiltinLedgerGrpcJournalEntry[]
+            = ledgerAdapterJournalEntries.map((ledgerAdapterJournalEntry) => {
+            const builtinLedgerGrpcJournalEntry: BuiltinLedgerGrpcJournalEntry = {
+                id: ledgerAdapterJournalEntry.id ?? undefined, // TODO: ?? or ||?
+                currencyCode: ledgerAdapterJournalEntry.currencyCode,
+                amount: ledgerAdapterJournalEntry.amount,
+                debitedAccountId: ledgerAdapterJournalEntry.debitedAccountId,
+                creditedAccountId: ledgerAdapterJournalEntry.creditedAccountId,
+                timestamp: ledgerAdapterJournalEntry.timestamp ?? undefined // TODO: ?? or ||?
             };
-            return grpcJournalEntry; // TODO: return object directly instead?
+            return builtinLedgerGrpcJournalEntry;
         });
 
-        const journalEntryIds: string[] = await this.client.createJournalEntries(
-            {grpcJournalEntryArray: grpcJournalEntries}
+        const journalEntryIds: string[] = await this.builtinLedgerClient.createJournalEntries(
+            {builtinLedgerGrpcJournalEntryArray: builtinLedgerGrpcJournalEntries}
         );
         return journalEntryIds;
     }
 
-    // TODO: why not return AccountDTO[] instead of LedgerAccount[]?
-    async getAccountsByIds(accountIds: string[]): Promise<LedgerAccount[]> {
-        const grpcAccountsOutput: GrpcAccount__Output[] = await this.client.getAccountsByIds(accountIds); // TODO: pass the strings directly?
-
-        const ledgerAccounts: LedgerAccount[] = grpcAccountsOutput.map((grpcAccountOutput) => {
-            if (
-                !grpcAccountOutput.state
-                || !grpcAccountOutput.type
-                || !grpcAccountOutput.currencyCode
-                || !grpcAccountOutput.balance
-                || !grpcAccountOutput.debitBalance
-                || !grpcAccountOutput.creditBalance
-            ) {
-                throw new Error(); // TODO: should this be done? should there be a message?
-            }
-
-            const ledgerAccount: LedgerAccount = {
-                id: grpcAccountOutput.id ?? null,
-                state: grpcAccountOutput.state,
-                type: grpcAccountOutput.type,
-                currencyCode: grpcAccountOutput.currencyCode,
-                balance: grpcAccountOutput.balance,
-                debitBalance: grpcAccountOutput.debitBalance,
-                creditBalance: grpcAccountOutput.creditBalance,
-                timestampLastJournalEntry: grpcAccountOutput.timestampLastJournalEntry ?? null
-            };
-            return ledgerAccount; // TODO: return object directly instead?
+    async getAccountsByIds(ledgerAccountIds: string[]): Promise<LedgerAdapterAccount[]> {
+        const builtinLedgerGrpcAccountIds: BuiltinLedgerGrpcId[] = ledgerAccountIds.map((ledgerAccountId) => {
+            return {builtinLedgerGrpcId: ledgerAccountId};
         });
 
-        return ledgerAccounts;
+        const builtinLedgerGrpcAccountsOutput: BuiltinLedgerGrpcAccount__Output[]
+            = await this.builtinLedgerClient.getAccountsByIds({builtinLedgerGrpcIdArray: builtinLedgerGrpcAccountIds});
+
+        const ledgerAdapterAccounts: LedgerAdapterAccount[]
+            = builtinLedgerGrpcAccountsOutput.map((builtinLedgerGrpcAccountOutput) => {
+            if (
+                !builtinLedgerGrpcAccountOutput.state
+                || !builtinLedgerGrpcAccountOutput.type
+                || !builtinLedgerGrpcAccountOutput.currencyCode
+                || !builtinLedgerGrpcAccountOutput.debitBalance
+                || !builtinLedgerGrpcAccountOutput.creditBalance
+            ) {
+                throw new Error(); // TODO: create custom error.
+            }
+
+            const ledgerAdapterAccount: LedgerAdapterAccount = {
+                id: builtinLedgerGrpcAccountOutput.id ?? null, // TODO: ?? or ||?
+                state: builtinLedgerGrpcAccountOutput.state as AccountState,
+                type: builtinLedgerGrpcAccountOutput.type as AccountType,
+                currencyCode: builtinLedgerGrpcAccountOutput.currencyCode,
+                debitBalance: builtinLedgerGrpcAccountOutput.debitBalance,
+                creditBalance: builtinLedgerGrpcAccountOutput.creditBalance,
+                timestampLastJournalEntry: builtinLedgerGrpcAccountOutput.timestampLastJournalEntry ?? null // TODO: ?? or ||?
+            };
+            return ledgerAdapterAccount;
+        });
+        return ledgerAdapterAccounts;
     }
 
-    // TODO: why not return JournalEntryDTO[] instead of LedgerJournalEntry[]?
-    async getJournalEntriesByAccountId(accountId: string): Promise<LedgerJournalEntry[]> {
-        const grpcJournalEntriesOutput: GrpcJournalEntry__Output[] =
-            await this.client.getJournalEntriesByAccountId(accountId); // TODO: pass the string directly?
+    async getJournalEntriesByAccountId(ledgerAccountId: string): Promise<LedgerAdapterJournalEntry[]> {
+        const builtinLedgerGrpcJournalEntriesOutput: BuiltinLedgerGrpcJournalEntry__Output[]
+            = await this.builtinLedgerClient.getJournalEntriesByAccountId({builtinLedgerGrpcId: ledgerAccountId});
 
-        const ledgerJournalEntries: LedgerJournalEntry[] =
-            grpcJournalEntriesOutput.map((grpcJournalEntryOutput) => {
+        const ledgerAdapterJournalEntries: LedgerAdapterJournalEntry[] =
+            builtinLedgerGrpcJournalEntriesOutput.map((builtinLedgerGrpcJournalEntryOutput) => {
             if (
-                !grpcJournalEntryOutput.currencyCode
-                || !grpcJournalEntryOutput.amount
-                || !grpcJournalEntryOutput.debitedAccountId
-                || !grpcJournalEntryOutput.creditedAccountId
+                !builtinLedgerGrpcJournalEntryOutput.currencyCode
+                || !builtinLedgerGrpcJournalEntryOutput.amount
+                || !builtinLedgerGrpcJournalEntryOutput.debitedAccountId
+                || !builtinLedgerGrpcJournalEntryOutput.creditedAccountId
             ) {
-                throw new Error(); // TODO: should this be done? should there be a message?
+                throw new Error(); // TODO: create custom error.
             }
 
-            const ledgerJournalEntry: LedgerJournalEntry = {
-                id: grpcJournalEntryOutput.id ?? null,
-                currencyCode: grpcJournalEntryOutput.currencyCode,
-                amount: grpcJournalEntryOutput.amount,
-                debitedAccountId: grpcJournalEntryOutput.debitedAccountId,
-                creditedAccountId: grpcJournalEntryOutput.creditedAccountId,
-                timestamp: grpcJournalEntryOutput.timestamp ?? null
+            const ledgerAdapterJournalEntry: LedgerAdapterJournalEntry = {
+                id: builtinLedgerGrpcJournalEntryOutput.id ?? null, // TODO: ?? or ||?
+                currencyCode: builtinLedgerGrpcJournalEntryOutput.currencyCode,
+                amount: builtinLedgerGrpcJournalEntryOutput.amount,
+                debitedAccountId: builtinLedgerGrpcJournalEntryOutput.debitedAccountId,
+                creditedAccountId: builtinLedgerGrpcJournalEntryOutput.creditedAccountId,
+                timestamp: builtinLedgerGrpcJournalEntryOutput.timestamp ?? null // TODO: ?? or ||?
             };
-            return ledgerJournalEntry; // TODO: return object directly instead?
+            return ledgerAdapterJournalEntry;
         });
 
-        return ledgerJournalEntries;
+        return ledgerAdapterJournalEntries;
     }
 }

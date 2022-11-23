@@ -30,28 +30,18 @@
 "use strict";
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {PackageDefinition} from "@grpc/proto-loader";
+import {loadSync, Options, PackageDefinition} from "@grpc/proto-loader";
 import {credentials, GrpcObject, loadPackageDefinition, Deadline} from "@grpc/grpc-js";
+import {Account, JournalEntry} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import {GrpcId, GrpcId__Output} from "./types/GrpcId";
+import {GrpcIdArray} from "./types/GrpcIdArray";
+import {GrpcAccount, GrpcAccount__Output} from "./types/GrpcAccount";
+import {GrpcJournalEntry, GrpcJournalEntry__Output} from "./types/GrpcJournalEntry";
+import {GrpcAccountsAndBalancesClient} from "./types/GrpcAccountsAndBalances";
+import {ProtoGrpcType} from "./types/accounts_and_balances";
 import {
-	ProtoGrpcType,
-	AccountsAndBalancesGrpcServiceClient,
-	loadProto,
-	accountDtoToGrpcAccount,
-	GrpcAccount,
-	GrpcId,
-	GrpcJournalEntryArray,
-	journalEntryDtoToGrpcJournalEntry,
-	GrpcJournalEntry,
-	grpcAccountOutputToAccountDto,
-	grpcJournalEntryOutputToJournalEntryDto,
-	GrpcAccount__Output,
-	GrpcJournalEntry__Output, GrpcId__Output
-} from "./types";
-import {IAccountDto, IJournalEntryDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
-import {
-	UnableToCreateAccountError,
+	UnableToCreateAccountsError,
 	UnableToCreateJournalEntriesError,
-	UnableToGetAccountError,
 	UnableToGetAccountsError,
 	UnableToGetJournalEntriesError
 } from "./errors";
@@ -61,7 +51,11 @@ export class GrpcClient {
 	private readonly logger: ILogger;
 	private readonly TIMEOUT_MS: number;
 	// Other properties.
-	private readonly client: AccountsAndBalancesGrpcServiceClient;
+	private static readonly PROTO_FILE_RELATIVE_PATH: string = "./account_and_balances.proto";
+	private static readonly LOAD_PROTO_OPTIONS: Options = {
+		longs: Number
+	};
+	private readonly client: GrpcAccountsAndBalancesClient;
 
 	constructor(
 		logger: ILogger,
@@ -72,15 +66,17 @@ export class GrpcClient {
 		this.logger = logger.createChild(this.constructor.name);
 		this.TIMEOUT_MS = timeoutMs;
 
-		const packageDefinition: PackageDefinition = loadProto();
+		const packageDefinition: PackageDefinition = loadSync(
+			GrpcClient.PROTO_FILE_RELATIVE_PATH,
+			GrpcClient.LOAD_PROTO_OPTIONS
+		);
 		const grpcObject: GrpcObject = loadPackageDefinition(packageDefinition);
-		this.client = new (grpcObject as unknown as ProtoGrpcType).AccountsAndBalancesGrpcService(
+		this.client = new (grpcObject as unknown as ProtoGrpcType).GrpcAccountsAndBalances(
 			`${host}:${portNo}`,
 			credentials.createInsecure()
 		);
 	}
 
-	// TODO: make sure init is called.
 	async init(): Promise<void> {
 		return new Promise((resolve, reject) => {
 			const deadline: Deadline = Date.now() + this.TIMEOUT_MS;
@@ -105,183 +101,137 @@ export class GrpcClient {
 		this.logger.info("gRPC client destroyed 🏁");
 	}
 
-	async createAccount(accountDto: IAccountDto): Promise<string> {
-		return new Promise((resolve, reject) => {
-			const grpcAccount: GrpcAccount = accountDtoToGrpcAccount(accountDto);
-
-			this.client.createAccount(
-				grpcAccount,
-				(error, grpcIdOutput) => {
-					if (error !== null) {
-						reject(new UnableToCreateAccountError(error.details));
-						return;
-					}
-
-					const accountId: string | undefined = grpcIdOutput?.grpcId;
-					if (accountId === undefined) {
-						reject(new UnableToCreateAccountError()); // TODO: message?
-						return;
-					}
-					resolve(accountId);
-				}
-			);
+	async createAccounts(accounts: Account[]): Promise<string[]> {
+		const grpcAccounts: GrpcAccount[] = accounts.map((account) => {
+			const grpcAccount: GrpcAccount = {
+				id: account.id ?? undefined, // TODO: ?? or ||?
+				ownerId: account.ownerId,
+				state: account.state,
+				type: account.type,
+				currencyCode: account.currencyCode,
+				debitBalance: account.debitBalance ?? undefined, // TODO: ?? or ||?
+				creditBalance: account.creditBalance ?? undefined, // TODO: ?? or ||?
+				timestampLastJournalEntry: account.timestampLastJournalEntry ?? undefined // TODO: ?? or ||?
+			};
+			return grpcAccount;
 		});
-	}
-
-	async createJournalEntries(journalEntryDtos: IJournalEntryDto[]): Promise<string[]> {
+		
 		return new Promise((resolve, reject) => {
-			const grpcJournalEntries: GrpcJournalEntry[] = journalEntryDtos.map((journalEntryDto) => {
-				return journalEntryDtoToGrpcJournalEntry(journalEntryDto);
-			});
-			const grpcJournalEntryArray: GrpcJournalEntryArray = {grpcJournalEntryArray: grpcJournalEntries};
-
-			this.client.createJournalEntries(
-				grpcJournalEntryArray,
+			this.client.createAccounts(
+				{grpcAccountArray: grpcAccounts},
 				(error, grpcIdArrayOutput) => {
-					if (error !== null) {
-						reject(new UnableToCreateJournalEntriesError(error.details));
+					if (error || !grpcIdArrayOutput) {
+						reject(new UnableToCreateAccountsError(error?.details));
 						return;
 					}
 
-					const grpcIdsOutput: GrpcId__Output[] | undefined = grpcIdArrayOutput?.grpcIdArray;
-					if (grpcIdsOutput === undefined) {
-						reject(new UnableToCreateJournalEntriesError()); // TODO: message?
-						return;
-					}
+					const grpcIdsOutput: GrpcId__Output[]
+						= grpcIdArrayOutput.grpcIdArray || [];
 
-					const idsJournalEntries: string[] = grpcIdsOutput.map((grpcIdOutput) => {
-						const journalEntryId: string | undefined = grpcIdOutput.grpcId;
-						if (journalEntryId === undefined) {
-							reject(new UnableToCreateJournalEntriesError()); // TODO: message?
-							throw new Error(); // TODO: return?
+					const accountIds: string[] = [];
+					for (const grpcIdOutput of grpcIdsOutput) {
+						if (!grpcIdOutput.grpcId) {
+							reject(new UnableToCreateAccountsError());
+							return;
 						}
-						return journalEntryId;
-					});
-					resolve(idsJournalEntries);
+						accountIds.push(grpcIdOutput.grpcId);
+					}
+					resolve(accountIds);
 				}
 			);
 		});
 	}
 
-	async getAccountById(accountId: string): Promise<IAccountDto | null> {
+	async createJournalEntries(journalEntries: JournalEntry[]): Promise<string[]> {
+		const grpcJournalEntries: GrpcJournalEntry[] = journalEntries.map((journalEntry) => {
+			const grpcJournalEntry: GrpcJournalEntry = {
+				id: journalEntry.id ?? undefined, // TODO: ?? or ||?
+				currencyCode: journalEntry.currencyCode,
+				amount: journalEntry.amount,
+				debitedAccountId: journalEntry.debitedAccountId,
+				creditedAccountId: journalEntry.creditedAccountId,
+				timestamp: journalEntry.timestamp ?? undefined // TODO: ?? or ||?
+			};
+			return grpcJournalEntry;
+		});
+		
 		return new Promise((resolve, reject) => {
-			const grpcAccountId: GrpcId = {grpcId: accountId};
-
-			this.client.getAccountById(
-				grpcAccountId,
-				(error, grpcGetAccountByIdResponseOutput) => {
-					if (error !== null) {
-						reject(new UnableToGetAccountError(error.details));
+			this.client.createJournalEntries(
+				{grpcJournalEntryArray: grpcJournalEntries},
+				(error, grpcIdArrayOutput) => {
+					if (error || !grpcIdArrayOutput) {
+						reject(new UnableToCreateJournalEntriesError(error?.details));
 						return;
 					}
 
-					const accountFound: boolean | undefined = grpcGetAccountByIdResponseOutput?.accountFound;
-					if (accountFound === undefined) {
-						reject(new UnableToGetAccountError()); // TODO: message?
-						return;
-					}
-					if (!accountFound) {
-						resolve(null);
-					}
+					const grpcIdsOutput: GrpcId__Output[]
+						= grpcIdArrayOutput.grpcIdArray || [];
 
-					const grpcAccountOutput: GrpcAccount__Output | undefined =
-						grpcGetAccountByIdResponseOutput?.grpcAccount;
-					if (grpcAccountOutput === undefined) {
-						reject(new UnableToGetAccountError()); // TODO: message?
-						return;
+					const journalEntryIds: string[] = [];
+					for (const grpcIdOutput of grpcIdsOutput) {
+						if (!grpcIdOutput.grpcId) {
+							reject(new UnableToCreateJournalEntriesError());
+							return;
+						}
+						journalEntryIds.push(grpcIdOutput.grpcId);
 					}
-
-					try {
-						const accountDto: IAccountDto = grpcAccountOutputToAccountDto(grpcAccountOutput);
-						resolve(accountDto);
-					} catch (error: unknown) {
-						reject(new UnableToGetAccountError()); // TODO: message?
-					}
+					resolve(journalEntryIds);
 				}
 			);
 		});
 	}
 
-	async getAccountsByExternalId(externalId: string): Promise<IAccountDto[]> {
+	async getAccountsByIds(accountIds: string[]): Promise<GrpcAccount__Output[]> {
+		const grpcAccountIds: GrpcId[] = accountIds.map((accountId) => {
+			return {grpcId: accountId};
+		});
+
 		return new Promise((resolve, reject) => {
-			const grpcExternalId: GrpcId = {grpcId: externalId};
-
-			this.client.getAccountsByExternalId(
-				grpcExternalId,
-				(error, grpcGetAccountsByExternalIdResponseOutput) => {
-					if (error !== null) {
-						reject(new UnableToGetAccountsError(error.details));
+			this.client.getAccountsByIds(
+				{grpcIdArray: grpcAccountIds},
+				(error, grpcAccountArrayOutput) => {
+					if (error || !grpcAccountArrayOutput) {
+						reject(new UnableToGetAccountsError(error?.details));
 						return;
 					}
 
-					const accountsFound: boolean | undefined = grpcGetAccountsByExternalIdResponseOutput?.accountsFound;
-					if (accountsFound === undefined) {
-						reject(new UnableToGetAccountsError()); // TODO: message?
-						return;
-					}
-					if (!accountsFound) {
-						resolve([]);
-					}
-
-					const grpcAccountsOutput: GrpcAccount__Output[] | undefined =
-						grpcGetAccountsByExternalIdResponseOutput?.grpcAccounts;
-					if (grpcAccountsOutput === undefined) {
-						reject(new UnableToGetAccountsError()); // TODO: message?
-						return;
-					}
-
-					try {
-						const accountDtos: IAccountDto[] =
-							grpcAccountsOutput.map((grpcAccountOutput) => {
-								return grpcAccountOutputToAccountDto(grpcAccountOutput);
-						});
-						resolve(accountDtos);
-					} catch (error: unknown) {
-						reject(new UnableToGetAccountsError()); // TODO: message?
-					}
+					const grpcAccountsOutput: GrpcAccount__Output[] = grpcAccountArrayOutput.grpcAccountArray || [];
+					resolve(grpcAccountsOutput);
 				}
 			);
 		});
 	}
 
-	async getJournalEntriesByAccountId(accountId: string): Promise<IJournalEntryDto[]> {
+	async getAccountsByOwnerId(ownerId: string): Promise<GrpcAccount__Output[]> {
 		return new Promise((resolve, reject) => {
-			const grpcAccountId: GrpcId = {grpcId: accountId};
+			this.client.getAccountsByOwnerId(
+				{grpcId: ownerId},
+				(error, grpcAccountArrayOutput) => {
+					if (error || !grpcAccountArrayOutput) {
+						reject(new UnableToGetAccountsError(error?.details));
+						return;
+					}
 
+					const grpcAccountsOutput: GrpcAccount__Output[] = grpcAccountArrayOutput.grpcAccountArray || [];
+					resolve(grpcAccountsOutput);
+				}
+			);
+		});
+	}
+
+	async getJournalEntriesByAccountId(accountId: string): Promise<GrpcJournalEntry__Output[]> {
+		return new Promise((resolve, reject) => {
 			this.client.getJournalEntriesByAccountId(
-				grpcAccountId,
-				(error, grpcGetJournalEntriesByAccountIdResponseOutput) => {
-					if (error !== null) {
-						reject(new UnableToGetJournalEntriesError(error.details));
+				{grpcId: accountId},
+				(error, grpcJournalEntryArrayOutput) => {
+					if (error || !grpcJournalEntryArrayOutput) {
+						reject(new UnableToGetJournalEntriesError(error?.details));
 						return;
 					}
 
-					const journalEntriesFound: boolean | undefined =
-						grpcGetJournalEntriesByAccountIdResponseOutput?.journalEntriesFound;
-					if (journalEntriesFound === undefined) {
-						reject(new UnableToGetJournalEntriesError()); // TODO: message?
-						return;
-					}
-					if (!journalEntriesFound) {
-						resolve([]);
-					}
-
-					const grpcJournalEntriesOutput: GrpcJournalEntry__Output[] | undefined =
-						grpcGetJournalEntriesByAccountIdResponseOutput?.grpcJournalEntries;
-					if (grpcJournalEntriesOutput === undefined) {
-						reject(new UnableToGetJournalEntriesError()); // TODO: message?
-						return;
-					}
-
-					try {
-						const journalEntryDtos: IJournalEntryDto[] =
-							grpcJournalEntriesOutput.map((grpcJournalEntryOutput) => {
-								return grpcJournalEntryOutputToJournalEntryDto(grpcJournalEntryOutput);
-							});
-						resolve(journalEntryDtos);
-					} catch (error: unknown) {
-						reject(new UnableToGetJournalEntriesError()); // TODO: message?
-					}
+					const grpcJournalEntriesOutput: GrpcJournalEntry__Output[] =
+						grpcJournalEntryArrayOutput.grpcJournalEntryArray || [];
+					resolve(grpcJournalEntriesOutput);
 				}
 			);
 		});

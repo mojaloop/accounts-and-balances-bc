@@ -29,7 +29,7 @@
 
 "use strict";
 
-import {IAccountsRepo} from "../domain/infrastructure-types/accounts_repo";
+import {IChartOfAccountsRepo} from "../domain/infrastructure-types/chart_of_accounts_repo";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {Collection, Db, MongoClient, MongoServerError} from "mongodb";
 import {
@@ -38,25 +38,26 @@ import {
     UnableToInitRepoError,
     UnableToStoreAccountsError
 } from "../domain/errors";
-import {Account} from "../domain/account";
+import {CoaAccount} from "../domain/coa_account";
+import {IBuiltinLedgerAccountsRepo, IBuiltinLedgerJournalEntriesRepo} from "../domain/infrastructure";
+import {BUILTIN_LEDGER_ACCOUNT_MONGO_SCHEMA} from "./builtin_ledger_accounts_mongo_repo";
 
-export const ACCOUNT_MONGO_SCHEMA: any = {
+export const BUILTIN_LEDGER_JOURNAL_ENTRY_MONGO_SCHEMA: any = {
     bsonType: "object",
-    title: "Account Mongo Schema",
+    title: "Built-in Ledger Journal Entry Mongo Schema",
     required: [
-        "_id",
+        "_id", // internalId.
+        "externalId",
         "ownerId",
         "state",
         "type",
         "currencyCode",
-        "currencyDecimals",
-        "debitBalance",
-        "creditBalance",
-        "timestampLastJournalEntry"
+        "currencyDecimals"
     ],
     properties: {
         // TODO: type vs bsonType; binData BSON type; check if _id can be replaced.
         _id: {/*type: "string",*/ bsonType: "string"},
+        externalId: {/*type: "string",*/ bsonType: "string"},
         ownerId: {/*type: "string",*/ bsonType: "string"},
         state: {/*type: "string",*/ bsonType: "string"},
         type: {/*type: "string",*/ bsonType: "string"},
@@ -66,7 +67,7 @@ export const ACCOUNT_MONGO_SCHEMA: any = {
     additionalProperties: false
 };
 
-export class AccountsMongoRepo implements IAccountsRepo {
+export class BuiltinLedgerJournalEntriesMongoRepo implements IBuiltinLedgerJournalEntriesRepo {
     // Properties received through the constructor.
     private readonly logger: ILogger;
     private readonly HOST: string;
@@ -150,32 +151,35 @@ export class AccountsMongoRepo implements IAccountsRepo {
         return accountsExist;
     }
 
-    async storeAccounts(accounts: Account[]): Promise<void> {
-        // Convert Account's internalId to Mongo's _id.
+    async storeAccounts(coaAccounts: CoaAccount[]): Promise<void> {
+        // Convert CoaAccount's internalId to Mongo's _id.
         // TODO: is this the best way to do it?
-        const mongoAccounts: any[] = accounts.map((account) => { // TODO: verify type.
+        const mongoAccounts: any[] = coaAccounts.map((coaAccount) => { // TODO: verify type.
             return {
-                _id: account.internalId,
-                externalId: account.externalId,
-                ownerId: account.ownerId,
-                state: account.state,
-                type: account.type,
-                currencyCode: account.currencyCode,
-                currencyDecimals: account.currencyDecimals
+                _id: coaAccount.internalId,
+                externalId: coaAccount.externalId,
+                ownerId: coaAccount.ownerId,
+                state: coaAccount.state,
+                type: coaAccount.type,
+                currencyCode: coaAccount.currencyCode,
+                currencyDecimals: coaAccount.currencyDecimals
             };
         });
 
         try {
             await this.collection.insertMany(mongoAccounts);
         } catch (error: unknown) {
-            if (error instanceof MongoServerError && error.code === AccountsMongoRepo.DUPLICATE_KEY_ERROR_CODE) { // TODO: should this be done?
+            if (
+                error instanceof MongoServerError
+                && error.code === ChartOfAccountsMongoRepo.DUPLICATE_KEY_ERROR_CODE
+            ) { // TODO: should this be done?
                 throw new AccountAlreadyExistsError();
             }
             throw new UnableToStoreAccountsError((error as any)?.message);
         }
     }
 
-    async getAccountsByInternalIds(internalIds: string[]): Promise<Account[]> {
+    async getAccountsByInternalIds(internalIds: string[]): Promise<CoaAccount[]> {
         let accounts: any[]; // TODO: verify type.
         try {
             accounts = await this.collection.find({_id: {$in: internalIds}}).toArray(); // TODO: verify filter; is there a simpler way to find by _id?
@@ -183,7 +187,7 @@ export class AccountsMongoRepo implements IAccountsRepo {
             throw new UnableToGetAccountsError((error as any)?.message);
         }
 
-        // Convert Mongo's _id to Account's internalId.
+        // Convert Mongo's _id to CoaAccount's internalId.
         // TODO: is this the best way to do it? will internalId be placed at the end of account?
         accounts.forEach((account) => {
             account.internalId = account._id;
@@ -192,7 +196,7 @@ export class AccountsMongoRepo implements IAccountsRepo {
         return accounts;
     }
 
-    async getAccountsByOwnerId(ownerId: string): Promise<Account[]> {
+    async getAccountsByOwnerId(ownerId: string): Promise<CoaAccount[]> {
         let accounts: any[]; // TODO: verify type.
         try {
             accounts = await this.collection.find({ownerId: ownerId}).toArray();
@@ -200,7 +204,7 @@ export class AccountsMongoRepo implements IAccountsRepo {
             throw new UnableToGetAccountsError((error as any)?.message);
         }
 
-        // Convert Mongo's _id to Account's internalId.
+        // Convert Mongo's _id to CoaAccount's internalId.
         // TODO: is this the best way to do it? will internalId be placed at the end of account?
         accounts.forEach((account) => {
             account.internalId = account._id;

@@ -4,24 +4,24 @@ import type { Long } from '@grpc/proto-loader';
 
 export interface GrpcAccount {
   'id'?: (string);
-  'externalId'?: (string);
+  'ownerId'?: (string);
   'state'?: (string);
   'type'?: (string);
   'currencyCode'?: (string);
-  'currencyDecimals'?: (number);
   'debitBalance'?: (string);
   'creditBalance'?: (string);
+  'balance'?: (string);
   'timestampLastJournalEntry'?: (number | string | Long);
 }
 
 export interface GrpcAccount__Output {
   'id'?: (string);
-  'externalId'?: (string);
+  'ownerId'?: (string);
   'state'?: (string);
   'type'?: (string);
   'currencyCode'?: (string);
-  'currencyDecimals'?: (number);
   'debitBalance'?: (string);
   'creditBalance'?: (string);
+  'balance'?: (string);
   'timestampLastJournalEntry'?: (number);
 }

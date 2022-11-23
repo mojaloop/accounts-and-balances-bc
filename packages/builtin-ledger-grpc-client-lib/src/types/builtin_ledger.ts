@@ -8,12 +8,12 @@ type SubtypeConstructor<Constructor extends new (...args: any) => any, Subtype> 
 };
 
 export interface ProtoGrpcType {
-  GrpcAccount: MessageTypeDefinition
-  GrpcAccountArray: MessageTypeDefinition
+  BuiltinLedgerGrpcAccount: MessageTypeDefinition
+  BuiltinLedgerGrpcAccountArray: MessageTypeDefinition
+  BuiltinLedgerGrpcId: MessageTypeDefinition
+  BuiltinLedgerGrpcIdArray: MessageTypeDefinition
+  BuiltinLedgerGrpcJournalEntry: MessageTypeDefinition
+  BuiltinLedgerGrpcJournalEntryArray: MessageTypeDefinition
   GrpcBuiltinLedger: SubtypeConstructor<typeof grpc.Client, _GrpcBuiltinLedgerClient> & { service: _GrpcBuiltinLedgerDefinition }
-  GrpcId: MessageTypeDefinition
-  GrpcIdArray: MessageTypeDefinition
-  GrpcJournalEntry: MessageTypeDefinition
-  GrpcJournalEntryArray: MessageTypeDefinition
 }
 

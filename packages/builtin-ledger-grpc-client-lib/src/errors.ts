@@ -29,8 +29,6 @@
 
 "use strict";
 
-export class UnableToSetCurrenciesError extends Error{}
-
 export class UnableToCreateAccountsError extends Error{}
 export class UnableToCreateJournalEntriesError extends Error{}
 

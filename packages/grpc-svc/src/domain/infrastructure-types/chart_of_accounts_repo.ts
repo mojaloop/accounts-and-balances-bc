@@ -29,22 +29,16 @@
 
 "use strict";
 
-/* ********** Constants Begin ********** */
+import {CoaAccount} from "../coa_account";
 
-// General.
-const BOUNDED_CONTEXT_NAME: string = "accounts-and-balances-bc";
-const SERVICE_NAME: string = "rest-integration-tests";
-const SERVICE_VERSION: string = "0.0.1";
+export interface IChartOfAccountsRepo {
+    init(): Promise<void>;
+    destroy(): Promise<void>;
 
-//
-const ACCESS_TOKEN: string = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InNSMHVoT2hpM05VbmJlMTF5SDZtOUZtcFpNN2JiRVl2czdpbGNfanN1MHMifQ.eyJ0eXAiOiJCZWFyZXIiLCJhenAiOiJzZWN1cml0eS1iYy11aSIsInJvbGVzIjpbIiJdLCJpYXQiOjE2NjQ0OTYyNjksImV4cCI6NDgyMDE5MTQ2OSwiYXVkIjoibW9qYWxvb3Audm5leHQuZGVmYXVsdF9hdWRpZW5jZSIsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6MzIwMS8iLCJzdWIiOiJ1c2VyOjp1c2VyIiwianRpIjoiNDVlODNkNjYtMThmOS00MTVlLWE2M2QtYzkyMGZiMTM2ZTU4In0.p3k1S9Qh03Y-SpNiUrjgEiurEkNHeYy75ACQJeVrqHzt6sD2vjLQcwxp77zBVU1e8CeIk56wGPhD9dXhBxF2AteoWYUBQTLz3urqnl9NhmWaTDdJDTVgipRRX3NuFHo30HdVIek_9HCFh4E2-_r0dKAYqhQhsIsvl8HigUNfgxsaqoSXaI4imfAqvo7Sr9SegLLN4XAV0MuKPmkYZZZCwvttf_w1K7ynT2XEvSUn1pCwvF4SkgblCJlCKWpWT0GpnG_P-oNuEpDABnemNPlA7BvGAAwBXpptZKV8dBnhrzPaV-u1CsiNS-EG_3oLkuK7C8Veg1meakzlJi5g0duc-A";
+    accountsExistByInternalIds(internalIds: string[]): Promise<boolean>;
 
-/* ********** Constants End ********** */
+    storeAccounts(accounts: CoaAccount[]): Promise<void>;
 
-describe("accounts and balances - integration tests with REST service", () => {
-	beforeAll(async () => {
-	});
-
-	afterAll(async () => {
-	});
-});
+    getAccountsByInternalIds(internalIds: string[]): Promise<CoaAccount[]>;
+    getAccountsByOwnerId(ownerId: string): Promise<CoaAccount[]>;
+}

@@ -31,27 +31,31 @@
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {ServerUnaryCall, sendUnaryData, status} from "@grpc/grpc-js";
-import {
-	GrpcAccount,
-	GrpcAccount__Output, GrpcAccountArray,
-	GrpcAccountArray__Output,
-	GrpcBuiltinLedgerHandlers,
-	GrpcId,
-	GrpcId__Output,
-	GrpcIdArray,
-	GrpcIdArray__Output,
-	GrpcJournalEntry,
-	GrpcJournalEntry__Output, GrpcJournalEntryArray,
-	GrpcJournalEntryArray__Output
-} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-client-lib";
 import {UnauthorizedError} from "../../domain/errors";
-import {Aggregate} from "../../domain/aggregate";
+import {BuiltinLedgerAggregate} from "../../domain/aggregate";
 import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
+import {BuiltinLedgerAccount} from "../../domain/builtin_ledger_account";
+import {
+	BuiltinLedgerGrpcAccount,
+	BuiltinLedgerGrpcAccount__Output,
+	BuiltinLedgerGrpcAccountArray,
+	BuiltinLedgerGrpcAccountArray__Output,
+	BuiltinLedgerGrpcId,
+	BuiltinLedgerGrpcId__Output,
+	BuiltinLedgerGrpcIdArray,
+	BuiltinLedgerGrpcIdArray__Output,
+	BuiltinLedgerGrpcJournalEntry, BuiltinLedgerGrpcJournalEntry__Output,
+	BuiltinLedgerGrpcJournalEntryArray,
+	BuiltinLedgerGrpcJournalEntryArray__Output,
+	GrpcBuiltinLedgerHandlers
+} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-client-lib";
+import {AccountState, AccountType} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import {BuiltinLedgerJournalEntry} from "../../domain/builtin_ledger_journal_entry";
 
 export class GrpcHandlers {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
-	private readonly aggregate: Aggregate;
+	private readonly aggregate: BuiltinLedgerAggregate;
 	// Other properties.
 	private static readonly UNKNOWN_ERROR_MESSAGE: string = "unknown error";
 	private readonly securityContext: CallSecurityContext = {
@@ -63,7 +67,7 @@ export class GrpcHandlers {
 
 	constructor(
 		logger: ILogger,
-		aggregate: Aggregate
+		aggregate: BuiltinLedgerAggregate
 	) {
 		this.logger = logger.createChild(this.constructor.name);
 		this.aggregate = aggregate;
@@ -79,14 +83,33 @@ export class GrpcHandlers {
 	}
 
 	private async createAccounts(
-		call: ServerUnaryCall<GrpcAccountArray__Output, GrpcIdArray>,
-		callback: sendUnaryData<GrpcIdArray>
+		call: ServerUnaryCall<BuiltinLedgerGrpcAccountArray__Output, BuiltinLedgerGrpcIdArray>,
+		callback: sendUnaryData<BuiltinLedgerGrpcIdArray>
 	): Promise<void> {
-		const grpcAccountsOutput: GrpcAccount__Output[] = call.request.grpcAccountArray || []; // TODO: assume that there's no error?
+		const builtinLedgerGrpcAccountsOutput: BuiltinLedgerGrpcAccount__Output[]
+			= call.request.builtinLedgerGrpcAccountArray || [];
+
+		const builtinLedgerAccounts: BuiltinLedgerAccount[]
+			= builtinLedgerGrpcAccountsOutput.map((builtinLedgerGrpcAccountOutput) => {
+			if (!builtinLedgerGrpcAccountOutput.currencyCode) {
+				throw new Error(); // TODO: create custom error.
+			}
+
+			const builtinLedgerAccount: BuiltinLedgerAccount = {
+				id: builtinLedgerGrpcAccountOutput.id ?? null, // TODO: ?? or ||?
+				state: builtinLedgerGrpcAccountOutput.state as AccountState, // TODO: cast?
+				type: builtinLedgerGrpcAccountOutput.type as AccountType, // TODO: cast?
+				currencyCode: builtinLedgerGrpcAccountOutput.currencyCode,
+				debitBalance: builtinLedgerGrpcAccountOutput.debitBalance ?? null, // TODO: ?? or ||?
+				creditBalance: builtinLedgerGrpcAccountOutput.creditBalance ?? null, // TODO: ?? or ||?
+				timestampLastJournalEntry: builtinLedgerGrpcAccountOutput.timestampLastJournalEntry ?? null // TODO: ?? or ||?
+			};
+			return builtinLedgerAccount;
+		});
 
 		let accountIds: string[];
 		try {
-			accountIds = await this.aggregate.createAccounts(grpcAccountsOutput, this.securityContext);
+			accountIds = await this.aggregate.createAccounts(builtinLedgerAccounts, this.securityContext);
 		} catch (error: unknown) {
 			if (error instanceof UnauthorizedError) {
 				callback(
@@ -102,22 +125,44 @@ export class GrpcHandlers {
 			return;
 		}
 
-		const grpcAccountIds: GrpcId[] = accountIds.map((accountId) => {
-			return {grpcId: accountId}; // TODO: return object directly?
+		const builtinLedgerGrpcAccountIds: BuiltinLedgerGrpcId[] = accountIds.map((accountId) => {
+			return {builtinLedgerGrpcId: accountId};
 		});
-		// const grpcIdArray: GrpcIdArray = {grpcIdArray: grpcAccountIds};
-		callback(null, {grpcIdArray: grpcAccountIds}); // TODO: pass object directly?
+		callback(null, {builtinLedgerGrpcIdArray: builtinLedgerGrpcAccountIds});
 	}
 
 	private async createJournalEntries(
-		call: ServerUnaryCall<GrpcJournalEntryArray__Output, GrpcIdArray>,
-		callback: sendUnaryData<GrpcIdArray>
+		call: ServerUnaryCall<BuiltinLedgerGrpcJournalEntryArray__Output, BuiltinLedgerGrpcIdArray>,
+		callback: sendUnaryData<BuiltinLedgerGrpcIdArray>
 	): Promise<void> {
-		const grpcJournalEntriesOutput: GrpcJournalEntry__Output[] = call.request.grpcJournalEntryArray || []; // TODO: assume that there's no error?
+		const builtinLedgerGrpcJournalEntriesOutput: BuiltinLedgerGrpcJournalEntry__Output[]
+			= call.request.builtinLedgerGrpcJournalEntryArray || [];
+
+		const builtinLedgerJournalEntries: BuiltinLedgerJournalEntry[]
+			= builtinLedgerGrpcJournalEntriesOutput.map((builtinLedgerGrpcJournalEntryOutput) => {
+			if (
+				!builtinLedgerGrpcJournalEntryOutput.currencyCode
+				|| !builtinLedgerGrpcJournalEntryOutput.debitedAccountId
+				|| !builtinLedgerGrpcJournalEntryOutput.creditedAccountId
+			) {
+				throw new Error(); // TODO: create custom error.
+			}
+
+			const builtinLedgerJournalEntry: BuiltinLedgerJournalEntry = {
+				id: builtinLedgerGrpcJournalEntryOutput.id ?? null, // TODO: ?? or ||?
+				currencyCode: builtinLedgerGrpcJournalEntryOutput.currencyCode,
+				amount: builtinLedgerGrpcJournalEntryOutput.currencyCode,
+				debitedAccountId: builtinLedgerGrpcJournalEntryOutput.debitedAccountId,
+				creditedAccountId: builtinLedgerGrpcJournalEntryOutput.creditedAccountId,
+				timestamp: builtinLedgerGrpcJournalEntryOutput.timestamp ?? null // TODO: ?? or ||?
+			};
+			return builtinLedgerJournalEntry;
+		});
 
 		let journalEntryIds: string[];
 		try {
-			journalEntryIds = await this.aggregate.createJournalEntries(grpcJournalEntriesOutput, this.securityContext);
+			journalEntryIds
+				= await this.aggregate.createJournalEntries(builtinLedgerJournalEntries, this.securityContext);
 		} catch (error: unknown) {
 			if (error instanceof UnauthorizedError) {
 				callback(
@@ -133,35 +178,35 @@ export class GrpcHandlers {
 			return;
 		}
 
-		const grpcJournalEntryIds: GrpcId[] = journalEntryIds.map((journalEntryId) => {
-			return {grpcId: journalEntryId}; // TODO: return object directly?
+		const builtinLedgerGrpcJournalEntryIds: BuiltinLedgerGrpcId[] = journalEntryIds.map((journalEntryId) => {
+			return {builtinLedgerGrpcId: journalEntryId};
 		});
-		// const grpcIdArray: GrpcIdArray = {grpcIdArray: grpcJournalEntryIds};
-		callback(null, {grpcIdArray: grpcJournalEntryIds}); // TODO: pass object directly?
+		callback(null, {builtinLedgerGrpcIdArray: builtinLedgerGrpcJournalEntryIds});
 	}
 
 	private async getAccountsByIds(
-		call: ServerUnaryCall<GrpcIdArray__Output, GrpcAccountArray>,
-		callback: sendUnaryData<GrpcAccountArray>
+		call: ServerUnaryCall<BuiltinLedgerGrpcIdArray__Output, BuiltinLedgerGrpcAccountArray>,
+		callback: sendUnaryData<BuiltinLedgerGrpcAccountArray>
 	): Promise<void> {
-		const grpcAccountIdsOutput: GrpcId__Output[] = call.request.grpcIdArray || []; // TODO: assume that there's no error?
+		const builtinLedgerGrpcAccountIdsOutput: BuiltinLedgerGrpcId__Output[]
+			= call.request.builtinLedgerGrpcIdArray || [];
 
 		const accountIds: string[] = [];
-		for (const grpcAccountIdOutput of grpcAccountIdsOutput) {
-			// const accountId: string | undefined = grpcAccountIdOutput.grpcId;
-			if (!grpcAccountIdOutput.grpcId) { // TODO: handle this case? use accountId aux variable?
+		for (const builtinLedgerGrpcAccountIdOutput of builtinLedgerGrpcAccountIdsOutput) {
+			// const accountId: string | undefined = builtinLedgerGrpcAccountIdOutput.builtinLedgerGrpcId; TODO: use this auxiliary variable?
+			if (!builtinLedgerGrpcAccountIdOutput.builtinLedgerGrpcId) {
 				callback(
-					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE}, // TODO: unknown error?
+					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
 					null
 				);
 				return;
 			}
-			accountIds.push(grpcAccountIdOutput.grpcId);
+			accountIds.push(builtinLedgerGrpcAccountIdOutput.builtinLedgerGrpcId);
 		}
 
-		let grpcAccounts: GrpcAccount[];
+		let builtinLedgerAccounts: BuiltinLedgerAccount[];
 		try {
-			grpcAccounts = await this.aggregate.getAccountsByIds(accountIds, this.securityContext);
+			builtinLedgerAccounts = await this.aggregate.getAccountsByIds(accountIds, this.securityContext);
 		} catch (error: unknown) {
 			if (error instanceof UnauthorizedError) {
 				callback(
@@ -177,25 +222,39 @@ export class GrpcHandlers {
 			return;
 		}
 
-		callback(null, {grpcAccountArray: grpcAccounts}); // TODO: pass object directly?
+		const builtinLedgerGrpcAccounts: BuiltinLedgerGrpcAccount[]
+			= builtinLedgerAccounts.map((builtinLedgerAccount) => {
+			const builtinLedgerGrpcAccount: BuiltinLedgerGrpcAccount = {
+				id: builtinLedgerAccount.id ?? undefined, // TODO: ?? or ||?
+				state: builtinLedgerAccount.state,
+				type: builtinLedgerAccount.type,
+				currencyCode: builtinLedgerAccount.currencyCode,
+				debitBalance: builtinLedgerAccount.debitBalance ?? undefined, // TODO: ?? or ||?
+				creditBalance: builtinLedgerAccount.creditBalance ?? undefined, // TODO: ?? or ||?
+				timestampLastJournalEntry: builtinLedgerAccount.timestampLastJournalEntry ?? undefined // TODO: ?? or ||?
+			};
+			return builtinLedgerGrpcAccount;
+		});
+		callback(null, {builtinLedgerGrpcAccountArray: builtinLedgerGrpcAccounts});
 	}
 
 	private async getJournalEntriesByAccountId(
-		call: ServerUnaryCall<GrpcId__Output, GrpcJournalEntryArray>,
-		callback: sendUnaryData<GrpcJournalEntryArray>
+		call: ServerUnaryCall<BuiltinLedgerGrpcId__Output, BuiltinLedgerGrpcJournalEntryArray>,
+		callback: sendUnaryData<BuiltinLedgerGrpcJournalEntryArray>
 	): Promise<void> {
-		const accountId: string | undefined = call.request.grpcId;
-		if (!accountId) { // TODO: handle this case?
+		const accountId: string | undefined = call.request.builtinLedgerGrpcId;
+		if (!accountId) {
 			callback(
-				{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE}, // TODO: unknown error?
+				{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
 				null
 			);
 			return;
 		}
 
-		let grpcJournalEntries: GrpcJournalEntry[];
+		let builtinLedgerJournalEntries: BuiltinLedgerJournalEntry[];
 		try {
-			grpcJournalEntries = await this.aggregate.getJournalEntriesByAccountId(accountId, this.securityContext);
+			builtinLedgerJournalEntries
+				= await this.aggregate.getJournalEntriesByAccountId(accountId, this.securityContext);
 		} catch (error: unknown) {
 			if (error instanceof UnauthorizedError) {
 				callback(
@@ -211,6 +270,18 @@ export class GrpcHandlers {
 			return;
 		}
 
-		callback(null, {grpcJournalEntryArray: grpcJournalEntries}); // TODO: pass object directly?
+		const builtinLedgerGrpcJournalEntries: BuiltinLedgerGrpcJournalEntry[]
+			= builtinLedgerJournalEntries.map((builtinLedgerJournalEntry) => {
+			const builtinLedgerGrpcJournalEntry: BuiltinLedgerGrpcJournalEntry = {
+				id: builtinLedgerJournalEntry.id ?? undefined, // TODO: ?? or ||?
+				currencyCode: builtinLedgerJournalEntry.currencyCode,
+				amount: builtinLedgerJournalEntry.currencyCode,
+				debitedAccountId: builtinLedgerJournalEntry.debitedAccountId,
+				creditedAccountId: builtinLedgerJournalEntry.creditedAccountId,
+				timestamp: builtinLedgerJournalEntry.timestamp ?? undefined // TODO: ?? or ||?
+			};
+			return builtinLedgerGrpcJournalEntry;
+		});
+		callback(null, {builtinLedgerGrpcJournalEntryArray: builtinLedgerGrpcJournalEntries});
 	}
 }

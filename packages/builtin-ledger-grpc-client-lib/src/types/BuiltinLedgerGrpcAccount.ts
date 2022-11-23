@@ -2,23 +2,21 @@
 
 import type { Long } from '@grpc/proto-loader';
 
-export interface GrpcAccount {
+export interface BuiltinLedgerGrpcAccount {
   'id'?: (string);
   'state'?: (string);
   'type'?: (string);
   'currencyCode'?: (string);
-  'balance'?: (string);
   'debitBalance'?: (string);
   'creditBalance'?: (string);
   'timestampLastJournalEntry'?: (number | string | Long);
 }
 
-export interface GrpcAccount__Output {
+export interface BuiltinLedgerGrpcAccount__Output {
   'id'?: (string);
   'state'?: (string);
   'type'?: (string);
   'currencyCode'?: (string);
-  'balance'?: (string);
   'debitBalance'?: (string);
   'creditBalance'?: (string);
   'timestampLastJournalEntry'?: (number);

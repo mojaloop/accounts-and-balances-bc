@@ -29,16 +29,36 @@
 
 "use strict";
 
-import {Account} from "../account";
+import {AccountState, AccountType} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
-export interface IAccountsRepo {
+export type LedgerAdapterAccount = {
+    id: string | null;
+    state: AccountState;
+    type: AccountType;
+    currencyCode: string;
+    debitBalance: string | null;
+    creditBalance: string | null;
+    timestampLastJournalEntry: number | null;
+}
+
+export type LedgerAdapterJournalEntry = {
+    id: string | null;
+    currencyCode: string;
+    amount: string;
+    debitedAccountId: string;
+    creditedAccountId: string;
+    timestamp: number | null;
+}
+
+export interface ILedgerAdapter {
     init(): Promise<void>;
     destroy(): Promise<void>;
 
-    accountsExistByInternalIds(internalIds: string[]): Promise<boolean>;
+    setCurrencies(currencies: {code: string, decimals: number}[]): Promise<void>;
 
-    storeAccounts(accounts: Account[]): Promise<void>;
+    createAccounts(ledgerAdapterAccounts: LedgerAdapterAccount[]): Promise<string[]>;
+    createJournalEntries(ledgerAdapterJournalEntries: LedgerAdapterJournalEntry[]): Promise<string[]>;
 
-    getAccountsByInternalIds(internalIds: string[]): Promise<Account[]>;
-    getAccountsByOwnerId(ownerId: string): Promise<Account[]>;
+    getAccountsByIds(ledgerAccountIds: string[]): Promise<LedgerAdapterAccount[]>;
+    getJournalEntriesByAccountId(ledgerAccountId: string): Promise<LedgerAdapterJournalEntry[]>;
 }

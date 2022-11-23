@@ -29,63 +29,64 @@
 
 "use strict";
 
-import {AccountState, AccountType, IAccountDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
-import {bigintToString} from "packages/ledger-grpc-svc/src/domain/converters";
+import {bigintToString} from "./converters";
 
-// TODO: implements/extends anything?
-export class Account {
+export type BuiltinLedgerJournalEntry = {
+	id: string | null;
+	currencyCode: string;
+	amount: string;
+	debitedAccountId: string;
+	creditedAccountId: string;
+	timestamp: number | null;
+}
+
+/*export class BuiltinLedgerJournalEntry {
 	id: string;
 	externalId: string | null;
-	state: AccountState;
-	type: AccountType;
+	externalCategory: string | null;
 	currencyCode: string;
 	currencyDecimals: number;
-	debitBalance: bigint;
-	creditBalance: bigint;
-	timestampLastJournalEntry: number | null;
+	amount: bigint;
+	debitedAccountId: string;
+	creditedAccountId: string;
+	timestamp: number | null;
 
 	constructor(
 		id: string,
 		externalId: string | null,
-		state: AccountState,
-		type: AccountType,
+		externalCategory: string | null,
 		currencyCode: string,
 		currencyDecimals: number,
-		debitBalance: bigint,
-		creditBalance: bigint,
-		timestampLastJournalEntry: number | null
+		amount: bigint,
+		debitedAccountId: string,
+		creditedAccountId: string,
+		timestamp: number | null
 	) {
 		this.id = id;
 		this.externalId = externalId;
-		this.state = state;
-		this.type = type;
+		this.externalCategory = externalCategory;
 		this.currencyCode = currencyCode;
 		this.currencyDecimals = currencyDecimals;
-		this.debitBalance = debitBalance;
-		this.creditBalance = creditBalance;
-		this.timestampLastJournalEntry = timestampLastJournalEntry;
+		this.amount = amount;
+		this.debitedAccountId = debitedAccountId;
+		this.creditedAccountId = creditedAccountId;
+		this.timestamp = timestamp;
 	}
 
-	toDto(): IAccountDto {
-		const debitBalance: string = bigintToString(this.debitBalance, this.currencyDecimals);
-		const creditBalance: string = bigintToString(this.creditBalance, this.currencyDecimals);
+	toDto(): IJournalEntryDto {
+		const amount: string = bigintToString(this.amount, this.currencyDecimals);
 
-		const accountDto: IAccountDto = {
+		const journalEntryDto: IJournalEntryDto = {
 			id: this.id,
 			externalId: this.externalId,
-			state: this.state,
-			type: this.type,
+			externalCategory: this.externalCategory,
 			currencyCode: this.currencyCode,
-			//currencyDecimals: this.currencyDecimals,
-			debitBalance: debitBalance,
-			creditBalance: creditBalance,
-			timestampLastJournalEntry: this.timestampLastJournalEntry
+			currencyDecimals: this.currencyDecimals,
+			amount: amount,
+			debitedAccountId: this.debitedAccountId,
+			creditedAccountId: this.creditedAccountId,
+			timestamp: this.timestamp
 		};
-		return accountDto;
+		return journalEntryDto;
 	}
-
-	calculateBalance(): bigint {
-		const balance: bigint = this.creditBalance - this.debitBalance;
-		return balance;
-	}
-}
+}*/

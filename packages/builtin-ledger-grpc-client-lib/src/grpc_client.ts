@@ -41,12 +41,12 @@ import {
 } from "./errors";
 import {GrpcBuiltinLedgerClient} from "./types/GrpcBuiltinLedger";
 import {ProtoGrpcType} from "./types/builtin_ledger";
-import {GrpcAccount__Output} from "./types/GrpcAccount";
-import {GrpcId, GrpcId__Output} from "./types/GrpcId";
-import {GrpcAccountArray} from "./types/GrpcAccountArray";
-import {GrpcJournalEntry__Output} from "./types/GrpcJournalEntry";
-import {GrpcJournalEntryArray} from "./types/GrpcJournalEntryArray";
-import {join} from "path";
+import {BuiltinLedgerGrpcAccountArray} from "./types/BuiltinLedgerGrpcAccountArray";
+import {BuiltinLedgerGrpcJournalEntry__Output} from "./types/BuiltinLedgerGrpcJournalEntry";
+import {BuiltinLedgerGrpcId, BuiltinLedgerGrpcId__Output} from "./types/BuiltinLedgerGrpcId";
+import {BuiltinLedgerGrpcAccount__Output} from "./types/BuiltinLedgerGrpcAccount";
+import {BuiltinLedgerGrpcIdArray} from "./types/BuiltinLedgerGrpcIdArray";
+import {BuiltinLedgerGrpcJournalEntryArray} from "./types/BuiltinLedgerGrpcJournalEntryArray";
 
 export class BuiltinLedgerGrpcClient {
 	// Properties received through the constructor.
@@ -103,25 +103,26 @@ export class BuiltinLedgerGrpcClient {
 		this.logger.info("gRPC client destroyed 🏁");
 	}
 
-	async createAccounts(grpcAccountArray: GrpcAccountArray): Promise<string[]> {
+	async createAccounts(builtinLedgerGrpcAccountArray: BuiltinLedgerGrpcAccountArray): Promise<string[]> {
 		return new Promise((resolve, reject) => {
 			this.client.createAccounts(
-				grpcAccountArray,
-				(error, grpcIdArrayOutput) => {
-					if (error || !grpcIdArrayOutput) {
-						reject(new UnableToCreateAccountsError(error?.details)); // TODO: should there be a message when error is null?
+				builtinLedgerGrpcAccountArray,
+				(error, builtinLedgerGrpcIdArrayOutput) => {
+					if (error || !builtinLedgerGrpcIdArrayOutput) {
+						reject(new UnableToCreateAccountsError(error?.details));
 						return;
 					}
 
-					const grpcIdsOutput: GrpcId__Output[] = grpcIdArrayOutput.grpcIdArray || []; // TODO: assume that there's no error?
+					const builtinLedgerGrpcIdsOutput: BuiltinLedgerGrpcId__Output[]
+						= builtinLedgerGrpcIdArrayOutput.builtinLedgerGrpcIdArray || [];
 
 					const accountIds: string[] = [];
-					for (const grpcIdOutput of grpcIdsOutput) {
-						if (!grpcIdOutput.grpcId) {
-							reject(new UnableToCreateAccountsError()); // TODO: should there be a message?
+					for (const builtinLedgerGrpcIdOutput of builtinLedgerGrpcIdsOutput) {
+						if (!builtinLedgerGrpcIdOutput.builtinLedgerGrpcId) {
+							reject(new UnableToCreateAccountsError());
 							return;
 						}
-						accountIds.push(grpcIdOutput.grpcId);
+						accountIds.push(builtinLedgerGrpcIdOutput.builtinLedgerGrpcId);
 					}
 					resolve(accountIds);
 				}
@@ -129,59 +130,66 @@ export class BuiltinLedgerGrpcClient {
 		});
 	}
 
-	async createJournalEntries(grpcJournalEntryArray: GrpcJournalEntryArray): Promise<string[]> {
+	async createJournalEntries(builtinLedgerGrpcJournalEntryArray: BuiltinLedgerGrpcJournalEntryArray): Promise<string[]> {
 		return new Promise((resolve, reject) => {
 			this.client.createJournalEntries(
-				grpcJournalEntryArray,
-				(error, grpcIdArrayOutput) => {
-					if (error || !grpcIdArrayOutput) {
-						reject(new UnableToCreateJournalEntriesError(error?.details)); // TODO: should there be a message when error is null?
+				builtinLedgerGrpcJournalEntryArray,
+				(error, builtinLedgerGrpcIdArrayOutput) => {
+					if (error || !builtinLedgerGrpcIdArrayOutput) {
+						reject(new UnableToCreateJournalEntriesError(error?.details));
 						return;
 					}
 
-					// TODO: implement based on createAccounts().
+					const builtinLedgerGrpcIdsOutput: BuiltinLedgerGrpcId__Output[]
+						= builtinLedgerGrpcIdArrayOutput.builtinLedgerGrpcIdArray || [];
+
+					const journalEntryIds: string[] = [];
+					for (const builtinLedgerGrpcIdOutput of builtinLedgerGrpcIdsOutput) {
+						if (!builtinLedgerGrpcIdOutput.builtinLedgerGrpcId) {
+							reject(new UnableToCreateJournalEntriesError());
+							return;
+						}
+						journalEntryIds.push(builtinLedgerGrpcIdOutput.builtinLedgerGrpcId);
+					}
+					resolve(journalEntryIds);
 				}
 			);
 		});
 	}
 
-	async getAccountsByIds(accountIds: string[]): Promise<GrpcAccount__Output[]> {
+	async getAccountsByIds(builtinLedgerGrpcAccountIdArray: BuiltinLedgerGrpcIdArray)
+		: Promise<BuiltinLedgerGrpcAccount__Output[]> {
 		return new Promise((resolve, reject) => {
-			const grpcAccountIds: GrpcId[] = accountIds.map((accountId) => {
-				return {grpcId: accountId}; // TODO: return object directly?
-			});
-			// const grpcAccountIdArray: GrpcIdArray = {grpcIdArray: grpcAccountIds};
-
 			this.client.getAccountsByIds(
-				{grpcIdArray: grpcAccountIds}, // TODO: pass object directly?
-				(error, grpcAccountArrayOutput) => {
-					if (error || !grpcAccountArrayOutput) {
-						reject(new UnableToGetAccountsError(error?.details)); // TODO: should there be a message when error is null?
+				builtinLedgerGrpcAccountIdArray,
+				(error, builtinLedgerGrpcAccountArrayOutput) => {
+					if (error || !builtinLedgerGrpcAccountArrayOutput) {
+						reject(new UnableToGetAccountsError(error?.details));
 						return;
 					}
 
-					const grpcAccountsOutput: GrpcAccount__Output[] = grpcAccountArrayOutput.grpcAccountArray || []; // TODO: assume that there's no error?
-					resolve(grpcAccountsOutput);
+					const builtinLedgerGrpcAccountsOutput: BuiltinLedgerGrpcAccount__Output[]
+						= builtinLedgerGrpcAccountArrayOutput.builtinLedgerGrpcAccountArray || [];
+					resolve(builtinLedgerGrpcAccountsOutput);
 				}
 			);
 		});
 	}
 
-	async getJournalEntriesByAccountId(accountId: string): Promise<GrpcJournalEntry__Output[]> {
+	async getJournalEntriesByAccountId(builtinLedgerGrpcAccountId: BuiltinLedgerGrpcId)
+		: Promise<BuiltinLedgerGrpcJournalEntry__Output[]> {
 		return new Promise((resolve, reject) => {
-			// const grpcAccountId: GrpcId = {grpcId: accountId};
-
 			this.client.getJournalEntriesByAccountId(
-				{grpcId: accountId}, // TODO: pass object directly?
-				(error, grpcJournalEntryArrayOutput) => {
-					if (error || !grpcJournalEntryArrayOutput) {
-						reject(new UnableToGetJournalEntriesError(error?.details)); // TODO: should there be a message when error is null?
+				builtinLedgerGrpcAccountId,
+				(error, builtinLedgerGrpcJournalEntryArrayOutput) => {
+					if (error || !builtinLedgerGrpcJournalEntryArrayOutput) {
+						reject(new UnableToGetJournalEntriesError(error?.details));
 						return;
 					}
 
-					const grpcJournalEntriesOutput: GrpcJournalEntry__Output[] =
-						grpcJournalEntryArrayOutput.grpcJournalEntryArray || []; // TODO: assume that there's no error?
-					resolve(grpcJournalEntriesOutput);
+					const builtinLedgerGrpcJournalEntriesOutput: BuiltinLedgerGrpcJournalEntry__Output[] =
+						builtinLedgerGrpcJournalEntryArrayOutput.builtinLedgerGrpcJournalEntryArray || [];
+					resolve(builtinLedgerGrpcJournalEntriesOutput);
 				}
 			);
 		});

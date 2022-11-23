@@ -29,15 +29,14 @@
 
 "use strict";
 
-import {IAccountDto, IJournalEntryDto} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import {BuiltinLedgerAccount} from "./builtin_ledger_account";
+import {BuiltinLedgerJournalEntry} from "./builtin_ledger_journal_entry";
 
-export interface IAccountsRepo {
+export interface IBuiltinLedgerAccountsRepo {
 	init(): Promise<void>;
 	destroy(): Promise<void>;
-	accountExistsById(accountId: string): Promise<boolean>;
-	storeNewAccount(account: IAccountDto): Promise<void>; // Throws if account.id is not unique.
-	getAccountById(accountId: string): Promise<IAccountDto | null>;
-	getAccountsByExternalId(externalId: string): Promise<IAccountDto[]>;
+	storeNewAccounts(accounts: BuiltinLedgerAccount[]): Promise<void>;
+	getAccountsByIds(accountIds: string[]): Promise<BuiltinLedgerAccount[]>;
 	updateAccountDebitBalanceAndTimestampById(
 		accountId: string,
 		debitBalance: string,
@@ -48,10 +47,9 @@ export interface IAccountsRepo {
 		timestampLastJournalEntry: number): Promise<void>;
 }
 
-export interface IJournalEntriesRepo {
+export interface IBuiltinLedgerJournalEntriesRepo {
 	init(): Promise<void>;
 	destroy(): Promise<void>;
-	journalEntryExistsById(journalEntryId: string): Promise<boolean>;
-	storeNewJournalEntry(journalEntry: IJournalEntryDto): Promise<void>; // Throws if account.id is not unique.
-	getJournalEntriesByAccountId(accountId: string): Promise<IJournalEntryDto[]>;
+	storeNewJournalEntries(journalEntries: BuiltinLedgerJournalEntry[]): Promise<void>;
+	getJournalEntriesByAccountId(accountId: string): Promise<BuiltinLedgerJournalEntry[]>;
 }

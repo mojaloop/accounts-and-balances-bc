@@ -33,7 +33,7 @@ export type AccountState = "ACTIVE" | "DELETED" | "INACTIVE";
 
 export type AccountType = "FEE" | "MULTILATERAL" | "POSITION" | "RECON" | "SETTLEMENT";
 
-export type AccountDto = {
+export type Account = {
 	id: string | null;
 	ownerId: string;
 	state: AccountState;
@@ -45,7 +45,7 @@ export type AccountDto = {
 	timestampLastJournalEntry: number | null;
 }
 
-export type JournalEntryDto = {
+export type JournalEntry = {
 	id: string | null;
 	ownerId: string | null;
 	currencyCode: string;
