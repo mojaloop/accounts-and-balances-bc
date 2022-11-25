@@ -34,7 +34,6 @@ import {loadSync, Options, PackageDefinition} from "@grpc/proto-loader";
 import {credentials, GrpcObject, loadPackageDefinition, Deadline} from "@grpc/grpc-js";
 import {Account, JournalEntry} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {GrpcId, GrpcId__Output} from "./types/GrpcId";
-import {GrpcIdArray} from "./types/GrpcIdArray";
 import {GrpcAccount, GrpcAccount__Output} from "./types/GrpcAccount";
 import {GrpcJournalEntry, GrpcJournalEntry__Output} from "./types/GrpcJournalEntry";
 import {GrpcAccountsAndBalancesClient} from "./types/GrpcAccountsAndBalances";

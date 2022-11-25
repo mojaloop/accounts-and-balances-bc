@@ -40,7 +40,7 @@ import {
 import {loadSync, Options, PackageDefinition} from "@grpc/proto-loader";
 
 import {TokenHelper} from "@mojaloop/security-bc-client-lib";
-import {Aggregate} from "../../domain/aggregate";
+import {BuiltinLedgerAggregate} from "../../domain/aggregate";
 import {
 	GrpcBuiltinLedgerHandlers,
 	ProtoGrpcType
@@ -63,7 +63,7 @@ export class GrpcServer {
 	constructor(
 		logger: ILogger,
 		tokenHelper: TokenHelper,
-		aggregate: Aggregate,
+		aggregate: BuiltinLedgerAggregate,
 		host: string,
 		portNo: number
 	) {

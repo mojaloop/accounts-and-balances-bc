@@ -35,7 +35,7 @@ export type LedgerAdapterAccount = {
     id: string | null;
     state: AccountState;
     type: AccountType;
-    currencyCode: string;
+    currencyCode: string; // TODO: why no currency decimals?
     debitBalance: string | null;
     creditBalance: string | null;
     timestampLastJournalEntry: number | null;
@@ -43,6 +43,7 @@ export type LedgerAdapterAccount = {
 
 export type LedgerAdapterJournalEntry = {
     id: string | null;
+    ownerId: string | null; // TODO: why ownerId here and not on the account type? should this really be called ownerId?
     currencyCode: string;
     amount: string;
     debitedAccountId: string;

@@ -29,16 +29,107 @@
 
 "use strict";
 
+import {AccountState, AccountType} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {bigintToString} from "./converters";
 
-export type BuiltinLedgerJournalEntry = {
+// TODO: does it make sense to have DTO and non-DTO types?
+
+export type BuiltinLedgerAccountDto = {
 	id: string | null;
+	state: AccountState;
+	type: AccountType;
+	currencyCode: string;
+	debitBalance: string | null;
+	creditBalance: string | null;
+	timestampLastJournalEntry: number | null;
+}
+
+export type BuiltinLedgerAccount = {
+	id: string;
+	state: AccountState;
+	type: AccountType;
+	currencyCode: string;
+	currencyDecimals: number;
+	debitBalance: bigint;
+	creditBalance: bigint;
+	timestampLastJournalEntry: number | null;
+}
+
+export type BuiltinLedgerJournalEntryDto = {
+	id: string | null;
+	ownerId: string;
 	currencyCode: string;
 	amount: string;
 	debitedAccountId: string;
 	creditedAccountId: string;
 	timestamp: number | null;
 }
+
+export type BuiltinLedgerJournalEntry = {
+	id: string;
+	ownerId: string;
+	currencyCode: string;
+	currencyDecimals: number;
+	amount: bigint;
+	debitedAccountId: string;
+	creditedAccountId: string;
+	timestamp: number;
+}
+
+/*export class BuiltinLedgerAccount {
+	id: string | null;
+	state: AccountState;
+	type: AccountType;
+	currencyCode: string;
+	debitBalance: string | null;
+	creditBalance: string | null;
+	timestampLastJournalEntry: number | null;
+
+	constructor(
+		id: string,
+		externalId: string | null,
+		state: AccountState,
+		type: AccountType,
+		currencyCode: string,
+		currencyDecimals: number,
+		debitBalance: bigint,
+		creditBalance: bigint,
+		timestampLastJournalEntry: number | null
+	) {
+		this.id = id;
+		this.externalId = externalId;
+		this.state = state;
+		this.type = type;
+		this.currencyCode = currencyCode;
+		this.currencyDecimals = currencyDecimals;
+		this.debitBalance = debitBalance;
+		this.creditBalance = creditBalance;
+		this.timestampLastJournalEntry = timestampLastJournalEntry;
+	}
+
+	toDto(): IAccountDto {
+		const debitBalance: string = bigintToString(this.debitBalance, this.currencyDecimals);
+		const creditBalance: string = bigintToString(this.creditBalance, this.currencyDecimals);
+
+		const accountDto: IAccountDto = {
+			id: this.id,
+			externalId: this.externalId,
+			state: this.state,
+			type: this.type,
+			currencyCode: this.currencyCode,
+			//currencyDecimals: this.currencyDecimals,
+			debitBalance: debitBalance,
+			creditBalance: creditBalance,
+			timestampLastJournalEntry: this.timestampLastJournalEntry
+		};
+		return accountDto;
+	}
+
+	calculateBalance(): bigint {
+		const balance: bigint = this.creditBalance - this.debitBalance;
+		return balance;
+	}
+}*/
 
 /*export class BuiltinLedgerJournalEntry {
 	id: string;

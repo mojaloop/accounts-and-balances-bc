@@ -55,9 +55,6 @@
   },
   "workspaces": [
     "packages/public-types-lib/",
-    "packages/domain-lib/",
-    "packages/infrastructure-lib/",
-    "packages/grpc-common-lib/",
     "packages/*"
   ]
 }

@@ -29,27 +29,30 @@
 
 "use strict";
 
-import {BuiltinLedgerAccount} from "./builtin_ledger_account";
-import {BuiltinLedgerJournalEntry} from "./builtin_ledger_journal_entry";
+import {BuiltinLedgerAccount, BuiltinLedgerJournalEntry} from "./entities";
+
+// TODO: use DTOs instead? if so, they need to have the currency decimals.
 
 export interface IBuiltinLedgerAccountsRepo {
 	init(): Promise<void>;
 	destroy(): Promise<void>;
-	storeNewAccounts(accounts: BuiltinLedgerAccount[]): Promise<void>;
+	storeNewAccount(account: BuiltinLedgerAccount): Promise<void>;
 	getAccountsByIds(accountIds: string[]): Promise<BuiltinLedgerAccount[]>;
 	updateAccountDebitBalanceAndTimestampById(
 		accountId: string,
-		debitBalance: string,
+		debitBalance: bigint,
+		currencyDecimals: number,
 		timestampLastJournalEntry: number): Promise<void>;
 	updateAccountCreditBalanceAndTimestampById(
 		accountId: string,
-		creditBalance: string,
+		creditBalance: bigint,
+		currencyDecimals: number,
 		timestampLastJournalEntry: number): Promise<void>;
 }
 
 export interface IBuiltinLedgerJournalEntriesRepo {
 	init(): Promise<void>;
 	destroy(): Promise<void>;
-	storeNewJournalEntries(journalEntries: BuiltinLedgerJournalEntry[]): Promise<void>;
+	storeNewJournalEntry(journalEntry: BuiltinLedgerJournalEntry): Promise<void>;
 	getJournalEntriesByAccountId(accountId: string): Promise<BuiltinLedgerJournalEntry[]>;
 }

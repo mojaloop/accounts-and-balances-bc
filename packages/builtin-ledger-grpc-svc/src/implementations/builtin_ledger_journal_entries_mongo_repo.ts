@@ -29,40 +29,42 @@
 
 "use strict";
 
-import {IChartOfAccountsRepo} from "../domain/infrastructure-types/chart_of_accounts_repo";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {Collection, Db, MongoClient, MongoServerError} from "mongodb";
 import {
-    AccountAlreadyExistsError,
-    UnableToGetAccountsError,
-    UnableToInitRepoError,
-    UnableToStoreAccountsError
+    JournalEntryAlreadyExistsError, UnableToGetJournalEntriesError,
+    UnableToInitRepoError, UnableToStoreJournalEntryError,
 } from "../domain/errors";
-import {CoaAccount} from "../domain/coa_account";
-import {IBuiltinLedgerAccountsRepo, IBuiltinLedgerJournalEntriesRepo} from "../domain/infrastructure";
-import {BUILTIN_LEDGER_ACCOUNT_MONGO_SCHEMA} from "./builtin_ledger_accounts_mongo_repo";
+import {IBuiltinLedgerJournalEntriesRepo} from "../domain/infrastructure";
+import {BuiltinLedgerJournalEntry} from "../domain/entities";
+import {bigintToString, stringToBigint} from "../domain/converters";
 
 export const BUILTIN_LEDGER_JOURNAL_ENTRY_MONGO_SCHEMA: any = {
     bsonType: "object",
     title: "Built-in Ledger Journal Entry Mongo Schema",
     required: [
-        "_id", // internalId.
-        "externalId",
-        "ownerId",
-        "state",
-        "type",
+        "_id", // id.
         "currencyCode",
-        "currencyDecimals"
+        "currencyDecimals",
+        "amount",
+        "debitedAccountId",
+        "creditedAccountId",
+        "timestamp"
     ],
     properties: {
-        // TODO: type vs bsonType; binData BSON type; check if _id can be replaced.
-        _id: {/*type: "string",*/ bsonType: "string"},
-        externalId: {/*type: "string",*/ bsonType: "string"},
-        ownerId: {/*type: "string",*/ bsonType: "string"},
-        state: {/*type: "string",*/ bsonType: "string"},
-        type: {/*type: "string",*/ bsonType: "string"},
-        currencyCode: {/*type: "string",*/ bsonType: "string"},
-        currencyDecimals: {/*type: "number",*/ bsonType: "int"}
+        properties: {
+            // TODO:
+            //  bsonType vs type;
+            //  long and binData BSON types;
+            //  check if _id can be replaced.
+            _id: {bsonType: "string"},
+            currencyCode: {bsonType: "string"},
+            currencyDecimals: {bsonType: "int"},
+            amount: {bsonType: "string"},
+            debitedAccountId: {bsonType: "string"},
+            creditedAccountId: {bsonType: "string"},
+            timestamp: {bsonType: ["number"]}, // TODO: long instead of number?
+        }
     },
     additionalProperties: false
 };
@@ -129,7 +131,7 @@ export class BuiltinLedgerJournalEntriesMongoRepo implements IBuiltinLedgerJourn
                 return;
             }
             this.collection = await db.createCollection(this.COLLECTION_NAME, {
-                validator: {$jsonSchema: ACCOUNT_MONGO_SCHEMA}
+                validator: {$jsonSchema: BUILTIN_LEDGER_JOURNAL_ENTRY_MONGO_SCHEMA}
             });
         } catch (error: unknown) {
             throw new UnableToInitRepoError((error as any)?.message);
@@ -140,76 +142,50 @@ export class BuiltinLedgerJournalEntriesMongoRepo implements IBuiltinLedgerJourn
         await this.client.close();
     }
 
-    async accountsExistByInternalIds(internalIds: string[]): Promise<boolean> {
-        let accounts: any[]; // TODO: verify type.
-        try {
-            accounts = await this.collection.find({_id: {$in: internalIds}}).toArray(); // TODO: verify filter; is there a simpler way to find by _id?
-        } catch (error: unknown) {
-            throw new UnableToGetAccountsError((error as any)?.message);
-        }
-        const accountsExist: boolean = accounts.length === internalIds.length;
-        return accountsExist;
-    }
-
-    async storeAccounts(coaAccounts: CoaAccount[]): Promise<void> {
-        // Convert CoaAccount's internalId to Mongo's _id.
+    async storeNewJournalEntry(builtinLedgerJournalEntry: BuiltinLedgerJournalEntry): Promise<void> {
+        // Convert BuiltinLedgerJournalEntry's id to Mongo's _id.
         // TODO: is this the best way to do it?
-        const mongoAccounts: any[] = coaAccounts.map((coaAccount) => { // TODO: verify type.
-            return {
-                _id: coaAccount.internalId,
-                externalId: coaAccount.externalId,
-                ownerId: coaAccount.ownerId,
-                state: coaAccount.state,
-                type: coaAccount.type,
-                currencyCode: coaAccount.currencyCode,
-                currencyDecimals: coaAccount.currencyDecimals
-            };
-        });
+        const mongoJournalEntry: any = { // TODO: verify type.
+            _id: builtinLedgerJournalEntry.id,
+            currencyCode: builtinLedgerJournalEntry.currencyCode,
+            currencyDecimals: builtinLedgerJournalEntry.currencyDecimals,
+            amount: bigintToString(builtinLedgerJournalEntry.amount, builtinLedgerJournalEntry.currencyDecimals), // TODO: create an auxiliary variable?
+            debitedAccountId: builtinLedgerJournalEntry.debitedAccountId,
+            creditedAccountId: builtinLedgerJournalEntry.creditedAccountId,
+            timestamp: builtinLedgerJournalEntry.timestamp
+        };
 
         try {
-            await this.collection.insertMany(mongoAccounts);
+            await this.collection.insertOne(mongoJournalEntry);
         } catch (error: unknown) {
             if (
                 error instanceof MongoServerError
-                && error.code === ChartOfAccountsMongoRepo.DUPLICATE_KEY_ERROR_CODE
+                && error.code === BuiltinLedgerJournalEntriesMongoRepo.DUPLICATE_KEY_ERROR_CODE
             ) { // TODO: should this be done?
-                throw new AccountAlreadyExistsError();
+                throw new JournalEntryAlreadyExistsError();
             }
-            throw new UnableToStoreAccountsError((error as any)?.message);
+            throw new UnableToStoreJournalEntryError((error as any)?.message);
         }
     }
 
-    async getAccountsByInternalIds(internalIds: string[]): Promise<CoaAccount[]> {
-        let accounts: any[]; // TODO: verify type.
+    async getJournalEntriesByAccountId(accountId: string): Promise<BuiltinLedgerJournalEntry[]> {
+        let journalEntries: any[]; // TODO: verify type.
         try {
-            accounts = await this.collection.find({_id: {$in: internalIds}}).toArray(); // TODO: verify filter; is there a simpler way to find by _id?
+            journalEntries = await this.collection.find(
+                {$or: [{debitedAccountId: accountId}, {creditedAccountId: accountId}]}
+            ).toArray();
         } catch (error: unknown) {
-            throw new UnableToGetAccountsError((error as any)?.message);
+            throw new UnableToGetJournalEntriesError((error as any)?.message);
         }
 
-        // Convert Mongo's _id to CoaAccount's internalId.
-        // TODO: is this the best way to do it? will internalId be placed at the end of account?
-        accounts.forEach((account) => {
-            account.internalId = account._id;
-            delete account._id;
-        });
-        return accounts;
-    }
+        // Convert Mongo's _id to BuiltinLedgerJournalEntry's id.
+        // TODO: is this the best way to do it? will id be placed at the end of journalEntry?
+        journalEntries.forEach((journalEntry) => {
+            journalEntry.id = journalEntry._id;
+            delete journalEntry._id;
 
-    async getAccountsByOwnerId(ownerId: string): Promise<CoaAccount[]> {
-        let accounts: any[]; // TODO: verify type.
-        try {
-            accounts = await this.collection.find({ownerId: ownerId}).toArray();
-        } catch (error: unknown) {
-            throw new UnableToGetAccountsError((error as any)?.message);
-        }
-
-        // Convert Mongo's _id to CoaAccount's internalId.
-        // TODO: is this the best way to do it? will internalId be placed at the end of account?
-        accounts.forEach((account) => {
-            account.internalId = account._id;
-            delete account._id;
+            journalEntry.amount = stringToBigint(journalEntry.amount, journalEntry.currencyDecimals); // TODO: create an auxiliary variable?
         });
-        return accounts;
+        return journalEntries;
     }
 }

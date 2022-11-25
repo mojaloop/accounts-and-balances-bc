@@ -27,8 +27,6 @@
     "audit:check": "npm audit",
     "audit:fix": "npm audit fix",
     "lint": "eslint src",
-    "gen-types": "sh ./gen-types.sh",
-    "prebuild": "npm run gen-types",
     "build": "tsc",
     "test:unit": "echo \"for now, grpc-client-lib doesn't have unit tests\"",
     "test:unit-single": "jest --coverage false -t",

@@ -34,7 +34,7 @@ import {ServerUnaryCall, sendUnaryData, status} from "@grpc/grpc-js";
 import {UnauthorizedError} from "../../domain/errors";
 import {BuiltinLedgerAggregate} from "../../domain/aggregate";
 import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
-import {BuiltinLedgerAccount} from "../../domain/builtin_ledger_account";
+import {BuiltinLedgerAccountDto, BuiltinLedgerJournalEntryDto} from "../../domain/entities";
 import {
 	BuiltinLedgerGrpcAccount,
 	BuiltinLedgerGrpcAccount__Output,
@@ -50,7 +50,6 @@ import {
 	GrpcBuiltinLedgerHandlers
 } from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-client-lib";
 import {AccountState, AccountType} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
-import {BuiltinLedgerJournalEntry} from "../../domain/builtin_ledger_journal_entry";
 
 export class GrpcHandlers {
 	// Properties received through the constructor.
@@ -89,13 +88,13 @@ export class GrpcHandlers {
 		const builtinLedgerGrpcAccountsOutput: BuiltinLedgerGrpcAccount__Output[]
 			= call.request.builtinLedgerGrpcAccountArray || [];
 
-		const builtinLedgerAccounts: BuiltinLedgerAccount[]
+		const builtinLedgerAccountDtos: BuiltinLedgerAccountDto[]
 			= builtinLedgerGrpcAccountsOutput.map((builtinLedgerGrpcAccountOutput) => {
 			if (!builtinLedgerGrpcAccountOutput.currencyCode) {
 				throw new Error(); // TODO: create custom error.
 			}
 
-			const builtinLedgerAccount: BuiltinLedgerAccount = {
+			const builtinLedgerAccountDto: BuiltinLedgerAccountDto = {
 				id: builtinLedgerGrpcAccountOutput.id ?? null, // TODO: ?? or ||?
 				state: builtinLedgerGrpcAccountOutput.state as AccountState, // TODO: cast?
 				type: builtinLedgerGrpcAccountOutput.type as AccountType, // TODO: cast?
@@ -104,12 +103,12 @@ export class GrpcHandlers {
 				creditBalance: builtinLedgerGrpcAccountOutput.creditBalance ?? null, // TODO: ?? or ||?
 				timestampLastJournalEntry: builtinLedgerGrpcAccountOutput.timestampLastJournalEntry ?? null // TODO: ?? or ||?
 			};
-			return builtinLedgerAccount;
+			return builtinLedgerAccountDto;
 		});
 
 		let accountIds: string[];
 		try {
-			accountIds = await this.aggregate.createAccounts(builtinLedgerAccounts, this.securityContext);
+			accountIds = await this.aggregate.createAccounts(builtinLedgerAccountDtos, this.securityContext);
 		} catch (error: unknown) {
 			if (error instanceof UnauthorizedError) {
 				callback(
@@ -138,31 +137,33 @@ export class GrpcHandlers {
 		const builtinLedgerGrpcJournalEntriesOutput: BuiltinLedgerGrpcJournalEntry__Output[]
 			= call.request.builtinLedgerGrpcJournalEntryArray || [];
 
-		const builtinLedgerJournalEntries: BuiltinLedgerJournalEntry[]
+		const builtinLedgerJournalEntryDtos: BuiltinLedgerJournalEntryDto[]
 			= builtinLedgerGrpcJournalEntriesOutput.map((builtinLedgerGrpcJournalEntryOutput) => {
 			if (
-				!builtinLedgerGrpcJournalEntryOutput.currencyCode
+				!builtinLedgerGrpcJournalEntryOutput.ownerId
+				|| !builtinLedgerGrpcJournalEntryOutput.currencyCode
 				|| !builtinLedgerGrpcJournalEntryOutput.debitedAccountId
 				|| !builtinLedgerGrpcJournalEntryOutput.creditedAccountId
 			) {
 				throw new Error(); // TODO: create custom error.
 			}
 
-			const builtinLedgerJournalEntry: BuiltinLedgerJournalEntry = {
+			const builtinLedgerJournalEntryDto: BuiltinLedgerJournalEntryDto = {
 				id: builtinLedgerGrpcJournalEntryOutput.id ?? null, // TODO: ?? or ||?
+				ownerId: builtinLedgerGrpcJournalEntryOutput.ownerId,
 				currencyCode: builtinLedgerGrpcJournalEntryOutput.currencyCode,
 				amount: builtinLedgerGrpcJournalEntryOutput.currencyCode,
 				debitedAccountId: builtinLedgerGrpcJournalEntryOutput.debitedAccountId,
 				creditedAccountId: builtinLedgerGrpcJournalEntryOutput.creditedAccountId,
 				timestamp: builtinLedgerGrpcJournalEntryOutput.timestamp ?? null // TODO: ?? or ||?
 			};
-			return builtinLedgerJournalEntry;
+			return builtinLedgerJournalEntryDto;
 		});
 
 		let journalEntryIds: string[];
 		try {
 			journalEntryIds
-				= await this.aggregate.createJournalEntries(builtinLedgerJournalEntries, this.securityContext);
+				= await this.aggregate.createJournalEntries(builtinLedgerJournalEntryDtos, this.securityContext);
 		} catch (error: unknown) {
 			if (error instanceof UnauthorizedError) {
 				callback(
@@ -204,9 +205,9 @@ export class GrpcHandlers {
 			accountIds.push(builtinLedgerGrpcAccountIdOutput.builtinLedgerGrpcId);
 		}
 
-		let builtinLedgerAccounts: BuiltinLedgerAccount[];
+		let builtinLedgerAccountDtos: BuiltinLedgerAccountDto[];
 		try {
-			builtinLedgerAccounts = await this.aggregate.getAccountsByIds(accountIds, this.securityContext);
+			builtinLedgerAccountDtos = await this.aggregate.getAccountsByIds(accountIds, this.securityContext);
 		} catch (error: unknown) {
 			if (error instanceof UnauthorizedError) {
 				callback(
@@ -223,15 +224,15 @@ export class GrpcHandlers {
 		}
 
 		const builtinLedgerGrpcAccounts: BuiltinLedgerGrpcAccount[]
-			= builtinLedgerAccounts.map((builtinLedgerAccount) => {
+			= builtinLedgerAccountDtos.map((builtinLedgerAccountDto) => {
 			const builtinLedgerGrpcAccount: BuiltinLedgerGrpcAccount = {
-				id: builtinLedgerAccount.id ?? undefined, // TODO: ?? or ||?
-				state: builtinLedgerAccount.state,
-				type: builtinLedgerAccount.type,
-				currencyCode: builtinLedgerAccount.currencyCode,
-				debitBalance: builtinLedgerAccount.debitBalance ?? undefined, // TODO: ?? or ||?
-				creditBalance: builtinLedgerAccount.creditBalance ?? undefined, // TODO: ?? or ||?
-				timestampLastJournalEntry: builtinLedgerAccount.timestampLastJournalEntry ?? undefined // TODO: ?? or ||?
+				id: builtinLedgerAccountDto.id ?? undefined, // TODO: ?? or ||?
+				state: builtinLedgerAccountDto.state,
+				type: builtinLedgerAccountDto.type,
+				currencyCode: builtinLedgerAccountDto.currencyCode,
+				debitBalance: builtinLedgerAccountDto.debitBalance ?? undefined, // TODO: ?? or ||?
+				creditBalance: builtinLedgerAccountDto.creditBalance ?? undefined, // TODO: ?? or ||?
+				timestampLastJournalEntry: builtinLedgerAccountDto.timestampLastJournalEntry ?? undefined // TODO: ?? or ||?
 			};
 			return builtinLedgerGrpcAccount;
 		});
@@ -251,9 +252,9 @@ export class GrpcHandlers {
 			return;
 		}
 
-		let builtinLedgerJournalEntries: BuiltinLedgerJournalEntry[];
+		let builtinLedgerJournalEntryDtos: BuiltinLedgerJournalEntryDto[];
 		try {
-			builtinLedgerJournalEntries
+			builtinLedgerJournalEntryDtos
 				= await this.aggregate.getJournalEntriesByAccountId(accountId, this.securityContext);
 		} catch (error: unknown) {
 			if (error instanceof UnauthorizedError) {
@@ -271,14 +272,14 @@ export class GrpcHandlers {
 		}
 
 		const builtinLedgerGrpcJournalEntries: BuiltinLedgerGrpcJournalEntry[]
-			= builtinLedgerJournalEntries.map((builtinLedgerJournalEntry) => {
+			= builtinLedgerJournalEntryDtos.map((builtinLedgerJournalEntryDto) => {
 			const builtinLedgerGrpcJournalEntry: BuiltinLedgerGrpcJournalEntry = {
-				id: builtinLedgerJournalEntry.id ?? undefined, // TODO: ?? or ||?
-				currencyCode: builtinLedgerJournalEntry.currencyCode,
-				amount: builtinLedgerJournalEntry.currencyCode,
-				debitedAccountId: builtinLedgerJournalEntry.debitedAccountId,
-				creditedAccountId: builtinLedgerJournalEntry.creditedAccountId,
-				timestamp: builtinLedgerJournalEntry.timestamp ?? undefined // TODO: ?? or ||?
+				id: builtinLedgerJournalEntryDto.id ?? undefined, // TODO: ?? or ||?
+				currencyCode: builtinLedgerJournalEntryDto.currencyCode,
+				amount: builtinLedgerJournalEntryDto.amount,
+				debitedAccountId: builtinLedgerJournalEntryDto.debitedAccountId,
+				creditedAccountId: builtinLedgerJournalEntryDto.creditedAccountId,
+				timestamp: builtinLedgerJournalEntryDto.timestamp ?? undefined // TODO: ?? or ||?
 			};
 			return builtinLedgerGrpcJournalEntry;
 		});

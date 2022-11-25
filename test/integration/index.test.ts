@@ -33,6 +33,7 @@ import {LogLevel} from "@mojaloop/logging-bc-public-types-lib";
 import {KafkaLogger} from "@mojaloop/logging-bc-client-lib";
 import {GrpcClient} from "@mojaloop/accounts-and-balances-bc-grpc-client-lib";
 import {
+	Account,
 	AccountState,
 	AccountType,
 	IAccountDto,
@@ -96,7 +97,7 @@ describe("accounts and balances - integration tests with gRPC service", () => {
 
 		const authorizationClient: IAuthorizationClient = new AuthorizationClientMock(logger);
 
-		const accountsRepo: IAccountsRepo = new MongoAccountsRepo(
+		/*const accountsRepo: IAccountsRepo = new MongoAccountsRepo(
 			logger,
 			MONGO_HOST,
 			MONGO_PORT_NO,
@@ -120,7 +121,7 @@ describe("accounts and balances - integration tests with gRPC service", () => {
 			creditBalance: HUB_ACCOUNT_INITIAL_CREDIT_BALANCE,
 			timestampLastJournalEntry: null
 		};
-		await accountsRepo.storeNewAccount(hubAccountDto);
+		await accountsRepo.storeNewAccount(hubAccountDto);*/
 
 		await GrpcService.start(logger, authorizationClient, undefined, accountsRepo);
 
@@ -141,19 +142,19 @@ describe("accounts and balances - integration tests with gRPC service", () => {
 	/* createAccount() */
 
 	test("create non-existent account", async () => {
-		const accountDto: IAccountDto = {
+		const account: Account = {
 			id: null,
-			externalId: null,
-			state: AccountState.ACTIVE,
-			type: AccountType.POSITION,
+			ownerId: "",
+			state: "ACTIVE",
+			type: "FEE",
 			currencyCode: "EUR",
-			currencyDecimals: null,
-			debitBalance: "0",
-			creditBalance: "0",
+			debitBalance: null,
+			creditBalance: null,
+			balance: null,
 			timestampLastJournalEntry: null
 		};
 
-		const accountId: string = await grpcClient.createAccount(accountDto);
+		const accountId: string = await grpcClient.createAccounts([account]);
 		expect(accountId).not.toBeNull();
 		expect(accountId).not.toEqual("");
 	});

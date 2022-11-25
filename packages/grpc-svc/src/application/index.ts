@@ -29,8 +29,8 @@
 
 "use strict";
 
-export * from "./service";
+export * from "./accounts_and_balances_grpc_service";
 
-import {Service} from "./service";
+import {AccountsAndBalancesGrpcService} from "./accounts_and_balances_grpc_service";
 
-Service.start();
+AccountsAndBalancesGrpcService.start();

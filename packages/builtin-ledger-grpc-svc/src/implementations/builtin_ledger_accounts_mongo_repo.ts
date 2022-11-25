@@ -29,29 +29,30 @@
 
 "use strict";
 
-import {IChartOfAccountsRepo} from "../domain/infrastructure-types/chart_of_accounts_repo";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {Collection, Db, MongoClient, MongoServerError} from "mongodb";
+import {Collection, Db, MongoClient, MongoServerError, UpdateResult} from "mongodb";
 import {
-    AccountAlreadyExistsError,
+    AccountAlreadyExistsError, AccountNotFoundError,
     UnableToGetAccountsError,
-    UnableToInitRepoError,
-    UnableToStoreAccountsError
+    UnableToInitRepoError, UnableToStoreAccountError,
+    UnableToUpdateAccountError
 } from "../domain/errors";
-import {CoaAccount} from "../domain/coa_account";
 import {IBuiltinLedgerAccountsRepo} from "../domain/infrastructure";
+import {BuiltinLedgerAccount} from "../domain/entities";
+import {bigintToString, stringToBigint} from "../domain/converters";
 
 export const BUILTIN_LEDGER_ACCOUNT_MONGO_SCHEMA: any = {
     bsonType: "object",
     title: "Built-in Ledger Account Mongo Schema",
     required: [
-        "_id", // internalId.
+        "_id", // id.
         "state",
         "type",
         "currencyCode",
+        "currencyDecimals",
         "debitBalance",
         "creditBalance",
-        "timestampLastJournalEntry",
+        "timestampLastJournalEntry"
     ],
     properties: {
         // TODO:
@@ -62,6 +63,7 @@ export const BUILTIN_LEDGER_ACCOUNT_MONGO_SCHEMA: any = {
         state: {bsonType: "string"},
         type: {bsonType: "string"},
         currencyCode: {bsonType: "string"},
+        currencyDecimals: {bsonType: "int"},
         debitBalance: {bsonType: "string"},
         creditBalance: {bsonType: "string"},
         timestampLastJournalEntry: {bsonType: ["number", "null"]}, // TODO: long instead of number?
@@ -131,7 +133,7 @@ export class BuiltinLedgerAccountsMongoRepo implements IBuiltinLedgerAccountsRep
                 return;
             }
             this.collection = await db.createCollection(this.COLLECTION_NAME, {
-                validator: {$jsonSchema: ACCOUNT_MONGO_SCHEMA}
+                validator: {$jsonSchema: BUILTIN_LEDGER_ACCOUNT_MONGO_SCHEMA}
             });
         } catch (error: unknown) {
             throw new UnableToInitRepoError((error as any)?.message);
@@ -142,76 +144,96 @@ export class BuiltinLedgerAccountsMongoRepo implements IBuiltinLedgerAccountsRep
         await this.client.close();
     }
 
-    async accountsExistByInternalIds(internalIds: string[]): Promise<boolean> {
-        let accounts: any[]; // TODO: verify type.
-        try {
-            accounts = await this.collection.find({_id: {$in: internalIds}}).toArray(); // TODO: verify filter; is there a simpler way to find by _id?
-        } catch (error: unknown) {
-            throw new UnableToGetAccountsError((error as any)?.message);
-        }
-        const accountsExist: boolean = accounts.length === internalIds.length;
-        return accountsExist;
-    }
-
-    async storeAccounts(coaAccounts: CoaAccount[]): Promise<void> {
-        // Convert CoaAccount's internalId to Mongo's _id.
+    async storeNewAccount(builtinLedgerAccount: BuiltinLedgerAccount): Promise<void> {
+        // Convert BuiltinLedgerAccount's id to Mongo's _id.
         // TODO: is this the best way to do it?
-        const mongoAccounts: any[] = coaAccounts.map((coaAccount) => { // TODO: verify type.
-            return {
-                _id: coaAccount.internalId,
-                externalId: coaAccount.externalId,
-                ownerId: coaAccount.ownerId,
-                state: coaAccount.state,
-                type: coaAccount.type,
-                currencyCode: coaAccount.currencyCode,
-                currencyDecimals: coaAccount.currencyDecimals
-            };
-        });
+        const mongoAccount: any = { // TODO: verify type.
+            _id: builtinLedgerAccount.id,
+            state: builtinLedgerAccount.state,
+            type: builtinLedgerAccount.type,
+            currencyCode: builtinLedgerAccount.currencyCode,
+            currencyDecimals: builtinLedgerAccount.currencyDecimals,
+            debitBalance: bigintToString(builtinLedgerAccount.debitBalance, builtinLedgerAccount.currencyDecimals), // TODO: create an auxiliary variable?
+            creditBalance: bigintToString(builtinLedgerAccount.creditBalance, builtinLedgerAccount.currencyDecimals), // TODO: create an auxiliary variable?
+            timestampLastJournalEntry: builtinLedgerAccount.timestampLastJournalEntry
+        };
 
         try {
-            await this.collection.insertMany(mongoAccounts);
+            await this.collection.insertOne(mongoAccount);
         } catch (error: unknown) {
             if (
                 error instanceof MongoServerError
-                && error.code === ChartOfAccountsMongoRepo.DUPLICATE_KEY_ERROR_CODE
+                && error.code === BuiltinLedgerAccountsMongoRepo.DUPLICATE_KEY_ERROR_CODE
             ) { // TODO: should this be done?
                 throw new AccountAlreadyExistsError();
             }
-            throw new UnableToStoreAccountsError((error as any)?.message);
+            throw new UnableToStoreAccountError((error as any)?.message);
         }
     }
 
-    async getAccountsByInternalIds(internalIds: string[]): Promise<CoaAccount[]> {
+    async getAccountsByIds(ids: string[]): Promise<BuiltinLedgerAccount[]> {
         let accounts: any[]; // TODO: verify type.
         try {
-            accounts = await this.collection.find({_id: {$in: internalIds}}).toArray(); // TODO: verify filter; is there a simpler way to find by _id?
+            accounts = await this.collection.find({_id: {$in: ids}}).toArray(); // TODO: verify filter; is there a simpler way to find by _id?
         } catch (error: unknown) {
             throw new UnableToGetAccountsError((error as any)?.message);
         }
 
-        // Convert Mongo's _id to CoaAccount's internalId.
-        // TODO: is this the best way to do it? will internalId be placed at the end of account?
+        // Convert Mongo's _id to BuiltinLedgerAccount's id.
+        // TODO: is this the best way to do it? will id be placed at the end of account?
         accounts.forEach((account) => {
-            account.internalId = account._id;
+            account.id = account._id;
             delete account._id;
+
+            account.debitBalance = stringToBigint(account.debitBalance, account.currencyDecimals); // TODO: create an auxiliary variable?
+            account.creditBalance = stringToBigint(account.creditBalance, account.currencyDecimals); // TODO: create an auxiliary variable?
         });
         return accounts;
     }
 
-    async getAccountsByOwnerId(ownerId: string): Promise<CoaAccount[]> {
-        let accounts: any[]; // TODO: verify type.
+    async updateAccountDebitBalanceAndTimestampById(
+        accountId: string,
+        debitBalance: bigint,
+        currencyDecimals: number,
+        timestampLastJournalEntry: number
+    ): Promise<void> {
+        const debitBalanceConverted: string = bigintToString(debitBalance, currencyDecimals);
+
+        let updateResult: UpdateResult;
         try {
-            accounts = await this.collection.find({ownerId: ownerId}).toArray();
+            updateResult = await this.collection.updateOne(
+                {_id: accountId},
+                {$set: {debitBalance: debitBalanceConverted, timestampLastJournalEntry: timestampLastJournalEntry}}
+            );
         } catch (error: unknown) {
-            throw new UnableToGetAccountsError((error as any)?.message);
+            throw new UnableToUpdateAccountError((error as any)?.message);
         }
 
-        // Convert Mongo's _id to CoaAccount's internalId.
-        // TODO: is this the best way to do it? will internalId be placed at the end of account?
-        accounts.forEach((account) => {
-            account.internalId = account._id;
-            delete account._id;
-        });
-        return accounts;
+        if (updateResult.modifiedCount === 0) { // TODO: use "!updateResult.modifiedCount" instead?
+            throw new AccountNotFoundError();
+        }
+    }
+
+    async updateAccountCreditBalanceAndTimestampById(
+        accountId: string,
+        creditBalance: bigint,
+        currencyDecimals: number,
+        timestampLastJournalEntry: number
+    ): Promise<void> {
+        const creditBalanceConverted: string = bigintToString(creditBalance, currencyDecimals);
+
+        let updateResult: UpdateResult;
+        try {
+            updateResult = await this.collection.updateOne(
+                {_id: accountId},
+                {$set: {creditBalance: creditBalanceConverted, timestampLastJournalEntry: timestampLastJournalEntry}}
+            );
+        } catch (error: unknown) {
+            throw new UnableToUpdateAccountError((error as any)?.message);
+        }
+
+        if (updateResult.modifiedCount === 0) { // TODO: use "!updateResult.modifiedCount" instead?
+            throw new AccountNotFoundError();
+        }
     }
 }

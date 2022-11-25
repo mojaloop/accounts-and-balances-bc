@@ -32,13 +32,6 @@
 import {ILogger, LogLevel} from "@mojaloop/logging-bc-public-types-lib";
 import {KafkaLogger} from "@mojaloop/logging-bc-client-lib";
 import {
-	Aggregate,
-	IAccountsRepo,
-	IJournalEntriesRepo,
-	Privileges
-} from "@mojaloop/accounts-and-balances-bc-domain-lib";
-import {MongoAccountsRepo, MongoJournalEntriesRepo} from "@mojaloop/accounts-and-balances-bc-infrastructure-lib";
-import {
 	AuditClient,
 	KafkaAuditClientDispatcher,
 	LocalAuditClientCryptoProvider
@@ -47,8 +40,13 @@ import {existsSync} from "fs";
 import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {AuthorizationClient, TokenHelper} from "@mojaloop/security-bc-client-lib";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
-import {GrpcServer} from "packages/builtin-ledger-grpc-svc/src/application/grpc_server/grpc_server";
 import {resolve} from "path";
+import {IBuiltinLedgerAccountsRepo, IBuiltinLedgerJournalEntriesRepo} from "../domain/infrastructure";
+import {GrpcServer} from "./grpc_server/grpc_server";
+import {BuiltinLedgerAccountsMongoRepo} from "../implementations/builtin_ledger_accounts_mongo_repo";
+import {BuiltinLedgerJournalEntriesMongoRepo} from "../implementations/builtin_ledger_journal_entries_mongo_repo";
+import {BuiltinLedgerAggregate} from "../domain/aggregate";
+import {Privileges} from "../domain/privileges";
 
 /* ********** Constants Begin ********** */
 
@@ -100,27 +98,27 @@ const MONGO_ACCOUNTS_COLLECTION_NAME: string =
 const MONGO_JOURNAL_ENTRIES_COLLECTION_NAME: string =
 	process.env["ACCOUNTS_AND_BALANCES_BC_MONGO_JOURNAL_ENTRIES_COLLECTION_NAME"] ?? "journal_entries";
 
-// Accounts and Balances gRPC Service.
-const ACCOUNTS_AND_BALANCES_GRPC_SERVICE_HOST: string =
-	process.env["ACCOUNTS_AND_BALANCES_BC_GRPC_SERVICE_HOST"] ?? "localhost";
-const ACCOUNTS_AND_BALANCES_GRPC_SERVICE_PORT_NO: number =
-	parseInt(process.env["ACCOUNTS_AND_BALANCES_BC_GRPC_SERVICE_PORT_NO"] ?? "") || 5678;
+// Built-in Ledger gRPC Service.
+const BUILTIN_LEDGER_GRPC_SERVICE_HOST: string =
+	process.env["ACCOUNTS_AND_BALANCES_BC_BUILTIN_LEDGER_GRPC_SERVICE_HOST"] ?? "localhost";
+const BUILTIN_LEDGER_GRPC_SERVICE_PORT_NO: number =
+	parseInt(process.env["ACCOUNTS_AND_BALANCES_BC_BUILTIN_LEDGER_GRPC_SERVICE_PORT_NO"] ?? "") || 5678;
 
 /* ********** Constants End ********** */
 
-export class GrpcService {
+export class BuiltinLedgerGrpcService {
 	private static logger: ILogger;
 	private static auditingClient: IAuditClient;
-	private static accountsRepo: IAccountsRepo;
-	private static journalEntriesRepo: IJournalEntriesRepo;
+	private static builtinLedgerAccountsRepo: IBuiltinLedgerAccountsRepo;
+	private static builtinLedgerJournalEntriesRepo: IBuiltinLedgerJournalEntriesRepo;
 	private static grpcServer: GrpcServer;
 
 	static async start(
 		logger?: ILogger,
 		authorizationClient?: IAuthorizationClient,
 		auditingClient?: IAuditClient,
-		accountsRepo?: IAccountsRepo,
-		journalEntriesRepo?: IJournalEntriesRepo
+		builtinLedgerAccountsRepo?: IBuiltinLedgerAccountsRepo,
+		builtinLedgerJournalEntriesRepo?: IBuiltinLedgerJournalEntriesRepo
 	): Promise<void> {
 		// Logger.
 		if (logger !== undefined) {
@@ -203,10 +201,10 @@ export class GrpcService {
 		}
 
 		// Repos.
-		if (accountsRepo !== undefined) {
-			this.accountsRepo = accountsRepo;
+		if (builtinLedgerAccountsRepo !== undefined) {
+			this.builtinLedgerAccountsRepo = builtinLedgerAccountsRepo;
 		} else {
-			this.accountsRepo = new MongoAccountsRepo(
+			this.builtinLedgerAccountsRepo = new BuiltinLedgerAccountsMongoRepo(
 				this.logger,
 				MONGO_HOST,
 				MONGO_PORT_NO,
@@ -217,17 +215,17 @@ export class GrpcService {
 				MONGO_ACCOUNTS_COLLECTION_NAME
 			);
 			try {
-				await this.accountsRepo.init();
+				await this.builtinLedgerAccountsRepo.init();
 			} catch (error: unknown) {
 				this.logger.fatal(error);
 				await this.stop();
 				process.exit(-1); // TODO: verify code.
 			}
 		}
-		if (journalEntriesRepo !== undefined) {
-			this.journalEntriesRepo = journalEntriesRepo;
+		if (builtinLedgerJournalEntriesRepo !== undefined) {
+			this.builtinLedgerJournalEntriesRepo = builtinLedgerJournalEntriesRepo;
 		} else {
-			this.journalEntriesRepo = new MongoJournalEntriesRepo(
+			this.builtinLedgerJournalEntriesRepo = new BuiltinLedgerJournalEntriesMongoRepo(
 				this.logger,
 				MONGO_HOST,
 				MONGO_PORT_NO,
@@ -238,7 +236,7 @@ export class GrpcService {
 				MONGO_JOURNAL_ENTRIES_COLLECTION_NAME
 			);
 			try {
-				await this.journalEntriesRepo.init();
+				await this.builtinLedgerJournalEntriesRepo.init();
 			} catch (error: unknown) {
 				this.logger.fatal(error);
 				await this.stop();
@@ -247,21 +245,21 @@ export class GrpcService {
 		}
 
 		// Aggregate.
-		const aggregate: Aggregate = new Aggregate(
+		const builtinLedgerAggregate: BuiltinLedgerAggregate = new BuiltinLedgerAggregate(
 			this.logger,
 			authorizationClient,
 			this.auditingClient,
-			this.accountsRepo,
-			this.journalEntriesRepo
+			this.builtinLedgerAccountsRepo,
+			this.builtinLedgerJournalEntriesRepo
 		);
 
 		// gRPC server.
 		this.grpcServer = new GrpcServer(
 			this.logger,
 			tokenHelper,
-			aggregate,
-			ACCOUNTS_AND_BALANCES_GRPC_SERVICE_HOST,
-			ACCOUNTS_AND_BALANCES_GRPC_SERVICE_PORT_NO
+			builtinLedgerAggregate,
+			BUILTIN_LEDGER_GRPC_SERVICE_HOST,
+			BUILTIN_LEDGER_GRPC_SERVICE_PORT_NO
 		);
 		try {
 			await this.grpcServer.start();
@@ -276,11 +274,11 @@ export class GrpcService {
 		if (this.grpcServer !== undefined) {
 			await this.grpcServer.stop();
 		}
-		if (this.journalEntriesRepo !== undefined) {
-			await this.journalEntriesRepo.destroy();
+		if (this.builtinLedgerJournalEntriesRepo !== undefined) {
+			await this.builtinLedgerJournalEntriesRepo.destroy();
 		}
-		if (this.accountsRepo !== undefined) {
-			await this.accountsRepo.destroy();
+		if (this.builtinLedgerAccountsRepo !== undefined) {
+			await this.builtinLedgerAccountsRepo.destroy();
 		}
 		if (this.auditingClient !== undefined) {
 			await this.auditingClient.destroy();
@@ -316,7 +314,7 @@ export class GrpcService {
 
 async function handleSignals(signal: NodeJS.Signals): Promise<void> {
 	console.info(`${signal} received`); // TODO: use console?
-	await GrpcService.stop();
+	await BuiltinLedgerGrpcService.stop();
 	process.exit();
 }
 

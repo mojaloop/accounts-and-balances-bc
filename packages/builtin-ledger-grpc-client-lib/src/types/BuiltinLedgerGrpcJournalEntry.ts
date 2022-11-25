@@ -4,6 +4,7 @@ import type { Long } from '@grpc/proto-loader';
 
 export interface BuiltinLedgerGrpcJournalEntry {
   'id'?: (string);
+  'ownerId'?: (string);
   'currencyCode'?: (string);
   'amount'?: (string);
   'debitedAccountId'?: (string);
@@ -13,6 +14,7 @@ export interface BuiltinLedgerGrpcJournalEntry {
 
 export interface BuiltinLedgerGrpcJournalEntry__Output {
   'id'?: (string);
+  'ownerId'?: (string);
   'currencyCode'?: (string);
   'amount'?: (string);
   'debitedAccountId'?: (string);

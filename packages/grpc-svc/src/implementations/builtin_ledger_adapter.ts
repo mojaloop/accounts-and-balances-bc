@@ -158,7 +158,8 @@ export class BuiltinLedgerAdapter implements ILedgerAdapter {
         const ledgerAdapterJournalEntries: LedgerAdapterJournalEntry[] =
             builtinLedgerGrpcJournalEntriesOutput.map((builtinLedgerGrpcJournalEntryOutput) => {
             if (
-                !builtinLedgerGrpcJournalEntryOutput.currencyCode
+                !builtinLedgerGrpcJournalEntryOutput.ownerId
+                || !builtinLedgerGrpcJournalEntryOutput.currencyCode
                 || !builtinLedgerGrpcJournalEntryOutput.amount
                 || !builtinLedgerGrpcJournalEntryOutput.debitedAccountId
                 || !builtinLedgerGrpcJournalEntryOutput.creditedAccountId
@@ -168,6 +169,7 @@ export class BuiltinLedgerAdapter implements ILedgerAdapter {
 
             const ledgerAdapterJournalEntry: LedgerAdapterJournalEntry = {
                 id: builtinLedgerGrpcJournalEntryOutput.id ?? null, // TODO: ?? or ||?
+                ownerId: builtinLedgerGrpcJournalEntryOutput.ownerId,
                 currencyCode: builtinLedgerGrpcJournalEntryOutput.currencyCode,
                 amount: builtinLedgerGrpcJournalEntryOutput.amount,
                 debitedAccountId: builtinLedgerGrpcJournalEntryOutput.debitedAccountId,

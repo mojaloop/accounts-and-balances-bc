@@ -29,8 +29,8 @@
 
 "use strict";
 
-export * from "./grpc_service";
+export * from "./builtin_ledger_grpc_service";
 
-import {GrpcService} from "./grpc_service";
+import {BuiltinLedgerGrpcService} from "./builtin_ledger_grpc_service";
 
-GrpcService.start();
+BuiltinLedgerGrpcService.start();

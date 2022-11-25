@@ -38,11 +38,12 @@ message BuiltinLedgerGrpcAccountArray {
 
 message BuiltinLedgerGrpcJournalEntry {
   string id = 1;
-	string currencyCode = 2;
-	string amount = 3;
-	string debitedAccountId = 4;
-  string creditedAccountId = 5;
-  uint64 timestamp = 6;
+  string ownerId = 2;
+	string currencyCode = 3;
+	string amount = 4;
+	string debitedAccountId = 5;
+  string creditedAccountId = 6;
+  uint64 timestamp = 7;
 }
 
 message BuiltinLedgerGrpcJournalEntryArray {
