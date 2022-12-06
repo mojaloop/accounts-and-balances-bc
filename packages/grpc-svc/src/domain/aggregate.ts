@@ -33,19 +33,25 @@ import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {
 	ILedgerAdapter,
 	LedgerAdapterAccount,
-	LedgerAdapterJournalEntry
+	LedgerAdapterJournalEntry, LedgerAdapterRequestId
 } from "./infrastructure-types/ledger_adapter";
 import {CoaAccount} from "./coa_account";
 import {AccountAlreadyExistsError, AccountNotFoundError} from "./errors";
 import {Account, JournalEntry} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {IChartOfAccountsRepo} from "./infrastructure-types/chart_of_accounts_repo";
 import {randomUUID} from "crypto";
+import {join} from "path";
+import {readFileSync} from "fs";
+import {InvalidCurrencyCodeError} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc/dist/domain/errors";
 
 export class AccountsAndBalancesAggregate {
 	// Properties received through the constructor.
 	private logger: ILogger;
 	private chartOfAccounts: IChartOfAccountsRepo;
 	private ledgerAdapter: ILedgerAdapter;
+	private readonly currencies: {code: string, decimals: number}[];
+	// Other properties.
+	private static readonly CURRENCIES_FILE_NAME: string = "currencies.json";
 
 	constructor(
 		logger: ILogger,
@@ -55,6 +61,15 @@ export class AccountsAndBalancesAggregate {
 		this.logger = logger.createChild(this.constructor.name);
 		this.chartOfAccounts = accountsRepo;
 		this.ledgerAdapter = ledgerAdapter;
+
+		// TODO: here?
+		const currenciesFileAbsolutePath: string = join(__dirname, AccountsAndBalancesAggregate.CURRENCIES_FILE_NAME);
+		try {
+			this.currencies = JSON.parse(readFileSync(currenciesFileAbsolutePath, "utf-8"));
+		} catch (error: unknown) {
+			this.logger.error(error);
+			throw error;
+		}
 	}
 
 	async createAccounts(accounts: Account[]): Promise<string[]> {
@@ -66,15 +81,26 @@ export class AccountsAndBalancesAggregate {
 			}
 		});
 
-		const accountsExist: boolean = await this.chartOfAccounts.accountsExistByInternalIds(internalAccountIds);
-		if (accountsExist) {
-			throw new AccountAlreadyExistsError();
+		if (internalAccountIds.length) { // TODO: use "!==0" instead?
+			const accountsExist: boolean = await this.chartOfAccounts.accountsExistByInternalIds(internalAccountIds);
+			if (accountsExist) {
+				throw new AccountAlreadyExistsError();
+			}
 		}
 
 		const coaAccounts: CoaAccount[] = [];
 		const ledgerAdapterAccounts: LedgerAdapterAccount[] = [];
 		for (const account of accounts) {
 			const accountId: string = account.id ?? randomUUID(); // TODO: should this be done? ?? or ||?
+
+			const currency: {code: string, decimals: number} | undefined
+				= this.currencies.find((currency) => {
+				return currency.code === account.currencyCode;
+			});
+			if (!currency) {
+				throw new InvalidCurrencyCodeError();
+			}
+
 			const coaAccount: CoaAccount = {
 				internalId: accountId,
 				externalId: accountId,
@@ -82,7 +108,7 @@ export class AccountsAndBalancesAggregate {
 				state: account.state,
 				type: account.type,
 				currencyCode: account.currencyCode,
-				currencyDecimals: 0 // TODO: get the currency decimals.
+				currencyDecimals: currency.decimals
 			};
 			coaAccounts.push(coaAccount);
 
@@ -91,9 +117,10 @@ export class AccountsAndBalancesAggregate {
 				state: account.state,
 				type: account.type,
 				currencyCode: account.currencyCode,
-				debitBalance: account.debitBalance,
-				creditBalance: account.creditBalance,
-				timestampLastJournalEntry: account.timestampLastJournalEntry
+				currencyDecimals: coaAccount.currencyDecimals,
+				debitBalance: null,
+				creditBalance: null,
+				timestampLastJournalEntry: null
 			};
 			ledgerAdapterAccounts.push(ledgerAdapterAccount);
 		}
@@ -108,10 +135,19 @@ export class AccountsAndBalancesAggregate {
 	async createJournalEntries(journalEntries: JournalEntry[]): Promise<string[]> {
 		const ledgerAdapterJournalEntries: LedgerAdapterJournalEntry[]
 			= journalEntries.map((journalEntry) => {
+			const currency: {code: string, decimals: number} | undefined
+				= this.currencies.find((currency) => {
+				return currency.code === journalEntry.currencyCode;
+			});
+			if (!currency) {
+				throw new InvalidCurrencyCodeError();
+			}
+
 			const ledgerAdapterJournalEntry: LedgerAdapterJournalEntry = {
 				id: journalEntry.id,
 				ownerId: journalEntry.ownerId,
 				currencyCode: journalEntry.currencyCode,
+				currencyDecimals: currency.decimals,
 				amount: journalEntry.amount,
 				debitedAccountId: journalEntry.debitedAccountId,
 				creditedAccountId: journalEntry.creditedAccountId,
@@ -120,7 +156,6 @@ export class AccountsAndBalancesAggregate {
 			return ledgerAdapterJournalEntry;
 		});
 
-		// TODO: update accounts.
 		const journalEntryIds: string[] = await this.ledgerAdapter.createJournalEntries(ledgerAdapterJournalEntries);
 		return journalEntryIds;
 	}
@@ -140,16 +175,17 @@ export class AccountsAndBalancesAggregate {
 	}
 
 	async getJournalEntriesByAccountId(accountId: string): Promise<JournalEntry[]> {
-		const accountExists: boolean = await this.chartOfAccounts.accountsExistByInternalIds([accountId]);
-		if (!accountExists) {
+		const coaAccount: CoaAccount | undefined =
+			(await this.chartOfAccounts.getAccountsByInternalIds([accountId]))[0];
+		if (!coaAccount) {
 			throw new AccountNotFoundError();
 		}
 
 		const ledgerAdapterJournalEntries: LedgerAdapterJournalEntry[] =
-			await this.ledgerAdapter.getJournalEntriesByAccountId(accountId);
+			await this.ledgerAdapter.getJournalEntriesByAccountId(accountId, coaAccount.currencyDecimals);
 
 		const journalEntries: JournalEntry[] = ledgerAdapterJournalEntries.map((ledgerAdapterJournalEntry) => {
-			const journalEntry: JournalEntry = { // TODO: everything extracted from ledgerAdapterJournalEntry?
+			const journalEntry: JournalEntry = {
 				id: ledgerAdapterJournalEntry.id,
 				ownerId: ledgerAdapterJournalEntry.ownerId,
 				currencyCode: ledgerAdapterJournalEntry.currencyCode,
@@ -164,8 +200,8 @@ export class AccountsAndBalancesAggregate {
 	}
 
 	private async getAccountsByExternalIdsOfCoaAccounts(coaAccounts: CoaAccount[]): Promise<Account[]> {
-		const externalAccountIds: string[] = coaAccounts.map((coaAccount) => {
-			return coaAccount.externalId;
+		const externalAccountIds: LedgerAdapterRequestId[] = coaAccounts.map((coaAccount) => { // TODO: change array name.
+			return {id: coaAccount.externalId, currencyDecimals: coaAccount.currencyDecimals};
 		});
 
 		const ledgerAdapterAccounts: LedgerAdapterAccount[]
@@ -187,11 +223,20 @@ export class AccountsAndBalancesAggregate {
 				currencyCode: coaAccount.currencyCode,
 				debitBalance: ledgerAdapterAccount.debitBalance,
 				creditBalance: ledgerAdapterAccount.creditBalance,
-				balance: null, // TODO: the balance has to be calculated according to the account type.
+				balance: this.calculateBalance(ledgerAdapterAccount.debitBalance, ledgerAdapterAccount.creditBalance, coaAccount.currencyDecimals),
 				timestampLastJournalEntry: ledgerAdapterAccount.timestampLastJournalEntry
 			};
 			return account;
 		});
 		return accounts;
+	}
+
+	private calculateBalance(debitBalance: string | null, creditBalance: string | null, currencyDecimals: number): string | null {
+		// TODO: check for null inputs and return null.
+		if (!debitBalance || !creditBalance) {
+			return null;
+		}
+		const balance: bigint = BigInt(debitBalance) - BigInt(creditBalance);
+		return balance.toString();
 	}
 }

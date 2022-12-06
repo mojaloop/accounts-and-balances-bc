@@ -39,7 +39,6 @@ import {
 } from "../domain/errors";
 import {IBuiltinLedgerAccountsRepo} from "../domain/infrastructure";
 import {BuiltinLedgerAccount} from "../domain/entities";
-import {bigintToString, stringToBigint} from "../domain/converters";
 
 export const BUILTIN_LEDGER_ACCOUNT_MONGO_SCHEMA: any = {
     bsonType: "object",
@@ -153,8 +152,8 @@ export class BuiltinLedgerAccountsMongoRepo implements IBuiltinLedgerAccountsRep
             type: builtinLedgerAccount.type,
             currencyCode: builtinLedgerAccount.currencyCode,
             currencyDecimals: builtinLedgerAccount.currencyDecimals,
-            debitBalance: bigintToString(builtinLedgerAccount.debitBalance, builtinLedgerAccount.currencyDecimals), // TODO: create an auxiliary variable?
-            creditBalance: bigintToString(builtinLedgerAccount.creditBalance, builtinLedgerAccount.currencyDecimals), // TODO: create an auxiliary variable?
+            debitBalance: builtinLedgerAccount.debitBalance.toString(), // TODO: create an auxiliary variable?
+            creditBalance: builtinLedgerAccount.creditBalance.toString(), // TODO: create an auxiliary variable?
             timestampLastJournalEntry: builtinLedgerAccount.timestampLastJournalEntry
         };
 
@@ -185,8 +184,8 @@ export class BuiltinLedgerAccountsMongoRepo implements IBuiltinLedgerAccountsRep
             account.id = account._id;
             delete account._id;
 
-            account.debitBalance = stringToBigint(account.debitBalance, account.currencyDecimals); // TODO: create an auxiliary variable?
-            account.creditBalance = stringToBigint(account.creditBalance, account.currencyDecimals); // TODO: create an auxiliary variable?
+            account.debitBalance = BigInt(account.debitBalance); // TODO: create an auxiliary variable?
+            account.creditBalance = BigInt(account.creditBalance); // TODO: create an auxiliary variable?
         });
         return accounts;
     }
@@ -194,16 +193,13 @@ export class BuiltinLedgerAccountsMongoRepo implements IBuiltinLedgerAccountsRep
     async updateAccountDebitBalanceAndTimestampById(
         accountId: string,
         debitBalance: bigint,
-        currencyDecimals: number,
         timestampLastJournalEntry: number
     ): Promise<void> {
-        const debitBalanceConverted: string = bigintToString(debitBalance, currencyDecimals);
-
         let updateResult: UpdateResult;
         try {
             updateResult = await this.collection.updateOne(
                 {_id: accountId},
-                {$set: {debitBalance: debitBalanceConverted, timestampLastJournalEntry: timestampLastJournalEntry}}
+                {$set: {debitBalance: debitBalance.toString(), timestampLastJournalEntry: timestampLastJournalEntry}}
             );
         } catch (error: unknown) {
             throw new UnableToUpdateAccountError((error as any)?.message);
@@ -217,16 +213,13 @@ export class BuiltinLedgerAccountsMongoRepo implements IBuiltinLedgerAccountsRep
     async updateAccountCreditBalanceAndTimestampById(
         accountId: string,
         creditBalance: bigint,
-        currencyDecimals: number,
         timestampLastJournalEntry: number
     ): Promise<void> {
-        const creditBalanceConverted: string = bigintToString(creditBalance, currencyDecimals);
-
         let updateResult: UpdateResult;
         try {
             updateResult = await this.collection.updateOne(
                 {_id: accountId},
-                {$set: {creditBalance: creditBalanceConverted, timestampLastJournalEntry: timestampLastJournalEntry}}
+                {$set: {creditBalance: creditBalance.toString(), timestampLastJournalEntry: timestampLastJournalEntry}}
             );
         } catch (error: unknown) {
             throw new UnableToUpdateAccountError((error as any)?.message);

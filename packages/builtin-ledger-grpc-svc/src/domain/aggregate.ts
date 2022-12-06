@@ -35,7 +35,6 @@ import {
 	AccountAlreadyExistsError,
 	SameDebitedAndCreditedAccountsError,
 	CurrencyCodesDifferError,
-	InsufficientBalanceError,
 	InvalidJournalEntryAmountError,
 	InvalidTimestampError,
 	JournalEntryAlreadyExistsError,
@@ -47,7 +46,6 @@ import {
 	InvalidCreditBalanceError,
 	InvalidDebitBalanceError,
 } from "./errors";
-import {AccountState, AccountType} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {IAuditClient, AuditSecurityContext} from "@mojaloop/auditing-bc-public-types-lib";
 import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
@@ -64,7 +62,8 @@ import {
 import {IBuiltinLedgerAccountsRepo, IBuiltinLedgerJournalEntriesRepo} from "./infrastructure";
 
 enum AuditingActions {
-	ACCOUNT_CREATED = "ACCOUNT_CREATED"
+	BUILTIN_LEDGER_ACCOUNT_CREATED = "BUILTIN_LEDGER_ACCOUNT_CREATED",
+	BUILTIN_LEDGER_JOURNAL_ENTRY_CREATED = "BUILTIN_LEDGER_JOURNAL_ENTRY_CREATED",
 }
 
 export class BuiltinLedgerAggregate {
@@ -122,17 +121,20 @@ export class BuiltinLedgerAggregate {
 		builtinLedgerAccountDtos: BuiltinLedgerAccountDto[],
 		securityContext: CallSecurityContext
 	): Promise<string[]> {
-		this.enforcePrivilege(securityContext, Privileges.CREATE_JOURNAL_ENTRY);
+		this.enforcePrivilege(securityContext, Privileges.CREATE_JOURNAL_ENTRY); // TODO: here or on createAccount()?
 
 		const accountIds: string[] = [];
 		for (const builtinLedgerAccountDto of builtinLedgerAccountDtos) {
-			const accountId: string = await this.createAccount(builtinLedgerAccountDto);
+			const accountId: string = await this.createAccount(builtinLedgerAccountDto, securityContext); // TODO: pass security context?
 			accountIds.push(accountId);
 		}
 		return accountIds;
 	}
 
-	async createAccount(builtinLedgerAccountDto: BuiltinLedgerAccountDto): Promise<string> {
+	private async createAccount(
+		builtinLedgerAccountDto: BuiltinLedgerAccountDto,
+		securityContext: CallSecurityContext
+	): Promise<string> {
 		// When creating an account, debitBalance, creditBalance and timestampLastJournalEntry are supposed to be null.
 		// For consistency purposes, and to make sure whoever calls this function knows that, if those values aren't
 		// respected, errors are thrown.
@@ -160,7 +162,7 @@ export class BuiltinLedgerAggregate {
 			throw new InvalidAccountTypeError();
 		}*/
 
-		// Validate the currency code. TODO: ignore the currency decimals?
+		// Validate the currency code.
 		const currency: {code: string, decimals: number} | undefined
 			= this.currencies.find((currency) => {
 			return currency.code === builtinLedgerAccountDto.currencyCode;
@@ -175,8 +177,8 @@ export class BuiltinLedgerAggregate {
 			type: builtinLedgerAccountDto.type,
 			currencyCode: builtinLedgerAccountDto.currencyCode,
 			currencyDecimals: currency.decimals,
-			debitBalance: 0n, // TODO: should this start out as 0 or null?
-			creditBalance: 0n, // TODO: should this start out as 0 or null?
+			debitBalance: 0n,
+			creditBalance: 0n,
 			timestampLastJournalEntry: null
 		};
 
@@ -190,13 +192,16 @@ export class BuiltinLedgerAggregate {
 			throw error;
 		}
 
-		// TODO: should this be here? are these the right values to use? wrap in try-catch block.
-		/*await this.auditingClient.audit(
-			AuditingActions.ACCOUNT_CREATED,
+		// TODO: wrap in try-catch block.
+		await this.auditingClient.audit(
+			AuditingActions.BUILTIN_LEDGER_ACCOUNT_CREATED,
 			true,
 			this.getAuditSecurityContext(securityContext),
-			[{key: "accountId", value: account.id}]
-		);*/
+			[{
+				key: "builtinLedgerAccountId",
+				value: builtinLedgerAccount.id
+			}]
+		);
 
 		return builtinLedgerAccount.id;
 	}
@@ -205,23 +210,20 @@ export class BuiltinLedgerAggregate {
 		builtinLedgerJournalEntryDtos: BuiltinLedgerJournalEntryDto[],
 		securityContext: CallSecurityContext
 	): Promise<string[]> {
-		this.enforcePrivilege(securityContext, Privileges.CREATE_JOURNAL_ENTRY);
+		this.enforcePrivilege(securityContext, Privileges.CREATE_JOURNAL_ENTRY); // TODO: here or on createJournalEntry()?
 
 		const journalEntryIds: string[] = [];
 		for (const builtinLedgerJournalEntryDto of builtinLedgerJournalEntryDtos) {
-			const journalEntryId: string = await this.createJournalEntry(builtinLedgerJournalEntryDto);
+			const journalEntryId: string = await this.createJournalEntry(builtinLedgerJournalEntryDto, securityContext); // TODO: pass security context?
 			journalEntryIds.push(journalEntryId);
 		}
 		return journalEntryIds;
 	}
 
-	// TODO: does the balance depend on the type of account?
-	private calculateAccountBalance(builtinLedgerAccount: BuiltinLedgerAccount): bigint {
-		const balance: bigint = builtinLedgerAccount.creditBalance - builtinLedgerAccount.debitBalance;
-		return balance;
-	}
-
-	private async createJournalEntry(builtinLedgerJournalEntryDto: BuiltinLedgerJournalEntryDto): Promise<string> {
+	private async createJournalEntry(
+		builtinLedgerJournalEntryDto: BuiltinLedgerJournalEntryDto,
+		securityContext: CallSecurityContext
+	): Promise<string> {
 		// When creating a journal entry, timestamp is supposed to be null. For consistency purposes, and to make sure
 		// whoever calls this function knows that, if those values aren't respected, errors are thrown.
 		if (builtinLedgerJournalEntryDto.timestamp) { // TODO: use "!== null" instead?
@@ -234,7 +236,7 @@ export class BuiltinLedgerAggregate {
 		// Generate a random UUId, if needed. TODO: randomUUID() can generate an id that already exists.
 		const journalEntryId: string = builtinLedgerJournalEntryDto.id ?? randomUUID(); // TODO: should this be done? ?? or ||?
 
-		// Validate the currency code. TODO: ignore the currency decimals?
+		// Validate the currency code.
 		const currency: {code: string, decimals: number} | undefined
 			= this.currencies.find((currency) => {
 			return currency.code === builtinLedgerJournalEntryDto.currencyCode;
@@ -279,7 +281,7 @@ export class BuiltinLedgerAggregate {
 		try {
 			debitedBuiltinLedgerAccount = (await this.builtinLedgerAccountsRepo.getAccountsByIds(
 				[builtinLedgerJournalEntry.debitedAccountId]
-			))[0]; // TODO: should this be done?
+			))[0]; // NOTE: in JS, [0] of an empty array is undefined.
 		} catch (error: unknown) {
 			this.logger.error(error);
 			throw error;
@@ -317,12 +319,6 @@ export class BuiltinLedgerAggregate {
 			throw new Error("currency decimals differ");
 		}
 
-		// Check if the balance is sufficient.
-		const balanceDebitedAccount: bigint = this.calculateAccountBalance(debitedBuiltinLedgerAccount);
-		if (balanceDebitedAccount - builtinLedgerJournalEntry.amount < 0n) {
-			throw new InsufficientBalanceError();
-		}
-
 		// Store the journal entry.
 		try {
 			await this.builtinLedgerJournalEntriesRepo.storeNewJournalEntry(builtinLedgerJournalEntry);
@@ -339,7 +335,6 @@ export class BuiltinLedgerAggregate {
 			await this.builtinLedgerAccountsRepo.updateAccountDebitBalanceAndTimestampById(
 				builtinLedgerJournalEntry.debitedAccountId,
 				updatedDebitBalance,
-				builtinLedgerJournalEntry.currencyDecimals,
 				builtinLedgerJournalEntry.timestamp
 			);
 		} catch (error: unknown) {
@@ -355,7 +350,6 @@ export class BuiltinLedgerAggregate {
 			await this.builtinLedgerAccountsRepo.updateAccountCreditBalanceAndTimestampById(
 				builtinLedgerJournalEntry.debitedAccountId,
 				updatedCreditBalance,
-				builtinLedgerJournalEntry.currencyDecimals,
 				builtinLedgerJournalEntry.timestamp
 			);
 		} catch (error: unknown) {
@@ -364,18 +358,20 @@ export class BuiltinLedgerAggregate {
 			throw error;
 		}
 
-		// TODO: should this be here? are these the right values to use? wrap in try-catch block.
-		/*await this.auditingClient.audit(
-			AuditingActions.JOURNAL_ENTRY_CREATED,
+		// TODO: wrap in try-catch block.
+		await this.auditingClient.audit(
+			AuditingActions.BUILTIN_LEDGER_JOURNAL_ENTRY_CREATED,
 			true,
 			this.getAuditSecurityContext(securityContext),
-			[{key: "accountId", value: account.id}]
-		);*/
+			[{
+				key: "builtinLedgerJournalEntryId",
+				value: builtinLedgerJournalEntry.id
+			}]
+		);
 
 		return builtinLedgerJournalEntry.id;
 	}
 
-	// TODO: audit?
 	async getAccountsByIds(
 		accountIds: string[],
 		securityContext: CallSecurityContext
@@ -406,7 +402,6 @@ export class BuiltinLedgerAggregate {
 		return builtinLedgerAccountDtos;
 	}
 
-	// TODO: audit?
 	async getJournalEntriesByAccountId(
 		accountId: string,
 		securityContext: CallSecurityContext

@@ -53,7 +53,7 @@ import {Privileges} from "../domain/privileges";
 // General.
 const BOUNDED_CONTEXT_NAME: string = "accounts-and-balances-bc";
 const SERVICE_NAME: string = "builtin-ledger-grpc-svc";
-const SERVICE_VERSION: string = require("package.json").version; // TODO: should this be done?
+const SERVICE_VERSION: string = "0.0.1";
 
 // Event streamer.
 const EVENT_STREAMER_HOST: string = process.env["ACCOUNTS_AND_BALANCES_BC_EVENT_STREAMER_HOST"] ?? "localhost";
@@ -79,7 +79,7 @@ const AUTHORIZATION_SERVICE_PORT_NO: number =
 	parseInt(process.env["ACCOUNTS_AND_BALANCES_BC_AUTHORIZATION_SERVICE_PORT_NO"] ?? "") || 3202;
 
 // Auditing.
-const AUDITING_CERT_FILE_RELATIVE_PATH: string = "../../../certs/auditing.crt";
+const AUDITING_CERT_FILE_RELATIVE_PATH: string = "../../../../certs/auditing.crt";
 const AUDITING_CERT_FILE_ABSOLUTE_PATH: string =
 	process.env["ACCOUNTS_AND_BALANCES_BC_AUDITING_CERT_FILE_ABSOLUTE_PATH"]
 	?? resolve(__dirname, AUDITING_CERT_FILE_RELATIVE_PATH);
@@ -217,7 +217,7 @@ export class BuiltinLedgerGrpcService {
 			try {
 				await this.builtinLedgerAccountsRepo.init();
 			} catch (error: unknown) {
-				this.logger.fatal(error);
+				this.logger.fatal("ola");
 				await this.stop();
 				process.exit(-1); // TODO: verify code.
 			}
@@ -238,7 +238,7 @@ export class BuiltinLedgerGrpcService {
 			try {
 				await this.builtinLedgerJournalEntriesRepo.init();
 			} catch (error: unknown) {
-				this.logger.fatal(error);
+				this.logger.fatal("adeus");
 				await this.stop();
 				process.exit(-1); // TODO: verify code.
 			}

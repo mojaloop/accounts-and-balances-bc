@@ -138,6 +138,7 @@ export class ChartOfAccountsMongoRepo implements IChartOfAccountsRepo {
         await this.client.close();
     }
 
+    // TODO: handle case in which the array received is empty (currently, true is returned).
     async accountsExistByInternalIds(internalIds: string[]): Promise<boolean> {
         let accounts: any[]; // TODO: verify type.
         try {

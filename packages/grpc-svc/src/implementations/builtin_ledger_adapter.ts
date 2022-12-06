@@ -32,7 +32,7 @@
 import {
     ILedgerAdapter,
     LedgerAdapterAccount,
-    LedgerAdapterJournalEntry
+    LedgerAdapterJournalEntry, LedgerAdapterRequestId
 } from "../domain/infrastructure-types/ledger_adapter";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {
@@ -71,11 +71,7 @@ export class BuiltinLedgerAdapter implements ILedgerAdapter {
         await this.builtinLedgerClient.destroy();
     }
 
-    async setCurrencies(currencies: {code: string, decimals: number}[]): Promise<void> {
-        // This adapter does not convert currencies because the service does it. TODO: clarify.
-        return;
-    }
-
+    // TODO: currency decimals ignored here, right?
     async createAccounts(ledgerAdapterAccounts: LedgerAdapterAccount[]): Promise<string[]> {
         const builtinLedgerGrpcAccounts: BuiltinLedgerGrpcAccount[]
             = ledgerAdapterAccounts.map((ledgerAdapterAccount) => {
@@ -97,6 +93,7 @@ export class BuiltinLedgerAdapter implements ILedgerAdapter {
         return accountIds;
     }
 
+    // TODO: currency decimals ignored here, right?
     async createJournalEntries(ledgerAdapterJournalEntries: LedgerAdapterJournalEntry[]): Promise<string[]> {
         const builtinLedgerGrpcJournalEntries: BuiltinLedgerGrpcJournalEntry[]
             = ledgerAdapterJournalEntries.map((ledgerAdapterJournalEntry) => {
@@ -117,9 +114,10 @@ export class BuiltinLedgerAdapter implements ILedgerAdapter {
         return journalEntryIds;
     }
 
-    async getAccountsByIds(ledgerAccountIds: string[]): Promise<LedgerAdapterAccount[]> {
+    // TODO: currency decimals ignored here, right?
+    async getAccountsByIds(ledgerAccountIds: LedgerAdapterRequestId[]): Promise<LedgerAdapterAccount[]> {
         const builtinLedgerGrpcAccountIds: BuiltinLedgerGrpcId[] = ledgerAccountIds.map((ledgerAccountId) => {
-            return {builtinLedgerGrpcId: ledgerAccountId};
+            return {builtinLedgerGrpcId: ledgerAccountId.id};
         });
 
         const builtinLedgerGrpcAccountsOutput: BuiltinLedgerGrpcAccount__Output[]
@@ -142,6 +140,7 @@ export class BuiltinLedgerAdapter implements ILedgerAdapter {
                 state: builtinLedgerGrpcAccountOutput.state as AccountState,
                 type: builtinLedgerGrpcAccountOutput.type as AccountType,
                 currencyCode: builtinLedgerGrpcAccountOutput.currencyCode,
+                currencyDecimals: null, // TODO: null?
                 debitBalance: builtinLedgerGrpcAccountOutput.debitBalance,
                 creditBalance: builtinLedgerGrpcAccountOutput.creditBalance,
                 timestampLastJournalEntry: builtinLedgerGrpcAccountOutput.timestampLastJournalEntry ?? null // TODO: ?? or ||?
@@ -151,7 +150,11 @@ export class BuiltinLedgerAdapter implements ILedgerAdapter {
         return ledgerAdapterAccounts;
     }
 
-    async getJournalEntriesByAccountId(ledgerAccountId: string): Promise<LedgerAdapterJournalEntry[]> {
+    // TODO: currency decimals ignored here, right?
+    async getJournalEntriesByAccountId(
+        ledgerAccountId: string,
+        currencyDecimals: number
+    ): Promise<LedgerAdapterJournalEntry[]> {
         const builtinLedgerGrpcJournalEntriesOutput: BuiltinLedgerGrpcJournalEntry__Output[]
             = await this.builtinLedgerClient.getJournalEntriesByAccountId({builtinLedgerGrpcId: ledgerAccountId});
 
@@ -171,6 +174,7 @@ export class BuiltinLedgerAdapter implements ILedgerAdapter {
                 id: builtinLedgerGrpcJournalEntryOutput.id ?? null, // TODO: ?? or ||?
                 ownerId: builtinLedgerGrpcJournalEntryOutput.ownerId,
                 currencyCode: builtinLedgerGrpcJournalEntryOutput.currencyCode,
+                currencyDecimals: null, // TODO: null?
                 amount: builtinLedgerGrpcJournalEntryOutput.amount,
                 debitedAccountId: builtinLedgerGrpcJournalEntryOutput.debitedAccountId,
                 creditedAccountId: builtinLedgerGrpcJournalEntryOutput.creditedAccountId,

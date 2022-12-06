@@ -29,30 +29,35 @@
 
 "use strict";
 
-import {BuiltinLedgerAccount, BuiltinLedgerJournalEntry} from "./entities";
+import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
+import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 
-// TODO: use DTOs instead? if so, they need to have the currency decimals.
+// TODO: should anything by logged?
+export class AuthorizationClientMock implements IAuthorizationClient {
+	// Properties received through the constructor.
+	private readonly logger: ILogger;
 
-export interface IBuiltinLedgerAccountsRepo {
-	init(): Promise<void>;
-	destroy(): Promise<void>;
-	storeNewAccount(account: BuiltinLedgerAccount): Promise<void>;
-	getAccountsByIds(accountIds: string[]): Promise<BuiltinLedgerAccount[]>;
-	updateAccountDebitBalanceAndTimestampById(
-		accountId: string,
-		debitBalance: bigint,
-		timestampLastJournalEntry: number
-	): Promise<void>;
-	updateAccountCreditBalanceAndTimestampById(
-		accountId: string,
-		creditBalance: bigint,
-		timestampLastJournalEntry: number
-	): Promise<void>;
-}
+	constructor(logger: ILogger) {
+		this.logger = logger.createChild(this.constructor.name);
+	}
 
-export interface IBuiltinLedgerJournalEntriesRepo {
-	init(): Promise<void>;
-	destroy(): Promise<void>;
-	storeNewJournalEntry(journalEntry: BuiltinLedgerJournalEntry): Promise<void>;
-	getJournalEntriesByAccountId(accountId: string): Promise<BuiltinLedgerJournalEntry[]>;
+	async init(): Promise<void> {
+		return;
+	}
+
+	async destroy(): Promise<void> {
+		return;
+	}
+
+	roleHasPrivilege(roleId: string, privilegeId: string): boolean {
+		return true;
+	}
+
+	addPrivilege(privId: string, labelName: string, description: string): void {
+		return;
+	}
+
+	addPrivilegesArray(privsArray: { privId: string; labelName: string; description: string }[]): void {
+		return;
+	}
 }

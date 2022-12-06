@@ -32,19 +32,18 @@
 import {LogLevel} from "@mojaloop/logging-bc-public-types-lib";
 import {KafkaLogger} from "@mojaloop/logging-bc-client-lib";
 import {GrpcClient} from "@mojaloop/accounts-and-balances-bc-grpc-client-lib";
-import {
-	Account,
-	AccountState,
-	AccountType,
-	IAccountDto,
-	IJournalEntryDto
-} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import {Account} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {randomUUID} from "crypto";
-import {IAccountsRepo} from "@mojaloop/accounts-and-balances-bc-domain-lib";
-import {MongoAccountsRepo} from "@mojaloop/accounts-and-balances-bc-infrastructure-lib";
-import {GrpcService} from "../../packages/grpc-svc/src/grpc_service";
+import {AccountsAndBalancesGrpcService} from "../../packages/grpc-svc/src/application/accounts_and_balances_grpc_service";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
-import {AuthorizationClientMock} from "@mojaloop/accounts-and-balances-bc-shared-mocks-lib";
+import {
+	IBuiltinLedgerAccountsRepo
+} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc/dist/domain/infrastructure";
+import {
+	BuiltinLedgerAccountsMongoRepo
+} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc/dist/implementations/builtin_ledger_accounts_mongo_repo";
+import {BuiltinLedgerAccount} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc/dist/domain/entities";
+import {AuthorizationClientMock} from "./authorization_client_mock";
 
 /* ********** Constants Begin ********** */
 
@@ -72,18 +71,20 @@ const MONGO_ACCOUNTS_COLLECTION_NAME: string = "accounts";
 
 // Accounts and Balances gRPC client.
 const ACCOUNTS_AND_BALANCES_GRPC_SERVICE_HOST: string = "localhost";
-const ACCOUNTS_AND_BALANCES_GRPC_SERVICE_PORT_NO: number = 5678;
+const ACCOUNTS_AND_BALANCES_GRPC_SERVICE_PORT_NO: number = 1234;
 const ACCOUNTS_AND_BALANCES_GRPC_CLIENT_TIMEOUT_MS: number = 5000;
 
 // Hub account.
 const HUB_ACCOUNT_ID: string = randomUUID();
-const HUB_ACCOUNT_INITIAL_CREDIT_BALANCE: string = (1_000_000).toString();
+const HUB_ACCOUNT_INITIAL_CREDIT_BALANCE: bigint = 1_000_000n;
 
 /* ********** Constants End ********** */
 
 let grpcClient: GrpcClient;
 
-describe("accounts and balances - integration tests with gRPC service", () => {
+jest.setTimeout(1_000_000_000);
+
+describe("accounts and balances - integration tests with built-in ledger", () => {
 	beforeAll(async () => {
 		const logger: KafkaLogger = new KafkaLogger(
 			BOUNDED_CONTEXT_NAME,
@@ -97,7 +98,7 @@ describe("accounts and balances - integration tests with gRPC service", () => {
 
 		const authorizationClient: IAuthorizationClient = new AuthorizationClientMock(logger);
 
-		/*const accountsRepo: IAccountsRepo = new MongoAccountsRepo(
+		/*const builtinLedgerAccountsRepo: IBuiltinLedgerAccountsRepo = new BuiltinLedgerAccountsMongoRepo(
 			logger,
 			MONGO_HOST,
 			MONGO_PORT_NO,
@@ -107,23 +108,22 @@ describe("accounts and balances - integration tests with gRPC service", () => {
 			MONGO_DB_NAME,
 			MONGO_ACCOUNTS_COLLECTION_NAME
 		);
-		await accountsRepo.init();
+		await builtinLedgerAccountsRepo.init();
 
 		// Create the hub account, used to credit other accounts.
-		const hubAccountDto: IAccountDto = {
+		const hubAccount: BuiltinLedgerAccount = {
 			id: HUB_ACCOUNT_ID,
-			externalId: null,
-			state: AccountState.ACTIVE,
-			type: AccountType.POSITION,
+			state: "ACTIVE",
+			type: "FEE",
 			currencyCode: "EUR",
 			currencyDecimals: 2,
-			debitBalance: "0",
+			debitBalance: 0n,
 			creditBalance: HUB_ACCOUNT_INITIAL_CREDIT_BALANCE,
 			timestampLastJournalEntry: null
 		};
-		await accountsRepo.storeNewAccount(hubAccountDto);*/
+		await builtinLedgerAccountsRepo.storeNewAccount(hubAccount);*/
 
-		await GrpcService.start(logger, authorizationClient, undefined, accountsRepo);
+		await AccountsAndBalancesGrpcService.start(logger, authorizationClient/*, undefined, builtinLedgerAccountsRepo*/);
 
 		grpcClient = new GrpcClient(
 			logger,
@@ -136,15 +136,15 @@ describe("accounts and balances - integration tests with gRPC service", () => {
 
 	afterAll(async () => {
 		await grpcClient.destroy();
-		await GrpcService.stop();
+		await AccountsAndBalancesGrpcService.stop();
 	});
 
-	/* createAccount() */
+	/* createAccounts() */
 
 	test("create non-existent account", async () => {
 		const account: Account = {
 			id: null,
-			ownerId: "",
+			ownerId: "test",
 			state: "ACTIVE",
 			type: "FEE",
 			currencyCode: "EUR",
@@ -154,14 +154,15 @@ describe("accounts and balances - integration tests with gRPC service", () => {
 			timestampLastJournalEntry: null
 		};
 
-		const accountId: string = await grpcClient.createAccounts([account]);
+		const accountId: string | undefined = (await grpcClient.createAccounts([account]))[0];
+		expect(accountId).not.toBeUndefined();
 		expect(accountId).not.toBeNull();
 		expect(accountId).not.toEqual("");
 	});
 
 	/* createJournalEntries() */
 
-	test("create non-existent journal entries", async () => {
+	/*test("create non-existent journal entries", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accountDtos: IAccountDto[] = await createAndCredit2Accounts();
 
@@ -197,7 +198,7 @@ describe("accounts and balances - integration tests with gRPC service", () => {
 		expect(idsJournalEntries[1]).not.toEqual("");
 	});
 
-	/* getAccountById() */
+	/!* getAccountById() *!/
 
 	test("get non-existent account by id", async () => {
 		const accountId: string = randomUUID();
@@ -205,7 +206,7 @@ describe("accounts and balances - integration tests with gRPC service", () => {
 		expect(accountDto).toBeNull();
 	});
 
-	/* getAccountsByExternalId() */
+	/!* getAccountsByExternalId() *!/
 
 	test("get non-existent accounts by external id", async () => {
 		const externalId: string = randomUUID();
@@ -213,17 +214,17 @@ describe("accounts and balances - integration tests with gRPC service", () => {
 		expect(accountDtos).toEqual([]);
 	});
 
-	/* getJournalEntriesByAccountId() */
+	/!* getJournalEntriesByAccountId() *!/
 
 	test("get non-existent journal entries by account id", async () => {
 		const accountId: string = randomUUID();
 		const journalEntryDtos: IJournalEntryDto[] =
 			await grpcClient.getJournalEntriesByAccountId(accountId);
 		expect(journalEntryDtos).toEqual([]);
-	});
+	});*/
 });
 
-async function createAndCredit2Accounts(
+/*async function createAndCredit2Accounts(
 	externalIdAccountA: string | null = null,
 	externalIdAccountB: string | null = null,
 	creditBalance: string = "100",
@@ -289,4 +290,4 @@ async function createAndCredit2Accounts(
 	const accountDtoBAfterCrediting: IAccountDto | null =
 		await grpcClient.getAccountById(idAccountB);
 	return [accountDtoAAfterCrediting!, accountDtoBAfterCrediting!];
-}
+}*/

@@ -44,13 +44,14 @@ import {
 	UnableToGetAccountsError,
 	UnableToGetJournalEntriesError
 } from "./errors";
+import {join} from "path";
 
 export class GrpcClient {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
 	private readonly TIMEOUT_MS: number;
 	// Other properties.
-	private static readonly PROTO_FILE_RELATIVE_PATH: string = "./account_and_balances.proto";
+	private static readonly PROTO_FILE_NAME: string = "accounts_and_balances.proto";
 	private static readonly LOAD_PROTO_OPTIONS: Options = {
 		longs: Number
 	};
@@ -65,8 +66,9 @@ export class GrpcClient {
 		this.logger = logger.createChild(this.constructor.name);
 		this.TIMEOUT_MS = timeoutMs;
 
+		const protoFileAbsolutePath: string = join(__dirname, GrpcClient.PROTO_FILE_NAME);
 		const packageDefinition: PackageDefinition = loadSync(
-			GrpcClient.PROTO_FILE_RELATIVE_PATH,
+			protoFileAbsolutePath,
 			GrpcClient.LOAD_PROTO_OPTIONS
 		);
 		const grpcObject: GrpcObject = loadPackageDefinition(packageDefinition);

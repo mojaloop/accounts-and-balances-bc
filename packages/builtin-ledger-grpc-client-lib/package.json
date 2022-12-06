@@ -31,6 +31,7 @@
     "gen-types": "sh ./gen-types.sh",
     "prebuild": "npm run gen-types",
     "build": "tsc",
+    "postbuild": "cp ./src/builtin_ledger.proto ./dist/",
     "test:unit": "echo \"for now, grpc-client-lib doesn't have unit tests\"",
     "test:unit-single": "jest --coverage false -t",
     "pub": "npm version patch && npm publish --tag latest --access public"

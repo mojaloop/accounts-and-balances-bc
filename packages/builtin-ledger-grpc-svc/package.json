@@ -28,6 +28,7 @@
     "audit:fix": "npm audit fix",
     "lint": "eslint src",
     "build": "tsc",
+    "postbuild": "cp ./src/domain/currencies.json ./dist/domain/",
     "test:unit": "jest",
     "test:unit-single": "jest --coverage false -t",
     "start": "node dist/index.js"

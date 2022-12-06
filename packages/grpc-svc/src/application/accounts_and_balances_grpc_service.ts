@@ -47,13 +47,14 @@ import {ChartOfAccountsMongoRepo} from "../implementations/chart_of_accounts_mon
 import {AccountsAndBalancesAggregate} from "../domain/aggregate";
 import {BuiltinLedgerAdapter} from "../implementations/builtin_ledger_adapter";
 import {ILedgerAdapter} from "../domain/infrastructure-types/ledger_adapter";
+import {BuiltinLedgerGrpcService} from "../../../builtin-ledger-grpc-svc/src/application/builtin_ledger_grpc_service";
 
 /* ********** Constants Begin ********** */
 
 // General.
 const BOUNDED_CONTEXT_NAME: string = "accounts-and-balances-bc";
 const SERVICE_NAME: string = "accounts-and-balances-grpc-svc";
-const SERVICE_VERSION: string = require("package.json").version; // TODO: should this be done?
+const SERVICE_VERSION: string = "0.0.1";
 
 // Event streamer.
 const EVENT_STREAMER_HOST: string = process.env["ACCOUNTS_AND_BALANCES_BC_EVENT_STREAMER_HOST"] ?? "localhost";
@@ -79,7 +80,7 @@ const AUTHORIZATION_SERVICE_PORT_NO: number =
     parseInt(process.env["ACCOUNTS_AND_BALANCES_BC_AUTHORIZATION_SERVICE_PORT_NO"] ?? "") || 3202;
 
 // Auditing.
-const AUDITING_CERT_FILE_RELATIVE_PATH: string = "../../../certs/auditing.crt";
+const AUDITING_CERT_FILE_RELATIVE_PATH: string = "../../../../certs/auditing.crt";
 const AUDITING_CERT_FILE_ABSOLUTE_PATH: string =
     process.env["ACCOUNTS_AND_BALANCES_BC_AUDITING_CERT_FILE_ABSOLUTE_PATH"]
     ?? resolve(__dirname, AUDITING_CERT_FILE_RELATIVE_PATH);
@@ -94,7 +95,7 @@ const MONGO_USERNAME: string = process.env["ACCOUNTS_AND_BALANCES_BC_MONGO_USERN
 const MONGO_PASSWORD: string = process.env["ACCOUNTS_AND_BALANCES_BC_MONGO_PASSWORD"] ?? "123456789";
 const MONGO_DB_NAME: string = process.env["ACCOUNTS_AND_BALANCES_BC_MONGO_DB_NAME"] ?? "accounts_and_balances_bc";
 const MONGO_ACCOUNTS_COLLECTION_NAME: string =
-    process.env["ACCOUNTS_AND_BALANCES_BC_MONGO_ACCOUNTS_COLLECTION_NAME"] ?? "accounts";
+    process.env["ACCOUNTS_AND_BALANCES_BC_MONGO_ACCOUNTS_COLLECTION_NAME"] ?? "chart_of_accounts";
 
 // Accounts and Balances gRPC Service.
 const ACCOUNTS_AND_BALANCES_GRPC_SERVICE_HOST: string =
@@ -220,6 +221,10 @@ export class AccountsAndBalancesGrpcService {
                 process.exit(-1); // TODO: verify code.
             }
         }
+
+        // TODO: init builtin ledger svc?
+        await BuiltinLedgerGrpcService.start(logger, authorizationClient);
+        // TODO: stop svc.
 
         // Ledger adapter.
         if (ledgerAdapter !== undefined) {

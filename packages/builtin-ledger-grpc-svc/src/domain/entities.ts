@@ -30,7 +30,6 @@
 "use strict";
 
 import {AccountState, AccountType} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
-import {bigintToString} from "./converters";
 
 // TODO: does it make sense to have DTO and non-DTO types?
 
@@ -39,6 +38,7 @@ export type BuiltinLedgerAccountDto = {
 	state: AccountState;
 	type: AccountType;
 	currencyCode: string;
+	// TODO: currency decimals not needed, right?
 	debitBalance: string | null;
 	creditBalance: string | null;
 	timestampLastJournalEntry: number | null;
@@ -48,6 +48,7 @@ export type BuiltinLedgerAccount = {
 	id: string;
 	state: AccountState;
 	type: AccountType;
+	limitCheckMode: "NONE" | "CREDITS_CANNOT_EXCEED_DEBITS" | "DEBITS_CANNOT_EXCEED_CREDITS";
 	currencyCode: string;
 	currencyDecimals: number;
 	debitBalance: bigint;
@@ -59,6 +60,7 @@ export type BuiltinLedgerJournalEntryDto = {
 	id: string | null;
 	ownerId: string;
 	currencyCode: string;
+	// TODO: currency decimals not needed, right?
 	amount: string;
 	debitedAccountId: string;
 	creditedAccountId: string;

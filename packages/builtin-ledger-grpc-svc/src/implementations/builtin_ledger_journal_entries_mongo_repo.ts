@@ -52,19 +52,17 @@ export const BUILTIN_LEDGER_JOURNAL_ENTRY_MONGO_SCHEMA: any = {
         "timestamp"
     ],
     properties: {
-        properties: {
-            // TODO:
-            //  bsonType vs type;
-            //  long and binData BSON types;
-            //  check if _id can be replaced.
-            _id: {bsonType: "string"},
-            currencyCode: {bsonType: "string"},
-            currencyDecimals: {bsonType: "int"},
-            amount: {bsonType: "string"},
-            debitedAccountId: {bsonType: "string"},
-            creditedAccountId: {bsonType: "string"},
-            timestamp: {bsonType: ["number"]}, // TODO: long instead of number?
-        }
+        // TODO:
+        //  bsonType vs type;
+        //  long and binData BSON types;
+        //  check if _id can be replaced.
+        _id: {bsonType: "string"},
+        currencyCode: {bsonType: "string"},
+        currencyDecimals: {bsonType: "int"},
+        amount: {bsonType: "string"},
+        debitedAccountId: {bsonType: "string"},
+        creditedAccountId: {bsonType: "string"},
+        timestamp: {bsonType: ["number"]}, // TODO: long instead of number?
     },
     additionalProperties: false
 };

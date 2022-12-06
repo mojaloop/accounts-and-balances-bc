@@ -35,7 +35,8 @@ export type LedgerAdapterAccount = {
     id: string | null;
     state: AccountState;
     type: AccountType;
-    currencyCode: string; // TODO: why no currency decimals?
+    currencyCode: string;
+    currencyDecimals: number | null; // Only for when creating. TODO: | null?
     debitBalance: string | null;
     creditBalance: string | null;
     timestampLastJournalEntry: number | null;
@@ -43,23 +44,30 @@ export type LedgerAdapterAccount = {
 
 export type LedgerAdapterJournalEntry = {
     id: string | null;
-    ownerId: string | null; // TODO: why ownerId here and not on the account type? should this really be called ownerId?
+    ownerId: string | null;
     currencyCode: string;
+    currencyDecimals: number | null; // // Only for when creating. TODO: | null?
     amount: string;
     debitedAccountId: string;
     creditedAccountId: string;
     timestamp: number | null;
 }
 
+export type LedgerAdapterRequestId = { // TODO: should this be an object or an array? find a better name.
+    id: string,
+    currencyDecimals: number
+}
+
 export interface ILedgerAdapter {
     init(): Promise<void>;
     destroy(): Promise<void>;
 
-    setCurrencies(currencies: {code: string, decimals: number}[]): Promise<void>;
-
     createAccounts(ledgerAdapterAccounts: LedgerAdapterAccount[]): Promise<string[]>;
     createJournalEntries(ledgerAdapterJournalEntries: LedgerAdapterJournalEntry[]): Promise<string[]>;
 
-    getAccountsByIds(ledgerAccountIds: string[]): Promise<LedgerAdapterAccount[]>;
-    getJournalEntriesByAccountId(ledgerAccountId: string): Promise<LedgerAdapterJournalEntry[]>;
+    getAccountsByIds(ledgerAccountIds: LedgerAdapterRequestId[]): Promise<LedgerAdapterAccount[]>;
+    getJournalEntriesByAccountId(
+        ledgerAccountId: string,
+        currencyDecimals: number
+    ): Promise<LedgerAdapterJournalEntry[]>;
 }

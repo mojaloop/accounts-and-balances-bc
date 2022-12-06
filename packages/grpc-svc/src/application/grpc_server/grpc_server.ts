@@ -43,6 +43,7 @@ import {TokenHelper} from "@mojaloop/security-bc-client-lib";
 import {AccountsAndBalancesAggregate} from "../../domain/aggregate";
 import {GrpcHandlers} from "./grpc_handlers";
 import {GrpcAccountsAndBalancesHandlers, ProtoGrpcType} from "@mojaloop/accounts-and-balances-bc-grpc-client-lib";
+import {join} from "path";
 
 export class GrpcServer {
 	// Properties received through the constructor.
@@ -68,8 +69,9 @@ export class GrpcServer {
 		this.HOST = host;
 		this.PORT_NO = portNo;
 
+		const protoFileAbsolutePath: string = "/home/goncalogarcia/Documents/Work/Mojaloop/vNext/BoundedContexts/accounts-and-balances-bc/packages/grpc-client-lib/src/accounts_and_balances.proto";
 		const packageDefinition: PackageDefinition = loadSync(
-			GrpcServer.PROTO_FILE_RELATIVE_PATH,
+			protoFileAbsolutePath,
 			GrpcServer.LOAD_PROTO_OPTIONS
 		);
 		const grpcObject: GrpcObject = loadPackageDefinition(packageDefinition);

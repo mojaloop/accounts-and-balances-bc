@@ -71,8 +71,9 @@ export class GrpcServer {
 		this.HOST = host;
 		this.PORT_NO = portNo;
 
+		const protoFileAbsolutePath: string = "/home/goncalogarcia/Documents/Work/Mojaloop/vNext/BoundedContexts/accounts-and-balances-bc/packages/builtin-ledger-grpc-client-lib/src/builtin_ledger.proto"; // TODO: solve.
 		const packageDefinition: PackageDefinition = loadSync(
-			GrpcServer.PROTO_FILE_RELATIVE_PATH,
+			protoFileAbsolutePath,
 			GrpcServer.LOAD_PROTO_OPTIONS
 		);
 		const grpcObject: GrpcObject = loadPackageDefinition(packageDefinition);
