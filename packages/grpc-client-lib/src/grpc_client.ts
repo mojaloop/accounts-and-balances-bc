@@ -32,7 +32,7 @@
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {loadSync, Options, PackageDefinition} from "@grpc/proto-loader";
 import {credentials, GrpcObject, loadPackageDefinition, Deadline} from "@grpc/grpc-js";
-import {Account, JournalEntry} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import {Account, AccountState, AccountType, JournalEntry} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {GrpcId, GrpcId__Output} from "./types/GrpcId";
 import {GrpcAccount, GrpcAccount__Output} from "./types/GrpcAccount";
 import {GrpcJournalEntry, GrpcJournalEntry__Output} from "./types/GrpcJournalEntry";
@@ -112,6 +112,7 @@ export class GrpcClient {
 				currencyCode: account.currencyCode,
 				debitBalance: account.debitBalance ?? undefined, // TODO: ?? or ||?
 				creditBalance: account.creditBalance ?? undefined, // TODO: ?? or ||?
+				balance: account.balance ?? undefined, // TODO: ?? or ||?
 				timestampLastJournalEntry: account.timestampLastJournalEntry ?? undefined // TODO: ?? or ||?
 			};
 			return grpcAccount;
@@ -147,6 +148,7 @@ export class GrpcClient {
 		const grpcJournalEntries: GrpcJournalEntry[] = journalEntries.map((journalEntry) => {
 			const grpcJournalEntry: GrpcJournalEntry = {
 				id: journalEntry.id ?? undefined, // TODO: ?? or ||?
+				ownerId: journalEntry.ownerId ?? undefined, // TODO: ?? or ||?
 				currencyCode: journalEntry.currencyCode,
 				amount: journalEntry.amount,
 				debitedAccountId: journalEntry.debitedAccountId,
@@ -182,7 +184,8 @@ export class GrpcClient {
 		});
 	}
 
-	async getAccountsByIds(accountIds: string[]): Promise<GrpcAccount__Output[]> {
+	// TODO: return GrpcAccount__Output or Account?
+	async getAccountsByIds(accountIds: string[]): Promise<Account[]> {
 		const grpcAccountIds: GrpcId[] = accountIds.map((accountId) => {
 			return {grpcId: accountId};
 		});
@@ -197,13 +200,17 @@ export class GrpcClient {
 					}
 
 					const grpcAccountsOutput: GrpcAccount__Output[] = grpcAccountArrayOutput.grpcAccountArray || [];
-					resolve(grpcAccountsOutput);
+					// resolve(grpcAccountsOutput);
+
+					const accounts: Account[] = this.grpcAccountsOutputToAccounts(grpcAccountsOutput);
+					resolve(accounts);
 				}
 			);
 		});
 	}
 
-	async getAccountsByOwnerId(ownerId: string): Promise<GrpcAccount__Output[]> {
+	// TODO: return GrpcAccount__Output or Account?
+	async getAccountsByOwnerId(ownerId: string): Promise<Account[]> {
 		return new Promise((resolve, reject) => {
 			this.client.getAccountsByOwnerId(
 				{grpcId: ownerId},
@@ -214,13 +221,17 @@ export class GrpcClient {
 					}
 
 					const grpcAccountsOutput: GrpcAccount__Output[] = grpcAccountArrayOutput.grpcAccountArray || [];
-					resolve(grpcAccountsOutput);
+					// resolve(grpcAccountsOutput);
+
+					const accounts: Account[] = this.grpcAccountsOutputToAccounts(grpcAccountsOutput);
+					resolve(accounts);
 				}
 			);
 		});
 	}
 
-	async getJournalEntriesByAccountId(accountId: string): Promise<GrpcJournalEntry__Output[]> {
+	// TODO: return GrpcJournalEntry__Output or JournalEntry?
+	async getJournalEntriesByAccountId(accountId: string): Promise<JournalEntry[]> {
 		return new Promise((resolve, reject) => {
 			this.client.getJournalEntriesByAccountId(
 				{grpcId: accountId},
@@ -232,9 +243,60 @@ export class GrpcClient {
 
 					const grpcJournalEntriesOutput: GrpcJournalEntry__Output[] =
 						grpcJournalEntryArrayOutput.grpcJournalEntryArray || [];
-					resolve(grpcJournalEntriesOutput);
+					// resolve(grpcJournalEntriesOutput);
+
+					const journalEntries: JournalEntry[] =
+						grpcJournalEntriesOutput.map((grpcJournalEntryOutput) => {
+						if (
+							!grpcJournalEntryOutput.currencyCode
+							|| !grpcJournalEntryOutput.amount
+							|| !grpcJournalEntryOutput.debitedAccountId
+							|| !grpcJournalEntryOutput.creditedAccountId
+						) {
+							throw new Error(); // TODO: create custom error.
+						}
+
+						const journalEntry: JournalEntry = {
+							id: grpcJournalEntryOutput.id ?? null, // TODO: ?? or ||?
+							ownerId: grpcJournalEntryOutput.ownerId ?? null, // TODO: ?? or ||?
+							currencyCode: grpcJournalEntryOutput.currencyCode,
+							amount: grpcJournalEntryOutput.amount,
+							debitedAccountId: grpcJournalEntryOutput.debitedAccountId,
+							creditedAccountId: grpcJournalEntryOutput.creditedAccountId,
+							timestamp: grpcJournalEntryOutput.timestamp ?? null // TODO: ?? or ||?
+						};
+						return journalEntry;
+					});
+					resolve(journalEntries);
 				}
 			);
 		});
+	}
+
+	private grpcAccountsOutputToAccounts(grpcAccountsOutput: GrpcAccount__Output[]): Account[] {
+		const accounts: Account[] = grpcAccountsOutput.map((grpcAccountOutput) => {
+			if (
+				!grpcAccountOutput.ownerId
+				|| !grpcAccountOutput.state
+				|| !grpcAccountOutput.type
+				|| !grpcAccountOutput.currencyCode
+			) {
+				throw new Error(); // TODO: create custom error.
+			}
+
+			const account: Account = {
+				id: grpcAccountOutput.id ?? null, // TODO: ?? or ||?
+				ownerId: grpcAccountOutput.ownerId,
+				state: grpcAccountOutput.state as AccountState, // TODO: cast?
+				type: grpcAccountOutput.type as AccountType, // TODO: cast?
+				currencyCode: grpcAccountOutput.currencyCode,
+				debitBalance: grpcAccountOutput.debitBalance ?? null, // TODO: ?? or ||?
+				creditBalance: grpcAccountOutput.creditBalance ?? null, // TODO: ?? or ||?
+				balance: grpcAccountOutput.balance ?? null, // TODO: ?? or ||?
+				timestampLastJournalEntry: grpcAccountOutput.timestampLastJournalEntry ?? null // TODO: ?? or ||?
+			};
+			return account;
+		});
+		return accounts;
 	}
 }

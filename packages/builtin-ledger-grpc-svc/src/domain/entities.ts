@@ -42,19 +42,25 @@ export type BuiltinLedgerAccountDto = {
 	debitBalance: string | null;
 	creditBalance: string | null;
 	timestampLastJournalEntry: number | null;
-}
+};
+
+// TODO: find a better name.
+export type LimitCheckMode =
+	"NONE"
+	| "CREDIT_BALANCE_CANNOT_EXCEED_DEBIT_BALANCE"
+	| "DEBIT_BALANCE_CANNOT_EXCEED_CREDIT_BALANCE";
 
 export type BuiltinLedgerAccount = {
 	id: string;
 	state: AccountState;
 	type: AccountType;
-	limitCheckMode: "NONE" | "CREDITS_CANNOT_EXCEED_DEBITS" | "DEBITS_CANNOT_EXCEED_CREDITS";
+	limitCheckMode: LimitCheckMode;
 	currencyCode: string;
 	currencyDecimals: number;
 	debitBalance: bigint;
 	creditBalance: bigint;
 	timestampLastJournalEntry: number | null;
-}
+};
 
 export type BuiltinLedgerJournalEntryDto = {
 	id: string | null;
@@ -65,7 +71,7 @@ export type BuiltinLedgerJournalEntryDto = {
 	debitedAccountId: string;
 	creditedAccountId: string;
 	timestamp: number | null;
-}
+};
 
 export type BuiltinLedgerJournalEntry = {
 	id: string;
@@ -76,7 +82,7 @@ export type BuiltinLedgerJournalEntry = {
 	debitedAccountId: string;
 	creditedAccountId: string;
 	timestamp: number;
-}
+};
 
 /*export class BuiltinLedgerAccount {
 	id: string | null;

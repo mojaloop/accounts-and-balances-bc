@@ -35,13 +35,13 @@ export class InvalidAccountTypeError extends Error {readonly message = "invalid 
 export class InvalidDebitBalanceError extends Error {readonly message = "invalid debit balance";}
 export class InvalidCreditBalanceError extends Error {readonly message = "invalid credit balance";}
 // JournalEntry.
-export class InvalidExternalCategoryError extends Error {readonly message = "invalid external category";}
 export class InvalidJournalEntryAmountError extends Error {readonly message = "invalid journal entry amount";}
 export class SameDebitedAndCreditedAccountsError extends Error {readonly message = "same debited and credited accounts";}
 export class DebitedAccountNotFoundError extends Error {readonly message = "no such debited account";}
 export class CreditedAccountNotFoundError extends Error {readonly message = "no such credited account";}
 export class CurrencyCodesDifferError extends Error {readonly message = "currency codes differ";}
-export class InsufficientBalanceError extends Error {readonly message = "insufficient balance";}
+export class DebitBalanceExceedsCreditBalanceError extends Error {readonly message = "debit balance exceeds credit balance";}
+export class CreditBalanceExceedsDebitBalanceError extends Error {readonly message = "credit balance exceeds debit balance";}
 // Common.
 export class InvalidIdError extends Error {readonly message = "invalid id";}
 export class InvalidExternalIdError extends Error {readonly message = "invalid external id";}

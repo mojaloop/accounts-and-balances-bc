@@ -43,6 +43,7 @@ import {randomUUID} from "crypto";
 import {join} from "path";
 import {readFileSync} from "fs";
 import {InvalidCurrencyCodeError} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc/dist/domain/errors";
+import {bigintToString, stringToBigint} from "./converters";
 
 export class AccountsAndBalancesAggregate {
 	// Properties received through the constructor.
@@ -215,6 +216,18 @@ export class AccountsAndBalancesAggregate {
 				throw new Error(); // TODO: create custom error.
 			}
 
+			if (
+				!ledgerAdapterAccount.debitBalance
+				|| !ledgerAdapterAccount.creditBalance
+			) {
+				throw new Error(); // TODO: create custom error.
+			}
+			const balance: string = this.calculateBalanceString(
+				ledgerAdapterAccount.debitBalance,
+				ledgerAdapterAccount.creditBalance,
+				coaAccount.currencyDecimals
+			);
+
 			const account: Account = {
 				id: coaAccount.internalId,
 				ownerId: coaAccount.ownerId,
@@ -223,7 +236,7 @@ export class AccountsAndBalancesAggregate {
 				currencyCode: coaAccount.currencyCode,
 				debitBalance: ledgerAdapterAccount.debitBalance,
 				creditBalance: ledgerAdapterAccount.creditBalance,
-				balance: this.calculateBalance(ledgerAdapterAccount.debitBalance, ledgerAdapterAccount.creditBalance, coaAccount.currencyDecimals),
+				balance: balance,
 				timestampLastJournalEntry: ledgerAdapterAccount.timestampLastJournalEntry
 			};
 			return account;
@@ -231,12 +244,11 @@ export class AccountsAndBalancesAggregate {
 		return accounts;
 	}
 
-	private calculateBalance(debitBalance: string | null, creditBalance: string | null, currencyDecimals: number): string | null {
-		// TODO: check for null inputs and return null.
-		if (!debitBalance || !creditBalance) {
-			return null;
-		}
-		const balance: bigint = BigInt(debitBalance) - BigInt(creditBalance);
-		return balance.toString();
+	private calculateBalanceString(debitBalanceString: string, creditBalanceString: string, currencyDecimals: number): string {
+		const debitBalanceBigint: bigint = stringToBigint(debitBalanceString, currencyDecimals);
+		const creditBalanceBigint: bigint = stringToBigint(creditBalanceString, currencyDecimals);
+		const balanceBigint: bigint = creditBalanceBigint - debitBalanceBigint;
+		const balanceString: string = bigintToString(balanceBigint, currencyDecimals);
+		return balanceString;
 	}
 }

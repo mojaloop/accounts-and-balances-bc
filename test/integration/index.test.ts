@@ -32,7 +32,7 @@
 import {LogLevel} from "@mojaloop/logging-bc-public-types-lib";
 import {KafkaLogger} from "@mojaloop/logging-bc-client-lib";
 import {GrpcClient} from "@mojaloop/accounts-and-balances-bc-grpc-client-lib";
-import {Account} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import {Account, JournalEntry} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {randomUUID} from "crypto";
 import {AccountsAndBalancesGrpcService} from "../../packages/grpc-svc/src/application/accounts_and_balances_grpc_service";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
@@ -98,7 +98,7 @@ describe("accounts and balances - integration tests with built-in ledger", () =>
 
 		const authorizationClient: IAuthorizationClient = new AuthorizationClientMock(logger);
 
-		/*const builtinLedgerAccountsRepo: IBuiltinLedgerAccountsRepo = new BuiltinLedgerAccountsMongoRepo(
+		const builtinLedgerAccountsRepo: IBuiltinLedgerAccountsRepo = new BuiltinLedgerAccountsMongoRepo(
 			logger,
 			MONGO_HOST,
 			MONGO_PORT_NO,
@@ -115,13 +115,14 @@ describe("accounts and balances - integration tests with built-in ledger", () =>
 			id: HUB_ACCOUNT_ID,
 			state: "ACTIVE",
 			type: "FEE",
+			limitCheckMode: "NONE",
 			currencyCode: "EUR",
 			currencyDecimals: 2,
 			debitBalance: 0n,
 			creditBalance: HUB_ACCOUNT_INITIAL_CREDIT_BALANCE,
 			timestampLastJournalEntry: null
 		};
-		await builtinLedgerAccountsRepo.storeNewAccount(hubAccount);*/
+		await builtinLedgerAccountsRepo.storeNewAccount(hubAccount);
 
 		await AccountsAndBalancesGrpcService.start(logger, authorizationClient/*, undefined, builtinLedgerAccountsRepo*/);
 
@@ -162,108 +163,105 @@ describe("accounts and balances - integration tests with built-in ledger", () =>
 
 	/* createJournalEntries() */
 
-	/*test("create non-existent journal entries", async () => {
+	test("create non-existent journal entries", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
-		const accountDtos: IAccountDto[] = await createAndCredit2Accounts();
+		const accounts: Account[] = await createAndCredit2Accounts();
 
-		const journalEntryDtoA: IJournalEntryDto = {
+		const journalEntryA: JournalEntry = {
 			id: null,
-			externalId: null,
-			externalCategory: null,
+			ownerId: null,
 			currencyCode: "EUR",
-			currencyDecimals: null,
 			amount: "5",
-			debitedAccountId: accountDtos[0].id!,
-			creditedAccountId: accountDtos[1].id!,
+			debitedAccountId: accounts[0].id!,
+			creditedAccountId: accounts[1].id!,
 			timestamp: null
 		};
 
-		const journalEntryDtoB: IJournalEntryDto = {
+		const journalEntryB: JournalEntry = {
 			id: null,
-			externalId: null,
-			externalCategory: null,
+			ownerId: null,
 			currencyCode: "EUR",
-			currencyDecimals: null,
 			amount: "5",
-			debitedAccountId: accountDtos[1].id!,
-			creditedAccountId: accountDtos[0].id!,
+			debitedAccountId: accounts[1].id!,
+			creditedAccountId: accounts[0].id!,
 			timestamp: null
 		};
 
-		const idsJournalEntries: string[] = await grpcClient
-			.createJournalEntries([journalEntryDtoA, journalEntryDtoB]);
+		const idsJournalEntries: string[] =
+			await grpcClient.createJournalEntries([journalEntryA, journalEntryB]);
+
+		expect(idsJournalEntries[0]).not.toBeUndefined();
 		expect(idsJournalEntries[0]).not.toBeNull();
 		expect(idsJournalEntries[0]).not.toEqual("");
+
+		expect(idsJournalEntries[1]).not.toBeUndefined();
 		expect(idsJournalEntries[1]).not.toBeNull();
 		expect(idsJournalEntries[1]).not.toEqual("");
 	});
 
-	/!* getAccountById() *!/
+	/* getAccountsByIds() */
 
 	test("get non-existent account by id", async () => {
 		const accountId: string = randomUUID();
-		const accountDto: IAccountDto | null = await grpcClient.getAccountById(accountId);
-		expect(accountDto).toBeNull();
+		const account: Account | undefined = (await grpcClient.getAccountsByIds([accountId]))[0];
+		expect(account).toBeUndefined();
 	});
 
-	/!* getAccountsByExternalId() *!/
+	/* getAccountsByOwnerId() */
 
-	test("get non-existent accounts by external id", async () => {
-		const externalId: string = randomUUID();
-		const accountDtos: IAccountDto[] = await grpcClient.getAccountsByExternalId(externalId);
-		expect(accountDtos).toEqual([]);
+	test("get non-existent accounts by owner id", async () => {
+		const ownerId: string = randomUUID();
+		const accounts: Account[] = await grpcClient.getAccountsByOwnerId(ownerId);
+		expect(accounts).toEqual([]);
 	});
 
-	/!* getJournalEntriesByAccountId() *!/
+	/* getJournalEntriesByAccountId() */
 
 	test("get non-existent journal entries by account id", async () => {
 		const accountId: string = randomUUID();
-		const journalEntryDtos: IJournalEntryDto[] =
-			await grpcClient.getJournalEntriesByAccountId(accountId);
-		expect(journalEntryDtos).toEqual([]);
-	});*/
+		const journalEntries: JournalEntry[] = await grpcClient.getJournalEntriesByAccountId(accountId);
+		expect(journalEntries).toEqual([]);
+	});
 });
 
-/*async function createAndCredit2Accounts(
-	externalIdAccountA: string | null = null,
-	externalIdAccountB: string | null = null,
+async function createAndCredit2Accounts(
+	ownerIdAccountA: string = "owner account A",
+	ownerIdAccountB: string = "owner account B",
 	creditBalance: string = "100",
-): Promise<IAccountDto[]> {
+): Promise<Account[]> {
 	// Account A.
-	const accountDtoABeforeCrediting: IAccountDto = {
+	const accountABeforeCrediting: Account = {
 		id: null,
-		externalId: externalIdAccountA,
-		state: AccountState.ACTIVE,
-		type: AccountType.POSITION,
+		ownerId: ownerIdAccountA,
+		state: "ACTIVE",
+		type: "FEE",
 		currencyCode: "EUR",
-		currencyDecimals: null,
-		debitBalance: "0",
-		creditBalance: "0",
+		debitBalance: null,
+		creditBalance: null,
+		balance: null,
 		timestampLastJournalEntry: null
 	};
-	const idAccountA: string = await grpcClient.createAccount(accountDtoABeforeCrediting);
+	const idAccountA: string | undefined = (await grpcClient.createAccounts([accountABeforeCrediting]))[0];
 
 	// Account B.
-	const accountDtoBBeforeCrediting: IAccountDto = {
+	const accountBBeforeCrediting: Account = {
 		id: null,
-		externalId: externalIdAccountB,
-		state: AccountState.ACTIVE,
-		type: AccountType.POSITION,
+		ownerId: ownerIdAccountB,
+		state: "ACTIVE",
+		type: "FEE",
 		currencyCode: "EUR",
-		currencyDecimals: null,
-		debitBalance: "0",
-		creditBalance: "0",
+		debitBalance: null,
+		creditBalance: null,
+		balance: null,
 		timestampLastJournalEntry: null
 	};
-	const idAccountB: string = await grpcClient.createAccount(accountDtoBBeforeCrediting);
+	const idAccountB: string | undefined = (await grpcClient.createAccounts([accountBBeforeCrediting]))[0];
 
 	// Journal entry A, regarding the crediting of account A.
-	const journalEntryDtoA: IJournalEntryDto = {
+	const journalEntryA: JournalEntry = {
 		id: null,
-		externalId: null,
-		externalCategory: null,
+		ownerId: null,
 		currencyCode: "EUR",
-		currencyDecimals: null,
 		amount: creditBalance,
 		debitedAccountId: HUB_ACCOUNT_ID,
 		creditedAccountId: idAccountA,
@@ -271,23 +269,19 @@ describe("accounts and balances - integration tests with built-in ledger", () =>
 	};
 
 	// Journal entry B, regarding the crediting of account B.
-	const journalEntryDtoB: IJournalEntryDto = {
+	const journalEntryB: JournalEntry = {
 		id: null,
-		externalId: null,
-		externalCategory: null,
+		ownerId: null,
 		currencyCode: "EUR",
-		currencyDecimals: null,
 		amount: creditBalance,
 		debitedAccountId: HUB_ACCOUNT_ID,
 		creditedAccountId: idAccountB,
 		timestamp: null
 	};
 
-	await grpcClient.createJournalEntries([journalEntryDtoA, journalEntryDtoB]);
+	await grpcClient.createJournalEntries([journalEntryA, journalEntryB]);
 
-	const accountDtoAAfterCrediting: IAccountDto | null =
-		await grpcClient.getAccountById(idAccountA);
-	const accountDtoBAfterCrediting: IAccountDto | null =
-		await grpcClient.getAccountById(idAccountB);
-	return [accountDtoAAfterCrediting!, accountDtoBAfterCrediting!];
-}*/
+	const accountAAfterCrediting: Account | undefined = (await grpcClient.getAccountsByIds([idAccountA]))[0];
+	const accountBAfterCrediting: Account | undefined = (await grpcClient.getAccountsByIds([idAccountB]))[0];
+	return [accountAAfterCrediting!, accountBAfterCrediting!];
+}

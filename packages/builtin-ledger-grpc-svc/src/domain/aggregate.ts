@@ -44,7 +44,7 @@ import {
 	InvalidIdError,
 	InvalidCurrencyCodeError,
 	InvalidCreditBalanceError,
-	InvalidDebitBalanceError,
+	InvalidDebitBalanceError, DebitBalanceExceedsCreditBalanceError, CreditBalanceExceedsDebitBalanceError,
 } from "./errors";
 import {IAuditClient, AuditSecurityContext} from "@mojaloop/auditing-bc-public-types-lib";
 import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
@@ -175,6 +175,7 @@ export class BuiltinLedgerAggregate {
 			id: accountId,
 			state: builtinLedgerAccountDto.state,
 			type: builtinLedgerAccountDto.type,
+			limitCheckMode: "NONE", // TODO: get the right mode.
 			currencyCode: builtinLedgerAccountDto.currencyCode,
 			currencyDecimals: currency.decimals,
 			debitBalance: 0n,
@@ -317,6 +318,20 @@ export class BuiltinLedgerAggregate {
 			// TODO: does it make sense to create a custom error?
 			this.logger.error("currency decimals differ");
 			throw new Error("currency decimals differ");
+		}
+
+		// Check the balances.
+		if (
+			debitedBuiltinLedgerAccount.limitCheckMode === "DEBIT_BALANCE_CANNOT_EXCEED_CREDIT_BALANCE"
+			&& debitedBuiltinLedgerAccount.debitBalance > debitedBuiltinLedgerAccount.creditBalance
+		) {
+			throw new DebitBalanceExceedsCreditBalanceError();
+		}
+		if (
+			debitedBuiltinLedgerAccount.limitCheckMode === "CREDIT_BALANCE_CANNOT_EXCEED_DEBIT_BALANCE"
+			&& debitedBuiltinLedgerAccount.creditBalance > debitedBuiltinLedgerAccount.debitBalance
+		) {
+			throw new CreditBalanceExceedsDebitBalanceError();
 		}
 
 		// Store the journal entry.

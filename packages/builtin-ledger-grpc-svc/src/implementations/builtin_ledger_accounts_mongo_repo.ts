@@ -47,6 +47,7 @@ export const BUILTIN_LEDGER_ACCOUNT_MONGO_SCHEMA: any = {
         "_id", // id.
         "state",
         "type",
+        "limitCheckMode",
         "currencyCode",
         "currencyDecimals",
         "debitBalance",
@@ -61,6 +62,7 @@ export const BUILTIN_LEDGER_ACCOUNT_MONGO_SCHEMA: any = {
         _id: {bsonType: "string"},
         state: {bsonType: "string"},
         type: {bsonType: "string"},
+        limitCheckMode: {bsonType: "string"},
         currencyCode: {bsonType: "string"},
         currencyDecimals: {bsonType: "int"},
         debitBalance: {bsonType: "string"},
@@ -150,6 +152,7 @@ export class BuiltinLedgerAccountsMongoRepo implements IBuiltinLedgerAccountsRep
             _id: builtinLedgerAccount.id,
             state: builtinLedgerAccount.state,
             type: builtinLedgerAccount.type,
+            limitCheckMode: builtinLedgerAccount.limitCheckMode,
             currencyCode: builtinLedgerAccount.currencyCode,
             currencyDecimals: builtinLedgerAccount.currencyDecimals,
             debitBalance: builtinLedgerAccount.debitBalance.toString(), // TODO: create an auxiliary variable?
