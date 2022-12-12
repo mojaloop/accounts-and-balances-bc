@@ -87,9 +87,9 @@ export class BuiltinLedgerAdapter implements ILedgerAdapter {
             return builtinLedgerGrpcAccount;
         });
 
-        const accountIds: string[] = await this.builtinLedgerClient.createAccounts(
+        const accountIds: string[] = (await this.builtinLedgerClient.createAccounts(
             {builtinLedgerGrpcAccountArray: builtinLedgerGrpcAccounts}
-        );
+        )).builtinLedgerGrpcIdArray!.map((id) => {return id.builtinLedgerGrpcId!});
         return accountIds;
     }
 
@@ -108,9 +108,9 @@ export class BuiltinLedgerAdapter implements ILedgerAdapter {
             return builtinLedgerGrpcJournalEntry;
         });
 
-        const journalEntryIds: string[] = await this.builtinLedgerClient.createJournalEntries(
+        const journalEntryIds: string[] = (await this.builtinLedgerClient.createJournalEntries(
             {builtinLedgerGrpcJournalEntryArray: builtinLedgerGrpcJournalEntries}
-        );
+        )).builtinLedgerGrpcIdArray!.map((id) => {return id.builtinLedgerGrpcId!});
         return journalEntryIds;
     }
 
@@ -121,7 +121,8 @@ export class BuiltinLedgerAdapter implements ILedgerAdapter {
         });
 
         const builtinLedgerGrpcAccountsOutput: BuiltinLedgerGrpcAccount__Output[]
-            = await this.builtinLedgerClient.getAccountsByIds({builtinLedgerGrpcIdArray: builtinLedgerGrpcAccountIds});
+            = (await this.builtinLedgerClient.getAccountsByIds({builtinLedgerGrpcIdArray: builtinLedgerGrpcAccountIds}))
+            .builtinLedgerGrpcAccountArray!;
 
         const ledgerAdapterAccounts: LedgerAdapterAccount[]
             = builtinLedgerGrpcAccountsOutput.map((builtinLedgerGrpcAccountOutput) => {
@@ -156,7 +157,8 @@ export class BuiltinLedgerAdapter implements ILedgerAdapter {
         currencyDecimals: number
     ): Promise<LedgerAdapterJournalEntry[]> {
         const builtinLedgerGrpcJournalEntriesOutput: BuiltinLedgerGrpcJournalEntry__Output[]
-            = await this.builtinLedgerClient.getJournalEntriesByAccountId({builtinLedgerGrpcId: ledgerAccountId});
+            = (await this.builtinLedgerClient.getJournalEntriesByAccountId({builtinLedgerGrpcId: ledgerAccountId}))
+            .builtinLedgerGrpcJournalEntryArray!;
 
         const ledgerAdapterJournalEntries: LedgerAdapterJournalEntry[] =
             builtinLedgerGrpcJournalEntriesOutput.map((builtinLedgerGrpcJournalEntryOutput) => {

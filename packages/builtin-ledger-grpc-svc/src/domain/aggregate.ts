@@ -320,8 +320,8 @@ export class BuiltinLedgerAggregate {
 			throw new Error("currency decimals differ");
 		}
 
-		// Check the balances.
-		if (
+		// Check the balances. TODO: verify.
+		/*if (
 			debitedBuiltinLedgerAccount.limitCheckMode === "DEBIT_BALANCE_CANNOT_EXCEED_CREDIT_BALANCE"
 			&& debitedBuiltinLedgerAccount.debitBalance > debitedBuiltinLedgerAccount.creditBalance
 		) {
@@ -332,7 +332,7 @@ export class BuiltinLedgerAggregate {
 			&& debitedBuiltinLedgerAccount.creditBalance > debitedBuiltinLedgerAccount.debitBalance
 		) {
 			throw new CreditBalanceExceedsDebitBalanceError();
-		}
+		}*/
 
 		// Store the journal entry.
 		try {

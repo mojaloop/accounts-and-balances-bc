@@ -60,7 +60,7 @@ export class GrpcServer {
 
 	constructor(
 		logger: ILogger,
-		tokenHelper: TokenHelper,
+		//tokenHelper: TokenHelper,
 		aggregate: AccountsAndBalancesAggregate,
 		host: string,
 		portNo: number

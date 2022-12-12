@@ -142,6 +142,7 @@ export class GrpcHandlers {
 			if (
 				!builtinLedgerGrpcJournalEntryOutput.ownerId
 				|| !builtinLedgerGrpcJournalEntryOutput.currencyCode
+				|| !builtinLedgerGrpcJournalEntryOutput.amount
 				|| !builtinLedgerGrpcJournalEntryOutput.debitedAccountId
 				|| !builtinLedgerGrpcJournalEntryOutput.creditedAccountId
 			) {
@@ -152,7 +153,7 @@ export class GrpcHandlers {
 				id: builtinLedgerGrpcJournalEntryOutput.id ?? null, // TODO: ?? or ||?
 				ownerId: builtinLedgerGrpcJournalEntryOutput.ownerId,
 				currencyCode: builtinLedgerGrpcJournalEntryOutput.currencyCode,
-				amount: builtinLedgerGrpcJournalEntryOutput.currencyCode,
+				amount: builtinLedgerGrpcJournalEntryOutput.amount,
 				debitedAccountId: builtinLedgerGrpcJournalEntryOutput.debitedAccountId,
 				creditedAccountId: builtinLedgerGrpcJournalEntryOutput.creditedAccountId,
 				timestamp: builtinLedgerGrpcJournalEntryOutput.timestamp ?? null // TODO: ?? or ||?

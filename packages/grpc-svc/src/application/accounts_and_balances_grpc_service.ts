@@ -48,6 +48,16 @@ import {AccountsAndBalancesAggregate} from "../domain/aggregate";
 import {BuiltinLedgerAdapter} from "../implementations/builtin_ledger_adapter";
 import {ILedgerAdapter} from "../domain/infrastructure-types/ledger_adapter";
 import {BuiltinLedgerGrpcService} from "../../../builtin-ledger-grpc-svc/src/application/builtin_ledger_grpc_service";
+import {
+    IBuiltinLedgerAccountsRepo,
+    IBuiltinLedgerJournalEntriesRepo
+} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc/dist/domain/infrastructure";
+import {AuthenticationServiceMock} from "../../test/unit/authentication_service_mock";
+import {BuiltinLedgerAccount} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc/dist/domain/entities";
+import {AuthorizationClientMock} from "../../test/unit/authorization_client_mock";
+import {AuditClientMock} from "../../test/unit/audit_client_mock";
+import {BuiltinLedgerAccountsMemoryRepo} from "../../test/unit/builtin_ledger_accounts_memory_repo";
+import {BuiltinLedgerJournalEntriesMemoryRepo} from "../../test/unit/builtin_ledger_journal_entries_memory_repo";
 
 /* ********** Constants Begin ********** */
 
@@ -141,7 +151,7 @@ export class AccountsAndBalancesGrpcService {
         }
 
         // Token helper.
-        const tokenHelper: TokenHelper = new TokenHelper(
+        /*const tokenHelper: TokenHelper = new TokenHelper(
             TOKEN_HELPER_ISSUER_NAME,
             TOKEN_HELPER_JWKS_URL,
             TOKEN_HELPER_AUDIENCE,
@@ -167,10 +177,10 @@ export class AccountsAndBalancesGrpcService {
             this.addPrivileges(authorizationClient as AuthorizationClient);
             await (authorizationClient as AuthorizationClient).bootstrap(true);
             await (authorizationClient as AuthorizationClient).fetch();
-        }
+        }*/
 
         // Auditing.
-        if (auditingClient !== undefined) {
+        /*if (auditingClient !== undefined) {
             this.auditingClient = auditingClient;
         } else {
             if (!existsSync(AUDITING_CERT_FILE_ABSOLUTE_PATH)) {
@@ -197,7 +207,7 @@ export class AccountsAndBalancesGrpcService {
                 await this.stop();
                 process.exit(-1); // TODO: verify code.
             }
-        }
+        }*/
 
         // Repo.
         if (chartOfAccountsRepo !== undefined) {
@@ -222,8 +232,36 @@ export class AccountsAndBalancesGrpcService {
             }
         }
 
+        // TODO: remove this.
+        const authenticationServiceMock: AuthenticationServiceMock = new AuthenticationServiceMock(this.logger);
+        authorizationClient = new AuthorizationClientMock(this.logger);
+        auditingClient = new AuditClientMock(this.logger);
+        const accountsRepo: IBuiltinLedgerAccountsRepo = new BuiltinLedgerAccountsMemoryRepo(this.logger);
+        const journalEntriesRepo: IBuiltinLedgerJournalEntriesRepo = new BuiltinLedgerJournalEntriesMemoryRepo(this.logger);
+        // Create the hub account, used to credit other accounts.
+        const builtinLedgerHubAccount: BuiltinLedgerAccount = {
+            id: "1234",
+            state: "ACTIVE",
+            type: "POSITION",
+            limitCheckMode: "NONE",
+            currencyCode: "EUR",
+            currencyDecimals: 2,
+            debitBalance: 0n,
+            creditBalance: 1_000_000n,
+            timestampLastJournalEntry: null
+        };
+        try {
+            await accountsRepo.storeNewAccount(builtinLedgerHubAccount);
+        } catch (error: unknown) {
+        }
         // TODO: init builtin ledger svc?
-        await BuiltinLedgerGrpcService.start(logger, authorizationClient);
+        await BuiltinLedgerGrpcService.start(
+            logger,
+            authorizationClient,
+            auditingClient,
+            accountsRepo,
+            journalEntriesRepo
+        );
         // TODO: stop svc.
 
         // Ledger adapter.
@@ -257,7 +295,7 @@ export class AccountsAndBalancesGrpcService {
         // gRPC server.
         this.grpcServer = new GrpcServer(
             this.logger,
-            tokenHelper,
+            //tokenHelper,
             accountsAndBalancesAggregate,
             ACCOUNTS_AND_BALANCES_GRPC_SERVICE_HOST,
             ACCOUNTS_AND_BALANCES_GRPC_SERVICE_PORT_NO

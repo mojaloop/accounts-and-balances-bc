@@ -41,12 +41,18 @@ import {
 } from "./errors";
 import {GrpcBuiltinLedgerClient} from "./types/GrpcBuiltinLedger";
 import {ProtoGrpcType} from "./types/builtin_ledger";
-import {BuiltinLedgerGrpcAccountArray} from "./types/BuiltinLedgerGrpcAccountArray";
+import {
+	BuiltinLedgerGrpcAccountArray,
+	BuiltinLedgerGrpcAccountArray__Output
+} from "./types/BuiltinLedgerGrpcAccountArray";
 import {BuiltinLedgerGrpcJournalEntry__Output} from "./types/BuiltinLedgerGrpcJournalEntry";
 import {BuiltinLedgerGrpcId, BuiltinLedgerGrpcId__Output} from "./types/BuiltinLedgerGrpcId";
 import {BuiltinLedgerGrpcAccount__Output} from "./types/BuiltinLedgerGrpcAccount";
-import {BuiltinLedgerGrpcIdArray} from "./types/BuiltinLedgerGrpcIdArray";
-import {BuiltinLedgerGrpcJournalEntryArray} from "./types/BuiltinLedgerGrpcJournalEntryArray";
+import {BuiltinLedgerGrpcIdArray, BuiltinLedgerGrpcIdArray__Output} from "./types/BuiltinLedgerGrpcIdArray";
+import {
+	BuiltinLedgerGrpcJournalEntryArray,
+	BuiltinLedgerGrpcJournalEntryArray__Output
+} from "./types/BuiltinLedgerGrpcJournalEntryArray";
 import {join} from "path";
 
 export class BuiltinLedgerGrpcClient {
@@ -105,7 +111,9 @@ export class BuiltinLedgerGrpcClient {
 		this.logger.info("gRPC client destroyed 🏁");
 	}
 
-	async createAccounts(builtinLedgerGrpcAccountArray: BuiltinLedgerGrpcAccountArray): Promise<string[]> {
+	async createAccounts(
+		builtinLedgerGrpcAccountArray: BuiltinLedgerGrpcAccountArray
+	): Promise<BuiltinLedgerGrpcIdArray__Output> {
 		return new Promise((resolve, reject) => {
 			this.client.createAccounts(
 				builtinLedgerGrpcAccountArray,
@@ -115,7 +123,7 @@ export class BuiltinLedgerGrpcClient {
 						return;
 					}
 
-					const builtinLedgerGrpcIdsOutput: BuiltinLedgerGrpcId__Output[]
+					/*const builtinLedgerGrpcIdsOutput: BuiltinLedgerGrpcId__Output[]
 						= builtinLedgerGrpcIdArrayOutput.builtinLedgerGrpcIdArray || [];
 
 					const accountIds: string[] = [];
@@ -126,13 +134,17 @@ export class BuiltinLedgerGrpcClient {
 						}
 						accountIds.push(builtinLedgerGrpcIdOutput.builtinLedgerGrpcId);
 					}
-					resolve(accountIds);
+					resolve(accountIds);*/
+
+					resolve(builtinLedgerGrpcIdArrayOutput);
 				}
 			);
 		});
 	}
 
-	async createJournalEntries(builtinLedgerGrpcJournalEntryArray: BuiltinLedgerGrpcJournalEntryArray): Promise<string[]> {
+	async createJournalEntries(
+		builtinLedgerGrpcJournalEntryArray: BuiltinLedgerGrpcJournalEntryArray
+	): Promise<BuiltinLedgerGrpcIdArray__Output> {
 		return new Promise((resolve, reject) => {
 			this.client.createJournalEntries(
 				builtinLedgerGrpcJournalEntryArray,
@@ -142,7 +154,7 @@ export class BuiltinLedgerGrpcClient {
 						return;
 					}
 
-					const builtinLedgerGrpcIdsOutput: BuiltinLedgerGrpcId__Output[]
+					/*const builtinLedgerGrpcIdsOutput: BuiltinLedgerGrpcId__Output[]
 						= builtinLedgerGrpcIdArrayOutput.builtinLedgerGrpcIdArray || [];
 
 					const journalEntryIds: string[] = [];
@@ -153,14 +165,17 @@ export class BuiltinLedgerGrpcClient {
 						}
 						journalEntryIds.push(builtinLedgerGrpcIdOutput.builtinLedgerGrpcId);
 					}
-					resolve(journalEntryIds);
+					resolve(journalEntryIds);*/
+
+					resolve(builtinLedgerGrpcIdArrayOutput);
 				}
 			);
 		});
 	}
 
-	async getAccountsByIds(builtinLedgerGrpcAccountIdArray: BuiltinLedgerGrpcIdArray)
-		: Promise<BuiltinLedgerGrpcAccount__Output[]> {
+	async getAccountsByIds(
+		builtinLedgerGrpcAccountIdArray: BuiltinLedgerGrpcIdArray
+	): Promise<BuiltinLedgerGrpcAccountArray__Output> {
 		return new Promise((resolve, reject) => {
 			this.client.getAccountsByIds(
 				builtinLedgerGrpcAccountIdArray,
@@ -170,16 +185,19 @@ export class BuiltinLedgerGrpcClient {
 						return;
 					}
 
-					const builtinLedgerGrpcAccountsOutput: BuiltinLedgerGrpcAccount__Output[]
+					/*const builtinLedgerGrpcAccountsOutput: BuiltinLedgerGrpcAccount__Output[]
 						= builtinLedgerGrpcAccountArrayOutput.builtinLedgerGrpcAccountArray || [];
-					resolve(builtinLedgerGrpcAccountsOutput);
+					resolve(builtinLedgerGrpcAccountsOutput);*/
+
+					resolve(builtinLedgerGrpcAccountArrayOutput);
 				}
 			);
 		});
 	}
 
-	async getJournalEntriesByAccountId(builtinLedgerGrpcAccountId: BuiltinLedgerGrpcId)
-		: Promise<BuiltinLedgerGrpcJournalEntry__Output[]> {
+	async getJournalEntriesByAccountId(
+		builtinLedgerGrpcAccountId: BuiltinLedgerGrpcId
+	): Promise<BuiltinLedgerGrpcJournalEntryArray__Output> {
 		return new Promise((resolve, reject) => {
 			this.client.getJournalEntriesByAccountId(
 				builtinLedgerGrpcAccountId,
@@ -189,9 +207,11 @@ export class BuiltinLedgerGrpcClient {
 						return;
 					}
 
-					const builtinLedgerGrpcJournalEntriesOutput: BuiltinLedgerGrpcJournalEntry__Output[] =
+					/*const builtinLedgerGrpcJournalEntriesOutput: BuiltinLedgerGrpcJournalEntry__Output[] =
 						builtinLedgerGrpcJournalEntryArrayOutput.builtinLedgerGrpcJournalEntryArray || [];
-					resolve(builtinLedgerGrpcJournalEntriesOutput);
+					resolve(builtinLedgerGrpcJournalEntriesOutput);*/
+
+					resolve(builtinLedgerGrpcJournalEntryArrayOutput);
 				}
 			);
 		});
