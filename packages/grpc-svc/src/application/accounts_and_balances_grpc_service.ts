@@ -132,6 +132,7 @@ export class AccountsAndBalancesGrpcService {
         // Logger.
         if (logger !== undefined) {
             this.logger = logger.createChild(this.name);
+            //this.logger = logger;
         } else {
             this.logger = new KafkaLogger(
                 BOUNDED_CONTEXT_NAME,
@@ -232,38 +233,6 @@ export class AccountsAndBalancesGrpcService {
             }
         }
 
-        // TODO: remove this.
-        const authenticationServiceMock: AuthenticationServiceMock = new AuthenticationServiceMock(this.logger);
-        authorizationClient = new AuthorizationClientMock(this.logger);
-        auditingClient = new AuditClientMock(this.logger);
-        const accountsRepo: IBuiltinLedgerAccountsRepo = new BuiltinLedgerAccountsMemoryRepo(this.logger);
-        const journalEntriesRepo: IBuiltinLedgerJournalEntriesRepo = new BuiltinLedgerJournalEntriesMemoryRepo(this.logger);
-        // Create the hub account, used to credit other accounts.
-        const builtinLedgerHubAccount: BuiltinLedgerAccount = {
-            id: "1234",
-            state: "ACTIVE",
-            type: "POSITION",
-            limitCheckMode: "NONE",
-            currencyCode: "EUR",
-            currencyDecimals: 2,
-            debitBalance: 0n,
-            creditBalance: 1_000_000n,
-            timestampLastJournalEntry: null
-        };
-        try {
-            await accountsRepo.storeNewAccount(builtinLedgerHubAccount);
-        } catch (error: unknown) {
-        }
-        // TODO: init builtin ledger svc?
-        await BuiltinLedgerGrpcService.start(
-            logger,
-            authorizationClient,
-            auditingClient,
-            accountsRepo,
-            journalEntriesRepo
-        );
-        // TODO: stop svc.
-
         // Ledger adapter.
         if (ledgerAdapter !== undefined) {
             this.ledgerAdapter = ledgerAdapter;
@@ -312,6 +281,9 @@ export class AccountsAndBalancesGrpcService {
     static async stop(): Promise<void> {
         if (this.grpcServer !== undefined) {
             await this.grpcServer.stop();
+        }
+        if (this.ledgerAdapter !== undefined) {
+            await this.ledgerAdapter.destroy();
         }
         if (this.chartOfAccountsRepo !== undefined) {
             await this.chartOfAccountsRepo.destroy();

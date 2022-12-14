@@ -64,7 +64,7 @@ export type BuiltinLedgerAccount = {
 
 export type BuiltinLedgerJournalEntryDto = {
 	id: string | null;
-	ownerId: string;
+	ownerId: string | null;
 	currencyCode: string;
 	// TODO: currency decimals not needed, right?
 	amount: string;
@@ -75,7 +75,7 @@ export type BuiltinLedgerJournalEntryDto = {
 
 export type BuiltinLedgerJournalEntry = {
 	id: string;
-	ownerId: string;
+	ownerId: string | null;
 	currencyCode: string;
 	currencyDecimals: number;
 	amount: bigint;

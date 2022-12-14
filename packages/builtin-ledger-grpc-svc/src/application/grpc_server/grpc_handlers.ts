@@ -69,6 +69,7 @@ export class GrpcHandlers {
 		aggregate: BuiltinLedgerAggregate
 	) {
 		this.logger = logger.createChild(this.constructor.name);
+        //this.logger = logger;
 		this.aggregate = aggregate;
 	}
 
@@ -140,8 +141,7 @@ export class GrpcHandlers {
 		const builtinLedgerJournalEntryDtos: BuiltinLedgerJournalEntryDto[]
 			= builtinLedgerGrpcJournalEntriesOutput.map((builtinLedgerGrpcJournalEntryOutput) => {
 			if (
-				!builtinLedgerGrpcJournalEntryOutput.ownerId
-				|| !builtinLedgerGrpcJournalEntryOutput.currencyCode
+				!builtinLedgerGrpcJournalEntryOutput.currencyCode
 				|| !builtinLedgerGrpcJournalEntryOutput.amount
 				|| !builtinLedgerGrpcJournalEntryOutput.debitedAccountId
 				|| !builtinLedgerGrpcJournalEntryOutput.creditedAccountId
@@ -151,7 +151,7 @@ export class GrpcHandlers {
 
 			const builtinLedgerJournalEntryDto: BuiltinLedgerJournalEntryDto = {
 				id: builtinLedgerGrpcJournalEntryOutput.id ?? null, // TODO: ?? or ||?
-				ownerId: builtinLedgerGrpcJournalEntryOutput.ownerId,
+				ownerId: builtinLedgerGrpcJournalEntryOutput.ownerId ?? null,
 				currencyCode: builtinLedgerGrpcJournalEntryOutput.currencyCode,
 				amount: builtinLedgerGrpcJournalEntryOutput.amount,
 				debitedAccountId: builtinLedgerGrpcJournalEntryOutput.debitedAccountId,

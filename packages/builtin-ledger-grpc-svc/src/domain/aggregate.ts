@@ -85,6 +85,7 @@ export class BuiltinLedgerAggregate {
 		journalEntriesRepo: IBuiltinLedgerJournalEntriesRepo
 	) {
 		this.logger = logger.createChild(this.constructor.name);
+        //this.logger = logger;
 		this.authorizationClient = authorizationClient;
 		this.auditingClient = auditingClient;
 		this.builtinLedgerAccountsRepo = accountsRepo;
@@ -253,9 +254,6 @@ export class BuiltinLedgerAggregate {
 		} catch (error: unknown) {
 			throw new InvalidJournalEntryAmountError();
 		}
-		if (amount <= 0n) {
-			throw new InvalidJournalEntryAmountError();
-		}
 
 		// Get a timestamp.
 		const timestamp: number = Date.now();
@@ -284,8 +282,8 @@ export class BuiltinLedgerAggregate {
 				[builtinLedgerJournalEntry.debitedAccountId]
 			))[0]; // NOTE: in JS, [0] of an empty array is undefined.
 		} catch (error: unknown) {
-			this.logger.error(error);
-			throw error;
+			/*this.logger.error(error);
+			throw error;*/
 		}
 		if (!debitedBuiltinLedgerAccount) {
 			throw new DebitedAccountNotFoundError();
@@ -354,8 +352,8 @@ export class BuiltinLedgerAggregate {
 			);
 		} catch (error: unknown) {
 			// TODO: revert store.
-			this.logger.error(error);
-			throw error;
+			/*this.logger.error(error);
+			throw error;*/
 		}
 
 		// Update the credited account's credit balance and timestamp.
@@ -369,8 +367,8 @@ export class BuiltinLedgerAggregate {
 			);
 		} catch (error: unknown) {
 			// TODO: revert store and update.
-			this.logger.error(error);
-			throw error;
+			/*this.logger.error(error);
+			throw error;*/
 		}
 
 		// TODO: wrap in try-catch block.

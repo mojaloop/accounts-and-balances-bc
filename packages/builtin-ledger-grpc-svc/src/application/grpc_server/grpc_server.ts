@@ -46,6 +46,7 @@ import {
 	ProtoGrpcType
 } from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-client-lib";
 import {GrpcHandlers} from "./grpc_handlers";
+import {join} from "path";
 
 export class GrpcServer {
 	// Properties received through the constructor.
@@ -68,10 +69,11 @@ export class GrpcServer {
 		portNo: number
 	) {
 		this.logger = logger.createChild(this.constructor.name);
+        //this.logger = logger;
 		this.HOST = host;
 		this.PORT_NO = portNo;
 
-		const protoFileAbsolutePath: string = "/home/themanincharge/Documents/Work/Mojaloop/vNext/BoundedContexts/accounts-and-balances-bc/packages/builtin-ledger-grpc-client-lib/src/builtin_ledger.proto"; // TODO: solve.
+		const protoFileAbsolutePath: string = join(__dirname, "../../../../builtin-ledger-grpc-client-lib/src/builtin_ledger.proto");
 		const packageDefinition: PackageDefinition = loadSync(
 			protoFileAbsolutePath,
 			GrpcServer.LOAD_PROTO_OPTIONS

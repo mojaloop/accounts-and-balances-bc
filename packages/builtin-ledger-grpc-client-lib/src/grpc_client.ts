@@ -73,6 +73,7 @@ export class BuiltinLedgerGrpcClient {
 		timeoutMs: number
 	) {
 		this.logger = logger.createChild(this.constructor.name);
+        //this.logger = logger;
 		this.TIMEOUT_MS = timeoutMs;
 
 		const protoFileAbsolutePath: string = join(__dirname, BuiltinLedgerGrpcClient.PROTO_FILE_NAME);

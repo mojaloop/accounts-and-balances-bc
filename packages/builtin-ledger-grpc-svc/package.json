@@ -34,23 +34,23 @@
     "start": "node dist/index.js"
   },
   "devDependencies": {
-    "@grpc/proto-loader": "~0.7.3",
+    "@grpc/proto-loader": "~0.7.4",
     "@mojaloop/accounts-and-balances-bc-grpc-client-lib": "~0.0.3",
     "@mojaloop/accounts-and-balances-bc-shared-mocks-lib": "~0.0.1"
   },
   "dependencies": {
-    "@grpc/grpc-js": "~1.7.3",
+    "@grpc/grpc-js": "~1.8.0",
     "@mojaloop/accounts-and-balances-bc-domain-lib": "~0.0.1",
     "@mojaloop/accounts-and-balances-bc-grpc-common-lib": "~0.0.3",
     "@mojaloop/accounts-and-balances-bc-infrastructure-lib": "~0.0.1",
     "@mojaloop/accounts-and-balances-bc-public-types-lib": "~0.0.3",
     "@mojaloop/auditing-bc-client-lib": "~0.0.10",
     "@mojaloop/auditing-bc-public-types-lib": "~0.0.11",
-    "@mojaloop/logging-bc-client-lib": "~0.1.15",
-    "@mojaloop/logging-bc-public-types-lib": "~0.1.12",
-    "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib": "~0.2.13",
-    "@mojaloop/security-bc-client-lib": "~0.0.59",
-    "@mojaloop/security-bc-public-types-lib": "~0.0.14",
-    "@types/node": "~18.11.8"
+    "@mojaloop/logging-bc-client-lib": "~0.1.17",
+    "@mojaloop/logging-bc-public-types-lib": "~0.1.14",
+    "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib": "~0.2.23",
+    "@mojaloop/security-bc-client-lib": "~0.0.60",
+    "@mojaloop/security-bc-public-types-lib": "~0.0.15",
+    "@types/node": "~18.11.15"
   }
 }

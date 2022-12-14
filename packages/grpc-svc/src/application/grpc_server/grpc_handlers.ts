@@ -64,6 +64,7 @@ export class GrpcHandlers {
 		aggregate: AccountsAndBalancesAggregate
 	) {
 		this.logger = logger.createChild(this.constructor.name);
+        //this.logger = logger;
 		this.aggregate = aggregate;
 	}
 
@@ -133,6 +134,7 @@ export class GrpcHandlers {
 		const journalEntries: JournalEntry[] = grpcJournalEntriesOutput.map((grpcJournalEntryOutput) => {
 			if (
 				!grpcJournalEntryOutput.currencyCode
+				|| !grpcJournalEntryOutput.amount
 				|| !grpcJournalEntryOutput.debitedAccountId
 				|| !grpcJournalEntryOutput.creditedAccountId
 			) {
@@ -143,7 +145,7 @@ export class GrpcHandlers {
 				id: grpcJournalEntryOutput.id ?? null, // TODO: ?? or ||?
 				ownerId: grpcJournalEntryOutput.ownerId ?? null, // TODO: ?? or ||?
 				currencyCode: grpcJournalEntryOutput.currencyCode,
-				amount: grpcJournalEntryOutput.currencyCode,
+				amount: grpcJournalEntryOutput.amount,
 				debitedAccountId: grpcJournalEntryOutput.debitedAccountId,
 				creditedAccountId: grpcJournalEntryOutput.creditedAccountId,
 				timestamp: grpcJournalEntryOutput.timestamp ?? null // TODO: ?? or ||?
@@ -263,7 +265,7 @@ export class GrpcHandlers {
 				id: journalEntry.id ?? undefined, // TODO: ?? or ||?
 				ownerId: journalEntry.ownerId ?? undefined, // TODO: ?? or ||?
 				currencyCode: journalEntry.currencyCode,
-				amount: journalEntry.currencyCode,
+				amount: journalEntry.amount,
 				debitedAccountId: journalEntry.debitedAccountId,
 				creditedAccountId: journalEntry.creditedAccountId,
 				timestamp: journalEntry.timestamp ?? undefined // TODO: ?? or ||?

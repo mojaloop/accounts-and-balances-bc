@@ -45,7 +45,7 @@ import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
 import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {IBuiltinLedgerAccountsRepo, IBuiltinLedgerJournalEntriesRepo} from "../../src/domain/infrastructure";
 import {BuiltinLedgerAccount} from "../../src/domain/entities";
-import {BuiltinLedgerGrpcService} from "../../src/application";
+import {BuiltinLedgerGrpcService} from "../../src/application/builtin_ledger_grpc_service";
 import {BuiltinLedgerAccountsMemoryRepo} from "./builtin_ledger_accounts_memory_repo";
 import {
 	BuiltinLedgerJournalEntriesMemoryRepo,
@@ -61,19 +61,22 @@ const SERVICE_VERSION: string = "0.0.1";
 const ACCOUNTS_AND_BALANCES_GRPC_SERVICE_HOST: string = "localhost";
 const ACCOUNTS_AND_BALANCES_GRPC_SERVICE_PORT_NO: number = 5678;
 const ACCOUNTS_AND_BALANCES_GRPC_CLIENT_TIMEOUT_MS: number = 5000;
-const HUB_ACCOUNT_ID: string = randomUUID();
+const HUB_ACCOUNT_ID: string = "hub_acc";
 const HUB_ACCOUNT_INITIAL_CREDIT_BALANCE: bigint = 1_000_000n;
 
+let authorizationClient: IAuthorizationClient;
+let accountsRepo: IBuiltinLedgerAccountsRepo;
+let journalEntriesRepo: IBuiltinLedgerJournalEntriesRepo;
 let grpcClient: BuiltinLedgerGrpcClient;
 
 describe("built-in ledger gRPC service - unit tests", () => {
 	beforeAll(async () => {
 		const logger: ILogger = new DefaultLogger(BOUNDED_CONTEXT_NAME, SERVICE_NAME, SERVICE_VERSION);
 		const authenticationServiceMock: AuthenticationServiceMock = new AuthenticationServiceMock(logger);
-		const authorizationClient: IAuthorizationClient = new AuthorizationClientMock(logger);
+		authorizationClient = new AuthorizationClientMock(logger);
 		const auditingClient: IAuditClient = new AuditClientMock(logger);
-		const accountsRepo: IBuiltinLedgerAccountsRepo = new BuiltinLedgerAccountsMemoryRepo(logger);
-		const journalEntriesRepo: IBuiltinLedgerJournalEntriesRepo = new BuiltinLedgerJournalEntriesMemoryRepo(logger);
+		accountsRepo = new BuiltinLedgerAccountsMemoryRepo(logger);
+		journalEntriesRepo = new BuiltinLedgerJournalEntriesMemoryRepo(logger);
 
 		// Create the hub account, used to credit other accounts.
 		const builtinLedgerHubAccount: BuiltinLedgerAccount = {
@@ -87,7 +90,10 @@ describe("built-in ledger gRPC service - unit tests", () => {
 			creditBalance: HUB_ACCOUNT_INITIAL_CREDIT_BALANCE,
 			timestampLastJournalEntry: null
 		};
-		await accountsRepo.storeNewAccount(builtinLedgerHubAccount);
+		try {
+			await accountsRepo.storeNewAccount(builtinLedgerHubAccount);
+		} catch (error: unknown) {
+		}
 
 		await BuiltinLedgerGrpcService.start(
 			logger,
@@ -132,6 +138,50 @@ describe("built-in ledger gRPC service - unit tests", () => {
 		expect(accountId).not.toBeUndefined();
 		expect(accountId).not.toBeNull();
 		expect(accountId).not.toEqual("");
+	});
+
+	test("create account", async () => {
+		const builtinLedgerGrpcAccountOutput: BuiltinLedgerGrpcAccount__Output = {
+			id: undefined,
+			state: "ACTIVE",
+			type: "FEE",
+			currencyCode: "EUR",
+			debitBalance: undefined,
+			creditBalance: undefined,
+			timestampLastJournalEntry: undefined
+		};
+
+		jest.spyOn(authorizationClient, "roleHasPrivilege").mockImplementationOnce(() => {
+			return false;
+		});
+
+		await expect(async () => {
+			await grpcClient.createAccounts(
+				{builtinLedgerGrpcAccountArray: [builtinLedgerGrpcAccountOutput]}
+			);
+		}).rejects.toThrow();
+	});
+
+	test("create account", async () => {
+		const builtinLedgerGrpcAccountOutput: BuiltinLedgerGrpcAccount__Output = {
+			id: undefined,
+			state: "ACTIVE",
+			type: "FEE",
+			currencyCode: "EUR",
+			debitBalance: undefined,
+			creditBalance: undefined,
+			timestampLastJournalEntry: undefined
+		};
+
+		jest.spyOn(accountsRepo, "storeNewAccount").mockImplementationOnce(() => {
+			throw new Error();
+		});
+
+		await expect(async () => {
+			await grpcClient.createAccounts(
+				{builtinLedgerGrpcAccountArray: [builtinLedgerGrpcAccountOutput]}
+			);
+		}).rejects.toThrow();
 	});
 
 	test("create account", async () => {
@@ -340,6 +390,28 @@ describe("built-in ledger gRPC service - unit tests", () => {
 
 		// Journal entry A.
 		const builtinLedgerGrpcJournalEntryOutputA: BuiltinLedgerGrpcJournalEntry__Output = {
+			id: undefined,
+			ownerId: "test",
+			currencyCode: "USD",
+			amount: "5",
+			debitedAccountId: accounts[0].id,
+			creditedAccountId: accounts[1].id,
+			timestamp: undefined
+		};
+
+		await expect(async () => {
+			(await grpcClient.createJournalEntries({builtinLedgerGrpcJournalEntryArray: [
+					builtinLedgerGrpcJournalEntryOutputA
+				]})).builtinLedgerGrpcIdArray;
+		}).rejects.toThrow();
+	});
+
+	test("create journal entries", async () => {
+		// Before creating a journal entry, the respective accounts need to be created.
+		const accounts = await createAndCredit2Accounts();
+
+		// Journal entry A.
+		const builtinLedgerGrpcJournalEntryOutputA: BuiltinLedgerGrpcJournalEntry__Output = {
 			id: "",
 			ownerId: "test",
 			currencyCode: "EUR",
@@ -501,6 +573,19 @@ describe("built-in ledger gRPC service - unit tests", () => {
 		expect(x).toEqual({});
 	});
 
+	test("get non-existent account by id", async () => {
+		const accountId: string = randomUUID();
+
+		jest.spyOn(accountsRepo, "getAccountsByIds").mockImplementationOnce(() => {
+			throw new Error();
+		});
+
+		await expect(async () => {
+			const x =
+				await grpcClient.getAccountsByIds({builtinLedgerGrpcIdArray: [{builtinLedgerGrpcId: accountId}]});
+		}).rejects.toThrow();
+	});
+
 	/* getJournalEntriesByAccountId() */
 
 	test("get non-existent journal entries by account id", async () => {
@@ -508,6 +593,19 @@ describe("built-in ledger gRPC service - unit tests", () => {
 		const x =
 			await grpcClient.getJournalEntriesByAccountId({builtinLedgerGrpcId: accountId});
 		expect(x).toEqual({});
+	});
+
+	test("get non-existent journal entries by account id", async () => {
+		const accountId: string = randomUUID();
+
+		jest.spyOn(journalEntriesRepo, "getJournalEntriesByAccountId").mockImplementationOnce(() => {
+			throw new Error();
+		});
+
+		await expect(async () => {
+			const x =
+				await grpcClient.getJournalEntriesByAccountId({builtinLedgerGrpcId: accountId});
+		}).rejects.toThrow();
 	});
 
 	test("converters", async () => {

@@ -123,6 +123,7 @@ export class BuiltinLedgerGrpcService {
 		// Logger.
 		if (logger !== undefined) {
 			this.logger = logger.createChild(this.name);
+			//this.logger = logger;
 		} else {
 			this.logger = new KafkaLogger(
 				BOUNDED_CONTEXT_NAME,
@@ -238,7 +239,7 @@ export class BuiltinLedgerGrpcService {
 			try {
 				await this.builtinLedgerJournalEntriesRepo.init();
 			} catch (error: unknown) {
-				this.logger.fatal("adeus");
+				this.logger.fatal("bye");
 				await this.stop();
 				process.exit(-1); // TODO: verify code.
 			}

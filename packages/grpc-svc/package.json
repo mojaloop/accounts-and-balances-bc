@@ -28,17 +28,17 @@
     "audit:fix": "npm audit fix",
     "lint": "eslint src",
     "build": "tsc",
-    "test:unit": "echo \"for now, grpc-client-lib doesn't have unit tests\"",
+    "test:unit": "jest",
     "test:unit-single": "jest --coverage false -t",
     "pub": "npm version patch && npm publish --tag latest --access public"
   },
   "devDependencies": {
-    "@grpc/proto-loader": "~0.7.3",
+    "@grpc/proto-loader": "~0.7.4",
     "@mojaloop/accounts-and-balances-bc-public-types-lib": "~0.0.3"
   },
   "dependencies": {
-    "@grpc/grpc-js": "~1.7.3",
-    "@mojaloop/logging-bc-public-types-lib": "~0.1.12",
-    "@mojaloop/logging-bc-client-lib": "~0.1.15"
+    "@grpc/grpc-js": "~1.8.0",
+    "@mojaloop/logging-bc-public-types-lib": "~0.1.14",
+    "@mojaloop/logging-bc-client-lib": "~0.1.17"
   }
 }

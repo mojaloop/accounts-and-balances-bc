@@ -54,6 +54,7 @@ export class BuiltinLedgerAdapter implements ILedgerAdapter {
         timeoutMs: number
     ) {
         this.logger = logger.createChild(this.constructor.name);
+        //this.logger = logger;
 
         this.builtinLedgerClient = new BuiltinLedgerGrpcClient(
             logger,
@@ -99,6 +100,7 @@ export class BuiltinLedgerAdapter implements ILedgerAdapter {
             = ledgerAdapterJournalEntries.map((ledgerAdapterJournalEntry) => {
             const builtinLedgerGrpcJournalEntry: BuiltinLedgerGrpcJournalEntry = {
                 id: ledgerAdapterJournalEntry.id ?? undefined, // TODO: ?? or ||?
+                ownerId: ledgerAdapterJournalEntry.ownerId ?? undefined,
                 currencyCode: ledgerAdapterJournalEntry.currencyCode,
                 amount: ledgerAdapterJournalEntry.amount,
                 debitedAccountId: ledgerAdapterJournalEntry.debitedAccountId,
@@ -163,8 +165,7 @@ export class BuiltinLedgerAdapter implements ILedgerAdapter {
         const ledgerAdapterJournalEntries: LedgerAdapterJournalEntry[] =
             builtinLedgerGrpcJournalEntriesOutput.map((builtinLedgerGrpcJournalEntryOutput) => {
             if (
-                !builtinLedgerGrpcJournalEntryOutput.ownerId
-                || !builtinLedgerGrpcJournalEntryOutput.currencyCode
+                !builtinLedgerGrpcJournalEntryOutput.currencyCode
                 || !builtinLedgerGrpcJournalEntryOutput.amount
                 || !builtinLedgerGrpcJournalEntryOutput.debitedAccountId
                 || !builtinLedgerGrpcJournalEntryOutput.creditedAccountId
@@ -174,7 +175,7 @@ export class BuiltinLedgerAdapter implements ILedgerAdapter {
 
             const ledgerAdapterJournalEntry: LedgerAdapterJournalEntry = {
                 id: builtinLedgerGrpcJournalEntryOutput.id ?? null, // TODO: ?? or ||?
-                ownerId: builtinLedgerGrpcJournalEntryOutput.ownerId,
+                ownerId: builtinLedgerGrpcJournalEntryOutput.ownerId ?? null,
                 currencyCode: builtinLedgerGrpcJournalEntryOutput.currencyCode,
                 currencyDecimals: null, // TODO: null?
                 amount: builtinLedgerGrpcJournalEntryOutput.amount,

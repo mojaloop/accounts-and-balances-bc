@@ -8,7 +8,8 @@ const config = {
 	clearMocks: true,
 	testMatch: ["**/test/unit/**/*.test.ts"],
 	collectCoverage: true,
-	collectCoverageFrom: ["./src/**/*.ts"],
+	collectCoverageFrom: ["./src/domain/**/*.ts"],
+	coveragePathIgnorePatterns: [/*"./src/application/index.ts", "./src/application/accounts_and_balances_grpc_service.ts", "./src/implementations/"*/, "./src/domain/errors.ts"],
 	coverageDirectory: `../../coverage/unit/${shortPackageName}/`,
 	coverageReporters: ["text", "lcov"],
 	coverageThreshold: {

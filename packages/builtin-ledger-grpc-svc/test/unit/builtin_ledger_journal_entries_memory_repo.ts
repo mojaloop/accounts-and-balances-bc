@@ -45,7 +45,7 @@ export class BuiltinLedgerJournalEntriesMemoryRepo implements IBuiltinLedgerJour
 	readonly journalEntries: Map<string, BuiltinLedgerJournalEntry>;
 
 	constructor(logger: ILogger) {
-		this.logger = logger;
+		//this.logger = logger;
 
 		this.journalEntries = new Map();
 	}

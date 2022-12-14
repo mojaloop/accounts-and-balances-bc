@@ -29,14 +29,14 @@
 
 "use strict";
 
-import {BuiltinLedgerJournalEntry} from "../../src/domain/entities";
+import {BuiltinLedgerJournalEntry} from "../../../builtin-ledger-grpc-svc/src/domain/entities";
 import {
 	JournalEntryAlreadyExistsError,
 	UnableToGetJournalEntriesError,
 	UnableToStoreJournalEntryError
-} from "../../src/domain/errors";
+} from "../../../builtin-ledger-grpc-svc/src/domain/errors";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {IBuiltinLedgerJournalEntriesRepo} from "../../src/domain/infrastructure";
+import {IBuiltinLedgerJournalEntriesRepo} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc/dist/domain/infrastructure";
 
 export class BuiltinLedgerJournalEntriesMemoryRepo implements IBuiltinLedgerJournalEntriesRepo {
 	// Properties received through the constructor.
@@ -45,7 +45,7 @@ export class BuiltinLedgerJournalEntriesMemoryRepo implements IBuiltinLedgerJour
 	readonly journalEntries: Map<string, BuiltinLedgerJournalEntry>;
 
 	constructor(logger: ILogger) {
-		this.logger = logger;
+		//this.logger = logger;
 
 		this.journalEntries = new Map();
 	}

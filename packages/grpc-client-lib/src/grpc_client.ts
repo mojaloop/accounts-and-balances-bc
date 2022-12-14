@@ -64,6 +64,7 @@ export class GrpcClient {
 		timeoutMs: number
 	) {
 		this.logger = logger.createChild(this.constructor.name);
+        //this.logger = logger;
 		this.TIMEOUT_MS = timeoutMs;
 
 		const protoFileAbsolutePath: string = join(__dirname, GrpcClient.PROTO_FILE_NAME);

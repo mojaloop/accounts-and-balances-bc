@@ -60,6 +60,7 @@ export class AccountsAndBalancesAggregate {
 		ledgerAdapter: ILedgerAdapter
 	) {
 		this.logger = logger.createChild(this.constructor.name);
+        //this.logger = logger;
 		this.chartOfAccounts = accountsRepo;
 		this.ledgerAdapter = ledgerAdapter;
 
@@ -114,7 +115,7 @@ export class AccountsAndBalancesAggregate {
 			coaAccounts.push(coaAccount);
 
 			const ledgerAdapterAccount: LedgerAdapterAccount = {
-				id: account.id,
+				id: accountId,
 				state: account.state,
 				type: account.type,
 				currencyCode: account.currencyCode,
@@ -163,6 +164,9 @@ export class AccountsAndBalancesAggregate {
 
 	async getAccountsByIds(accountIds: string[]): Promise<Account[]> {
 		const coaAccounts: CoaAccount[] = await this.chartOfAccounts.getAccountsByInternalIds(accountIds);
+		if (!coaAccounts.length) {
+			return [];
+		}
 
 		const accounts: Account[] = await this.getAccountsByExternalIdsOfCoaAccounts(coaAccounts);
 		return accounts;
@@ -170,6 +174,9 @@ export class AccountsAndBalancesAggregate {
 
 	async getAccountsByOwnerId(ownerId: string): Promise<Account[]> {
 		const coaAccounts: CoaAccount[] = await this.chartOfAccounts.getAccountsByOwnerId(ownerId);
+		if (!coaAccounts.length) {
+			return [];
+		}
 
 		const accounts: Account[] = await this.getAccountsByExternalIdsOfCoaAccounts(coaAccounts);
 		return accounts;
@@ -179,7 +186,7 @@ export class AccountsAndBalancesAggregate {
 		const coaAccount: CoaAccount | undefined =
 			(await this.chartOfAccounts.getAccountsByInternalIds([accountId]))[0];
 		if (!coaAccount) {
-			throw new AccountNotFoundError();
+			return [];
 		}
 
 		const ledgerAdapterJournalEntries: LedgerAdapterJournalEntry[] =
@@ -212,7 +219,7 @@ export class AccountsAndBalancesAggregate {
 			const coaAccount: CoaAccount | undefined = coaAccounts.find((coaAccount) => {
 				return coaAccount.externalId === ledgerAdapterAccount.id;
 			});
-			if (!coaAccount) {
+			/*if (!coaAccount) {
 				throw new Error(); // TODO: create custom error.
 			}
 
@@ -221,19 +228,19 @@ export class AccountsAndBalancesAggregate {
 				|| !ledgerAdapterAccount.creditBalance
 			) {
 				throw new Error(); // TODO: create custom error.
-			}
+			}*/
 			const balance: string = this.calculateBalanceString(
-				ledgerAdapterAccount.debitBalance,
-				ledgerAdapterAccount.creditBalance,
-				coaAccount.currencyDecimals
+				ledgerAdapterAccount.debitBalance!,
+				ledgerAdapterAccount.creditBalance!,
+				coaAccount!.currencyDecimals
 			);
 
 			const account: Account = {
-				id: coaAccount.internalId,
-				ownerId: coaAccount.ownerId,
-				state: coaAccount.state,
-				type: coaAccount.type,
-				currencyCode: coaAccount.currencyCode,
+				id: coaAccount!.internalId,
+				ownerId: coaAccount!.ownerId,
+				state: coaAccount!.state,
+				type: coaAccount!.type,
+				currencyCode: coaAccount!.currencyCode,
 				debitBalance: ledgerAdapterAccount.debitBalance,
 				creditBalance: ledgerAdapterAccount.creditBalance,
 				balance: balance,

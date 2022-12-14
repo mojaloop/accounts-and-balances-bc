@@ -29,15 +29,15 @@
 
 "use strict";
 
-import {IBuiltinLedgerAccountsRepo} from "../../src/domain/infrastructure";
+import {IBuiltinLedgerAccountsRepo} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc/dist/domain/infrastructure";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {BuiltinLedgerAccount} from "../../src/domain/entities";
+import {BuiltinLedgerAccount} from "../../../builtin-ledger-grpc-svc/src/domain/entities";
 import {
 	AccountAlreadyExistsError,
 	AccountNotFoundError, UnableToGetAccountsError,
 	UnableToStoreAccountError,
 	UnableToUpdateAccountError
-} from "../../src/domain/errors";
+} from "../../../builtin-ledger-grpc-svc/src/domain/errors";
 
 export class BuiltinLedgerAccountsMemoryRepo implements IBuiltinLedgerAccountsRepo {
 	// Properties received through the constructor.
@@ -46,7 +46,7 @@ export class BuiltinLedgerAccountsMemoryRepo implements IBuiltinLedgerAccountsRe
 	readonly accounts: Map<string, BuiltinLedgerAccount>;
 
 	constructor(logger: ILogger) {
-		this.logger = logger;
+		//this.logger = logger;
 
 		this.accounts = new Map();
 	}
