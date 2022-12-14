@@ -1,6 +1,6 @@
 {
   "name": "@mojaloop/accounts-and-balances-bc-public-types-lib",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Accounts and Balances BC - Public Types Library",
   "license": "Apache-2.0",
   "repository": {
@@ -30,8 +30,6 @@
     "test:unit": "echo \"public-types-lib doesn't have unit tests\"",
     "pub": "npm version patch && npm publish --tag latest --access public"
   },
-  "devDependencies": {
-  },
-  "dependencies": {
-  }
+  "devDependencies": {},
+  "dependencies": {}
 }
