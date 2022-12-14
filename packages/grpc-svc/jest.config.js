@@ -1,23 +1,25 @@
-const { name } = require("./package.json");
-let packageName = name.replace("@mojaloop", "");
+"use strict";
 
-module.exports = {
-  preset: "ts-jest",
-  testEnvironment: "node",
-  testMatch: ["**/test/unit/**/*.test.ts"],
-  passWithNoTests: true,
-  collectCoverage: true,
-  collectCoverageFrom: ["./src/**/*.ts"],
-  coveragePathIgnorePatterns: ["./src/tmp_files"],
-  coverageReporters: ["text", ["json", {file: `../../../coverage/${packageName}-final.json`}]],
-  //coverageDirectory: "../../coverage/",
-  clearMocks: true,
-  coverageThreshold: {
-    "global": {
-      "branches": 90,
-      "functions": 90,
-      "lines": 90,
-      "statements": -10
-    }
-  }
-}
+const fullPackageName = require("./package.json").name;
+const shortPackageName = fullPackageName.replace("@mojaloop/", "");
+
+const config = {
+	preset: "ts-jest",
+	clearMocks: true,
+	testMatch: ["**/test/unit/**/*.test.ts"],
+	collectCoverage: true,
+	collectCoverageFrom: ["./src/domain/**/*.ts"],
+	coveragePathIgnorePatterns: [/*"./src/application/index.ts", "./src/application/accounts_and_balances_grpc_service.ts", "./src/implementations/"*/, "./src/domain/errors.ts"],
+	coverageDirectory: `../../coverage/unit/${shortPackageName}/`,
+	coverageReporters: ["text", "lcov"],
+	coverageThreshold: {
+		"global": {
+			"branches": 90,
+			"functions": 90,
+			"lines": 90,
+			"statements": -10
+		}
+	}
+};
+
+module.exports = config;

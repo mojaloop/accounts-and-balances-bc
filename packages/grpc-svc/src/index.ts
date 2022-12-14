@@ -29,6 +29,4 @@
 
 "use strict";
 
-import {startGrpcService} from "./grpc_svc";
-
-startGrpcService();
+export * from "./application";
