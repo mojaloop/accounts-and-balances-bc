@@ -54,7 +54,6 @@ export class BuiltinLedgerAdapter implements ILedgerAdapter {
         timeoutMs: number
     ) {
         this.logger = logger.createChild(this.constructor.name);
-        //this.logger = logger;
 
         this.builtinLedgerClient = new BuiltinLedgerGrpcClient(
             logger,

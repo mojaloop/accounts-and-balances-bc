@@ -64,7 +64,6 @@ export class GrpcHandlers {
 		aggregate: AccountsAndBalancesAggregate
 	) {
 		this.logger = logger.createChild(this.constructor.name);
-        //this.logger = logger;
 		this.aggregate = aggregate;
 	}
 

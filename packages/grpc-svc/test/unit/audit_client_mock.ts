@@ -38,7 +38,7 @@ export class AuditClientMock implements IAuditClient {
 	private readonly logger: ILogger;
 
 	constructor(logger: ILogger) {
-		//this.logger = logger;
+		this.logger = logger.createChild(this.constructor.name);
 	}
 
 	async init(): Promise<void> {

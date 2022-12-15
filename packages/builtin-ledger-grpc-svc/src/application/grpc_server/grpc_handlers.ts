@@ -31,7 +31,23 @@
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {ServerUnaryCall, sendUnaryData, status} from "@grpc/grpc-js";
-import {UnauthorizedError} from "../../domain/errors";
+import {
+	AccountAlreadyExistsError, CreditBalanceExceedsDebitBalanceError,
+	CreditedAccountNotFoundError,
+	CurrencyCodesDifferError,
+	DebitBalanceExceedsCreditBalanceError,
+	DebitedAccountNotFoundError,
+	InvalidAccountStateError,
+	InvalidAccountTypeError,
+	InvalidCreditBalanceError,
+	InvalidCurrencyCodeError,
+	InvalidDebitBalanceError,
+	InvalidIdError,
+	InvalidJournalEntryAmountError,
+	InvalidTimestampError, JournalEntryAlreadyExistsError,
+	SameDebitedAndCreditedAccountsError,
+	UnauthorizedError
+} from "../../domain/errors";
 import {BuiltinLedgerAggregate} from "../../domain/aggregate";
 import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
 import {BuiltinLedgerAccountDto, BuiltinLedgerJournalEntryDto} from "../../domain/entities";
@@ -69,7 +85,6 @@ export class GrpcHandlers {
 		aggregate: BuiltinLedgerAggregate
 	) {
 		this.logger = logger.createChild(this.constructor.name);
-        //this.logger = logger;
 		this.aggregate = aggregate;
 	}
 
@@ -114,6 +129,46 @@ export class GrpcHandlers {
 			if (error instanceof UnauthorizedError) {
 				callback(
 					{code: status.PERMISSION_DENIED, details: error.message},
+					null
+				);
+			} else if (error instanceof InvalidDebitBalanceError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof InvalidCreditBalanceError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof InvalidTimestampError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof InvalidIdError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof InvalidAccountStateError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof InvalidAccountTypeError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof InvalidCurrencyCodeError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof AccountAlreadyExistsError) {
+				callback(
+					{code: status.ALREADY_EXISTS, details: error.message},
 					null
 				);
 			} else {
@@ -169,6 +224,61 @@ export class GrpcHandlers {
 			if (error instanceof UnauthorizedError) {
 				callback(
 					{code: status.PERMISSION_DENIED, details: error.message},
+					null
+				);
+			} else if (error instanceof InvalidTimestampError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof InvalidIdError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof InvalidCurrencyCodeError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof InvalidJournalEntryAmountError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof SameDebitedAndCreditedAccountsError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof DebitedAccountNotFoundError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof CreditedAccountNotFoundError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof CurrencyCodesDifferError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			/*} else if (error instanceof DebitBalanceExceedsCreditBalanceError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof CreditBalanceExceedsDebitBalanceError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);*/
+			} else if (error instanceof JournalEntryAlreadyExistsError) {
+				callback(
+					{code: status.ALREADY_EXISTS, details: error.message},
 					null
 				);
 			} else {

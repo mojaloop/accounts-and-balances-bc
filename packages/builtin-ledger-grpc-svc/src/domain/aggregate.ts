@@ -85,7 +85,6 @@ export class BuiltinLedgerAggregate {
 		journalEntriesRepo: IBuiltinLedgerJournalEntriesRepo
 	) {
 		this.logger = logger.createChild(this.constructor.name);
-        //this.logger = logger;
 		this.authorizationClient = authorizationClient;
 		this.auditingClient = auditingClient;
 		this.builtinLedgerAccountsRepo = accountsRepo;
@@ -122,7 +121,7 @@ export class BuiltinLedgerAggregate {
 		builtinLedgerAccountDtos: BuiltinLedgerAccountDto[],
 		securityContext: CallSecurityContext
 	): Promise<string[]> {
-		this.enforcePrivilege(securityContext, Privileges.CREATE_JOURNAL_ENTRY); // TODO: here or on createAccount()?
+		this.enforcePrivilege(securityContext, Privileges.CREATE_ACCOUNT); // TODO: enforce privilege here and on createAccount()?
 
 		const accountIds: string[] = [];
 		for (const builtinLedgerAccountDto of builtinLedgerAccountDtos) {
@@ -136,6 +135,8 @@ export class BuiltinLedgerAggregate {
 		builtinLedgerAccountDto: BuiltinLedgerAccountDto,
 		securityContext: CallSecurityContext
 	): Promise<string> {
+		this.enforcePrivilege(securityContext, Privileges.CREATE_ACCOUNT);
+
 		// When creating an account, debitBalance, creditBalance and timestampLastJournalEntry are supposed to be null.
 		// For consistency purposes, and to make sure whoever calls this function knows that, if those values aren't
 		// respected, errors are thrown.
@@ -212,7 +213,7 @@ export class BuiltinLedgerAggregate {
 		builtinLedgerJournalEntryDtos: BuiltinLedgerJournalEntryDto[],
 		securityContext: CallSecurityContext
 	): Promise<string[]> {
-		this.enforcePrivilege(securityContext, Privileges.CREATE_JOURNAL_ENTRY); // TODO: here or on createJournalEntry()?
+		this.enforcePrivilege(securityContext, Privileges.CREATE_JOURNAL_ENTRY); // TODO: enforce privilege here and on createJournalEntry()?
 
 		const journalEntryIds: string[] = [];
 		for (const builtinLedgerJournalEntryDto of builtinLedgerJournalEntryDtos) {
@@ -226,6 +227,8 @@ export class BuiltinLedgerAggregate {
 		builtinLedgerJournalEntryDto: BuiltinLedgerJournalEntryDto,
 		securityContext: CallSecurityContext
 	): Promise<string> {
+		this.enforcePrivilege(securityContext, Privileges.CREATE_JOURNAL_ENTRY);
+
 		// When creating a journal entry, timestamp is supposed to be null. For consistency purposes, and to make sure
 		// whoever calls this function knows that, if those values aren't respected, errors are thrown.
 		if (builtinLedgerJournalEntryDto.timestamp) { // TODO: use "!== null" instead?
@@ -280,10 +283,10 @@ export class BuiltinLedgerAggregate {
 		try {
 			debitedBuiltinLedgerAccount = (await this.builtinLedgerAccountsRepo.getAccountsByIds(
 				[builtinLedgerJournalEntry.debitedAccountId]
-			))[0]; // NOTE: in JS, [0] of an empty array is undefined.
+			))[0];
 		} catch (error: unknown) {
-			/*this.logger.error(error);
-			throw error;*/
+			this.logger.error(error);
+			throw error;
 		}
 		if (!debitedBuiltinLedgerAccount) {
 			throw new DebitedAccountNotFoundError();
@@ -352,8 +355,8 @@ export class BuiltinLedgerAggregate {
 			);
 		} catch (error: unknown) {
 			// TODO: revert store.
-			/*this.logger.error(error);
-			throw error;*/
+			this.logger.error(error);
+			throw error;
 		}
 
 		// Update the credited account's credit balance and timestamp.
@@ -367,8 +370,8 @@ export class BuiltinLedgerAggregate {
 			);
 		} catch (error: unknown) {
 			// TODO: revert store and update.
-			/*this.logger.error(error);
-			throw error;*/
+			this.logger.error(error);
+			throw error;
 		}
 
 		// TODO: wrap in try-catch block.

@@ -39,7 +39,6 @@ export class AuthorizationClientMock implements IAuthorizationClient {
 
 	constructor(logger: ILogger) {
 		this.logger = logger.createChild(this.constructor.name);
-        //this.logger = logger;
 	}
 
 	async init(): Promise<void> {

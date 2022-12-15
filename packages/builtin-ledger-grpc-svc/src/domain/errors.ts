@@ -37,8 +37,8 @@ export class InvalidCreditBalanceError extends Error {readonly message = "invali
 // JournalEntry.
 export class InvalidJournalEntryAmountError extends Error {readonly message = "invalid journal entry amount";}
 export class SameDebitedAndCreditedAccountsError extends Error {readonly message = "same debited and credited accounts";}
-export class DebitedAccountNotFoundError extends Error {readonly message = "no such debited account";}
-export class CreditedAccountNotFoundError extends Error {readonly message = "no such credited account";}
+export class DebitedAccountNotFoundError extends Error {readonly message = "debited account not found";}
+export class CreditedAccountNotFoundError extends Error {readonly message = "credited account not found";}
 export class CurrencyCodesDifferError extends Error {readonly message = "currency codes differ";}
 export class DebitBalanceExceedsCreditBalanceError extends Error {readonly message = "debit balance exceeds credit balance";}
 export class CreditBalanceExceedsDebitBalanceError extends Error {readonly message = "credit balance exceeds debit balance";}
@@ -51,7 +51,7 @@ export class InvalidTimestampError extends Error {readonly message = "invalid ti
 // Repos.
 export class UnableToInitRepoError extends Error {readonly message = "unable to init repo";}
 export class AccountAlreadyExistsError extends Error {readonly message = "account already exists";}
-export class AccountNotFoundError extends Error {readonly message = "no such account";}
+export class AccountNotFoundError extends Error {readonly message = "account not found";}
 export class UnableToStoreAccountError extends Error {readonly message = "unable to store account";}
 export class UnableToGetAccountError extends Error {readonly message = "unable to get account";}
 export class UnableToGetAccountsError extends Error {readonly message = "unable to get accounts";}

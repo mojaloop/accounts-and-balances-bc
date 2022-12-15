@@ -93,7 +93,6 @@ export class BuiltinLedgerJournalEntriesMongoRepo implements IBuiltinLedgerJourn
         collectionName: string
     ) {
         this.logger = logger.createChild(this.constructor.name);
-        //this.logger = logger;
         this.HOST = host;
         this.PORT_NO = portNo;
         this.TIMEOUT_MS = timeoutMs;

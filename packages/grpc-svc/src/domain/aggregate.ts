@@ -60,7 +60,6 @@ export class AccountsAndBalancesAggregate {
 		ledgerAdapter: ILedgerAdapter
 	) {
 		this.logger = logger.createChild(this.constructor.name);
-        //this.logger = logger;
 		this.chartOfAccounts = accountsRepo;
 		this.ledgerAdapter = ledgerAdapter;
 

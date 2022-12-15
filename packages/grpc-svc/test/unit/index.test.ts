@@ -43,7 +43,7 @@ import {Account, JournalEntry} from "@mojaloop/accounts-and-balances-bc-public-t
 import {randomUUID} from "crypto";
 import {GrpcClient} from "@mojaloop/accounts-and-balances-bc-grpc-client-lib";
 import {AuthorizationClientMock} from "../../../../test/integration/authorization_client_mock";
-import {AccountsAndBalancesGrpcService} from "../../src/application/accounts_and_balances_grpc_service";
+import {GrpcService} from "../../src/application/grpc_service";
 import {AuthenticationServiceMock} from "./authentication_service_mock";
 import {AuditClientMock} from "./audit_client_mock";
 import {ChartOfAccountsMemoryRepo} from "./chart_of_accounts_memory_repo";
@@ -53,59 +53,37 @@ import {BuiltinLedgerJournalEntriesMemoryRepo} from "./builtin_ledger_journal_en
 import {CoaAccount} from "../../src/domain/coa_account";
 import {bigintToString, stringToBigint} from "../../src/domain/converters";
 
-/* ********** Constants Begin ********** */
-
-// General.
 const BOUNDED_CONTEXT_NAME: string = "accounts-and-balances-bc";
-const SERVICE_NAME: string = "grpc-integration-tests";
+const SERVICE_NAME: string = "grpc-svc-unit-tests";
 const SERVICE_VERSION: string = "0.0.1";
 
-// Event streamer.
-const EVENT_STREAMER_HOST: string = "localhost";
-const EVENT_STREAMER_PORT_NO: number = 9092;
+const ACCOUNTS_AND_BALANCES_GRPC_SVC_HOST: string = "localhost";
+const ACCOUNTS_AND_BALANCES_GRPC_SVC_PORT_NO: number = 1234;
+const ACCOUNTS_AND_BALANCES_GRPC_CLIENT_TIMEOUT_MS: number = 5_000;
 
-// Logging.
-const LOGGING_LEVEL: LogLevel = LogLevel.INFO;
-const LOGGING_TOPIC: string = "logs";
+const UNKNOWN_ERROR_MESSAGE: string = "unknown error";
 
-// Repo.
-const MONGO_HOST: string = "localhost";
-const MONGO_PORT_NO: number = 27017;
-const MONGO_TIMEOUT_MS: number = 5000;
-const MONGO_USERNAME: string = "accounts-and-balances-bc";
-const MONGO_PASSWORD: string = "123456789";
-const MONGO_DB_NAME: string = "accounts_and_balances_bc";
-const MONGO_ACCOUNTS_COLLECTION_NAME: string = "accounts";
-
-// Accounts and Balances gRPC client.
-const ACCOUNTS_AND_BALANCES_GRPC_SERVICE_HOST: string = "localhost";
-const ACCOUNTS_AND_BALANCES_GRPC_SERVICE_PORT_NO: number = 1234;
-const ACCOUNTS_AND_BALANCES_GRPC_CLIENT_TIMEOUT_MS: number = 5000;
-
-// Hub account.
-const HUB_ACCOUNT_ID: string = "hub_acc";
+const HUB_ACCOUNT_ID: string = randomUUID();
 const HUB_ACCOUNT_INITIAL_CREDIT_BALANCE: bigint = 1_000_000n;
-
-/* ********** Constants End ********** */
 
 let grpcClient: GrpcClient;
 
-jest.setTimeout(1_000_000_000);
-
-describe("accounts and balances gRPC service - unit tests", () => {
+describe("accounts and balances grpc service - unit tests with the built-in ledger", () => {
 	beforeAll(async () => {
 		const logger: ILogger = new DefaultLogger(BOUNDED_CONTEXT_NAME, SERVICE_NAME, SERVICE_VERSION);
-		const authenticationServiceMock: AuthenticationServiceMock = new AuthenticationServiceMock(logger);
+		new AuthenticationServiceMock(logger); // No reference needed.
 		const authorizationClient: IAuthorizationClient = new AuthorizationClientMock(logger);
 		const auditingClient: IAuditClient = new AuditClientMock(logger);
-		const accountsRepo: IBuiltinLedgerAccountsRepo = new BuiltinLedgerAccountsMemoryRepo(logger);
-		const journalEntriesRepo: IBuiltinLedgerJournalEntriesRepo = new BuiltinLedgerJournalEntriesMemoryRepo(logger);
+		const builtinLedgerAccountsRepo: IBuiltinLedgerAccountsRepo = new BuiltinLedgerAccountsMemoryRepo(logger);
+		const builtinLedgerJournalEntriesRepo: IBuiltinLedgerJournalEntriesRepo
+			= new BuiltinLedgerJournalEntriesMemoryRepo(logger);
+		const chartOfAccountRepo: IChartOfAccountsRepo = new ChartOfAccountsMemoryRepo(logger);
 
-		// Create the hub account, used to credit other accounts.
+		// Create the hub account, used to credit other accounts, on the built-in ledger.
 		const builtinLedgerHubAccount: BuiltinLedgerAccount = {
 			id: HUB_ACCOUNT_ID,
 			state: "ACTIVE",
-			type: "POSITION",
+			type: "FEE",
 			limitCheckMode: "NONE",
 			currencyCode: "EUR",
 			currencyDecimals: 2,
@@ -113,57 +91,38 @@ describe("accounts and balances gRPC service - unit tests", () => {
 			creditBalance: HUB_ACCOUNT_INITIAL_CREDIT_BALANCE,
 			timestampLastJournalEntry: null
 		};
-		try {
-			await accountsRepo.storeNewAccount(builtinLedgerHubAccount);
-		} catch (error: unknown) {
-		}
+		await builtinLedgerAccountsRepo.storeNewAccount(builtinLedgerHubAccount);
 
-		await BuiltinLedgerGrpcService.start(
-			logger,
-			authorizationClient,
-			auditingClient,
-			accountsRepo,
-			journalEntriesRepo
-		);
-
-		/*grpcClient = new BuiltinLedgerGrpcClient(
-			logger,
-			ACCOUNTS_AND_BALANCES_GRPC_SERVICE_HOST,
-			ACCOUNTS_AND_BALANCES_GRPC_SERVICE_PORT_NO,
-			ACCOUNTS_AND_BALANCES_GRPC_CLIENT_TIMEOUT_MS
-		);
-		await grpcClient.init();*/
-
-
-
-
-
-		//const logger: ILogger = new DefaultLogger(BOUNDED_CONTEXT_NAME, SERVICE_NAME, SERVICE_VERSION);
-		const chartOfAccountRepo: IChartOfAccountsRepo = new ChartOfAccountsMemoryRepo(logger);
-		// Create the hub account, used to credit other accounts.
-		const coaAccountHubAccount: CoaAccount = {
+		// Create the hub account, used to credit other accounts, on the main service.
+		const coaHubAccount: CoaAccount = {
 			internalId: HUB_ACCOUNT_ID,
 			externalId: HUB_ACCOUNT_ID,
 			ownerId: "test",
 			state: "ACTIVE",
-			type: "POSITION",
+			type: "FEE",
 			currencyCode: "EUR",
 			currencyDecimals: 2
 		};
-		await chartOfAccountRepo.storeAccounts([coaAccountHubAccount]);
+		await chartOfAccountRepo.storeAccounts([coaHubAccount]);
 
-		// TODO: start this service here or on the built-in ledger service?
-		await AccountsAndBalancesGrpcService.start(
+		// TODO: start this service here or on the main service?
+		await BuiltinLedgerGrpcService.start(
 			logger,
 			authorizationClient,
 			auditingClient,
+			builtinLedgerAccountsRepo,
+			builtinLedgerJournalEntriesRepo
+		);
+
+		await GrpcService.start(
+			logger,
 			chartOfAccountRepo
 		);
 
 		grpcClient = new GrpcClient(
 			logger,
-			ACCOUNTS_AND_BALANCES_GRPC_SERVICE_HOST,
-			ACCOUNTS_AND_BALANCES_GRPC_SERVICE_PORT_NO,
+			ACCOUNTS_AND_BALANCES_GRPC_SVC_HOST,
+			ACCOUNTS_AND_BALANCES_GRPC_SVC_PORT_NO,
 			ACCOUNTS_AND_BALANCES_GRPC_CLIENT_TIMEOUT_MS
 		);
 		await grpcClient.init();
@@ -171,13 +130,13 @@ describe("accounts and balances gRPC service - unit tests", () => {
 
 	afterAll(async () => {
 		await grpcClient.destroy();
+		await GrpcService.stop();
 		await BuiltinLedgerGrpcService.stop();
-		await AccountsAndBalancesGrpcService.stop();
 	});
 
 	/* createAccounts() */
 
-	test("create non-existent account", async () => {
+	test("createAccounts()", async () => {
 		const account: Account = {
 			id: null,
 			ownerId: "test",
@@ -196,7 +155,7 @@ describe("accounts and balances gRPC service - unit tests", () => {
 		expect(accountId).not.toEqual("");
 	});
 
-	test("create non-existent account", async () => {
+	test("createAccounts()", async () => {
 		const id: string = "test_id";
 		const account: Account = {
 			id: id,
@@ -214,7 +173,7 @@ describe("accounts and balances gRPC service - unit tests", () => {
 		expect(accountId).toEqual(id);
 	});
 
-	test("create non-existent account", async () => {
+	test("createAccounts()", async () => {
 		const id: string = "test_id";
 		const account: Account = {
 			id: id,
@@ -233,7 +192,7 @@ describe("accounts and balances gRPC service - unit tests", () => {
 		}).rejects.toThrow();
 	});
 
-	test("create non-existent account", async () => {
+	test("createAccounts()", async () => {
 		const account: Account = {
 			id: null,
 			ownerId: "test",

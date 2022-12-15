@@ -46,7 +46,7 @@ export class BuiltinLedgerAccountsMemoryRepo implements IBuiltinLedgerAccountsRe
 	readonly accounts: Map<string, BuiltinLedgerAccount>;
 
 	constructor(logger: ILogger) {
-		//this.logger = logger;
+		this.logger = logger.createChild(this.constructor.name);
 
 		this.accounts = new Map();
 	}

@@ -8,9 +8,9 @@ const config = {
 	clearMocks: true,
 	testMatch: ["**/test/unit/**/*.test.ts"],
 	collectCoverage: true,
-	collectCoverageFrom: ["./src/domain/**/*.ts"],
+	collectCoverageFrom: ["./src/**/*.ts"],
+	coveragePathIgnorePatterns: ["./src/implementations/"],
 	coverageDirectory: `../../coverage/unit/${shortPackageName}/`,
-	coveragePathIgnorePatterns: [/*"./src/application/index.ts", "./src/application/builtin_ledger_grpc_service.ts", */"./src/domain/errors.ts"/*, "./src/implementations/"*/],
 	coverageReporters: ["text", "lcov"],
 	coverageThreshold: {
 		"global": {
