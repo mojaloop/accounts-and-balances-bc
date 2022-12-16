@@ -39,8 +39,9 @@ import {GrpcJournalEntry, GrpcJournalEntry__Output} from "./types/GrpcJournalEnt
 import {GrpcAccountsAndBalancesClient} from "./types/GrpcAccountsAndBalances";
 import {ProtoGrpcType} from "./types/accounts_and_balances";
 import {
+	UnableToActivateAccountsError,
 	UnableToCreateAccountsError,
-	UnableToCreateJournalEntriesError,
+	UnableToCreateJournalEntriesError, UnableToDeactivateAccountsError, UnableToDeleteAccountsError,
 	UnableToGetAccountsError,
 	UnableToGetJournalEntriesError
 } from "./errors";
@@ -184,7 +185,6 @@ export class GrpcClient {
 		});
 	}
 
-	// TODO: return GrpcAccount__Output or Account?
 	async getAccountsByIds(accountIds: string[]): Promise<Account[]> {
 		const grpcAccountIds: GrpcId[] = accountIds.map((accountId) => {
 			return {grpcId: accountId};
@@ -209,7 +209,6 @@ export class GrpcClient {
 		});
 	}
 
-	// TODO: return GrpcAccount__Output or Account?
 	async getAccountsByOwnerId(ownerId: string): Promise<Account[]> {
 		return new Promise((resolve, reject) => {
 			this.client.getAccountsByOwnerId(
@@ -230,7 +229,6 @@ export class GrpcClient {
 		});
 	}
 
-	// TODO: return GrpcJournalEntry__Output or JournalEntry?
 	async getJournalEntriesByAccountId(accountId: string): Promise<JournalEntry[]> {
 		return new Promise((resolve, reject) => {
 			this.client.getJournalEntriesByAccountId(
@@ -268,6 +266,66 @@ export class GrpcClient {
 						return journalEntry;
 					});
 					resolve(journalEntries);
+				}
+			);
+		});
+	}
+
+	async deleteAccountsByIds(accountIds: string[]): Promise<void> {
+		const grpcAccountIds: GrpcId[] = accountIds.map((accountId) => {
+			return {grpcId: accountId};
+		});
+
+		return new Promise((resolve, reject) => {
+			this.client.deleteAccountsByIds(
+				{grpcIdArray: grpcAccountIds},
+				(error) => {
+					if (error) {
+						reject(new UnableToDeleteAccountsError(error.details));
+						return;
+					}
+
+					resolve();
+				}
+			);
+		});
+	}
+
+	async deactivateAccountsByIds(accountIds: string[]): Promise<void> {
+		const grpcAccountIds: GrpcId[] = accountIds.map((accountId) => {
+			return {grpcId: accountId};
+		});
+
+		return new Promise((resolve, reject) => {
+			this.client.deactivateAccountsByIds(
+				{grpcIdArray: grpcAccountIds},
+				(error) => {
+					if (error) {
+						reject(new UnableToDeactivateAccountsError(error.details));
+						return;
+					}
+
+					resolve();
+				}
+			);
+		});
+	}
+
+	async activateAccountsByIds(accountIds: string[]): Promise<void> {
+		const grpcAccountIds: GrpcId[] = accountIds.map((accountId) => {
+			return {grpcId: accountId};
+		});
+
+		return new Promise((resolve, reject) => {
+			this.client.activateAccountsByIds(
+				{grpcIdArray: grpcAccountIds},
+				(error) => {
+					if (error) {
+						reject(new UnableToActivateAccountsError(error.details));
+						return;
+					}
+
+					resolve();
 				}
 			);
 		});

@@ -33,6 +33,7 @@ export * from "./grpc_client";
 export * from "./errors";
 
 export * from "./types/accounts_and_balances";
+export * from "./types/google/protobuf/Empty";
 export * from "./types/GrpcAccount";
 export * from "./types/GrpcAccountArray";
 export * from "./types/GrpcId";

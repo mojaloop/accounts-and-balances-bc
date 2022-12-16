@@ -29,15 +29,17 @@
 
 "use strict";
 
-import {IBuiltinLedgerAccountsRepo} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc/dist/domain/infrastructure";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {BuiltinLedgerAccount} from "../../../builtin-ledger-grpc-svc/src/domain/entities";
 import {
 	AccountAlreadyExistsError,
-	AccountNotFoundError, UnableToGetAccountsError,
+	AccountNotFoundError,
+	BuiltinLedgerAccount,
+	IBuiltinLedgerAccountsRepo,
+	UnableToGetAccountsError,
 	UnableToStoreAccountError,
-	UnableToUpdateAccountError
-} from "../../../builtin-ledger-grpc-svc/src/domain/errors";
+	UnableToUpdateAccountError, UnableToUpdateAccountsError
+} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc";
+import {AccountState} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 export class BuiltinLedgerAccountsMemoryRepo implements IBuiltinLedgerAccountsRepo {
 	// Properties received through the constructor.
@@ -126,5 +128,19 @@ export class BuiltinLedgerAccountsMemoryRepo implements IBuiltinLedgerAccountsRe
 		}
 		builtinLedgerAccount.creditBalance = creditBalance;
 		builtinLedgerAccount.timestampLastJournalEntry = timestampLastJournalEntry;
+	}
+
+	async updateAccountStatesByIds(accountIds: string[], accountState: AccountState): Promise<void> {
+		try {
+			for (const builtinLedgerAccount of this.accounts.values()) {
+				for (const accountId of accountIds) {
+					if (builtinLedgerAccount.id === accountId) {
+						builtinLedgerAccount.state = accountState;
+					}
+				}
+			}
+		} catch (error: unknown) {
+			throw new UnableToUpdateAccountsError((error as any)?.message);
+		}
 	}
 }

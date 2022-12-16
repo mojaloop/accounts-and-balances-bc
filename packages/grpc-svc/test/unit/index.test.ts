@@ -29,20 +29,27 @@
 
 "use strict";
 
-import {ILogger, LogLevel} from "@mojaloop/logging-bc-public-types-lib";
+import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {DefaultLogger} from "@mojaloop/logging-bc-client-lib";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
 import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {
+	BuiltinLedgerAccount,
+	CreditedAccountNotFoundError,
+	CurrencyCodesDifferError,
+	DebitedAccountNotFoundError,
 	IBuiltinLedgerAccountsRepo,
-	IBuiltinLedgerJournalEntriesRepo
-} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc/dist/domain/infrastructure";
-import {BuiltinLedgerAccount} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc/dist/domain/entities";
+	IBuiltinLedgerJournalEntriesRepo,
+	InvalidJournalEntryAmountError,
+	JournalEntryAlreadyExistsError,
+	SameDebitedAndCreditedAccountsError,
+	UnauthorizedError
+} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc";
 import {BuiltinLedgerGrpcService} from "../../../builtin-ledger-grpc-svc/src/application/builtin_ledger_grpc_service";
 import {Account, JournalEntry} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {randomUUID} from "crypto";
 import {GrpcClient} from "@mojaloop/accounts-and-balances-bc-grpc-client-lib";
-import {AuthorizationClientMock} from "../../../../test/integration/authorization_client_mock";
+import {AuthorizationClientMock} from "./authorization_client_mock";
 import {GrpcService} from "../../src/application/grpc_service";
 import {AuthenticationServiceMock} from "./authentication_service_mock";
 import {AuditClientMock} from "./audit_client_mock";
@@ -52,6 +59,20 @@ import {BuiltinLedgerAccountsMemoryRepo} from "./builtin_ledger_accounts_memory_
 import {BuiltinLedgerJournalEntriesMemoryRepo} from "./builtin_ledger_journal_entries_memory_repo";
 import {CoaAccount} from "../../src/domain/coa_account";
 import {bigintToString, stringToBigint} from "../../src/domain/converters";
+import {
+	UnableToCreateAccountsError,
+	UnableToCreateJournalEntriesError
+} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-client-lib";
+import {
+	AccountAlreadyExistsError,
+	InvalidBalanceError,
+	InvalidCreditBalanceError,
+	InvalidCurrencyCodeError,
+	InvalidDebitBalanceError,
+	InvalidIdError,
+	InvalidOwnerIdError,
+	InvalidTimestampError
+} from "../../src/domain/errors";
 
 const BOUNDED_CONTEXT_NAME: string = "accounts-and-balances-bc";
 const SERVICE_NAME: string = "grpc-svc-unit-tests";
@@ -66,17 +87,17 @@ const UNKNOWN_ERROR_MESSAGE: string = "unknown error";
 const HUB_ACCOUNT_ID: string = randomUUID();
 const HUB_ACCOUNT_INITIAL_CREDIT_BALANCE: bigint = 1_000_000n;
 
+let authorizationClient: IAuthorizationClient;
 let grpcClient: GrpcClient;
 
 describe("accounts and balances grpc service - unit tests with the built-in ledger", () => {
 	beforeAll(async () => {
 		const logger: ILogger = new DefaultLogger(BOUNDED_CONTEXT_NAME, SERVICE_NAME, SERVICE_VERSION);
 		new AuthenticationServiceMock(logger); // No reference needed.
-		const authorizationClient: IAuthorizationClient = new AuthorizationClientMock(logger);
+		authorizationClient = new AuthorizationClientMock(logger);
 		const auditingClient: IAuditClient = new AuditClientMock(logger);
 		const builtinLedgerAccountsRepo: IBuiltinLedgerAccountsRepo = new BuiltinLedgerAccountsMemoryRepo(logger);
-		const builtinLedgerJournalEntriesRepo: IBuiltinLedgerJournalEntriesRepo
-			= new BuiltinLedgerJournalEntriesMemoryRepo(logger);
+		const builtinLedgerJournalEntriesRepo: IBuiltinLedgerJournalEntriesRepo = new BuiltinLedgerJournalEntriesMemoryRepo(logger);
 		const chartOfAccountRepo: IChartOfAccountsRepo = new ChartOfAccountsMemoryRepo(logger);
 
 		// Create the hub account, used to credit other accounts, on the built-in ledger.
@@ -136,7 +157,45 @@ describe("accounts and balances grpc service - unit tests with the built-in ledg
 
 	/* createAccounts() */
 
-	test("createAccounts()", async () => {
+	test("createAccounts() - correct usage, no problems", async () => {
+		const accountA: Account = {
+			id: null,
+			ownerId: "test",
+			state: "ACTIVE",
+			type: "FEE",
+			currencyCode: "EUR",
+			debitBalance: null,
+			creditBalance: null,
+			balance: null,
+			timestampLastJournalEntry: null
+		};
+
+		const accountB: Account = {
+			id: null,
+			ownerId: "test",
+			state: "ACTIVE",
+			type: "FEE",
+			currencyCode: "EUR",
+			debitBalance: null,
+			creditBalance: null,
+			balance: null,
+			timestampLastJournalEntry: null
+		};
+
+		const accountIds: string[] = await grpcClient.createAccounts([accountA, accountB]);
+		const idAccountA: string | undefined = accountIds[0];
+		const idAccountB: string | undefined = accountIds[1];
+
+		expect(idAccountA).not.toBeUndefined();
+		expect(idAccountA).not.toEqual("");
+
+		expect(idAccountB).not.toBeUndefined();
+		expect(idAccountB).not.toEqual("");
+
+		expect(idAccountA).not.toEqual(idAccountB);
+	});
+
+	test("createAccounts() - unauthorized", async () => {
 		const account: Account = {
 			id: null,
 			ownerId: "test",
@@ -149,50 +208,173 @@ describe("accounts and balances grpc service - unit tests with the built-in ledg
 			timestampLastJournalEntry: null
 		};
 
-		const accountId: string | undefined = (await grpcClient.createAccounts([account]))[0];
-		expect(accountId).not.toBeUndefined();
-		expect(accountId).not.toBeNull();
-		expect(accountId).not.toEqual("");
-	});
+		jest.spyOn(authorizationClient, "roleHasPrivilege").mockImplementationOnce(() => {
+			return false;
+		});
 
-	test("createAccounts()", async () => {
-		const id: string = "test_id";
-		const account: Account = {
-			id: id,
-			ownerId: "test",
-			state: "ACTIVE",
-			type: "FEE",
-			currencyCode: "EUR",
-			debitBalance: null,
-			creditBalance: null,
-			balance: null,
-			timestampLastJournalEntry: null
-		};
-
-		const accountId: string | undefined = (await grpcClient.createAccounts([account]))[0];
-		expect(accountId).toEqual(id);
-	});
-
-	test("createAccounts()", async () => {
-		const id: string = "test_id";
-		const account: Account = {
-			id: id,
-			ownerId: "test",
-			state: "ACTIVE",
-			type: "FEE",
-			currencyCode: "EUR",
-			debitBalance: null,
-			creditBalance: null,
-			balance: null,
-			timestampLastJournalEntry: null
-		};
-
-		await expect(async () => {
+		let errorName: string | undefined;
+		let errorMessage: string | undefined;
+		try {
 			await grpcClient.createAccounts([account]);
-		}).rejects.toThrow();
+		} catch (error: unknown) {
+			errorName = error?.constructor.name;
+			errorMessage = (error as any)?.message;
+		}
+		expect(errorName).toEqual(UnableToCreateAccountsError.name);
+		expect(errorMessage).toEqual((new UnauthorizedError()).message); // TODO: any other way to get the message?
 	});
 
-	test("createAccounts()", async () => {
+	test("createAccounts() - non-null debit balance", async () => {
+		const account: Account = {
+			id: null,
+			ownerId: "test",
+			state: "ACTIVE",
+			type: "FEE",
+			currencyCode: "EUR",
+			debitBalance: "10",
+			creditBalance: null,
+			balance: null,
+			timestampLastJournalEntry: null
+		};
+
+		let errorName: string | undefined;
+		let errorMessage: string | undefined;
+		try {
+			await grpcClient.createAccounts([account]);
+		} catch (error: unknown) {
+			errorName = error?.constructor.name;
+			errorMessage = (error as any)?.message;
+		}
+		expect(errorName).toEqual(UnableToCreateAccountsError.name);
+		expect(errorMessage).toEqual((new InvalidDebitBalanceError()).message); // TODO: any other way to get the message?
+	});
+
+	test("createAccounts() - non-null credit balance", async () => {
+		const account: Account = {
+			id: null,
+			ownerId: "test",
+			state: "ACTIVE",
+			type: "FEE",
+			currencyCode: "EUR",
+			debitBalance: null,
+			creditBalance: "10",
+			balance: null,
+			timestampLastJournalEntry: null
+		};
+
+		let errorName: string | undefined;
+		let errorMessage: string | undefined;
+		try {
+			await grpcClient.createAccounts([account]);
+		} catch (error: unknown) {
+			errorName = error?.constructor.name;
+			errorMessage = (error as any)?.message;
+		}
+		expect(errorName).toEqual(UnableToCreateAccountsError.name);
+		expect(errorMessage).toEqual((new InvalidCreditBalanceError()).message); // TODO: any other way to get the message?
+	});
+
+	test("createAccounts() - non-null balance", async () => {
+		const account: Account = {
+			id: null,
+			ownerId: "test",
+			state: "ACTIVE",
+			type: "FEE",
+			currencyCode: "EUR",
+			debitBalance: null,
+			creditBalance: null,
+			balance: "10",
+			timestampLastJournalEntry: null
+		};
+
+		let errorName: string | undefined;
+		let errorMessage: string | undefined;
+		try {
+			await grpcClient.createAccounts([account]);
+		} catch (error: unknown) {
+			errorName = error?.constructor.name;
+			errorMessage = (error as any)?.message;
+		}
+		expect(errorName).toEqual(UnableToCreateAccountsError.name);
+		expect(errorMessage).toEqual((new InvalidBalanceError()).message); // TODO: any other way to get the message?
+	});
+
+	test("createAccounts() - non-null timestamp", async () => {
+		const account: Account = {
+			id: null,
+			ownerId: "test",
+			state: "ACTIVE",
+			type: "FEE",
+			currencyCode: "EUR",
+			debitBalance: null,
+			creditBalance: null,
+			balance: null,
+			timestampLastJournalEntry: 123
+		};
+
+		let errorName: string | undefined;
+		let errorMessage: string | undefined;
+		try {
+			await grpcClient.createAccounts([account]);
+		} catch (error: unknown) {
+			errorName = error?.constructor.name;
+			errorMessage = (error as any)?.message;
+		}
+		expect(errorName).toEqual(UnableToCreateAccountsError.name);
+		expect(errorMessage).toEqual((new InvalidTimestampError()).message); // TODO: any other way to get the message?
+	});
+
+	test("createAccounts() - empty id string", async () => {
+		const account: Account = {
+			id: "",
+			ownerId: "test",
+			state: "ACTIVE",
+			type: "FEE",
+			currencyCode: "EUR",
+			debitBalance: null,
+			creditBalance: null,
+			balance: null,
+			timestampLastJournalEntry: null
+		};
+
+		let errorName: string | undefined;
+		let errorMessage: string | undefined;
+		try {
+			await grpcClient.createAccounts([account]);
+		} catch (error: unknown) {
+			errorName = error?.constructor.name;
+			errorMessage = (error as any)?.message;
+		}
+		expect(errorName).toEqual(UnableToCreateAccountsError.name);
+		expect(errorMessage).toEqual((new InvalidIdError()).message); // TODO: any other way to get the message?
+	});
+
+	test("createAccounts() - empty owner id string", async () => {
+		const account: Account = {
+			id: null,
+			ownerId: "",
+			state: "ACTIVE",
+			type: "FEE",
+			currencyCode: "EUR",
+			debitBalance: null,
+			creditBalance: null,
+			balance: null,
+			timestampLastJournalEntry: null
+		};
+
+		let errorName: string | undefined;
+		let errorMessage: string | undefined;
+		try {
+			await grpcClient.createAccounts([account]);
+		} catch (error: unknown) {
+			errorName = error?.constructor.name;
+			errorMessage = (error as any)?.message;
+		}
+		expect(errorName).toEqual(UnableToCreateAccountsError.name);
+		expect(errorMessage).toEqual((new InvalidIdError()).message); // TODO: any other way to get the message?
+	});
+
+	test("createAccounts() - non-existent currency code", async () => {
 		const account: Account = {
 			id: null,
 			ownerId: "test",
@@ -205,14 +387,49 @@ describe("accounts and balances grpc service - unit tests with the built-in ledg
 			timestampLastJournalEntry: null
 		};
 
-		await expect(async () => {
+		let errorName: string | undefined;
+		let errorMessage: string | undefined;
+		try {
 			await grpcClient.createAccounts([account]);
-		}).rejects.toThrow();
+		} catch (error: unknown) {
+			errorName = error?.constructor.name;
+			errorMessage = (error as any)?.message;
+		}
+		expect(errorName).toEqual(UnableToCreateAccountsError.name);
+		expect(errorMessage).toEqual((new InvalidCurrencyCodeError()).message); // TODO: any other way to get the message?
+	});
+
+	test("createAccounts() - duplicate account", async () => {
+		const accountId: string = randomUUID();
+		const account: Account = {
+			id: accountId,
+			ownerId: "test",
+			state: "ACTIVE",
+			type: "FEE",
+			currencyCode: "EUR",
+			debitBalance: null,
+			creditBalance: null,
+			balance: null,
+			timestampLastJournalEntry: null
+		};
+
+		await grpcClient.createAccounts([account]);
+
+		let errorName: string | undefined;
+		let errorMessage: string | undefined;
+		try {
+			await grpcClient.createAccounts([account]);
+		} catch (error: unknown) {
+			errorName = error?.constructor.name;
+			errorMessage = (error as any)?.message;
+		}
+		expect(errorName).toEqual(UnableToCreateAccountsError.name);
+		expect(errorMessage).toEqual((new AccountAlreadyExistsError()).message); // TODO: any other way to get the message?
 	});
 
 	/* createJournalEntries() */
 
-	test("create non-existent journal entries", async () => {
+	test("createJournalEntries() - correct usage, no problems", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: Account[] = await createAndCredit2Accounts();
 
@@ -236,23 +453,133 @@ describe("accounts and balances grpc service - unit tests with the built-in ledg
 			timestamp: null
 		};
 
-		const idsJournalEntries: string[] =
+		const journalEntryIds: string[] =
 			await grpcClient.createJournalEntries([journalEntryA, journalEntryB]);
+		const idJournalEntryA: string | undefined = journalEntryIds[0];
+		const idJournalEntryB: string | undefined = journalEntryIds[1];
 
-		expect(idsJournalEntries[0]).not.toBeUndefined();
-		expect(idsJournalEntries[0]).not.toBeNull();
-		expect(idsJournalEntries[0]).not.toEqual("");
+		expect(idJournalEntryA).not.toBeUndefined();
+		expect(idJournalEntryA).not.toEqual("");
 
-		expect(idsJournalEntries[1]).not.toBeUndefined();
-		expect(idsJournalEntries[1]).not.toBeNull();
-		expect(idsJournalEntries[1]).not.toEqual("");
+		expect(idJournalEntryB).not.toBeUndefined();
+		expect(idJournalEntryB).not.toEqual("");
+
+		expect(idJournalEntryA).not.toEqual(idJournalEntryB);
 	});
 
-	test("create non-existent journal entries", async () => {
+	test("createJournalEntries() - unauthorized", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: Account[] = await createAndCredit2Accounts();
 
-		const journalEntryA: JournalEntry = {
+		const journalEntry: JournalEntry = {
+			id: null,
+			ownerId: null,
+			currencyCode: "EUR",
+			amount: "5",
+			debitedAccountId: accounts[0].id!,
+			creditedAccountId: accounts[1].id!,
+			timestamp: null
+		};
+
+		jest.spyOn(authorizationClient, "roleHasPrivilege").mockImplementationOnce(() => {
+			return false;
+		});
+
+		let errorName: string | undefined;
+		let errorMessage: string | undefined;
+		try {
+			await grpcClient.createJournalEntries([journalEntry]);
+		} catch (error: unknown) {
+			errorName = error?.constructor.name;
+			errorMessage = (error as any)?.message;
+		}
+		expect(errorName).toEqual(UnableToCreateJournalEntriesError.name);
+		expect(errorMessage).toEqual((new UnauthorizedError()).message); // TODO: any other way to get the message?
+	});
+
+	test("createJournalEntries() - non-null timestamp", async () => {
+		// Before creating a journal entry, the respective accounts need to be created.
+		const accounts: Account[] = await createAndCredit2Accounts();
+
+		const journalEntry: JournalEntry = {
+			id: null,
+			ownerId: null,
+			currencyCode: "EUR",
+			amount: "5",
+			debitedAccountId: accounts[0].id!,
+			creditedAccountId: accounts[1].id!,
+			timestamp: 123
+		};
+
+		let errorName: string | undefined;
+		let errorMessage: string | undefined;
+		try {
+			await grpcClient.createJournalEntries([journalEntry]);
+		} catch (error: unknown) {
+			errorName = error?.constructor.name;
+			errorMessage = (error as any)?.message;
+		}
+		expect(errorName).toEqual(UnableToCreateJournalEntriesError.name);
+		expect(errorMessage).toEqual((new InvalidTimestampError()).message); // TODO: any other way to get the message?
+	});
+
+	test("createJournalEntries() - empty id string", async () => {
+		// Before creating a journal entry, the respective accounts need to be created.
+		const accounts: Account[] = await createAndCredit2Accounts();
+
+		const journalEntry: JournalEntry = {
+			id: "",
+			ownerId: null,
+			currencyCode: "EUR",
+			amount: "5",
+			debitedAccountId: accounts[0].id!,
+			creditedAccountId: accounts[1].id!,
+			timestamp: null
+		};
+
+		let errorName: string | undefined;
+		let errorMessage: string | undefined;
+		try {
+			await grpcClient.createJournalEntries([journalEntry]);
+		} catch (error: unknown) {
+			errorName = error?.constructor.name;
+			errorMessage = (error as any)?.message;
+		}
+		expect(errorName).toEqual(UnableToCreateJournalEntriesError.name);
+		expect(errorMessage).toEqual((new InvalidIdError()).message); // TODO: any other way to get the message?
+	});
+
+	test("createJournalEntries() - empty owner id string", async () => {
+		// Before creating a journal entry, the respective accounts need to be created.
+		const accounts: Account[] = await createAndCredit2Accounts();
+
+		const journalEntry: JournalEntry = {
+			id: null,
+			ownerId: "",
+			currencyCode: "EUR",
+			amount: "5",
+			debitedAccountId: accounts[0].id!,
+			creditedAccountId: accounts[1].id!,
+			timestamp: null
+		};
+
+		let errorName: string | undefined;
+		let errorMessage: string | undefined;
+		try {
+			await grpcClient.createJournalEntries([journalEntry]);
+		} catch (error: unknown) {
+			errorName = error?.constructor.name;
+			errorMessage = (error as any)?.message;
+		}
+		expect(errorName).toEqual(UnableToCreateJournalEntriesError.name);
+		expect(errorMessage).toEqual((new InvalidOwnerIdError()).message); // TODO: any other way to get the message?
+	});
+
+	test("createJournalEntries() - non-existent currency code", async () => {
+		// Before creating a journal entry, the respective accounts need to be created.
+		const accounts: Account[] = await createAndCredit2Accounts();
+
+		const journalEntry: JournalEntry = {
 			id: null,
 			ownerId: null,
 			currencyCode: "some string",
@@ -262,35 +589,195 @@ describe("accounts and balances grpc service - unit tests with the built-in ledg
 			timestamp: null
 		};
 
-		await expect(async () => {
-			const idsJournalEntries: string[] =
-				await grpcClient.createJournalEntries([journalEntryA]);
-		}).rejects.toThrow();
+		let errorName: string | undefined;
+		let errorMessage: string | undefined;
+		try {
+			await grpcClient.createJournalEntries([journalEntry]);
+		} catch (error: unknown) {
+			errorName = error?.constructor.name;
+			errorMessage = (error as any)?.message;
+		}
+		expect(errorName).toEqual(UnableToCreateJournalEntriesError.name);
+		expect(errorMessage).toEqual((new InvalidCurrencyCodeError()).message); // TODO: any other way to get the message?
+	});
+
+	test("createJournalEntries() - invalid amount", async () => {
+		// Before creating a journal entry, the respective accounts need to be created.
+		const accounts: Account[] = await createAndCredit2Accounts();
+
+		const journalEntry: JournalEntry = {
+			id: null,
+			ownerId: null,
+			currencyCode: "EUR",
+			amount: "some string",
+			debitedAccountId: accounts[0].id!,
+			creditedAccountId: accounts[1].id!,
+			timestamp: null
+		};
+
+		let errorName: string | undefined;
+		let errorMessage: string | undefined;
+		try {
+			await grpcClient.createJournalEntries([journalEntry]);
+		} catch (error: unknown) {
+			errorName = error?.constructor.name;
+			errorMessage = (error as any)?.message;
+		}
+		expect(errorName).toEqual(UnableToCreateJournalEntriesError.name);
+		expect(errorMessage).toEqual((new InvalidJournalEntryAmountError()).message); // TODO: any other way to get the message?
+	});
+
+	test("createJournalEntries() - same debited and credited accounts", async () => {
+		// Before creating a journal entry, the respective accounts need to be created.
+		const accounts: Account[] = await createAndCredit2Accounts();
+
+		const journalEntry: JournalEntry = {
+			id: null,
+			ownerId: null,
+			currencyCode: "EUR",
+			amount: "5",
+			debitedAccountId: accounts[0].id!,
+			creditedAccountId: accounts[0].id!,
+			timestamp: null
+		};
+
+		let errorName: string | undefined;
+		let errorMessage: string | undefined;
+		try {
+			await grpcClient.createJournalEntries([journalEntry]);
+		} catch (error: unknown) {
+			errorName = error?.constructor.name;
+			errorMessage = (error as any)?.message;
+		}
+		expect(errorName).toEqual(UnableToCreateJournalEntriesError.name);
+		expect(errorMessage).toEqual((new SameDebitedAndCreditedAccountsError()).message); // TODO: any other way to get the message?
+	});
+
+	test("createJournalEntries() - non-existent debited account", async () => {
+		// Before creating a journal entry, the respective accounts need to be created.
+		const accounts: Account[] = await createAndCredit2Accounts();
+
+		const journalEntry: JournalEntry = {
+			id: null,
+			ownerId: null,
+			currencyCode: "EUR",
+			amount: "5",
+			debitedAccountId: "some string",
+			creditedAccountId: accounts[1].id!,
+			timestamp: null
+		};
+
+		let errorName: string | undefined;
+		let errorMessage: string | undefined;
+		try {
+			await grpcClient.createJournalEntries([journalEntry]);
+		} catch (error: unknown) {
+			errorName = error?.constructor.name;
+			errorMessage = (error as any)?.message;
+		}
+		expect(errorName).toEqual(UnableToCreateJournalEntriesError.name);
+		expect(errorMessage).toEqual((new DebitedAccountNotFoundError()).message); // TODO: any other way to get the message?
+	});
+
+	test("createJournalEntries() - non-existent credited account", async () => {
+		// Before creating a journal entry, the respective accounts need to be created.
+		const accounts: Account[] = await createAndCredit2Accounts();
+
+		const journalEntry: JournalEntry = {
+			id: null,
+			ownerId: null,
+			currencyCode: "EUR",
+			amount: "5",
+			debitedAccountId: accounts[0].id!,
+			creditedAccountId: "some string",
+			timestamp: null
+		};
+
+		let errorName: string | undefined;
+		let errorMessage: string | undefined;
+		try {
+			await grpcClient.createJournalEntries([journalEntry]);
+		} catch (error: unknown) {
+			errorName = error?.constructor.name;
+			errorMessage = (error as any)?.message;
+		}
+		expect(errorName).toEqual(UnableToCreateJournalEntriesError.name);
+		expect(errorMessage).toEqual((new CreditedAccountNotFoundError()).message); // TODO: any other way to get the message?
+	});
+
+	test("createJournalEntries() - currency codes differ", async () => {
+		// Before creating a journal entry, the respective accounts need to be created.
+		// The currency code of the following accounts is EUR.
+		const accounts: Account[] = await createAndCredit2Accounts();
+
+		const journalEntry: JournalEntry = {
+			id: null,
+			ownerId: null,
+			currencyCode: "USD",
+			amount: "5",
+			debitedAccountId: accounts[0].id!,
+			creditedAccountId: accounts[1].id!,
+			timestamp: null
+		};
+
+		let errorName: string | undefined;
+		let errorMessage: string | undefined;
+		try {
+			await grpcClient.createJournalEntries([journalEntry]);
+		} catch (error: unknown) {
+			errorName = error?.constructor.name;
+			errorMessage = (error as any)?.message;
+		}
+		expect(errorName).toEqual(UnableToCreateJournalEntriesError.name);
+		expect(errorMessage).toEqual((new CurrencyCodesDifferError()).message); // TODO: any other way to get the message?
+	});
+
+	test("createJournalEntries() - duplicate journal entry", async () => {
+		// Before creating a journal entry, the respective accounts need to be created.
+		const accounts: Account[] = await createAndCredit2Accounts();
+
+		const journalEntryId: string = randomUUID();
+		const journalEntry: JournalEntry = {
+			id: journalEntryId,
+			ownerId: null,
+			currencyCode: "EUR",
+			amount: "5",
+			debitedAccountId: accounts[0].id!,
+			creditedAccountId: accounts[1].id!,
+			timestamp: null
+		};
+
+		await grpcClient.createJournalEntries([journalEntry]);
+
+		let errorName: string | undefined;
+		let errorMessage: string | undefined;
+		try {
+			await grpcClient.createJournalEntries([journalEntry]);
+		} catch (error: unknown) {
+			errorName = error?.constructor.name;
+			errorMessage = (error as any)?.message;
+		}
+		expect(errorName).toEqual(UnableToCreateJournalEntriesError.name);
+		expect(errorMessage).toEqual((new JournalEntryAlreadyExistsError()).message); // TODO: any other way to get the message?
 	});
 
 	/* getAccountsByIds() */
 
-	test("get non-existent account by id", async () => {
+	test("getAccountsByIds() - non-existent account", async () => {
 		const accountId: string = randomUUID();
-		const account: Account | undefined = (await grpcClient.getAccountsByIds([accountId]))[0];
-		expect(account).toBeUndefined();
+		const accounts: Account[] = await grpcClient.getAccountsByIds([accountId]);
+		expect(accounts).toEqual([]);
 	});
 
 	/* getAccountsByOwnerId() */
 
-	test("get non-existent accounts by owner id", async () => {
-		const ownerId: string = randomUUID();
-		const accounts: Account[] = await grpcClient.getAccountsByOwnerId(ownerId);
-		expect(accounts).toEqual([]);
-	});
+	test("getAccountsByOwnerId() - main test", async () => {
+		const ownerIdA: string = "a";
+		const ownerIdB: string = "b";
 
-	test("get existent accounts by owner id", async () => {
-		const ownerId: string = randomUUID();
-
-		// Account A.
 		const accountA: Account = {
 			id: null,
-			ownerId: ownerId,
+			ownerId: ownerIdA,
 			state: "ACTIVE",
 			type: "FEE",
 			currencyCode: "EUR",
@@ -299,12 +786,10 @@ describe("accounts and balances grpc service - unit tests with the built-in ledg
 			balance: null,
 			timestampLastJournalEntry: null
 		};
-		const idAccountA: string | undefined = (await grpcClient.createAccounts([accountA]))[0];
 
-		// Account B.
 		const accountB: Account = {
 			id: null,
-			ownerId: ownerId,
+			ownerId: ownerIdB,
 			state: "ACTIVE",
 			type: "FEE",
 			currencyCode: "EUR",
@@ -313,45 +798,61 @@ describe("accounts and balances grpc service - unit tests with the built-in ledg
 			balance: null,
 			timestampLastJournalEntry: null
 		};
-		const idAccountB: string | undefined = (await grpcClient.createAccounts([accountB]))[0];
 
-		const accounts: Account[] = await grpcClient.getAccountsByOwnerId(ownerId);
+		const accountC: Account = {
+			id: null,
+			ownerId: ownerIdA,
+			state: "ACTIVE",
+			type: "FEE",
+			currencyCode: "EUR",
+			debitBalance: null,
+			creditBalance: null,
+			balance: null,
+			timestampLastJournalEntry: null
+		};
+
+		const accountIds: string[] = await grpcClient.createAccounts([accountA, accountB, accountC]);
+		const idAccountA: string | undefined = accountIds[0];
+		const idAccountB: string | undefined = accountIds[1];
+		const idAccountC: string | undefined = accountIds[2];
+
+		const accounts: Account[] = await grpcClient.getAccountsByOwnerId(ownerIdA);
+
+		expect(accounts.length).toEqual(2); // Accounts A and C.
 
 		expect(accounts[0].id).toEqual(idAccountA);
-		expect(accounts[0].ownerId).toEqual(ownerId);
+		expect(accounts[0].ownerId).toEqual(accountA.ownerId);
 		expect(accounts[0].state).toEqual(accountA.state);
 		expect(accounts[0].type).toEqual(accountA.type);
 		expect(accounts[0].currencyCode).toEqual(accountA.currencyCode);
 		expect(accounts[0].debitBalance).toEqual("0");
 		expect(accounts[0].creditBalance).toEqual("0");
 		expect(accounts[0].balance).toEqual("0");
-		expect(accounts[0].timestampLastJournalEntry).toBeNull();
+		expect(accounts[0].timestampLastJournalEntry).toEqual(accountA.timestampLastJournalEntry);
 
-		expect(accounts[1].id).toEqual(idAccountB);
-		expect(accounts[1].ownerId).toEqual(ownerId);
-		expect(accounts[1].state).toEqual(accountB.state);
-		expect(accounts[1].type).toEqual(accountB.type);
-		expect(accounts[1].currencyCode).toEqual(accountB.currencyCode);
+		expect(accounts[1].id).toEqual(idAccountC);
+		expect(accounts[1].ownerId).toEqual(accountC.ownerId);
+		expect(accounts[1].state).toEqual(accountC.state);
+		expect(accounts[1].type).toEqual(accountC.type);
+		expect(accounts[1].currencyCode).toEqual(accountC.currencyCode);
 		expect(accounts[1].debitBalance).toEqual("0");
 		expect(accounts[1].creditBalance).toEqual("0");
 		expect(accounts[1].balance).toEqual("0");
-		expect(accounts[1].timestampLastJournalEntry).toBeNull();
+		expect(accounts[1].timestampLastJournalEntry).toEqual(accountB.timestampLastJournalEntry);
+	});
+
+	test("getAccountsByOwnerId() - non-existent owner", async () => {
+		const ownerId: string = randomUUID();
+		const accounts: Account[] = await grpcClient.getAccountsByOwnerId(ownerId);
+		expect(accounts).toEqual([]);
 	});
 
 	/* getJournalEntriesByAccountId() */
 
-	test("get non-existent journal entries by account id", async () => {
-		const accountId: string = randomUUID();
-		const journalEntries: JournalEntry[] = await grpcClient.getJournalEntriesByAccountId(accountId);
-		expect(journalEntries).toEqual([]);
-	});
-
-	test("get existent journal entries by account id", async () => {
-		// Before creating a journal entry, the respective accounts need to be created.
-		// Account A.
+	test("getJournalEntriesByAccountId() - main test", async () => {
 		const accountA: Account = {
 			id: null,
-			ownerId: "ownerIdAccountA",
+			ownerId: "test",
 			state: "ACTIVE",
 			type: "FEE",
 			currencyCode: "EUR",
@@ -360,12 +861,10 @@ describe("accounts and balances grpc service - unit tests with the built-in ledg
 			balance: null,
 			timestampLastJournalEntry: null
 		};
-		const idAccountA: string | undefined = (await grpcClient.createAccounts([accountA]))[0];
 
-		// Account B.
 		const accountB: Account = {
 			id: null,
-			ownerId: "ownerIdAccountB",
+			ownerId: "test",
 			state: "ACTIVE",
 			type: "FEE",
 			currencyCode: "EUR",
@@ -374,11 +873,26 @@ describe("accounts and balances grpc service - unit tests with the built-in ledg
 			balance: null,
 			timestampLastJournalEntry: null
 		};
-		const idAccountB: string | undefined = (await grpcClient.createAccounts([accountB]))[0];
 
-		const journalEntryId: string = randomUUID();
+		const accountC: Account = {
+			id: null,
+			ownerId: "test",
+			state: "ACTIVE",
+			type: "FEE",
+			currencyCode: "EUR",
+			debitBalance: null,
+			creditBalance: null,
+			balance: null,
+			timestampLastJournalEntry: null
+		};
+
+		const accountIds: string[] = await grpcClient.createAccounts([accountA, accountB, accountC]);
+		const idAccountA: string | undefined = accountIds[0];
+		const idAccountB: string | undefined = accountIds[1];
+		const idAccountC: string | undefined = accountIds[2];
+
 		const journalEntryA: JournalEntry = {
-			id: journalEntryId,
+			id: null,
 			ownerId: null,
 			currencyCode: "EUR",
 			amount: "5",
@@ -387,37 +901,116 @@ describe("accounts and balances grpc service - unit tests with the built-in ledg
 			timestamp: null
 		};
 
-		await grpcClient.createJournalEntries([journalEntryA]);
+		const journalEntryB: JournalEntry = {
+			id: null,
+			ownerId: null,
+			currencyCode: "EUR",
+			amount: "10",
+			debitedAccountId: idAccountA,
+			creditedAccountId: idAccountC,
+			timestamp: null
+		};
 
-		const journalEntries: JournalEntry[] = await grpcClient.getJournalEntriesByAccountId(idAccountA);
+		const journalEntryC: JournalEntry = {
+			id: null,
+			ownerId: null,
+			currencyCode: "EUR",
+			amount: "15",
+			debitedAccountId: idAccountB,
+			creditedAccountId: idAccountA,
+			timestamp: null
+		};
 
-		expect(journalEntries[0].id).toEqual(journalEntryId);
-		expect(journalEntries[0].ownerId).toBeNull();
-		expect(journalEntries[0].currencyCode).toEqual("EUR");
-		expect(journalEntries[0].amount).toEqual("5");
-		expect(journalEntries[0].debitedAccountId).toEqual(idAccountA);
-		expect(journalEntries[0].creditedAccountId).toEqual(idAccountB);
+		const journalEntryIds: string[] = await grpcClient.createJournalEntries([journalEntryA, journalEntryB, journalEntryC]);
+		const idJournalEntryA: string | undefined = journalEntryIds[0];
+		const idJournalEntryB: string | undefined = journalEntryIds[1];
+		const idJournalEntryC: string | undefined = journalEntryIds[2];
+
+		const journalEntries: JournalEntry[] = await grpcClient.getJournalEntriesByAccountId(idAccountB);
+
+		expect(journalEntries.length).toEqual(2); // Journal entries A and C.
+
+		expect(journalEntries[0].id).toEqual(idJournalEntryA);
+		expect(journalEntries[0].ownerId).toEqual(journalEntryA.ownerId);
+		expect(journalEntries[0].currencyCode).toEqual(journalEntryA.currencyCode);
+		expect(journalEntries[0].amount).toEqual(journalEntryA.amount);
+		expect(journalEntries[0].debitedAccountId).toEqual(journalEntryA.debitedAccountId);
+		expect(journalEntries[0].creditedAccountId).toEqual(journalEntryA.creditedAccountId);
 		expect(journalEntries[0].timestamp).not.toBeNull();
+		expect(journalEntries[0].timestamp).not.toEqual(0);
+
+		expect(journalEntries[1].id).toEqual(idJournalEntryC);
+		expect(journalEntries[1].ownerId).toEqual(journalEntryC.ownerId);
+		expect(journalEntries[1].currencyCode).toEqual(journalEntryC.currencyCode);
+		expect(journalEntries[1].amount).toEqual(journalEntryC.amount);
+		expect(journalEntries[1].debitedAccountId).toEqual(journalEntryC.debitedAccountId);
+		expect(journalEntries[1].creditedAccountId).toEqual(journalEntryC.creditedAccountId);
+		expect(journalEntries[1].timestamp).not.toBeNull();
+		expect(journalEntries[1].timestamp).not.toEqual(0);
 	});
 
-	test("converters", async () => {
-		bigintToString(1587n, 2);
+	test("getJournalEntriesByAccountId() - non-existent account", async () => {
+		const accountId: string = randomUUID();
+		const journalEntries: JournalEntry[] = await grpcClient.getJournalEntriesByAccountId(accountId);
+		expect(journalEntries).toEqual([]);
 	});
 
-	test("converters", async () => {
-		bigintToString(1587000n, 2);
+	/* stringToBigint() */
+
+	test("stringToBigint() - \"0\", 2 decimals", async () => {
+		expect(stringToBigint("0", 2)).toEqual(0n);
 	});
 
-	test("converters", async () => {
-		await expect(async () => {
-			stringToBigint("some string", 2);
-		}).rejects.toThrow();
+	test("stringToBigint() - \"0.00\", 2 decimals", async () => {
+		expect(() => {
+			stringToBigint("0.00", 2);
+		}).toThrow();
+	});
+
+	test("stringToBigint() - \"0.01\", 2 decimals", async () => {
+		expect(stringToBigint("0.01", 2)).toEqual(1n);
+	});
+
+	test("stringToBigint() - \"100\", 2 decimals", async () => {
+		expect(stringToBigint("100", 2)).toEqual(10000n);
+	});
+
+	test("stringToBigint() - \"100.00\", 2 decimals", async () => {
+		expect(() => {
+			stringToBigint("100.00", 2);
+		}).toThrow();
+	});
+
+	test("stringToBigint() - \"100.01\", 2 decimals", async () => {
+		expect(stringToBigint("100.01", 2)).toEqual(10001n);
+	});
+
+	test("stringToBigint() - \"100.012\", 2 decimals", async () => {
+		expect(() => {
+			stringToBigint("100.012", 2);
+		}).toThrow();
+	});
+
+	test("stringToBigint() - \"100.0123456789\", 2 decimals", async () => {
+		expect(() => {
+			stringToBigint("100.0123456789", 2);
+		}).toThrow();
+	});
+
+	/* bigintToString() */
+
+	test("bigintToString() - 0n, 2 decimals", async () => {
+		expect(bigintToString(0n, 2)).toEqual("0");
+	});
+
+	test("bigintToString() - 10000n, 2 decimals", async () => {
+		expect(bigintToString(10000n, 2)).toEqual("100");
 	});
 });
 
 async function createAndCredit2Accounts(
-	ownerIdAccountA: string = "owner account A",
-	ownerIdAccountB: string = "owner account B",
+	ownerIdAccountA: string = "test",
+	ownerIdAccountB: string = "test",
 	creditBalance: string = "100",
 ): Promise<Account[]> {
 	// Account A.
@@ -432,7 +1025,6 @@ async function createAndCredit2Accounts(
 		balance: null,
 		timestampLastJournalEntry: null
 	};
-	const idAccountA: string | undefined = (await grpcClient.createAccounts([accountABeforeCrediting]))[0];
 
 	// Account B.
 	const accountBBeforeCrediting: Account = {
@@ -446,7 +1038,11 @@ async function createAndCredit2Accounts(
 		balance: null,
 		timestampLastJournalEntry: null
 	};
-	const idAccountB: string | undefined = (await grpcClient.createAccounts([accountBBeforeCrediting]))[0];
+
+	const accountIds: string[]
+		= await grpcClient.createAccounts([accountABeforeCrediting, accountBBeforeCrediting]);
+	const idAccountA: string | undefined = accountIds[0];
+	const idAccountB: string | undefined = accountIds[1];
 
 	// Journal entry A, regarding the crediting of account A.
 	const journalEntryA: JournalEntry = {
@@ -472,7 +1068,6 @@ async function createAndCredit2Accounts(
 
 	await grpcClient.createJournalEntries([journalEntryA, journalEntryB]);
 
-	const accountAAfterCrediting: Account | undefined = (await grpcClient.getAccountsByIds([idAccountA]))[0];
-	const accountBAfterCrediting: Account | undefined = (await grpcClient.getAccountsByIds([idAccountB]))[0];
-	return [accountAAfterCrediting!, accountBAfterCrediting!];
+	const accountsAfterCrediting: Account[] = await grpcClient.getAccountsByIds([idAccountA, idAccountB]);
+	return accountsAfterCrediting;
 }

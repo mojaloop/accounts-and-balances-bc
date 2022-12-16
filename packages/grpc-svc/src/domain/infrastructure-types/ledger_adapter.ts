@@ -70,4 +70,8 @@ export interface ILedgerAdapter {
         ledgerAccountId: string,
         currencyDecimals: number
     ): Promise<LedgerAdapterJournalEntry[]>;
+
+    deleteAccountsByIds(accountIds: string[]): Promise<void>;
+    deactivateAccountsByIds(accountIds: string[]): Promise<void>;
+    activateAccountsByIds(accountIds: string[]): Promise<void>;
 }

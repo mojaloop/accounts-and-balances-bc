@@ -56,6 +56,7 @@ export class UnableToStoreAccountError extends Error {readonly message = "unable
 export class UnableToGetAccountError extends Error {readonly message = "unable to get account";}
 export class UnableToGetAccountsError extends Error {readonly message = "unable to get accounts";}
 export class UnableToUpdateAccountError extends Error {readonly message = "unable to update account";}
+export class UnableToUpdateAccountsError extends Error {readonly message = "unable to update accounts";}
 export class JournalEntryAlreadyExistsError extends Error {readonly message = "journal entry already exists";}
 export class UnableToStoreJournalEntryError extends Error {readonly message = "unable to store journal entry";}
 export class UnableToGetJournalEntryError extends Error {readonly message = "unable to get journal entry";}

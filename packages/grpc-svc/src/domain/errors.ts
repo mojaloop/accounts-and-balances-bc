@@ -29,9 +29,17 @@
 
 "use strict";
 
-export class AccountAlreadyExistsError extends Error {}
-export class AccountNotFoundError extends Error {}
+export class AccountAlreadyExistsError extends Error {readonly message = "account already exists";}
+export class AccountNotFoundError extends Error {readonly message = "account not found";}
+export class InvalidDebitBalanceError extends Error {readonly message = "invalid debit balance";}
+export class InvalidCreditBalanceError extends Error {readonly message = "invalid credit balance";}
+export class InvalidBalanceError extends Error {readonly message = "invalid balance";}
+export class InvalidTimestampError extends Error {readonly message = "invalid timestamp";}
+export class InvalidIdError extends Error {readonly message = "invalid id";}
+export class InvalidOwnerIdError extends Error {readonly message = "invalid owner id";}
+export class InvalidCurrencyCodeError extends Error {readonly message = "invalid currency code";}
 // Repo-only.
-export class UnableToInitRepoError extends Error {}
-export class UnableToGetAccountsError extends Error {}
-export class UnableToStoreAccountsError extends Error {}
+export class UnableToInitRepoError extends Error {readonly message = "unable to init repo";}
+export class UnableToStoreAccountsError extends Error {readonly message = "unable to store accounts";}
+export class UnableToGetAccountsError extends Error {readonly message = "unable to get accounts";}
+export class UnableToUpdateAccountsError extends Error {readonly message = "unable to update accounts";}

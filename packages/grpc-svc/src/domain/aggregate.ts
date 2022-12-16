@@ -36,13 +36,22 @@ import {
 	LedgerAdapterJournalEntry, LedgerAdapterRequestId
 } from "./infrastructure-types/ledger_adapter";
 import {CoaAccount} from "./coa_account";
-import {AccountAlreadyExistsError, AccountNotFoundError} from "./errors";
+import {
+	AccountAlreadyExistsError,
+	AccountNotFoundError,
+	InvalidBalanceError,
+	InvalidCreditBalanceError,
+	InvalidCurrencyCodeError,
+	InvalidDebitBalanceError,
+	InvalidIdError,
+	InvalidOwnerIdError,
+	InvalidTimestampError
+} from "./errors";
 import {Account, JournalEntry} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {IChartOfAccountsRepo} from "./infrastructure-types/chart_of_accounts_repo";
 import {randomUUID} from "crypto";
 import {join} from "path";
 import {readFileSync} from "fs";
-import {InvalidCurrencyCodeError} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc/dist/domain/errors";
 import {bigintToString, stringToBigint} from "./converters";
 
 export class AccountsAndBalancesAggregate {
@@ -74,7 +83,9 @@ export class AccountsAndBalancesAggregate {
 	}
 
 	async createAccounts(accounts: Account[]): Promise<string[]> {
-		// TODO: is there a simpler way to do the following?
+		// TODO: check if any of the accounts is deleted/inactive.
+
+		// Extract the ids. TODO: is there a simpler way to do this?
 		const internalAccountIds: string[] = [];
 		accounts.forEach((account) => {
 			if (account.id) {
@@ -92,8 +103,36 @@ export class AccountsAndBalancesAggregate {
 		const coaAccounts: CoaAccount[] = [];
 		const ledgerAdapterAccounts: LedgerAdapterAccount[] = [];
 		for (const account of accounts) {
+			// When creating an account, debitBalance, creditBalance, balance and timestampLastJournalEntry are
+			// supposed to be null. For consistency purposes, and to make sure whoever calls this function knows that,
+			// if those values aren't respected, errors are thrown.
+			if (account.debitBalance) { // TODO: use "!== null" instead?
+				throw new InvalidDebitBalanceError();
+			}
+			if (account.creditBalance) { // TODO: use "!== null" instead?
+				throw new InvalidCreditBalanceError();
+			}
+			if (account.balance) { // TODO: use "!== null" instead?
+				throw new InvalidBalanceError();
+			}
+			if (account.timestampLastJournalEntry) { // TODO: use "!== null" instead?
+				throw new InvalidTimestampError();
+			}
+
+			if (account.id === "") {
+				throw new InvalidIdError();
+			}
+
+			if (account.ownerId === "") {
+				throw new InvalidOwnerIdError();
+			}
+
+			// TODO: validate the account's state and type.
+
+			// Generate a random UUId, if needed. TODO: randomUUID() can generate an id that already exists.
 			const accountId: string = account.id ?? randomUUID(); // TODO: should this be done? ?? or ||?
 
+			// Validate the currency code and get the currency.
 			const currency: {code: string, decimals: number} | undefined
 				= this.currencies.find((currency) => {
 				return currency.code === account.currencyCode;
@@ -118,7 +157,7 @@ export class AccountsAndBalancesAggregate {
 				state: account.state,
 				type: account.type,
 				currencyCode: account.currencyCode,
-				currencyDecimals: coaAccount.currencyDecimals,
+				currencyDecimals: currency.decimals,
 				debitBalance: null,
 				creditBalance: null,
 				timestampLastJournalEntry: null
@@ -134,8 +173,28 @@ export class AccountsAndBalancesAggregate {
 	}
 
 	async createJournalEntries(journalEntries: JournalEntry[]): Promise<string[]> {
+		// TODO: check if any of the accounts is deleted/inactive.
+
 		const ledgerAdapterJournalEntries: LedgerAdapterJournalEntry[]
 			= journalEntries.map((journalEntry) => {
+			// When creating a journal entry, timestamp is supposed to be null. For consistency purposes, and to make
+			// sure whoever calls this function knows that, if this value isn't respected, an error is thrown.
+			if (journalEntry.timestamp) { // TODO: use "!== null" instead?
+				throw new InvalidTimestampError();
+			}
+
+			if (journalEntry.id === "") {
+				throw new InvalidIdError();
+			}
+
+			if (journalEntry.ownerId === "") {
+				throw new InvalidOwnerIdError();
+			}
+
+			// Generate a random UUId, if needed. TODO: randomUUID() can generate an id that already exists.
+			const journalEntryId: string = journalEntry.id ?? randomUUID(); // TODO: should this be done? ?? or ||?
+
+			// Validate the currency code and get the currency.
 			const currency: {code: string, decimals: number} | undefined
 				= this.currencies.find((currency) => {
 				return currency.code === journalEntry.currencyCode;
@@ -145,7 +204,7 @@ export class AccountsAndBalancesAggregate {
 			}
 
 			const ledgerAdapterJournalEntry: LedgerAdapterJournalEntry = {
-				id: journalEntry.id,
+				id: journalEntryId,
 				ownerId: journalEntry.ownerId,
 				currencyCode: journalEntry.currencyCode,
 				currencyDecimals: currency.decimals,
@@ -162,6 +221,8 @@ export class AccountsAndBalancesAggregate {
 	}
 
 	async getAccountsByIds(accountIds: string[]): Promise<Account[]> {
+		// TODO: check if any of the accounts is deleted/inactive.
+
 		const coaAccounts: CoaAccount[] = await this.chartOfAccounts.getAccountsByInternalIds(accountIds);
 		if (!coaAccounts.length) {
 			return [];
@@ -172,6 +233,8 @@ export class AccountsAndBalancesAggregate {
 	}
 
 	async getAccountsByOwnerId(ownerId: string): Promise<Account[]> {
+		// TODO: check if any of the accounts is deleted/inactive.
+
 		const coaAccounts: CoaAccount[] = await this.chartOfAccounts.getAccountsByOwnerId(ownerId);
 		if (!coaAccounts.length) {
 			return [];
@@ -182,6 +245,8 @@ export class AccountsAndBalancesAggregate {
 	}
 
 	async getJournalEntriesByAccountId(accountId: string): Promise<JournalEntry[]> {
+		// TODO: check if any of the accounts is deleted/inactive.
+
 		const coaAccount: CoaAccount | undefined =
 			(await this.chartOfAccounts.getAccountsByInternalIds([accountId]))[0];
 		if (!coaAccount) {
@@ -206,6 +271,43 @@ export class AccountsAndBalancesAggregate {
 		return journalEntries;
 	}
 
+	async deleteAccountsByIds(accountIds: string[]): Promise<void> {
+		const accountsExist: boolean = await this.chartOfAccounts.accountsExistByInternalIds(accountIds);
+		if (!accountsExist) {
+			throw new AccountNotFoundError();
+		}
+
+		await this.ledgerAdapter.deleteAccountsByIds(accountIds);
+
+		await this.chartOfAccounts.updateAccountStatesByIds(accountIds, "DELETED");
+	}
+
+	async deactivateAccountsByIds(accountIds: string[]): Promise<void> {
+		// TODO: check if any of the accounts is deleted.
+
+		const accountsExist: boolean = await this.chartOfAccounts.accountsExistByInternalIds(accountIds);
+		if (!accountsExist) {
+			throw new AccountNotFoundError();
+		}
+
+		await this.ledgerAdapter.deactivateAccountsByIds(accountIds);
+
+		await this.chartOfAccounts.updateAccountStatesByIds(accountIds, "INACTIVE");
+	}
+
+	async activateAccountsByIds(accountIds: string[]): Promise<void> {
+		// TODO: check if any of the accounts is deleted.
+
+		const accountsExist: boolean = await this.chartOfAccounts.accountsExistByInternalIds(accountIds);
+		if (!accountsExist) {
+			throw new AccountNotFoundError();
+		}
+
+		await this.ledgerAdapter.activateAccountsByIds(accountIds);
+
+		await this.chartOfAccounts.updateAccountStatesByIds(accountIds, "ACTIVE");
+	}
+
 	private async getAccountsByExternalIdsOfCoaAccounts(coaAccounts: CoaAccount[]): Promise<Account[]> {
 		const externalAccountIds: LedgerAdapterRequestId[] = coaAccounts.map((coaAccount) => { // TODO: change array name.
 			return {id: coaAccount.externalId, currencyDecimals: coaAccount.currencyDecimals};
@@ -218,7 +320,7 @@ export class AccountsAndBalancesAggregate {
 			const coaAccount: CoaAccount | undefined = coaAccounts.find((coaAccount) => {
 				return coaAccount.externalId === ledgerAdapterAccount.id;
 			});
-			/*if (!coaAccount) {
+			if (!coaAccount) {
 				throw new Error(); // TODO: create custom error.
 			}
 
@@ -227,19 +329,19 @@ export class AccountsAndBalancesAggregate {
 				|| !ledgerAdapterAccount.creditBalance
 			) {
 				throw new Error(); // TODO: create custom error.
-			}*/
+			}
 			const balance: string = this.calculateBalanceString(
-				ledgerAdapterAccount.debitBalance!,
-				ledgerAdapterAccount.creditBalance!,
-				coaAccount!.currencyDecimals
+				ledgerAdapterAccount.debitBalance,
+				ledgerAdapterAccount.creditBalance,
+				coaAccount.currencyDecimals
 			);
 
 			const account: Account = {
-				id: coaAccount!.internalId,
-				ownerId: coaAccount!.ownerId,
-				state: coaAccount!.state,
-				type: coaAccount!.type,
-				currencyCode: coaAccount!.currencyCode,
+				id: coaAccount.internalId,
+				ownerId: coaAccount.ownerId,
+				state: coaAccount.state,
+				type: coaAccount.type,
+				currencyCode: coaAccount.currencyCode,
 				debitBalance: ledgerAdapterAccount.debitBalance,
 				creditBalance: ledgerAdapterAccount.creditBalance,
 				balance: balance,

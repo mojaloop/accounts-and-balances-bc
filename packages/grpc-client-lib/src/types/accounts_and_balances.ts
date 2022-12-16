@@ -15,5 +15,10 @@ export interface ProtoGrpcType {
   GrpcIdArray: MessageTypeDefinition
   GrpcJournalEntry: MessageTypeDefinition
   GrpcJournalEntryArray: MessageTypeDefinition
+  google: {
+    protobuf: {
+      Empty: MessageTypeDefinition
+    }
+  }
 }
 

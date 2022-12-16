@@ -187,4 +187,28 @@ export class BuiltinLedgerAdapter implements ILedgerAdapter {
 
         return ledgerAdapterJournalEntries;
     }
+
+    async deleteAccountsByIds(ledgerAccountIds: string[]): Promise<void> {
+        const builtinLedgerGrpcAccountIds: BuiltinLedgerGrpcId[] = ledgerAccountIds.map((ledgerAccountId) => {
+            return {builtinLedgerGrpcId: ledgerAccountId};
+        });
+
+        await this.builtinLedgerClient.deleteAccountsByIds({builtinLedgerGrpcIdArray: builtinLedgerGrpcAccountIds});
+    }
+
+    async deactivateAccountsByIds(ledgerAccountIds: string[]): Promise<void> {
+        const builtinLedgerGrpcAccountIds: BuiltinLedgerGrpcId[] = ledgerAccountIds.map((ledgerAccountId) => {
+            return {builtinLedgerGrpcId: ledgerAccountId};
+        });
+
+        await this.builtinLedgerClient.deactivateAccountsByIds({builtinLedgerGrpcIdArray: builtinLedgerGrpcAccountIds});
+    }
+
+    async activateAccountsByIds(ledgerAccountIds: string[]): Promise<void> {
+        const builtinLedgerGrpcAccountIds: BuiltinLedgerGrpcId[] = ledgerAccountIds.map((ledgerAccountId) => {
+            return {builtinLedgerGrpcId: ledgerAccountId};
+        });
+
+        await this.builtinLedgerClient.activateAccountsByIds({builtinLedgerGrpcIdArray: builtinLedgerGrpcAccountIds});
+    }
 }

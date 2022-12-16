@@ -32,10 +32,11 @@
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {ServerUnaryCall, sendUnaryData, status} from "@grpc/grpc-js";
 import {
-	AccountAlreadyExistsError, CreditBalanceExceedsDebitBalanceError,
+	AccountAlreadyExistsError,
+	BuiltinLedgerAccountDto,
+	BuiltinLedgerJournalEntryDto,
 	CreditedAccountNotFoundError,
 	CurrencyCodesDifferError,
-	DebitBalanceExceedsCreditBalanceError,
 	DebitedAccountNotFoundError,
 	InvalidAccountStateError,
 	InvalidAccountTypeError,
@@ -47,10 +48,9 @@ import {
 	InvalidTimestampError, JournalEntryAlreadyExistsError,
 	SameDebitedAndCreditedAccountsError,
 	UnauthorizedError
-} from "../../domain/errors";
+} from "../../domain";
 import {BuiltinLedgerAggregate} from "../../domain/aggregate";
 import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
-import {BuiltinLedgerAccountDto, BuiltinLedgerJournalEntryDto} from "../../domain/entities";
 import {
 	BuiltinLedgerGrpcAccount,
 	BuiltinLedgerGrpcAccount__Output,
@@ -63,6 +63,7 @@ import {
 	BuiltinLedgerGrpcJournalEntry, BuiltinLedgerGrpcJournalEntry__Output,
 	BuiltinLedgerGrpcJournalEntryArray,
 	BuiltinLedgerGrpcJournalEntryArray__Output,
+	Empty,
 	GrpcBuiltinLedgerHandlers
 } from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-client-lib";
 import {AccountState, AccountType} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
@@ -93,7 +94,10 @@ export class GrpcHandlers {
 			"CreateAccounts": this.createAccounts.bind(this),
 			"CreateJournalEntries": this.createJournalEntries.bind(this),
 			"GetAccountsByIds": this.getAccountsByIds.bind(this),
-			"GetJournalEntriesByAccountId": this.getJournalEntriesByAccountId.bind(this)
+			"GetJournalEntriesByAccountId": this.getJournalEntriesByAccountId.bind(this),
+			"DeleteAccountsByIds": this.deleteAccountsByIds.bind(this),
+			"DeactivateAccountsByIds": this.deactivateAccountsByIds.bind(this),
+			"ActivateAccountsByIds": this.activateAccountsByIds.bind(this)
 		};
 	}
 
@@ -395,5 +399,125 @@ export class GrpcHandlers {
 			return builtinLedgerGrpcJournalEntry;
 		});
 		callback(null, {builtinLedgerGrpcJournalEntryArray: builtinLedgerGrpcJournalEntries});
+	}
+
+	private async deleteAccountsByIds(
+		call: ServerUnaryCall<BuiltinLedgerGrpcIdArray__Output, Empty>,
+		callback: sendUnaryData<Empty>
+	): Promise<void> {
+		const builtinLedgerGrpcAccountIdsOutput: BuiltinLedgerGrpcId__Output[]
+			= call.request.builtinLedgerGrpcIdArray || [];
+
+		const accountIds: string[] = [];
+		for (const builtinLedgerGrpcAccountIdOutput of builtinLedgerGrpcAccountIdsOutput) {
+			// const accountId: string | undefined = builtinLedgerGrpcAccountIdOutput.builtinLedgerGrpcId; TODO: use this auxiliary variable?
+			if (!builtinLedgerGrpcAccountIdOutput.builtinLedgerGrpcId) {
+				callback(
+					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
+					null
+				);
+				return;
+			}
+			accountIds.push(builtinLedgerGrpcAccountIdOutput.builtinLedgerGrpcId);
+		}
+
+		try {
+			await this.aggregate.deleteAccountsByIds(accountIds, this.securityContext);
+		} catch (error: unknown) {
+			if (error instanceof UnauthorizedError) {
+				callback(
+					{code: status.PERMISSION_DENIED, details: error.message},
+					null
+				);
+			} else {
+				callback(
+					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
+					null
+				);
+			}
+			return;
+		}
+
+		callback(null, {});
+	}
+
+	private async deactivateAccountsByIds(
+		call: ServerUnaryCall<BuiltinLedgerGrpcIdArray__Output, Empty>,
+		callback: sendUnaryData<Empty>
+	): Promise<void> {
+		const builtinLedgerGrpcAccountIdsOutput: BuiltinLedgerGrpcId__Output[]
+			= call.request.builtinLedgerGrpcIdArray || [];
+
+		const accountIds: string[] = [];
+		for (const builtinLedgerGrpcAccountIdOutput of builtinLedgerGrpcAccountIdsOutput) {
+			// const accountId: string | undefined = builtinLedgerGrpcAccountIdOutput.builtinLedgerGrpcId; TODO: use this auxiliary variable?
+			if (!builtinLedgerGrpcAccountIdOutput.builtinLedgerGrpcId) {
+				callback(
+					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
+					null
+				);
+				return;
+			}
+			accountIds.push(builtinLedgerGrpcAccountIdOutput.builtinLedgerGrpcId);
+		}
+
+		try {
+			await this.aggregate.deactivateAccountsByIds(accountIds, this.securityContext);
+		} catch (error: unknown) {
+			if (error instanceof UnauthorizedError) {
+				callback(
+					{code: status.PERMISSION_DENIED, details: error.message},
+					null
+				);
+			} else {
+				callback(
+					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
+					null
+				);
+			}
+			return;
+		}
+
+		callback(null, {});
+	}
+
+	private async activateAccountsByIds(
+		call: ServerUnaryCall<BuiltinLedgerGrpcIdArray__Output, Empty>,
+		callback: sendUnaryData<Empty>
+	): Promise<void> {
+		const builtinLedgerGrpcAccountIdsOutput: BuiltinLedgerGrpcId__Output[]
+			= call.request.builtinLedgerGrpcIdArray || [];
+
+		const accountIds: string[] = [];
+		for (const builtinLedgerGrpcAccountIdOutput of builtinLedgerGrpcAccountIdsOutput) {
+			// const accountId: string | undefined = builtinLedgerGrpcAccountIdOutput.builtinLedgerGrpcId; TODO: use this auxiliary variable?
+			if (!builtinLedgerGrpcAccountIdOutput.builtinLedgerGrpcId) {
+				callback(
+					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
+					null
+				);
+				return;
+			}
+			accountIds.push(builtinLedgerGrpcAccountIdOutput.builtinLedgerGrpcId);
+		}
+
+		try {
+			await this.aggregate.activateAccountsByIds(accountIds, this.securityContext);
+		} catch (error: unknown) {
+			if (error instanceof UnauthorizedError) {
+				callback(
+					{code: status.PERMISSION_DENIED, details: error.message},
+					null
+				);
+			} else {
+				callback(
+					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
+					null
+				);
+			}
+			return;
+		}
+
+		callback(null, {});
 	}
 }

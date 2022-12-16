@@ -15,5 +15,10 @@ export interface ProtoGrpcType {
   BuiltinLedgerGrpcJournalEntry: MessageTypeDefinition
   BuiltinLedgerGrpcJournalEntryArray: MessageTypeDefinition
   GrpcBuiltinLedger: SubtypeConstructor<typeof grpc.Client, _GrpcBuiltinLedgerClient> & { service: _GrpcBuiltinLedgerDefinition }
+  google: {
+    protobuf: {
+      Empty: MessageTypeDefinition
+    }
+  }
 }
 

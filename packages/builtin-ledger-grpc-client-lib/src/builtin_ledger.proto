@@ -1,11 +1,16 @@
 syntax = "proto3";
 
+import "google/protobuf/empty.proto";
+
 service GrpcBuiltinLedger {
   // All unary RPCs.
   rpc CreateAccounts(BuiltinLedgerGrpcAccountArray) returns (BuiltinLedgerGrpcIdArray);
   rpc CreateJournalEntries(BuiltinLedgerGrpcJournalEntryArray) returns (BuiltinLedgerGrpcIdArray);
   rpc GetAccountsByIds(BuiltinLedgerGrpcIdArray) returns (BuiltinLedgerGrpcAccountArray);
   rpc GetJournalEntriesByAccountId(BuiltinLedgerGrpcId) returns (BuiltinLedgerGrpcJournalEntryArray);
+  rpc DeleteAccountsByIds(BuiltinLedgerGrpcIdArray) returns (google.protobuf.Empty);
+  rpc DeactivateAccountsByIds(BuiltinLedgerGrpcIdArray) returns (google.protobuf.Empty);
+  rpc ActivateAccountsByIds(BuiltinLedgerGrpcIdArray) returns (google.protobuf.Empty);
 }
 
 /* Id. */

@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+import "google/protobuf/empty.proto";
+
 service GrpcAccountsAndBalances {
   // All unary RPCs.
   rpc CreateAccounts(GrpcAccountArray) returns (GrpcIdArray);
@@ -7,6 +9,9 @@ service GrpcAccountsAndBalances {
   rpc GetAccountsByIds(GrpcIdArray) returns (GrpcAccountArray);
   rpc GetAccountsByOwnerId(GrpcId) returns (GrpcAccountArray);
   rpc GetJournalEntriesByAccountId(GrpcId) returns (GrpcJournalEntryArray);
+  rpc DeleteAccountsByIds(GrpcIdArray) returns (google.protobuf.Empty);
+  rpc DeactivateAccountsByIds(GrpcIdArray) returns (google.protobuf.Empty);
+  rpc ActivateAccountsByIds(GrpcIdArray) returns (google.protobuf.Empty);
 }
 
 /* Id. */

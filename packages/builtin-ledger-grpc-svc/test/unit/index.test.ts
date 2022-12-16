@@ -47,29 +47,31 @@ import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {DefaultLogger} from "@mojaloop/logging-bc-client-lib";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
 import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
-import {IBuiltinLedgerAccountsRepo, IBuiltinLedgerJournalEntriesRepo} from "../../src/domain/infrastructure";
-import {BuiltinLedgerAccount} from "../../src/domain/entities";
-import {BuiltinLedgerGrpcService} from "../../src/application/builtin_ledger_grpc_service";
 import {BuiltinLedgerAccountsMemoryRepo} from "./builtin_ledger_accounts_memory_repo";
-import {
-	BuiltinLedgerJournalEntriesMemoryRepo,
-} from "./builtin_ledger_journal_entries_memory_repo";
+import {BuiltinLedgerJournalEntriesMemoryRepo} from "./builtin_ledger_journal_entries_memory_repo";
 import {AuthenticationServiceMock} from "./authentication_service_mock";
 import {AuthorizationClientMock} from "./authorization_client_mock";
 import {AuditClientMock} from "./audit_client_mock";
 import {bigintToString, stringToBigint} from "../../src/domain/converters";
 import {
-	AccountAlreadyExistsError, CreditedAccountNotFoundError,
-	CurrencyCodesDifferError, DebitedAccountNotFoundError,
+	AccountAlreadyExistsError,
+	BuiltinLedgerAccount,
+	CreditedAccountNotFoundError,
+	CurrencyCodesDifferError,
+	DebitedAccountNotFoundError,
+	IBuiltinLedgerAccountsRepo,
+	IBuiltinLedgerJournalEntriesRepo,
 	InvalidCreditBalanceError,
 	InvalidCurrencyCodeError,
 	InvalidDebitBalanceError,
 	InvalidIdError,
 	InvalidJournalEntryAmountError,
-	InvalidTimestampError, JournalEntryAlreadyExistsError,
+	InvalidTimestampError,
+	JournalEntryAlreadyExistsError,
 	SameDebitedAndCreditedAccountsError,
 	UnauthorizedError
-} from "../../src/domain/errors";
+} from "../../src";
+import {BuiltinLedgerGrpcService} from "../../src/application/builtin_ledger_grpc_service";
 
 const BOUNDED_CONTEXT_NAME: string = "accounts-and-balances-bc";
 const SERVICE_NAME: string = "builtin-ledger-grpc-svc-unit-tests";
@@ -288,7 +290,7 @@ describe("built-in ledger grpc service - unit tests", () => {
 		expect(errorMessage).toEqual((new InvalidTimestampError()).message); // TODO: any other way to get the message?
 	});
 
-	test("createAccounts() - empty string id", async () => {
+	test("createAccounts() - empty id string", async () => {
 		const builtinLedgerGrpcAccount: BuiltinLedgerGrpcAccount = {
 			id: "",
 			state: "ACTIVE",
@@ -513,7 +515,7 @@ describe("built-in ledger grpc service - unit tests", () => {
 		expect(errorMessage).toEqual((new InvalidTimestampError()).message); // TODO: any other way to get the message?
 	});
 
-	test("createJournalEntries() - empty string id", async () => {
+	test("createJournalEntries() - empty id string", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const builtinLedgerGrpcAccountsOutput: BuiltinLedgerGrpcAccount__Output[] = await createAndCredit2Accounts();
 
@@ -850,6 +852,88 @@ describe("built-in ledger grpc service - unit tests", () => {
 		expect(errorName).toEqual(UnableToGetJournalEntriesError.name);
 		expect(errorMessage).toEqual(UNKNOWN_ERROR_MESSAGE);
 	});
+
+	/* deleteAccountsByIds() */
+
+	test("deleteAccountsByIds() - ", async () => {
+		// Account A.
+		const builtinLedgerGrpcAccountA: BuiltinLedgerGrpcAccount = {
+			id: undefined,
+			state: "ACTIVE",
+			type: "FEE",
+			currencyCode: "EUR",
+			debitBalance: undefined,
+			creditBalance: undefined,
+			timestampLastJournalEntry: undefined
+		};
+
+		// Account B.
+		const builtinLedgerGrpcAccountB: BuiltinLedgerGrpcAccount = {
+			id: undefined,
+			state: "ACTIVE",
+			type: "FEE",
+			currencyCode: "EUR",
+			debitBalance: undefined,
+			creditBalance: undefined,
+			timestampLastJournalEntry: undefined
+		};
+
+		const builtinLedgerGrpcIdArrayOutput: BuiltinLedgerGrpcIdArray__Output
+			= await builtinLedgerGrpcClient.createAccounts({
+				builtinLedgerGrpcAccountArray: [
+					builtinLedgerGrpcAccountA,
+					builtinLedgerGrpcAccountB
+				]
+			}
+		);
+
+		expect(builtinLedgerGrpcIdArrayOutput.builtinLedgerGrpcIdArray).not.toBeUndefined();
+
+		const idAccountA: string | undefined
+			= builtinLedgerGrpcIdArrayOutput.builtinLedgerGrpcIdArray![0].builtinLedgerGrpcId;
+		const idAccountB: string | undefined
+			= builtinLedgerGrpcIdArrayOutput.builtinLedgerGrpcIdArray![1].builtinLedgerGrpcId;
+
+		await builtinLedgerGrpcClient.deleteAccountsByIds({
+				builtinLedgerGrpcIdArray: [
+					{builtinLedgerGrpcId: idAccountA},
+					{builtinLedgerGrpcId: idAccountB}
+				]
+			}
+		);
+
+		const builtinLedgerGrpcAccountArrayOutput: BuiltinLedgerGrpcAccountArray__Output
+			= await builtinLedgerGrpcClient.getAccountsByIds(
+			{
+				builtinLedgerGrpcIdArray: [{builtinLedgerGrpcId: idAccountA}, {builtinLedgerGrpcId: idAccountB}]
+			});
+
+		expect(builtinLedgerGrpcAccountArrayOutput.builtinLedgerGrpcAccountArray).not.toBeUndefined();
+		const accounts: BuiltinLedgerGrpcAccount__Output[]
+			= builtinLedgerGrpcAccountArrayOutput.builtinLedgerGrpcAccountArray!;
+
+		expect(accounts.length).toEqual(2);
+
+		expect(accounts[0].id).toEqual(idAccountA);
+		expect(accounts[0].state).toEqual("DELETED");
+		expect(accounts[0].type).toEqual(builtinLedgerGrpcAccountA.type);
+		expect(accounts[0].currencyCode).toEqual(builtinLedgerGrpcAccountA.currencyCode);
+		expect(accounts[0].debitBalance).toEqual("0");
+		expect(accounts[0].creditBalance).toEqual("0");
+		expect(accounts[0].timestampLastJournalEntry).toEqual(builtinLedgerGrpcAccountA.timestampLastJournalEntry);
+
+		expect(accounts[1].id).toEqual(idAccountB);
+		expect(accounts[1].state).toEqual("DELETED");
+		expect(accounts[1].type).toEqual(builtinLedgerGrpcAccountB.type);
+		expect(accounts[1].currencyCode).toEqual(builtinLedgerGrpcAccountB.currencyCode);
+		expect(accounts[1].debitBalance).toEqual("0");
+		expect(accounts[1].creditBalance).toEqual("0");
+		expect(accounts[1].timestampLastJournalEntry).toEqual(builtinLedgerGrpcAccountB.timestampLastJournalEntry);
+	});
+
+	/* deactivateAccountsByIds() */
+
+	/* activateAccountsByIds() */
 
 	/* stringToBigint() */
 

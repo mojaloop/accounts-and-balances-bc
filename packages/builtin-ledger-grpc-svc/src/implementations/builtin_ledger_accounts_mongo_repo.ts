@@ -32,13 +32,17 @@
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {Collection, Db, MongoClient, MongoServerError, UpdateResult} from "mongodb";
 import {
-    AccountAlreadyExistsError, AccountNotFoundError,
+    AccountAlreadyExistsError,
+    AccountNotFoundError,
+    BuiltinLedgerAccount,
+    IBuiltinLedgerAccountsRepo,
     UnableToGetAccountsError,
-    UnableToInitRepoError, UnableToStoreAccountError,
-    UnableToUpdateAccountError
-} from "../domain/errors";
-import {IBuiltinLedgerAccountsRepo} from "../domain/infrastructure";
-import {BuiltinLedgerAccount} from "../domain/entities";
+    UnableToInitRepoError,
+    UnableToStoreAccountError,
+    UnableToUpdateAccountError,
+    UnableToUpdateAccountsError
+} from "../domain";
+import {AccountState} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 export const BUILTIN_LEDGER_ACCOUNT_MONGO_SCHEMA: any = {
     bsonType: "object",
@@ -226,6 +230,22 @@ export class BuiltinLedgerAccountsMongoRepo implements IBuiltinLedgerAccountsRep
             );
         } catch (error: unknown) {
             throw new UnableToUpdateAccountError((error as any)?.message);
+        }
+
+        if (updateResult.modifiedCount === 0) { // TODO: use "!updateResult.modifiedCount" instead?
+            throw new AccountNotFoundError();
+        }
+    }
+
+    async updateAccountStatesByIds(accountIds: string[], accountState: AccountState): Promise<void> {
+        let updateResult: any; // TODO: verify type.
+        try {
+            updateResult = await this.collection.updateMany(
+                {_id: {$in: accountIds}},
+                {$set: {accountState: accountState}}
+            );
+        } catch (error: unknown) {
+            throw new UnableToUpdateAccountsError((error as any)?.message);
         }
 
         if (updateResult.modifiedCount === 0) { // TODO: use "!updateResult.modifiedCount" instead?

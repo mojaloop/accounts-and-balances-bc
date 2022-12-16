@@ -33,6 +33,8 @@ import {IChartOfAccountsRepo} from "../../src/domain/infrastructure-types/chart_
 import {CoaAccount} from "../../src/domain/coa_account";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {AccountAlreadyExistsError, UnableToGetAccountsError, UnableToStoreAccountsError} from "../../src/domain/errors";
+import {AccountState} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import {UnableToUpdateAccountsError} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc";
 
 export class ChartOfAccountsMemoryRepo implements IChartOfAccountsRepo {
 	// Properties received through the constructor.
@@ -116,6 +118,20 @@ export class ChartOfAccountsMemoryRepo implements IChartOfAccountsRepo {
 			return coaAccounts;
 		} catch (error: unknown) {
 			throw new UnableToGetAccountsError((error as any)?.message);
+		}
+	}
+
+	async updateAccountStatesByIds(accountIds: string[], accountState: AccountState): Promise<void> {
+		try {
+			for (const account of this.accounts.values()) {
+				for (const accountId of accountIds) {
+					if (account.internalId === accountId) {
+						account.state = accountState;
+					}
+				}
+			}
+		} catch (error: unknown) {
+			throw new UnableToUpdateAccountsError((error as any)?.message);
 		}
 	}
 }

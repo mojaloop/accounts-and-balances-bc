@@ -21,7 +21,7 @@
 
  * Crosslake
  - Pedro Sousa Barreto <pedrob@crosslaketech.com>
-
+GetJournalEntriesByAccountId
  * Gonçalo Garcia <goncalogarcia99@gmail.com>
 
  --------------
@@ -64,6 +64,9 @@ import {IBuiltinLedgerAccountsRepo, IBuiltinLedgerJournalEntriesRepo} from "./in
 enum AuditingActions {
 	BUILTIN_LEDGER_ACCOUNT_CREATED = "BUILTIN_LEDGER_ACCOUNT_CREATED",
 	BUILTIN_LEDGER_JOURNAL_ENTRY_CREATED = "BUILTIN_LEDGER_JOURNAL_ENTRY_CREATED",
+	BUILTIN_LEDGER_ACCOUNT_DELETED = "BUILTIN_LEDGER_ACCOUNT_DELETED",
+	BUILTIN_LEDGER_ACCOUNT_DEACTIVATED = "BUILTIN_LEDGER_ACCOUNT_DEACTIVATED",
+	BUILTIN_LEDGER_ACCOUNT_ACTIVATED = "BUILTIN_LEDGER_ACCOUNT_ACTIVATED"
 }
 
 export class BuiltinLedgerAggregate {
@@ -164,7 +167,7 @@ export class BuiltinLedgerAggregate {
 			throw new InvalidAccountTypeError();
 		}*/
 
-		// Validate the currency code.
+		// Validate the currency code and get the currency.
 		const currency: {code: string, decimals: number} | undefined
 			= this.currencies.find((currency) => {
 			return currency.code === builtinLedgerAccountDto.currencyCode;
@@ -230,7 +233,7 @@ export class BuiltinLedgerAggregate {
 		this.enforcePrivilege(securityContext, Privileges.CREATE_JOURNAL_ENTRY);
 
 		// When creating a journal entry, timestamp is supposed to be null. For consistency purposes, and to make sure
-		// whoever calls this function knows that, if those values aren't respected, errors are thrown.
+		// whoever calls this function knows that, if this value isn't respected, an error is thrown.
 		if (builtinLedgerJournalEntryDto.timestamp) { // TODO: use "!== null" instead?
 			throw new InvalidTimestampError();
 		}
@@ -241,7 +244,7 @@ export class BuiltinLedgerAggregate {
 		// Generate a random UUId, if needed. TODO: randomUUID() can generate an id that already exists.
 		const journalEntryId: string = builtinLedgerJournalEntryDto.id ?? randomUUID(); // TODO: should this be done? ?? or ||?
 
-		// Validate the currency code.
+		// Validate the currency code and get the currency.
 		const currency: {code: string, decimals: number} | undefined
 			= this.currencies.find((currency) => {
 			return currency.code === builtinLedgerJournalEntryDto.currencyCode;
@@ -447,5 +450,47 @@ export class BuiltinLedgerAggregate {
 			return builtinLedgerJournalEntryDto;
 		});
 		return builtinLedgerJournalEntryDtos;
+	}
+
+	async deleteAccountsByIds(
+		accountIds: string[],
+		securityContext: CallSecurityContext
+	): Promise<void> {
+		this.enforcePrivilege(securityContext, Privileges.DELETE_ACCOUNT);
+
+		try {
+			await this.builtinLedgerAccountsRepo.updateAccountStatesByIds(accountIds, "DELETED");
+		} catch (error: unknown) {
+			this.logger.error(error);
+			throw error;
+		}
+	}
+
+	async deactivateAccountsByIds(
+		accountIds: string[],
+		securityContext: CallSecurityContext
+	): Promise<void> {
+		this.enforcePrivilege(securityContext, Privileges.DEACTIVATE_ACCOUNT);
+
+		try {
+			await this.builtinLedgerAccountsRepo.updateAccountStatesByIds(accountIds, "INACTIVE");
+		} catch (error: unknown) {
+			this.logger.error(error);
+			throw error;
+		}
+	}
+
+	async activateAccountsByIds(
+		accountIds: string[],
+		securityContext: CallSecurityContext
+	): Promise<void> {
+		this.enforcePrivilege(securityContext, Privileges.ACTIVATE_ACCOUNT);
+
+		try {
+			await this.builtinLedgerAccountsRepo.updateAccountStatesByIds(accountIds, "ACTIVE");
+		} catch (error: unknown) {
+			this.logger.error(error);
+			throw error;
+		}
 	}
 }

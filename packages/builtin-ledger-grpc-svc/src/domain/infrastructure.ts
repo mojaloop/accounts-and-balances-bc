@@ -30,6 +30,7 @@
 "use strict";
 
 import {BuiltinLedgerAccount, BuiltinLedgerJournalEntry} from "./entities";
+import {AccountState} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 // TODO: use DTOs instead? if so, they need to have the currency decimals.
 
@@ -48,6 +49,7 @@ export interface IBuiltinLedgerAccountsRepo {
 		creditBalance: bigint,
 		timestampLastJournalEntry: number
 	): Promise<void>;
+	updateAccountStatesByIds(accountIds: string[], accountState: AccountState): Promise<void>;
 }
 
 export interface IBuiltinLedgerJournalEntriesRepo {
