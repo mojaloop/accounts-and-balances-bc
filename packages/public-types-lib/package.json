@@ -30,8 +30,6 @@
     "test:unit": "echo \"public-types-lib doesn't have unit tests\"",
     "pub": "npm version patch && npm publish --tag latest --access public"
   },
-  "devDependencies": {
-  },
-  "dependencies": {
-  }
+  "devDependencies": {},
+  "dependencies": {}
 }
