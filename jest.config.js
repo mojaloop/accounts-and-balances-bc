@@ -4,7 +4,7 @@ const config = {
 	preset: "ts-jest",
 	clearMocks: true,
 	testMatch: ["<rootDir>/test/integration/**/*.test.ts"],
-	collectCoverage: true,
+	collectCoverage: false,
 	collectCoverageFrom: ["./packages/**/src/**/*.ts"],
 	coverageDirectory: "./coverage/integration/",
 	coverageReporters: ["text", "lcov"],

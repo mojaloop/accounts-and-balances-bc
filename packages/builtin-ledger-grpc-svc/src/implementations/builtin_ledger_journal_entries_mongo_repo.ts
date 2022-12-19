@@ -32,8 +32,8 @@
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {Collection, Db, MongoClient, MongoServerError} from "mongodb";
 import {
-    JournalEntryAlreadyExistsError, UnableToGetJournalEntriesError,
-    UnableToInitRepoError, UnableToStoreJournalEntryError,
+    BLJournalEntryAlreadyExistsError, BLUnableToGetJournalEntriesError,
+    BLUnableToInitRepoError, BLUnableToStoreJournalEntryError,
 } from "../domain/errors";
 import {IBuiltinLedgerJournalEntriesRepo} from "../domain/infrastructure";
 import {BuiltinLedgerJournalEntry} from "../domain/entities";
@@ -132,7 +132,7 @@ export class BuiltinLedgerJournalEntriesMongoRepo implements IBuiltinLedgerJourn
                 validator: {$jsonSchema: BUILTIN_LEDGER_JOURNAL_ENTRY_MONGO_SCHEMA}
             });
         } catch (error: unknown) {
-            throw new UnableToInitRepoError((error as any)?.message);
+            throw new BLUnableToInitRepoError((error as any)?.message);
         }
     }
 
@@ -160,9 +160,9 @@ export class BuiltinLedgerJournalEntriesMongoRepo implements IBuiltinLedgerJourn
                 error instanceof MongoServerError
                 && error.code === BuiltinLedgerJournalEntriesMongoRepo.DUPLICATE_KEY_ERROR_CODE
             ) { // TODO: should this be done?
-                throw new JournalEntryAlreadyExistsError();
+                throw new BLJournalEntryAlreadyExistsError();
             }
-            throw new UnableToStoreJournalEntryError((error as any)?.message);
+            throw new BLUnableToStoreJournalEntryError((error as any)?.message);
         }
     }
 
@@ -173,7 +173,7 @@ export class BuiltinLedgerJournalEntriesMongoRepo implements IBuiltinLedgerJourn
                 {$or: [{debitedAccountId: accountId}, {creditedAccountId: accountId}]}
             ).toArray();
         } catch (error: unknown) {
-            throw new UnableToGetJournalEntriesError((error as any)?.message);
+            throw new BLUnableToGetJournalEntriesError((error as any)?.message);
         }
 
         // Convert Mongo's _id to BuiltinLedgerJournalEntry's id.

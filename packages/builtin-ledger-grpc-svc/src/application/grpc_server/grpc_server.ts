@@ -38,7 +38,6 @@ import {
 	ServiceDefinition
 } from "@grpc/grpc-js";
 import {loadSync, Options, PackageDefinition} from "@grpc/proto-loader";
-
 import {TokenHelper} from "@mojaloop/security-bc-client-lib";
 import {BuiltinLedgerAggregate} from "../../domain/aggregate";
 import {

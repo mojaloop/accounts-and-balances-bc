@@ -43,3 +43,7 @@ export class UnableToInitRepoError extends Error {readonly message = "unable to 
 export class UnableToStoreAccountsError extends Error {readonly message = "unable to store accounts";}
 export class UnableToGetAccountsError extends Error {readonly message = "unable to get accounts";}
 export class UnableToUpdateAccountsError extends Error {readonly message = "unable to update accounts";}
+// Others.
+// LedgerError is used to pass error messages from a ledger to the aggregate through a ledger adapter. This is needed
+// to make a distinction between the messages that are supposed to be shown to the client and the ones that are not.
+export class LedgerError extends Error {}

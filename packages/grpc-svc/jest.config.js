@@ -9,7 +9,14 @@ const config = {
 	testMatch: ["**/test/unit/**/*.test.ts"],
 	collectCoverage: true,
 	collectCoverageFrom: ["./src/**/*.ts"],
-	coveragePathIgnorePatterns: ["./src/implementations/"],
+	coveragePathIgnorePatterns: [
+		"./src/index.ts",
+		"./src/application/index.ts",
+		"./src/application/grpc_svc.ts",
+		"./src/application/grpc_server/grpc_handlers.ts",
+		"./src/domain/errors.ts",
+		"./src/implementations/"
+	],
 	coverageDirectory: `../../coverage/unit/${shortPackageName}/`,
 	coverageReporters: ["text", "lcov"],
 	coverageThreshold: {

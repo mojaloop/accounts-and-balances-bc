@@ -29,25 +29,25 @@
 
 "use strict";
 
-import {BuiltinLedgerJournalEntry} from "../../../builtin-ledger-grpc-svc/src/domain/entities";
-import {
-	JournalEntryAlreadyExistsError,
-	UnableToGetJournalEntriesError,
-	UnableToStoreJournalEntryError
-} from "../../../builtin-ledger-grpc-svc/src/domain/errors";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {IBuiltinLedgerJournalEntriesRepo} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc/dist/domain/infrastructure";
+import {
+	BuiltinLedgerJournalEntry,
+	IBuiltinLedgerJournalEntriesRepo,
+	BLJournalEntryAlreadyExistsError
+} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc";
+// import {BLJournalEntryAlreadyExistsError} from "../../builtin-ledger-grpc-svc/src/domain/errors";
 
-export class BuiltinLedgerJournalEntriesMemoryRepo implements IBuiltinLedgerJournalEntriesRepo {
+
+export class BuiltinLedgerJournalEntriesMockRepo implements IBuiltinLedgerJournalEntriesRepo {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
 	// Other properties.
-	readonly journalEntries: Map<string, BuiltinLedgerJournalEntry>;
+	readonly builtinLedgerJournalEntries: Map<string, BuiltinLedgerJournalEntry>;
 
 	constructor(logger: ILogger) {
 		this.logger = logger.createChild(this.constructor.name);
 
-		this.journalEntries = new Map();
+		this.builtinLedgerJournalEntries = new Map();
 	}
 
 	async init(): Promise<void> {
@@ -59,33 +59,19 @@ export class BuiltinLedgerJournalEntriesMemoryRepo implements IBuiltinLedgerJour
 	}
 
 	async storeNewJournalEntry(builtinLedgerJournalEntry: BuiltinLedgerJournalEntry): Promise<void> {
-		let journalEntryExists: boolean;
-		try {
-			journalEntryExists = this.journalEntries.has(builtinLedgerJournalEntry.id);
-		} catch (error: unknown) {
-			throw new UnableToStoreJournalEntryError();
+		if (this.builtinLedgerJournalEntries.has(builtinLedgerJournalEntry.id)) {
+			throw new BLJournalEntryAlreadyExistsError();
 		}
-		if (journalEntryExists) {
-			throw new JournalEntryAlreadyExistsError();
-		}
-		try {
-			this.journalEntries.set(builtinLedgerJournalEntry.id, builtinLedgerJournalEntry);
-		} catch (error: unknown) {
-			throw new UnableToStoreJournalEntryError();
-		}
+		this.builtinLedgerJournalEntries.set(builtinLedgerJournalEntry.id, builtinLedgerJournalEntry);
 	}
 
 	async getJournalEntriesByAccountId(accountId: string): Promise<BuiltinLedgerJournalEntry[]> {
 		const builtinLedgerJournalEntries: BuiltinLedgerJournalEntry[] = [];
-		try {
-			for (const builtinLedgerJournalEntry of this.journalEntries.values()) {
-				if (builtinLedgerJournalEntry.debitedAccountId === accountId
-					|| builtinLedgerJournalEntry.creditedAccountId === accountId) {
-					builtinLedgerJournalEntries.push(builtinLedgerJournalEntry);
-				}
+		for (const builtinLedgerJournalEntry of this.builtinLedgerJournalEntries.values()) {
+			if (builtinLedgerJournalEntry.debitedAccountId === accountId
+				|| builtinLedgerJournalEntry.creditedAccountId === accountId) {
+				builtinLedgerJournalEntries.push(builtinLedgerJournalEntry);
 			}
-		} catch (error: unknown) {
-			throw new UnableToGetJournalEntriesError();
 		}
 		return builtinLedgerJournalEntries;
 	}

@@ -29,12 +29,11 @@
 
 "use strict";
 
-import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
+import {AuditEntryLabel, AuditSecurityContext, IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 
 // TODO: should anything by logged?
-export class AuthorizationClientMock implements IAuthorizationClient {
-	// Properties received through the constructor.
+export class AuditClientMock implements IAuditClient {
 	private readonly logger: ILogger;
 
 	constructor(logger: ILogger) {
@@ -49,15 +48,12 @@ export class AuthorizationClientMock implements IAuthorizationClient {
 		return;
 	}
 
-	roleHasPrivilege(roleId: string, privilegeId: string): boolean {
-		return true;
-	}
-
-	addPrivilege(privId: string, labelName: string, description: string): void {
-		return;
-	}
-
-	addPrivilegesArray(privsArray: { privId: string; labelName: string; description: string }[]): void {
+	async audit(
+		actionType: string,
+		actionSuccessful: boolean,
+		securityContext?: AuditSecurityContext,
+		labels?: AuditEntryLabel[]
+	): Promise<void> {
 		return;
 	}
 }

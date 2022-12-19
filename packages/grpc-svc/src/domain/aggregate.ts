@@ -45,7 +45,7 @@ import {
 	InvalidDebitBalanceError,
 	InvalidIdError,
 	InvalidOwnerIdError,
-	InvalidTimestampError
+	InvalidTimestampError, LedgerError
 } from "./errors";
 import {Account, JournalEntry} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {IChartOfAccountsRepo} from "./infrastructure-types/chart_of_accounts_repo";
@@ -165,7 +165,15 @@ export class AccountsAndBalancesAggregate {
 			ledgerAdapterAccounts.push(ledgerAdapterAccount);
 		}
 
-		const accountIds: string[] = await this.ledgerAdapter.createAccounts(ledgerAdapterAccounts);
+		let accountIds: string[];
+		try {
+			accountIds = await this.ledgerAdapter.createAccounts(ledgerAdapterAccounts);
+		} catch (error: unknown) {
+			if (!(error instanceof LedgerError)) {
+				this.logger.error(error);
+			}
+			throw error;
+		}
 
 		await this.chartOfAccounts.storeAccounts(coaAccounts);
 
@@ -216,7 +224,15 @@ export class AccountsAndBalancesAggregate {
 			return ledgerAdapterJournalEntry;
 		});
 
-		const journalEntryIds: string[] = await this.ledgerAdapter.createJournalEntries(ledgerAdapterJournalEntries);
+		let journalEntryIds: string[];
+		try {
+			journalEntryIds = await this.ledgerAdapter.createJournalEntries(ledgerAdapterJournalEntries);
+		} catch (error: unknown) {
+			if (!(error instanceof LedgerError)) {
+				this.logger.error(error);
+			}
+			throw error;
+		}
 		return journalEntryIds;
 	}
 
@@ -253,8 +269,16 @@ export class AccountsAndBalancesAggregate {
 			return [];
 		}
 
-		const ledgerAdapterJournalEntries: LedgerAdapterJournalEntry[] =
-			await this.ledgerAdapter.getJournalEntriesByAccountId(accountId, coaAccount.currencyDecimals);
+		let ledgerAdapterJournalEntries: LedgerAdapterJournalEntry[];
+		try {
+			ledgerAdapterJournalEntries =
+				await this.ledgerAdapter.getJournalEntriesByAccountId(accountId, coaAccount.currencyDecimals);
+		} catch (error: unknown) {
+			if (!(error instanceof LedgerError)) {
+				this.logger.error(error);
+			}
+			throw error;
+		}
 
 		const journalEntries: JournalEntry[] = ledgerAdapterJournalEntries.map((ledgerAdapterJournalEntry) => {
 			const journalEntry: JournalEntry = {
@@ -277,9 +301,16 @@ export class AccountsAndBalancesAggregate {
 			throw new AccountNotFoundError();
 		}
 
-		await this.ledgerAdapter.deleteAccountsByIds(accountIds);
+		try {
+			await this.ledgerAdapter.deleteAccountsByIds(accountIds);
+		} catch (error: unknown) {
+			if (!(error instanceof LedgerError)) {
+				this.logger.error(error);
+			}
+			throw error;
+		}
 
-		await this.chartOfAccounts.updateAccountStatesByIds(accountIds, "DELETED");
+		await this.chartOfAccounts.updateAccountStatesByInternalIds(accountIds, "DELETED");
 	}
 
 	async deactivateAccountsByIds(accountIds: string[]): Promise<void> {
@@ -290,9 +321,16 @@ export class AccountsAndBalancesAggregate {
 			throw new AccountNotFoundError();
 		}
 
-		await this.ledgerAdapter.deactivateAccountsByIds(accountIds);
+		try {
+			await this.ledgerAdapter.deactivateAccountsByIds(accountIds);
+		} catch (error: unknown) {
+			if (!(error instanceof LedgerError)) {
+				this.logger.error(error);
+			}
+			throw error;
+		}
 
-		await this.chartOfAccounts.updateAccountStatesByIds(accountIds, "INACTIVE");
+		await this.chartOfAccounts.updateAccountStatesByInternalIds(accountIds, "INACTIVE");
 	}
 
 	async activateAccountsByIds(accountIds: string[]): Promise<void> {
@@ -303,9 +341,16 @@ export class AccountsAndBalancesAggregate {
 			throw new AccountNotFoundError();
 		}
 
-		await this.ledgerAdapter.activateAccountsByIds(accountIds);
+		try {
+			await this.ledgerAdapter.activateAccountsByIds(accountIds);
+		} catch (error: unknown) {
+			if (!(error instanceof LedgerError)) {
+				this.logger.error(error);
+			}
+			throw error;
+		}
 
-		await this.chartOfAccounts.updateAccountStatesByIds(accountIds, "ACTIVE");
+		await this.chartOfAccounts.updateAccountStatesByInternalIds(accountIds, "ACTIVE");
 	}
 
 	private async getAccountsByExternalIdsOfCoaAccounts(coaAccounts: CoaAccount[]): Promise<Account[]> {
@@ -313,8 +358,15 @@ export class AccountsAndBalancesAggregate {
 			return {id: coaAccount.externalId, currencyDecimals: coaAccount.currencyDecimals};
 		});
 
-		const ledgerAdapterAccounts: LedgerAdapterAccount[]
-			= await this.ledgerAdapter.getAccountsByIds(externalAccountIds);
+		let ledgerAdapterAccounts: LedgerAdapterAccount[];
+		try {
+			ledgerAdapterAccounts = await this.ledgerAdapter.getAccountsByIds(externalAccountIds);
+		} catch (error: unknown) {
+			if (!(error instanceof LedgerError)) {
+				this.logger.error(error);
+			}
+			throw error;
+		}
 
 		const accounts: Account[] = ledgerAdapterAccounts.map((ledgerAdapterAccount) => {
 			const coaAccount: CoaAccount | undefined = coaAccounts.find((coaAccount) => {

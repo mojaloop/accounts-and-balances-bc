@@ -32,19 +32,19 @@ GetJournalEntriesByAccountId
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {randomUUID} from "crypto";
 import {
-	AccountAlreadyExistsError,
-	SameDebitedAndCreditedAccountsError,
-	CurrencyCodesDifferError,
-	InvalidJournalEntryAmountError,
-	InvalidTimestampError,
-	JournalEntryAlreadyExistsError,
-	CreditedAccountNotFoundError,
-	DebitedAccountNotFoundError,
-	UnauthorizedError,
-	InvalidIdError,
-	InvalidCurrencyCodeError,
-	InvalidCreditBalanceError,
-	InvalidDebitBalanceError, DebitBalanceExceedsCreditBalanceError, CreditBalanceExceedsDebitBalanceError,
+	BLAccountAlreadyExistsError,
+	BLSameDebitedAndCreditedAccountsError,
+	BLCurrencyCodesDifferError,
+	BLInvalidJournalEntryAmountError,
+	BLInvalidTimestampError,
+	BLJournalEntryAlreadyExistsError,
+	BLCreditedAccountNotFoundError,
+	BLDebitedAccountNotFoundError,
+	BLUnauthorizedError,
+	BLInvalidIdError,
+	BLInvalidCurrencyCodeError,
+	BLInvalidCreditBalanceError,
+	BLInvalidDebitBalanceError, BLAccountNotFoundError,
 } from "./errors";
 import {IAuditClient, AuditSecurityContext} from "@mojaloop/auditing-bc-public-types-lib";
 import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
@@ -109,7 +109,7 @@ export class BuiltinLedgerAggregate {
 				return;
 			}
 		}
-		throw new UnauthorizedError(); // TODO: change error name.
+		throw new BLUnauthorizedError(); // TODO: change error name.
 	}
 
 	private getAuditSecurityContext(securityContext: CallSecurityContext): AuditSecurityContext {
@@ -144,27 +144,27 @@ export class BuiltinLedgerAggregate {
 		// For consistency purposes, and to make sure whoever calls this function knows that, if those values aren't
 		// respected, errors are thrown.
 		if (builtinLedgerAccountDto.debitBalance) { // TODO: use "!== null" instead?
-			throw new InvalidDebitBalanceError();
+			throw new BLInvalidDebitBalanceError();
 		}
 		if (builtinLedgerAccountDto.creditBalance) { // TODO: use "!== null" instead?
-			throw new InvalidCreditBalanceError();
+			throw new BLInvalidCreditBalanceError();
 		}
 		if (builtinLedgerAccountDto.timestampLastJournalEntry) { // TODO: use "!== null" instead?
-			throw new InvalidTimestampError();
+			throw new BLInvalidTimestampError();
 		}
 
 		if (builtinLedgerAccountDto.id === "") {
-			throw new InvalidIdError();
+			throw new BLInvalidIdError();
 		}
 		// Generate a random UUId, if needed. TODO: randomUUID() can generate an id that already exists.
 		const accountId: string = builtinLedgerAccountDto.id ?? randomUUID(); // TODO: should this be done? ?? or ||?
 
 		// Validate the account's state and type. TODO: how to do this?
 		/*if (!Object.values(AccountState).includes(builtinLedgerAccountDto.state)) {
-			throw new InvalidAccountStateError();
+			throw new BLInvalidAccountStateError();
 		}
 		if (!Object.values(AccountType).includes(builtinLedgerAccountDto.type)) {
-			throw new InvalidAccountTypeError();
+			throw new BLInvalidAccountTypeError();
 		}*/
 
 		// Validate the currency code and get the currency.
@@ -173,7 +173,7 @@ export class BuiltinLedgerAggregate {
 			return currency.code === builtinLedgerAccountDto.currencyCode;
 		});
 		if (!currency) {
-			throw new InvalidCurrencyCodeError();
+			throw new BLInvalidCurrencyCodeError();
 		}
 
 		const builtinLedgerAccount: BuiltinLedgerAccount = {
@@ -192,7 +192,7 @@ export class BuiltinLedgerAggregate {
 		try {
 			await this.builtinLedgerAccountsRepo.storeNewAccount(builtinLedgerAccount);
 		} catch (error: unknown) {
-			if (!(error instanceof AccountAlreadyExistsError)) {
+			if (!(error instanceof BLAccountAlreadyExistsError)) {
 				this.logger.error(error);
 			}
 			throw error;
@@ -235,11 +235,11 @@ export class BuiltinLedgerAggregate {
 		// When creating a journal entry, timestamp is supposed to be null. For consistency purposes, and to make sure
 		// whoever calls this function knows that, if this value isn't respected, an error is thrown.
 		if (builtinLedgerJournalEntryDto.timestamp) { // TODO: use "!== null" instead?
-			throw new InvalidTimestampError();
+			throw new BLInvalidTimestampError();
 		}
 
 		if (builtinLedgerJournalEntryDto.id === "") {
-			throw new InvalidIdError();
+			throw new BLInvalidIdError();
 		}
 		// Generate a random UUId, if needed. TODO: randomUUID() can generate an id that already exists.
 		const journalEntryId: string = builtinLedgerJournalEntryDto.id ?? randomUUID(); // TODO: should this be done? ?? or ||?
@@ -250,7 +250,7 @@ export class BuiltinLedgerAggregate {
 			return currency.code === builtinLedgerJournalEntryDto.currencyCode;
 		});
 		if (!currency) {
-			throw new InvalidCurrencyCodeError();
+			throw new BLInvalidCurrencyCodeError();
 		}
 
 		// Convert the amount to bigint and validate it.
@@ -258,7 +258,7 @@ export class BuiltinLedgerAggregate {
 		try {
 			amount = stringToBigint(builtinLedgerJournalEntryDto.amount, currency.decimals);
 		} catch (error: unknown) {
-			throw new InvalidJournalEntryAmountError();
+			throw new BLInvalidJournalEntryAmountError();
 		}
 
 		// Get a timestamp.
@@ -277,43 +277,45 @@ export class BuiltinLedgerAggregate {
 
 		// Check if the debited and credited accounts are the same.
 		if (builtinLedgerJournalEntry.debitedAccountId === builtinLedgerJournalEntry.creditedAccountId) {
-			throw new SameDebitedAndCreditedAccountsError();
+			throw new BLSameDebitedAndCreditedAccountsError();
 		}
 
 		// Check if the debited account exists. The account is fetched because some of its properties need to be
 		// consulted.
 		let debitedBuiltinLedgerAccount: BuiltinLedgerAccount | undefined;
 		try {
-			debitedBuiltinLedgerAccount = (await this.builtinLedgerAccountsRepo.getAccountsByIds(
+			const builtinLedgerAccounts: BuiltinLedgerAccount[] = await this.builtinLedgerAccountsRepo.getAccountsByIds(
 				[builtinLedgerJournalEntry.debitedAccountId]
-			))[0];
+			);
+			debitedBuiltinLedgerAccount = builtinLedgerAccounts[0];
 		} catch (error: unknown) {
 			this.logger.error(error);
 			throw error;
 		}
 		if (!debitedBuiltinLedgerAccount) {
-			throw new DebitedAccountNotFoundError();
+			throw new BLDebitedAccountNotFoundError();
 		}
 
 		// Check if the credited account exists. The account is fetched because some of its properties need to be
 		// consulted.
 		let creditedBuiltinLedgerAccount: BuiltinLedgerAccount | undefined;
 		try {
-			creditedBuiltinLedgerAccount = (await this.builtinLedgerAccountsRepo.getAccountsByIds(
+			const builtinLedgerAccounts: BuiltinLedgerAccount[] = await this.builtinLedgerAccountsRepo.getAccountsByIds(
 				[builtinLedgerJournalEntry.creditedAccountId]
-			))[0]; // TODO: should this be done?
+			);
+			creditedBuiltinLedgerAccount = builtinLedgerAccounts[0];
 		} catch (error: unknown) {
 			this.logger.error(error);
 			throw error;
 		}
 		if (!creditedBuiltinLedgerAccount) {
-			throw new CreditedAccountNotFoundError();
+			throw new BLCreditedAccountNotFoundError();
 		}
 
 		// Check if the currency codes of the debited and credited accounts and the journal entry match.
 		if (debitedBuiltinLedgerAccount.currencyCode !== creditedBuiltinLedgerAccount.currencyCode
 			|| debitedBuiltinLedgerAccount.currencyCode !== builtinLedgerJournalEntry.currencyCode) {
-			throw new CurrencyCodesDifferError();
+			throw new BLCurrencyCodesDifferError();
 		}
 
 		// Check if the currency decimals of the debited and credited accounts and the journal entry match.
@@ -321,7 +323,7 @@ export class BuiltinLedgerAggregate {
 			|| debitedBuiltinLedgerAccount.currencyDecimals !== builtinLedgerJournalEntry.currencyDecimals) {
 			// TODO: does it make sense to create a custom error?
 			this.logger.error("currency decimals differ");
-			throw new Error("currency decimals differ");
+			throw new Error();
 		}
 
 		// Check the balances. TODO: verify.
@@ -329,20 +331,20 @@ export class BuiltinLedgerAggregate {
 			debitedBuiltinLedgerAccount.limitCheckMode === "DEBIT_BALANCE_CANNOT_EXCEED_CREDIT_BALANCE"
 			&& debitedBuiltinLedgerAccount.debitBalance > debitedBuiltinLedgerAccount.creditBalance
 		) {
-			throw new DebitBalanceExceedsCreditBalanceError();
+			throw new BLDebitBalanceExceedsCreditBalanceError();
 		}
 		if (
 			debitedBuiltinLedgerAccount.limitCheckMode === "CREDIT_BALANCE_CANNOT_EXCEED_DEBIT_BALANCE"
 			&& debitedBuiltinLedgerAccount.creditBalance > debitedBuiltinLedgerAccount.debitBalance
 		) {
-			throw new CreditBalanceExceedsDebitBalanceError();
+			throw new BLCreditBalanceExceedsDebitBalanceError();
 		}*/
 
 		// Store the journal entry.
 		try {
 			await this.builtinLedgerJournalEntriesRepo.storeNewJournalEntry(builtinLedgerJournalEntry);
 		} catch (error: unknown) {
-			if (!(error instanceof JournalEntryAlreadyExistsError)) {
+			if (!(error instanceof BLJournalEntryAlreadyExistsError)) {
 				this.logger.error(error);
 			}
 			throw error;
@@ -461,7 +463,9 @@ export class BuiltinLedgerAggregate {
 		try {
 			await this.builtinLedgerAccountsRepo.updateAccountStatesByIds(accountIds, "DELETED");
 		} catch (error: unknown) {
-			this.logger.error(error);
+			if (!(error instanceof BLAccountNotFoundError)) {
+				this.logger.error(error);
+			}
 			throw error;
 		}
 	}
@@ -475,7 +479,9 @@ export class BuiltinLedgerAggregate {
 		try {
 			await this.builtinLedgerAccountsRepo.updateAccountStatesByIds(accountIds, "INACTIVE");
 		} catch (error: unknown) {
-			this.logger.error(error);
+			if (!(error instanceof BLAccountNotFoundError)) {
+				this.logger.error(error);
+			}
 			throw error;
 		}
 	}
@@ -489,7 +495,9 @@ export class BuiltinLedgerAggregate {
 		try {
 			await this.builtinLedgerAccountsRepo.updateAccountStatesByIds(accountIds, "ACTIVE");
 		} catch (error: unknown) {
-			this.logger.error(error);
+			if (!(error instanceof BLAccountNotFoundError)) {
+				this.logger.error(error);
+			}
 			throw error;
 		}
 	}

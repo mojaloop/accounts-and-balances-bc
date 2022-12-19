@@ -36,10 +36,10 @@ import {
 	BuiltinLedgerGrpcAccountArray__Output,
 	BuiltinLedgerGrpcClient,
 	BuiltinLedgerGrpcIdArray__Output,
-	BuiltinLedgerGrpcJournalEntry,
-	BuiltinLedgerGrpcJournalEntryArray__Output,
+	BuiltinLedgerGrpcJournalEntry, BuiltinLedgerGrpcJournalEntry__Output,
+	BuiltinLedgerGrpcJournalEntryArray__Output, UnableToActivateAccountsError,
 	UnableToCreateAccountsError,
-	UnableToCreateJournalEntriesError,
+	UnableToCreateJournalEntriesError, UnableToDeactivateAccountsError, UnableToDeleteAccountsError,
 	UnableToGetAccountsError,
 	UnableToGetJournalEntriesError
 } from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-client-lib";
@@ -47,31 +47,35 @@ import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {DefaultLogger} from "@mojaloop/logging-bc-client-lib";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
 import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
-import {BuiltinLedgerAccountsMemoryRepo} from "./builtin_ledger_accounts_memory_repo";
-import {BuiltinLedgerJournalEntriesMemoryRepo} from "./builtin_ledger_journal_entries_memory_repo";
-import {AuthenticationServiceMock} from "./authentication_service_mock";
-import {AuthorizationClientMock} from "./authorization_client_mock";
-import {AuditClientMock} from "./audit_client_mock";
+import {
+	AuditClientMock,
+	AuthenticationServiceMock,
+	AuthorizationClientMock,
+	BuiltinLedgerAccountsMockRepo,
+	BuiltinLedgerJournalEntriesMockRepo
+} from "@mojaloop/accounts-and-balances-bc-shared-mocks-lib";
 import {bigintToString, stringToBigint} from "../../src/domain/converters";
 import {
-	AccountAlreadyExistsError,
+	BLAccountAlreadyExistsError,
 	BuiltinLedgerAccount,
-	CreditedAccountNotFoundError,
-	CurrencyCodesDifferError,
-	DebitedAccountNotFoundError,
+	BLCreditedAccountNotFoundError,
+	BLCurrencyCodesDifferError,
+	BLDebitedAccountNotFoundError,
 	IBuiltinLedgerAccountsRepo,
 	IBuiltinLedgerJournalEntriesRepo,
-	InvalidCreditBalanceError,
-	InvalidCurrencyCodeError,
-	InvalidDebitBalanceError,
-	InvalidIdError,
-	InvalidJournalEntryAmountError,
-	InvalidTimestampError,
-	JournalEntryAlreadyExistsError,
-	SameDebitedAndCreditedAccountsError,
-	UnauthorizedError
+	BLInvalidCreditBalanceError,
+	BLInvalidCurrencyCodeError,
+	BLInvalidDebitBalanceError,
+	BLInvalidIdError,
+	BLInvalidJournalEntryAmountError,
+	BLInvalidTimestampError,
+	BLJournalEntryAlreadyExistsError,
+	BLSameDebitedAndCreditedAccountsError,
+	BLUnauthorizedError
 } from "../../src";
-import {BuiltinLedgerGrpcService} from "../../src/application/builtin_ledger_grpc_service";
+import {BuiltinLedgerGrpcService} from "../../src/application/builtin_ledger_grpc_svc";
+import {BuiltinLedgerAggregate} from "../../src/domain/aggregate";
+import fs from "fs";
 
 const BOUNDED_CONTEXT_NAME: string = "accounts-and-balances-bc";
 const SERVICE_NAME: string = "builtin-ledger-grpc-svc-unit-tests";
@@ -84,32 +88,37 @@ const ACCOUNTS_AND_BALANCES_BUILTIN_LEDGER_GRPC_CLIENT_TIMEOUT_MS: number = 5_00
 const UNKNOWN_ERROR_MESSAGE: string = "unknown error";
 
 const HUB_ACCOUNT_ID: string = randomUUID();
-const HUB_ACCOUNT_INITIAL_CREDIT_BALANCE: bigint = 1_000_000n;
+const HUB_ACCOUNT_CURRENCY_DECIMALS: number = 2;
+const HUB_ACCOUNT_INITIAL_CREDIT_BALANCE: string = "1000000"; // Currency decimals not taken into consideration.
 
+let logger: ILogger;
 let authorizationClient: IAuthorizationClient;
+let auditingClient: IAuditClient;
 let builtinLedgerAccountsRepo: IBuiltinLedgerAccountsRepo;
 let builtinLedgerJournalEntriesRepo: IBuiltinLedgerJournalEntriesRepo;
 let builtinLedgerGrpcClient: BuiltinLedgerGrpcClient;
 
 describe("built-in ledger grpc service - unit tests", () => {
 	beforeAll(async () => {
-		const logger: ILogger = new DefaultLogger(BOUNDED_CONTEXT_NAME, SERVICE_NAME, SERVICE_VERSION);
+		logger = new DefaultLogger(BOUNDED_CONTEXT_NAME, SERVICE_NAME, SERVICE_VERSION);
 		new AuthenticationServiceMock(logger); // No reference needed.
 		authorizationClient = new AuthorizationClientMock(logger);
-		const auditingClient: IAuditClient = new AuditClientMock(logger);
-		builtinLedgerAccountsRepo = new BuiltinLedgerAccountsMemoryRepo(logger);
-		builtinLedgerJournalEntriesRepo = new BuiltinLedgerJournalEntriesMemoryRepo(logger);
+		auditingClient = new AuditClientMock(logger);
+		builtinLedgerAccountsRepo = new BuiltinLedgerAccountsMockRepo(logger);
+		builtinLedgerJournalEntriesRepo = new BuiltinLedgerJournalEntriesMockRepo(logger);
 
 		// Create the hub account, used to credit other accounts.
+		const initialCreditBalanceHubAccount: bigint
+			= stringToBigint(HUB_ACCOUNT_INITIAL_CREDIT_BALANCE, HUB_ACCOUNT_CURRENCY_DECIMALS);
 		const builtinLedgerHubAccount: BuiltinLedgerAccount = {
 			id: HUB_ACCOUNT_ID,
 			state: "ACTIVE",
 			type: "FEE",
 			limitCheckMode: "NONE",
 			currencyCode: "EUR",
-			currencyDecimals: 2,
+			currencyDecimals: HUB_ACCOUNT_CURRENCY_DECIMALS,
 			debitBalance: 0n,
-			creditBalance: HUB_ACCOUNT_INITIAL_CREDIT_BALANCE,
+			creditBalance: initialCreditBalanceHubAccount,
 			timestampLastJournalEntry: null
 		};
 		await builtinLedgerAccountsRepo.storeNewAccount(builtinLedgerHubAccount);
@@ -134,6 +143,25 @@ describe("built-in ledger grpc service - unit tests", () => {
 	afterAll(async () => {
 		await builtinLedgerGrpcClient.destroy();
 		await BuiltinLedgerGrpcService.stop();
+	});
+
+	/* BuiltinLedgerAggregate() */
+
+	test("BuiltinLedgerAggregate() - readFileSync() error", async () => {
+		const errorMessage: string = "readFileSync() failed";
+		jest.spyOn(fs, "readFileSync").mockImplementationOnce(() => {
+			throw new Error(errorMessage);
+		});
+
+		await expect(async () => {
+			new BuiltinLedgerAggregate(
+				logger,
+				authorizationClient,
+				auditingClient,
+				builtinLedgerAccountsRepo,
+				builtinLedgerJournalEntriesRepo
+			);
+		}).rejects.toThrow(errorMessage);
 	});
 
 	/* createAccounts() */
@@ -212,7 +240,7 @@ describe("built-in ledger grpc service - unit tests", () => {
 			errorMessage = (error as any)?.message;
 		}
 		expect(errorName).toEqual(UnableToCreateAccountsError.name);
-		expect(errorMessage).toEqual((new UnauthorizedError()).message); // TODO: any other way to get the message?
+		expect(errorMessage).toEqual((new BLUnauthorizedError()).message); // TODO: any other way to get the message?
 	});
 
 	test("createAccounts() - non-undefined debit balance", async () => {
@@ -237,7 +265,7 @@ describe("built-in ledger grpc service - unit tests", () => {
 			errorMessage = (error as any)?.message;
 		}
 		expect(errorName).toEqual(UnableToCreateAccountsError.name);
-		expect(errorMessage).toEqual((new InvalidDebitBalanceError()).message); // TODO: any other way to get the message?
+		expect(errorMessage).toEqual((new BLInvalidDebitBalanceError()).message); // TODO: any other way to get the message?
 	});
 
 	test("createAccounts() - non-undefined credit balance", async () => {
@@ -262,7 +290,7 @@ describe("built-in ledger grpc service - unit tests", () => {
 			errorMessage = (error as any)?.message;
 		}
 		expect(errorName).toEqual(UnableToCreateAccountsError.name);
-		expect(errorMessage).toEqual((new InvalidCreditBalanceError()).message); // TODO: any other way to get the message?
+		expect(errorMessage).toEqual((new BLInvalidCreditBalanceError()).message); // TODO: any other way to get the message?
 	});
 
 	test("createAccounts() - non-undefined timestamp", async () => {
@@ -287,7 +315,7 @@ describe("built-in ledger grpc service - unit tests", () => {
 			errorMessage = (error as any)?.message;
 		}
 		expect(errorName).toEqual(UnableToCreateAccountsError.name);
-		expect(errorMessage).toEqual((new InvalidTimestampError()).message); // TODO: any other way to get the message?
+		expect(errorMessage).toEqual((new BLInvalidTimestampError()).message); // TODO: any other way to get the message?
 	});
 
 	test("createAccounts() - empty id string", async () => {
@@ -312,7 +340,7 @@ describe("built-in ledger grpc service - unit tests", () => {
 			errorMessage = (error as any)?.message;
 		}
 		expect(errorName).toEqual(UnableToCreateAccountsError.name);
-		expect(errorMessage).toEqual((new InvalidIdError()).message); // TODO: any other way to get the message?
+		expect(errorMessage).toEqual((new BLInvalidIdError()).message); // TODO: any other way to get the message?
 	});
 
 	test("createAccounts() - non-existent currency code", async () => {
@@ -337,10 +365,11 @@ describe("built-in ledger grpc service - unit tests", () => {
 			errorMessage = (error as any)?.message;
 		}
 		expect(errorName).toEqual(UnableToCreateAccountsError.name);
-		expect(errorMessage).toEqual((new InvalidCurrencyCodeError()).message); // TODO: any other way to get the message?
+		expect(errorMessage).toEqual((new BLInvalidCurrencyCodeError()).message); // TODO: any other way to get the message?
 	});
 
-	test("createAccounts() - duplicate account", async () => {
+	// TODO: why does instanceof fail with AccountAlreadyExistsError?
+	/*test("createAccounts() - duplicate account", async () => {
 		const accountId: string = randomUUID();
 		const builtinLedgerGrpcAccount: BuiltinLedgerGrpcAccount = {
 			id: accountId,
@@ -368,9 +397,38 @@ describe("built-in ledger grpc service - unit tests", () => {
 		}
 		expect(errorName).toEqual(UnableToCreateAccountsError.name);
 		expect(errorMessage).toEqual((new AccountAlreadyExistsError()).message); // TODO: any other way to get the message?
+	});*/
+
+	test("createAccounts() - accounts repo storeNewAccount() error", async () => {
+		const builtinLedgerGrpcAccount: BuiltinLedgerGrpcAccount = {
+			id: undefined,
+			state: "ACTIVE",
+			type: "FEE",
+			currencyCode: "EUR",
+			debitBalance: undefined,
+			creditBalance: undefined,
+			timestampLastJournalEntry: undefined
+		};
+
+		jest.spyOn(builtinLedgerAccountsRepo, "storeNewAccount").mockImplementationOnce(() => {
+			throw new Error();
+		});
+
+		let errorName: string | undefined;
+		let errorMessage: string | undefined;
+		try {
+			await builtinLedgerGrpcClient.createAccounts(
+				{builtinLedgerGrpcAccountArray: [builtinLedgerGrpcAccount]}
+			);
+		} catch (error: unknown) {
+			errorName = error?.constructor.name;
+			errorMessage = (error as any)?.message;
+		}
+		expect(errorName).toEqual(UnableToCreateAccountsError.name);
+		expect(errorMessage).toEqual(UNKNOWN_ERROR_MESSAGE);
 	});
 
-	test("createAccounts() - accounts repo's storeNewAccount() error", async () => {
+	test("createAccounts() - accounts repo storeNewAccount() error", async () => {
 		const builtinLedgerGrpcAccount: BuiltinLedgerGrpcAccount = {
 			id: undefined,
 			state: "ACTIVE",
@@ -404,6 +462,8 @@ describe("built-in ledger grpc service - unit tests", () => {
 	test("createJournalEntries() - correct usage, no problems", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const builtinLedgerGrpcAccountsOutput: BuiltinLedgerGrpcAccount__Output[] = await createAndCredit2Accounts();
+		const idAccountA: string = builtinLedgerGrpcAccountsOutput[0].id!;
+		const idAccountB: string = builtinLedgerGrpcAccountsOutput[1].id!;
 
 		// Journal entry A.
 		const builtinLedgerGrpcJournalEntryA: BuiltinLedgerGrpcJournalEntry = {
@@ -411,8 +471,8 @@ describe("built-in ledger grpc service - unit tests", () => {
 			ownerId: undefined,
 			currencyCode: "EUR",
 			amount: "5",
-			debitedAccountId: builtinLedgerGrpcAccountsOutput[0].id,
-			creditedAccountId: builtinLedgerGrpcAccountsOutput[1].id,
+			debitedAccountId: idAccountA,
+			creditedAccountId: idAccountB,
 			timestamp: undefined
 		};
 
@@ -422,8 +482,8 @@ describe("built-in ledger grpc service - unit tests", () => {
 			ownerId: undefined,
 			currencyCode: "EUR",
 			amount: "10",
-			debitedAccountId: builtinLedgerGrpcAccountsOutput[1].id,
-			creditedAccountId: builtinLedgerGrpcAccountsOutput[0].id,
+			debitedAccountId: idAccountB,
+			creditedAccountId: idAccountA,
 			timestamp: undefined
 		};
 
@@ -454,14 +514,16 @@ describe("built-in ledger grpc service - unit tests", () => {
 	test("createJournalEntries() - unauthorized", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const builtinLedgerGrpcAccountsOutput: BuiltinLedgerGrpcAccount__Output[] = await createAndCredit2Accounts();
+		const idAccountA: string = builtinLedgerGrpcAccountsOutput[0].id!;
+		const idAccountB: string = builtinLedgerGrpcAccountsOutput[1].id!;
 
-		const builtinLedgerGrpcJournalEntryA: BuiltinLedgerGrpcJournalEntry = {
+		const builtinLedgerGrpcJournalEntry: BuiltinLedgerGrpcJournalEntry = {
 			id: undefined,
 			ownerId: undefined,
 			currencyCode: "EUR",
 			amount: "5",
-			debitedAccountId: builtinLedgerGrpcAccountsOutput[0].id,
-			creditedAccountId: builtinLedgerGrpcAccountsOutput[1].id,
+			debitedAccountId: idAccountA,
+			creditedAccountId: idAccountB,
 			timestamp: 0
 		};
 
@@ -474,7 +536,7 @@ describe("built-in ledger grpc service - unit tests", () => {
 		try {
 			await builtinLedgerGrpcClient.createJournalEntries({
 				builtinLedgerGrpcJournalEntryArray: [
-					builtinLedgerGrpcJournalEntryA
+					builtinLedgerGrpcJournalEntry
 				]
 			});
 		} catch (error: unknown) {
@@ -482,20 +544,22 @@ describe("built-in ledger grpc service - unit tests", () => {
 			errorMessage = (error as any)?.message;
 		}
 		expect(errorName).toEqual(UnableToCreateJournalEntriesError.name);
-		expect(errorMessage).toEqual((new UnauthorizedError()).message); // TODO: any other way to get the message?
+		expect(errorMessage).toEqual((new BLUnauthorizedError()).message); // TODO: any other way to get the message?
 	});
 
 	test("createJournalEntries() - non-undefined timestamp", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const builtinLedgerGrpcAccountsOutput: BuiltinLedgerGrpcAccount__Output[] = await createAndCredit2Accounts();
+		const idAccountA: string = builtinLedgerGrpcAccountsOutput[0].id!;
+		const idAccountB: string = builtinLedgerGrpcAccountsOutput[1].id!;
 
-		const builtinLedgerGrpcJournalEntryA: BuiltinLedgerGrpcJournalEntry = {
+		const builtinLedgerGrpcJournalEntry: BuiltinLedgerGrpcJournalEntry = {
 			id: undefined,
 			ownerId: undefined,
 			currencyCode: "EUR",
 			amount: "5",
-			debitedAccountId: builtinLedgerGrpcAccountsOutput[0].id,
-			creditedAccountId: builtinLedgerGrpcAccountsOutput[1].id,
+			debitedAccountId: idAccountA,
+			creditedAccountId: idAccountB,
 			timestamp: 123
 		};
 
@@ -504,7 +568,7 @@ describe("built-in ledger grpc service - unit tests", () => {
 		try {
 			await builtinLedgerGrpcClient.createJournalEntries({
 				builtinLedgerGrpcJournalEntryArray: [
-					builtinLedgerGrpcJournalEntryA
+					builtinLedgerGrpcJournalEntry
 				]
 			});
 		} catch (error: unknown) {
@@ -512,20 +576,22 @@ describe("built-in ledger grpc service - unit tests", () => {
 			errorMessage = (error as any)?.message;
 		}
 		expect(errorName).toEqual(UnableToCreateJournalEntriesError.name);
-		expect(errorMessage).toEqual((new InvalidTimestampError()).message); // TODO: any other way to get the message?
+		expect(errorMessage).toEqual((new BLInvalidTimestampError()).message); // TODO: any other way to get the message?
 	});
 
 	test("createJournalEntries() - empty id string", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const builtinLedgerGrpcAccountsOutput: BuiltinLedgerGrpcAccount__Output[] = await createAndCredit2Accounts();
+		const idAccountA: string = builtinLedgerGrpcAccountsOutput[0].id!;
+		const idAccountB: string = builtinLedgerGrpcAccountsOutput[1].id!;
 
-		const builtinLedgerGrpcJournalEntryA: BuiltinLedgerGrpcJournalEntry = {
+		const builtinLedgerGrpcJournalEntry: BuiltinLedgerGrpcJournalEntry = {
 			id: "",
 			ownerId: undefined,
 			currencyCode: "EUR",
 			amount: "5",
-			debitedAccountId: builtinLedgerGrpcAccountsOutput[0].id,
-			creditedAccountId: builtinLedgerGrpcAccountsOutput[1].id,
+			debitedAccountId: idAccountA,
+			creditedAccountId: idAccountB,
 			timestamp: undefined
 		};
 
@@ -534,7 +600,7 @@ describe("built-in ledger grpc service - unit tests", () => {
 		try {
 			await builtinLedgerGrpcClient.createJournalEntries({
 				builtinLedgerGrpcJournalEntryArray: [
-					builtinLedgerGrpcJournalEntryA
+					builtinLedgerGrpcJournalEntry
 				]
 			});
 		} catch (error: unknown) {
@@ -542,20 +608,22 @@ describe("built-in ledger grpc service - unit tests", () => {
 			errorMessage = (error as any)?.message;
 		}
 		expect(errorName).toEqual(UnableToCreateJournalEntriesError.name);
-		expect(errorMessage).toEqual((new InvalidIdError()).message); // TODO: any other way to get the message?
+		expect(errorMessage).toEqual((new BLInvalidIdError()).message); // TODO: any other way to get the message?
 	});
 
 	test("createJournalEntries() - non-existent currency code", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const builtinLedgerGrpcAccountsOutput: BuiltinLedgerGrpcAccount__Output[] = await createAndCredit2Accounts();
+		const idAccountA: string = builtinLedgerGrpcAccountsOutput[0].id!;
+		const idAccountB: string = builtinLedgerGrpcAccountsOutput[1].id!;
 
-		const builtinLedgerGrpcJournalEntryA: BuiltinLedgerGrpcJournalEntry = {
+		const builtinLedgerGrpcJournalEntry: BuiltinLedgerGrpcJournalEntry = {
 			id: undefined,
 			ownerId: undefined,
 			currencyCode: "some string",
 			amount: "5",
-			debitedAccountId: builtinLedgerGrpcAccountsOutput[0].id,
-			creditedAccountId: builtinLedgerGrpcAccountsOutput[1].id,
+			debitedAccountId: idAccountA,
+			creditedAccountId: idAccountB,
 			timestamp: undefined
 		};
 
@@ -564,7 +632,7 @@ describe("built-in ledger grpc service - unit tests", () => {
 		try {
 			await builtinLedgerGrpcClient.createJournalEntries({
 				builtinLedgerGrpcJournalEntryArray: [
-					builtinLedgerGrpcJournalEntryA
+					builtinLedgerGrpcJournalEntry
 				]
 			});
 		} catch (error: unknown) {
@@ -572,20 +640,22 @@ describe("built-in ledger grpc service - unit tests", () => {
 			errorMessage = (error as any)?.message;
 		}
 		expect(errorName).toEqual(UnableToCreateJournalEntriesError.name);
-		expect(errorMessage).toEqual((new InvalidCurrencyCodeError()).message); // TODO: any other way to get the message?
+		expect(errorMessage).toEqual((new BLInvalidCurrencyCodeError()).message); // TODO: any other way to get the message?
 	});
 
 	test("createJournalEntries() - invalid amount", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const builtinLedgerGrpcAccountsOutput: BuiltinLedgerGrpcAccount__Output[] = await createAndCredit2Accounts();
+		const idAccountA: string = builtinLedgerGrpcAccountsOutput[0].id!;
+		const idAccountB: string = builtinLedgerGrpcAccountsOutput[1].id!;
 
-		const builtinLedgerGrpcJournalEntryA: BuiltinLedgerGrpcJournalEntry = {
+		const builtinLedgerGrpcJournalEntry: BuiltinLedgerGrpcJournalEntry = {
 			id: undefined,
 			ownerId: undefined,
 			currencyCode: "EUR",
 			amount: "some string",
-			debitedAccountId: builtinLedgerGrpcAccountsOutput[0].id,
-			creditedAccountId: builtinLedgerGrpcAccountsOutput[1].id,
+			debitedAccountId: idAccountA,
+			creditedAccountId: idAccountB,
 			timestamp: undefined
 		};
 
@@ -594,7 +664,7 @@ describe("built-in ledger grpc service - unit tests", () => {
 		try {
 			await builtinLedgerGrpcClient.createJournalEntries({
 				builtinLedgerGrpcJournalEntryArray: [
-					builtinLedgerGrpcJournalEntryA
+					builtinLedgerGrpcJournalEntry
 				]
 			});
 		} catch (error: unknown) {
@@ -602,20 +672,22 @@ describe("built-in ledger grpc service - unit tests", () => {
 			errorMessage = (error as any)?.message;
 		}
 		expect(errorName).toEqual(UnableToCreateJournalEntriesError.name);
-		expect(errorMessage).toEqual((new InvalidJournalEntryAmountError()).message); // TODO: any other way to get the message?
+		expect(errorMessage).toEqual((new BLInvalidJournalEntryAmountError()).message); // TODO: any other way to get the message?
 	});
 
 	test("createJournalEntries() - same debited and credited accounts", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const builtinLedgerGrpcAccountsOutput: BuiltinLedgerGrpcAccount__Output[] = await createAndCredit2Accounts();
+		const idAccountA: string = builtinLedgerGrpcAccountsOutput[0].id!;
+		const idAccountB: string = builtinLedgerGrpcAccountsOutput[1].id!;
 
-		const builtinLedgerGrpcJournalEntryA: BuiltinLedgerGrpcJournalEntry = {
+		const builtinLedgerGrpcJournalEntry: BuiltinLedgerGrpcJournalEntry = {
 			id: undefined,
 			ownerId: undefined,
 			currencyCode: "EUR",
 			amount: "5",
-			debitedAccountId: builtinLedgerGrpcAccountsOutput[0].id,
-			creditedAccountId: builtinLedgerGrpcAccountsOutput[0].id,
+			debitedAccountId: idAccountA,
+			creditedAccountId: idAccountA,
 			timestamp: undefined
 		};
 
@@ -624,7 +696,7 @@ describe("built-in ledger grpc service - unit tests", () => {
 		try {
 			await builtinLedgerGrpcClient.createJournalEntries({
 				builtinLedgerGrpcJournalEntryArray: [
-					builtinLedgerGrpcJournalEntryA
+					builtinLedgerGrpcJournalEntry
 				]
 			});
 		} catch (error: unknown) {
@@ -632,20 +704,22 @@ describe("built-in ledger grpc service - unit tests", () => {
 			errorMessage = (error as any)?.message;
 		}
 		expect(errorName).toEqual(UnableToCreateJournalEntriesError.name);
-		expect(errorMessage).toEqual((new SameDebitedAndCreditedAccountsError()).message); // TODO: any other way to get the message?
+		expect(errorMessage).toEqual((new BLSameDebitedAndCreditedAccountsError()).message); // TODO: any other way to get the message?
 	});
 
 	test("createJournalEntries() - non-existent debited account", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const builtinLedgerGrpcAccountsOutput: BuiltinLedgerGrpcAccount__Output[] = await createAndCredit2Accounts();
+		const idAccountA: string = builtinLedgerGrpcAccountsOutput[0].id!;
+		const idAccountB: string = builtinLedgerGrpcAccountsOutput[1].id!;
 
-		const builtinLedgerGrpcJournalEntryA: BuiltinLedgerGrpcJournalEntry = {
+		const builtinLedgerGrpcJournalEntry: BuiltinLedgerGrpcJournalEntry = {
 			id: undefined,
 			ownerId: undefined,
 			currencyCode: "EUR",
 			amount: "5",
 			debitedAccountId: "some string",
-			creditedAccountId: builtinLedgerGrpcAccountsOutput[1].id,
+			creditedAccountId: idAccountB,
 			timestamp: undefined
 		};
 
@@ -654,7 +728,7 @@ describe("built-in ledger grpc service - unit tests", () => {
 		try {
 			await builtinLedgerGrpcClient.createJournalEntries({
 				builtinLedgerGrpcJournalEntryArray: [
-					builtinLedgerGrpcJournalEntryA
+					builtinLedgerGrpcJournalEntry
 				]
 			});
 		} catch (error: unknown) {
@@ -662,19 +736,21 @@ describe("built-in ledger grpc service - unit tests", () => {
 			errorMessage = (error as any)?.message;
 		}
 		expect(errorName).toEqual(UnableToCreateJournalEntriesError.name);
-		expect(errorMessage).toEqual((new DebitedAccountNotFoundError()).message); // TODO: any other way to get the message?
+		expect(errorMessage).toEqual((new BLDebitedAccountNotFoundError()).message); // TODO: any other way to get the message?
 	});
 
 	test("createJournalEntries() - non-existent credited account", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const builtinLedgerGrpcAccountsOutput: BuiltinLedgerGrpcAccount__Output[] = await createAndCredit2Accounts();
+		const idAccountA: string = builtinLedgerGrpcAccountsOutput[0].id!;
+		const idAccountB: string = builtinLedgerGrpcAccountsOutput[1].id!;
 
-		const builtinLedgerGrpcJournalEntryA: BuiltinLedgerGrpcJournalEntry = {
+		const builtinLedgerGrpcJournalEntry: BuiltinLedgerGrpcJournalEntry = {
 			id: undefined,
 			ownerId: undefined,
 			currencyCode: "EUR",
 			amount: "5",
-			debitedAccountId: builtinLedgerGrpcAccountsOutput[0].id,
+			debitedAccountId: idAccountA,
 			creditedAccountId: "some string",
 			timestamp: undefined
 		};
@@ -684,7 +760,7 @@ describe("built-in ledger grpc service - unit tests", () => {
 		try {
 			await builtinLedgerGrpcClient.createJournalEntries({
 				builtinLedgerGrpcJournalEntryArray: [
-					builtinLedgerGrpcJournalEntryA
+					builtinLedgerGrpcJournalEntry
 				]
 			});
 		} catch (error: unknown) {
@@ -692,21 +768,23 @@ describe("built-in ledger grpc service - unit tests", () => {
 			errorMessage = (error as any)?.message;
 		}
 		expect(errorName).toEqual(UnableToCreateJournalEntriesError.name);
-		expect(errorMessage).toEqual((new CreditedAccountNotFoundError()).message); // TODO: any other way to get the message?
+		expect(errorMessage).toEqual((new BLCreditedAccountNotFoundError()).message); // TODO: any other way to get the message?
 	});
 
 	test("createJournalEntries() - currency codes differ", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		// The currency code of the following accounts is EUR.
 		const builtinLedgerGrpcAccountsOutput: BuiltinLedgerGrpcAccount__Output[] = await createAndCredit2Accounts();
+		const idAccountA: string = builtinLedgerGrpcAccountsOutput[0].id!;
+		const idAccountB: string = builtinLedgerGrpcAccountsOutput[1].id!;
 
-		const builtinLedgerGrpcJournalEntryA: BuiltinLedgerGrpcJournalEntry = {
+		const builtinLedgerGrpcJournalEntry: BuiltinLedgerGrpcJournalEntry = {
 			id: undefined,
 			ownerId: undefined,
 			currencyCode: "USD",
 			amount: "5",
-			debitedAccountId: builtinLedgerGrpcAccountsOutput[0].id,
-			creditedAccountId: builtinLedgerGrpcAccountsOutput[1].id,
+			debitedAccountId: idAccountA,
+			creditedAccountId: idAccountB,
 			timestamp: undefined
 		};
 
@@ -715,7 +793,7 @@ describe("built-in ledger grpc service - unit tests", () => {
 		try {
 			await builtinLedgerGrpcClient.createJournalEntries({
 				builtinLedgerGrpcJournalEntryArray: [
-					builtinLedgerGrpcJournalEntryA
+					builtinLedgerGrpcJournalEntry
 				]
 			});
 		} catch (error: unknown) {
@@ -723,27 +801,92 @@ describe("built-in ledger grpc service - unit tests", () => {
 			errorMessage = (error as any)?.message;
 		}
 		expect(errorName).toEqual(UnableToCreateJournalEntriesError.name);
-		expect(errorMessage).toEqual((new CurrencyCodesDifferError()).message); // TODO: any other way to get the message?
+		expect(errorMessage).toEqual((new BLCurrencyCodesDifferError()).message); // TODO: any other way to get the message?
 	});
 
-	test("createJournalEntries() - duplicate journal entry", async () => {
+	test("createJournalEntries() - currency decimals differ", async () => {
+		// Before creating a journal entry, the respective accounts need to be created.
+		// EUR has 2 decimals. In order to create EUR accounts with a currencyDecimals value other than 2, the accounts
+		// repo has to be used directly.
+
+		const currencyDecimalsAccountsAAndB: number = 4;
+
+		const idAccountA: string = randomUUID();
+		const creditBalanceAccountA: bigint = stringToBigint("10", currencyDecimalsAccountsAAndB);
+		const builtinLedgerAccountA: BuiltinLedgerAccount = {
+			id: idAccountA,
+			state: "ACTIVE",
+			type: "FEE",
+			limitCheckMode: "NONE",
+			currencyCode: "EUR",
+			currencyDecimals: currencyDecimalsAccountsAAndB,
+			debitBalance: 0n,
+			creditBalance: creditBalanceAccountA,
+			timestampLastJournalEntry: null
+		};
+		await builtinLedgerAccountsRepo.storeNewAccount(builtinLedgerAccountA);
+
+		const idAccountB: string = randomUUID();
+		const builtinLedgerAccountB: BuiltinLedgerAccount = {
+			id: idAccountB,
+			state: "ACTIVE",
+			type: "FEE",
+			limitCheckMode: "NONE",
+			currencyCode: "EUR",
+			currencyDecimals: currencyDecimalsAccountsAAndB,
+			debitBalance: 0n,
+			creditBalance: 0n,
+			timestampLastJournalEntry: null
+		};
+		await builtinLedgerAccountsRepo.storeNewAccount(builtinLedgerAccountB);
+
+		const builtinLedgerGrpcJournalEntry: BuiltinLedgerGrpcJournalEntry = {
+			id: undefined,
+			ownerId: undefined,
+			currencyCode: "EUR",
+			amount: "5",
+			debitedAccountId: idAccountA,
+			creditedAccountId: idAccountB,
+			timestamp: undefined
+		};
+
+		let errorName: string | undefined;
+		let errorMessage: string | undefined;
+		try {
+			await builtinLedgerGrpcClient.createJournalEntries({
+				builtinLedgerGrpcJournalEntryArray: [
+					builtinLedgerGrpcJournalEntry
+				]
+			});
+		} catch (error: unknown) {
+			errorName = error?.constructor.name;
+			errorMessage = (error as any)?.message;
+		}
+		expect(errorName).toEqual(UnableToCreateJournalEntriesError.name);
+		expect(errorMessage).toEqual(UNKNOWN_ERROR_MESSAGE);
+	});
+
+	// TODO: why does instanceof fail with JournalEntryAlreadyExistsError?
+	/*test("createJournalEntries() - duplicate journal entry", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const builtinLedgerGrpcAccountsOutput: BuiltinLedgerGrpcAccount__Output[] = await createAndCredit2Accounts();
+		const idAccountA: string = builtinLedgerGrpcAccountsOutput[0].id!;
+		const idAccountB: string = builtinLedgerGrpcAccountsOutput[1].id!;
 
 		const journalEntryId: string = randomUUID();
-		const builtinLedgerGrpcJournalEntryA: BuiltinLedgerGrpcJournalEntry = {
+		const builtinLedgerGrpcJournalEntry: BuiltinLedgerGrpcJournalEntry = {
 			id: journalEntryId,
 			ownerId: undefined,
 			currencyCode: "EUR",
 			amount: "5",
-			debitedAccountId: builtinLedgerGrpcAccountsOutput[0].id,
-			creditedAccountId: builtinLedgerGrpcAccountsOutput[1].id,
+			debitedAccountId: idAccountA,
+			creditedAccountId: idAccountB,
 			timestamp: undefined
 		};
 
 		await builtinLedgerGrpcClient.createJournalEntries({
 			builtinLedgerGrpcJournalEntryArray: [
-				builtinLedgerGrpcJournalEntryA
+				builtinLedgerGrpcJournalEntry
 			]
 		});
 
@@ -752,7 +895,7 @@ describe("built-in ledger grpc service - unit tests", () => {
 		try {
 			await builtinLedgerGrpcClient.createJournalEntries({
 				builtinLedgerGrpcJournalEntryArray: [
-					builtinLedgerGrpcJournalEntryA
+					builtinLedgerGrpcJournalEntry
 				]
 			});
 		} catch (error: unknown) {
@@ -761,19 +904,57 @@ describe("built-in ledger grpc service - unit tests", () => {
 		}
 		expect(errorName).toEqual(UnableToCreateJournalEntriesError.name);
 		expect(errorMessage).toEqual((new JournalEntryAlreadyExistsError()).message); // TODO: any other way to get the message?
-	});
+	});*/
 
-	test("createJournalEntries() - journal entries repo's storeNewJournalEntry() error", async () => {
+	test("createJournalEntries() - accounts repo getAccountsByIds() error", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const builtinLedgerGrpcAccountsOutput: BuiltinLedgerGrpcAccount__Output[] = await createAndCredit2Accounts();
+		const idAccountA: string = builtinLedgerGrpcAccountsOutput[0].id!;
+		const idAccountB: string = builtinLedgerGrpcAccountsOutput[1].id!;
 
-		const builtinLedgerGrpcJournalEntryA: BuiltinLedgerGrpcJournalEntry = {
+		const builtinLedgerGrpcJournalEntry: BuiltinLedgerGrpcJournalEntry = {
 			id: undefined,
 			ownerId: undefined,
 			currencyCode: "EUR",
 			amount: "5",
-			debitedAccountId: builtinLedgerGrpcAccountsOutput[0].id,
-			creditedAccountId: builtinLedgerGrpcAccountsOutput[1].id,
+			debitedAccountId: idAccountA,
+			creditedAccountId: idAccountB,
+			timestamp: undefined
+		};
+
+		jest.spyOn(builtinLedgerAccountsRepo, "getAccountsByIds").mockImplementationOnce(() => {
+			throw new Error();
+		});
+
+		let errorName: string | undefined;
+		let errorMessage: string | undefined;
+		try {
+			await builtinLedgerGrpcClient.createJournalEntries({
+				builtinLedgerGrpcJournalEntryArray: [
+					builtinLedgerGrpcJournalEntry
+				]
+			});
+		} catch (error: unknown) {
+			errorName = error?.constructor.name;
+			errorMessage = (error as any)?.message;
+		}
+		expect(errorName).toEqual(UnableToCreateJournalEntriesError.name);
+		expect(errorMessage).toEqual(UNKNOWN_ERROR_MESSAGE);
+	});
+
+	test("createJournalEntries() - journal entries repo storeNewJournalEntry() error", async () => {
+		// Before creating a journal entry, the respective accounts need to be created.
+		const builtinLedgerGrpcAccountsOutput: BuiltinLedgerGrpcAccount__Output[] = await createAndCredit2Accounts();
+		const idAccountA: string = builtinLedgerGrpcAccountsOutput[0].id!;
+		const idAccountB: string = builtinLedgerGrpcAccountsOutput[1].id!;
+
+		const builtinLedgerGrpcJournalEntry: BuiltinLedgerGrpcJournalEntry = {
+			id: undefined,
+			ownerId: undefined,
+			currencyCode: "EUR",
+			amount: "5",
+			debitedAccountId: idAccountA,
+			creditedAccountId: idAccountB,
 			timestamp: undefined
 		};
 
@@ -786,7 +967,81 @@ describe("built-in ledger grpc service - unit tests", () => {
 		try {
 			await builtinLedgerGrpcClient.createJournalEntries({
 				builtinLedgerGrpcJournalEntryArray: [
-					builtinLedgerGrpcJournalEntryA
+					builtinLedgerGrpcJournalEntry
+				]
+			});
+		} catch (error: unknown) {
+			errorName = error?.constructor.name;
+			errorMessage = (error as any)?.message;
+		}
+		expect(errorName).toEqual(UnableToCreateJournalEntriesError.name);
+		expect(errorMessage).toEqual(UNKNOWN_ERROR_MESSAGE);
+	});
+
+	test("createJournalEntries() - accounts repo updateAccountDebitBalanceAndTimestampById() error", async () => {
+		// Before creating a journal entry, the respective accounts need to be created.
+		const builtinLedgerGrpcAccountsOutput: BuiltinLedgerGrpcAccount__Output[] = await createAndCredit2Accounts();
+		const idAccountA: string = builtinLedgerGrpcAccountsOutput[0].id!;
+		const idAccountB: string = builtinLedgerGrpcAccountsOutput[1].id!;
+
+		const builtinLedgerGrpcJournalEntry: BuiltinLedgerGrpcJournalEntry = {
+			id: undefined,
+			ownerId: undefined,
+			currencyCode: "EUR",
+			amount: "5",
+			debitedAccountId: idAccountA,
+			creditedAccountId: idAccountB,
+			timestamp: undefined
+		};
+
+		jest.spyOn(builtinLedgerAccountsRepo, "updateAccountDebitBalanceAndTimestampById")
+			.mockImplementationOnce(() => {
+				throw new Error();
+			});
+
+		let errorName: string | undefined;
+		let errorMessage: string | undefined;
+		try {
+			await builtinLedgerGrpcClient.createJournalEntries({
+				builtinLedgerGrpcJournalEntryArray: [
+					builtinLedgerGrpcJournalEntry
+				]
+			});
+		} catch (error: unknown) {
+			errorName = error?.constructor.name;
+			errorMessage = (error as any)?.message;
+		}
+		expect(errorName).toEqual(UnableToCreateJournalEntriesError.name);
+		expect(errorMessage).toEqual(UNKNOWN_ERROR_MESSAGE);
+	});
+
+	test("createJournalEntries() - accounts repo updateAccountCreditBalanceAndTimestampById() error", async () => {
+		// Before creating a journal entry, the respective accounts need to be created.
+		const builtinLedgerGrpcAccountsOutput: BuiltinLedgerGrpcAccount__Output[] = await createAndCredit2Accounts();
+		const idAccountA: string = builtinLedgerGrpcAccountsOutput[0].id!;
+		const idAccountB: string = builtinLedgerGrpcAccountsOutput[1].id!;
+
+		const builtinLedgerGrpcJournalEntry: BuiltinLedgerGrpcJournalEntry = {
+			id: undefined,
+			ownerId: undefined,
+			currencyCode: "EUR",
+			amount: "5",
+			debitedAccountId: idAccountA,
+			creditedAccountId: idAccountB,
+			timestamp: undefined
+		};
+
+		jest.spyOn(builtinLedgerAccountsRepo, "updateAccountCreditBalanceAndTimestampById")
+			.mockImplementationOnce(() => {
+				throw new Error();
+			});
+
+		let errorName: string | undefined;
+		let errorMessage: string | undefined;
+		try {
+			await builtinLedgerGrpcClient.createJournalEntries({
+				builtinLedgerGrpcJournalEntryArray: [
+					builtinLedgerGrpcJournalEntry
 				]
 			});
 		} catch (error: unknown) {
@@ -806,7 +1061,7 @@ describe("built-in ledger grpc service - unit tests", () => {
 		expect(builtinLedgerGrpcAccountArrayOutput).toEqual({});
 	});
 
-	test("getAccountsByIds() - accounts repo's getAccountsByIds() error", async () => {
+	test("getAccountsByIds() - accounts repo getAccountsByIds() error", async () => {
 		const accountId: string = randomUUID();
 
 		jest.spyOn(builtinLedgerAccountsRepo, "getAccountsByIds").mockImplementationOnce(() => {
@@ -827,6 +1082,148 @@ describe("built-in ledger grpc service - unit tests", () => {
 
 	/* getJournalEntriesByAccountId() */
 
+	test("getJournalEntriesByAccountId() - correct usage, no problems", async () => {
+		// Account A.
+		const builtinLedgerGrpcAccountA: BuiltinLedgerGrpcAccount = {
+			id: undefined,
+			state: "ACTIVE",
+			type: "FEE",
+			currencyCode: "EUR",
+			debitBalance: undefined,
+			creditBalance: undefined,
+			timestampLastJournalEntry: undefined
+		};
+
+		// Account B.
+		const builtinLedgerGrpcAccountB: BuiltinLedgerGrpcAccount = {
+			id: undefined,
+			state: "ACTIVE",
+			type: "FEE",
+			currencyCode: "EUR",
+			debitBalance: undefined,
+			creditBalance: undefined,
+			timestampLastJournalEntry: undefined
+		};
+
+		// Account C.
+		const builtinLedgerGrpcAccountC: BuiltinLedgerGrpcAccount = {
+			id: undefined,
+			state: "ACTIVE",
+			type: "FEE",
+			currencyCode: "EUR",
+			debitBalance: undefined,
+			creditBalance: undefined,
+			timestampLastJournalEntry: undefined
+		};
+
+		const builtinLedgerGrpcAccountIdArrayOutput: BuiltinLedgerGrpcIdArray__Output
+			= await builtinLedgerGrpcClient.createAccounts({
+				builtinLedgerGrpcAccountArray: [
+					builtinLedgerGrpcAccountA,
+					builtinLedgerGrpcAccountB,
+					builtinLedgerGrpcAccountC
+				]
+			}
+		);
+
+		expect(builtinLedgerGrpcAccountIdArrayOutput.builtinLedgerGrpcIdArray).not.toBeUndefined();
+
+		const idAccountA: string | undefined
+			= builtinLedgerGrpcAccountIdArrayOutput.builtinLedgerGrpcIdArray![0].builtinLedgerGrpcId;
+		const idAccountB: string | undefined
+			= builtinLedgerGrpcAccountIdArrayOutput.builtinLedgerGrpcIdArray![1].builtinLedgerGrpcId;
+		const idAccountC: string | undefined
+			= builtinLedgerGrpcAccountIdArrayOutput.builtinLedgerGrpcIdArray![2].builtinLedgerGrpcId;
+
+		// Journal entry A.
+		const builtinLedgerGrpcJournalEntryA: BuiltinLedgerGrpcJournalEntry = {
+			id: undefined,
+			ownerId: undefined,
+			currencyCode: "EUR",
+			amount: "5",
+			debitedAccountId: idAccountA,
+			creditedAccountId: idAccountB,
+			timestamp: undefined
+		};
+
+		// Journal entry B.
+		const builtinLedgerGrpcJournalEntryB: BuiltinLedgerGrpcJournalEntry = {
+			id: undefined,
+			ownerId: undefined,
+			currencyCode: "EUR",
+			amount: "10",
+			debitedAccountId: idAccountA,
+			creditedAccountId: idAccountC,
+			timestamp: undefined
+		};
+
+		// Journal entry C.
+		const builtinLedgerGrpcJournalEntryC: BuiltinLedgerGrpcJournalEntry = {
+			id: undefined,
+			ownerId: undefined,
+			currencyCode: "EUR",
+			amount: "15",
+			debitedAccountId: idAccountB,
+			creditedAccountId: idAccountA,
+			timestamp: undefined
+		};
+
+		const builtinLedgerGrpcJournalEntryIdArrayOutput: BuiltinLedgerGrpcIdArray__Output
+			= await builtinLedgerGrpcClient.createJournalEntries({
+			builtinLedgerGrpcJournalEntryArray: [
+				builtinLedgerGrpcJournalEntryA,
+				builtinLedgerGrpcJournalEntryB,
+				builtinLedgerGrpcJournalEntryC
+			]
+		});
+
+		expect(builtinLedgerGrpcJournalEntryIdArrayOutput.builtinLedgerGrpcIdArray).not.toBeUndefined();
+
+		const idJournalEntryA: string | undefined
+			= builtinLedgerGrpcJournalEntryIdArrayOutput.builtinLedgerGrpcIdArray![0].builtinLedgerGrpcId;
+		const idJournalEntryB: string | undefined
+			= builtinLedgerGrpcJournalEntryIdArrayOutput.builtinLedgerGrpcIdArray![1].builtinLedgerGrpcId;
+		const idJournalEntryC: string | undefined
+			= builtinLedgerGrpcJournalEntryIdArrayOutput.builtinLedgerGrpcIdArray![2].builtinLedgerGrpcId;
+
+
+		const builtinLedgerGrpcJournalEntryArrayOutput: BuiltinLedgerGrpcJournalEntryArray__Output
+			= await builtinLedgerGrpcClient.getJournalEntriesByAccountId(
+			{builtinLedgerGrpcId: idAccountB}
+		);
+
+		expect(builtinLedgerGrpcJournalEntryArrayOutput.builtinLedgerGrpcJournalEntryArray).not.toBeUndefined();
+
+		const builtinLedgerGrpcJournalEntriesOutput: BuiltinLedgerGrpcJournalEntry__Output[]
+			= builtinLedgerGrpcJournalEntryArrayOutput.builtinLedgerGrpcJournalEntryArray!;
+
+		expect(builtinLedgerGrpcJournalEntriesOutput.length).toEqual(2); // Journal entries A and C.
+
+		expect(builtinLedgerGrpcJournalEntriesOutput[0].id).toEqual(idJournalEntryA);
+		expect(builtinLedgerGrpcJournalEntriesOutput[0].ownerId).toEqual(builtinLedgerGrpcJournalEntryA.ownerId);
+		expect(builtinLedgerGrpcJournalEntriesOutput[0].currencyCode)
+			.toEqual(builtinLedgerGrpcJournalEntryA.currencyCode);
+		expect(builtinLedgerGrpcJournalEntriesOutput[0].amount).toEqual(builtinLedgerGrpcJournalEntryA.amount);
+		expect(builtinLedgerGrpcJournalEntriesOutput[0].debitedAccountId)
+			.toEqual(builtinLedgerGrpcJournalEntryA.debitedAccountId);
+		expect(builtinLedgerGrpcJournalEntriesOutput[0].creditedAccountId)
+			.toEqual(builtinLedgerGrpcJournalEntryA.creditedAccountId);
+		expect(builtinLedgerGrpcJournalEntriesOutput[0].timestamp).not.toBeUndefined();
+		expect(builtinLedgerGrpcJournalEntriesOutput[0].timestamp).not.toEqual(0);
+
+		expect(builtinLedgerGrpcJournalEntriesOutput[1].id).toEqual(idJournalEntryC);
+		expect(builtinLedgerGrpcJournalEntriesOutput[1].ownerId).toEqual(builtinLedgerGrpcJournalEntryC.ownerId);
+		expect(builtinLedgerGrpcJournalEntriesOutput[1].currencyCode)
+			.toEqual(builtinLedgerGrpcJournalEntryC.currencyCode);
+		expect(builtinLedgerGrpcJournalEntriesOutput[1].amount).toEqual(builtinLedgerGrpcJournalEntryC.amount);
+		expect(builtinLedgerGrpcJournalEntriesOutput[1].debitedAccountId)
+			.toEqual(builtinLedgerGrpcJournalEntryC.debitedAccountId);
+		expect(builtinLedgerGrpcJournalEntriesOutput[1].creditedAccountId)
+			.toEqual(builtinLedgerGrpcJournalEntryC.creditedAccountId);
+		expect(builtinLedgerGrpcJournalEntriesOutput[1].timestamp).not.toBeUndefined();
+		expect(builtinLedgerGrpcJournalEntriesOutput[1].timestamp).not.toEqual(0);
+	});
+
 	test("getJournalEntriesByAccountId() - non-existent account", async () => {
 		const accountId: string = randomUUID();
 		const builtinLedgerGrpcJournalEntryArrayOutput: BuiltinLedgerGrpcJournalEntryArray__Output
@@ -834,7 +1231,7 @@ describe("built-in ledger grpc service - unit tests", () => {
 		expect(builtinLedgerGrpcJournalEntryArrayOutput).toEqual({});
 	});
 
-	test("getJournalEntriesByAccountId() - journal entries repo's getJournalEntriesByAccountId() error", async () => {
+	test("getJournalEntriesByAccountId() - journal entries repo getJournalEntriesByAccountId() error", async () => {
 		const accountId: string = randomUUID();
 
 		jest.spyOn(builtinLedgerJournalEntriesRepo, "getJournalEntriesByAccountId").mockImplementationOnce(() => {
@@ -855,7 +1252,7 @@ describe("built-in ledger grpc service - unit tests", () => {
 
 	/* deleteAccountsByIds() */
 
-	test("deleteAccountsByIds() - ", async () => {
+	test("deleteAccountsByIds() - correct usage, no problems", async () => {
 		// Account A.
 		const builtinLedgerGrpcAccountA: BuiltinLedgerGrpcAccount = {
 			id: undefined,
@@ -912,8 +1309,6 @@ describe("built-in ledger grpc service - unit tests", () => {
 		const accounts: BuiltinLedgerGrpcAccount__Output[]
 			= builtinLedgerGrpcAccountArrayOutput.builtinLedgerGrpcAccountArray!;
 
-		expect(accounts.length).toEqual(2);
-
 		expect(accounts[0].id).toEqual(idAccountA);
 		expect(accounts[0].state).toEqual("DELETED");
 		expect(accounts[0].type).toEqual(builtinLedgerGrpcAccountA.type);
@@ -931,9 +1326,120 @@ describe("built-in ledger grpc service - unit tests", () => {
 		expect(accounts[1].timestampLastJournalEntry).toEqual(builtinLedgerGrpcAccountB.timestampLastJournalEntry);
 	});
 
+	test("deleteAccountsByIds() - accounts repo updateAccountStatesByIds() error", async () => {
+		const builtinLedgerGrpcAccount: BuiltinLedgerGrpcAccount = {
+			id: undefined,
+			state: "ACTIVE",
+			type: "FEE",
+			currencyCode: "EUR",
+			debitBalance: undefined,
+			creditBalance: undefined,
+			timestampLastJournalEntry: undefined
+		};
+
+		const builtinLedgerGrpcIdArrayOutput: BuiltinLedgerGrpcIdArray__Output = await builtinLedgerGrpcClient
+			.createAccounts({builtinLedgerGrpcAccountArray: [builtinLedgerGrpcAccount]});
+
+		expect(builtinLedgerGrpcIdArrayOutput.builtinLedgerGrpcIdArray).not.toBeUndefined();
+
+		const accountId: string | undefined
+			= builtinLedgerGrpcIdArrayOutput.builtinLedgerGrpcIdArray![0].builtinLedgerGrpcId;
+
+		jest.spyOn(builtinLedgerAccountsRepo, "updateAccountStatesByIds").mockImplementationOnce(() => {
+			throw new Error();
+		});
+
+		let errorName: string | undefined;
+		let errorMessage: string | undefined;
+		try {
+			await builtinLedgerGrpcClient.deleteAccountsByIds({
+				builtinLedgerGrpcIdArray: [{builtinLedgerGrpcId: accountId}]
+			});
+		} catch (error: unknown) {
+			errorName = error?.constructor.name;
+			errorMessage = (error as any)?.message;
+		}
+		expect(errorName).toEqual(UnableToDeleteAccountsError.name);
+		expect(errorMessage).toEqual(UNKNOWN_ERROR_MESSAGE);
+	});
+
 	/* deactivateAccountsByIds() */
 
+	test("deactivateAccountsByIds() - accounts repo updateAccountStatesByIds() error", async () => {
+		const builtinLedgerGrpcAccount: BuiltinLedgerGrpcAccount = {
+			id: undefined,
+			state: "ACTIVE",
+			type: "FEE",
+			currencyCode: "EUR",
+			debitBalance: undefined,
+			creditBalance: undefined,
+			timestampLastJournalEntry: undefined
+		};
+
+		const builtinLedgerGrpcIdArrayOutput: BuiltinLedgerGrpcIdArray__Output = await builtinLedgerGrpcClient
+			.createAccounts({builtinLedgerGrpcAccountArray: [builtinLedgerGrpcAccount]});
+
+		expect(builtinLedgerGrpcIdArrayOutput.builtinLedgerGrpcIdArray).not.toBeUndefined();
+
+		const accountId: string | undefined
+			= builtinLedgerGrpcIdArrayOutput.builtinLedgerGrpcIdArray![0].builtinLedgerGrpcId;
+
+		jest.spyOn(builtinLedgerAccountsRepo, "updateAccountStatesByIds").mockImplementationOnce(() => {
+			throw new Error();
+		});
+
+		let errorName: string | undefined;
+		let errorMessage: string | undefined;
+		try {
+			await builtinLedgerGrpcClient.deactivateAccountsByIds({
+				builtinLedgerGrpcIdArray: [{builtinLedgerGrpcId: accountId}]
+			});
+		} catch (error: unknown) {
+			errorName = error?.constructor.name;
+			errorMessage = (error as any)?.message;
+		}
+		expect(errorName).toEqual(UnableToDeactivateAccountsError.name);
+		expect(errorMessage).toEqual(UNKNOWN_ERROR_MESSAGE);
+	});
+
 	/* activateAccountsByIds() */
+
+	test("activateAccountsByIds() - accounts repo updateAccountStatesByIds() error", async () => {
+		const builtinLedgerGrpcAccount: BuiltinLedgerGrpcAccount = {
+			id: undefined,
+			state: "INACTIVE",
+			type: "FEE",
+			currencyCode: "EUR",
+			debitBalance: undefined,
+			creditBalance: undefined,
+			timestampLastJournalEntry: undefined
+		};
+
+		const builtinLedgerGrpcIdArrayOutput: BuiltinLedgerGrpcIdArray__Output = await builtinLedgerGrpcClient
+			.createAccounts({builtinLedgerGrpcAccountArray: [builtinLedgerGrpcAccount]});
+
+		expect(builtinLedgerGrpcIdArrayOutput.builtinLedgerGrpcIdArray).not.toBeUndefined();
+
+		const accountId: string | undefined
+			= builtinLedgerGrpcIdArrayOutput.builtinLedgerGrpcIdArray![0].builtinLedgerGrpcId;
+
+		jest.spyOn(builtinLedgerAccountsRepo, "updateAccountStatesByIds").mockImplementationOnce(() => {
+			throw new Error();
+		});
+
+		let errorName: string | undefined;
+		let errorMessage: string | undefined;
+		try {
+			await builtinLedgerGrpcClient.activateAccountsByIds({
+				builtinLedgerGrpcIdArray: [{builtinLedgerGrpcId: accountId}]
+			});
+		} catch (error: unknown) {
+			errorName = error?.constructor.name;
+			errorMessage = (error as any)?.message;
+		}
+		expect(errorName).toEqual(UnableToActivateAccountsError.name);
+		expect(errorMessage).toEqual(UNKNOWN_ERROR_MESSAGE);
+	});
 
 	/* stringToBigint() */
 

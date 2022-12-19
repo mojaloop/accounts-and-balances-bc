@@ -32,22 +32,21 @@
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {ServerUnaryCall, sendUnaryData, status} from "@grpc/grpc-js";
 import {
-	AccountAlreadyExistsError,
+	BLAccountAlreadyExistsError,
+	BLAccountNotFoundError,
 	BuiltinLedgerAccountDto,
 	BuiltinLedgerJournalEntryDto,
-	CreditedAccountNotFoundError,
-	CurrencyCodesDifferError,
-	DebitedAccountNotFoundError,
-	InvalidAccountStateError,
-	InvalidAccountTypeError,
-	InvalidCreditBalanceError,
-	InvalidCurrencyCodeError,
-	InvalidDebitBalanceError,
-	InvalidIdError,
-	InvalidJournalEntryAmountError,
-	InvalidTimestampError, JournalEntryAlreadyExistsError,
-	SameDebitedAndCreditedAccountsError,
-	UnauthorizedError
+	BLCreditedAccountNotFoundError,
+	BLCurrencyCodesDifferError,
+	BLDebitedAccountNotFoundError,
+	BLInvalidCreditBalanceError,
+	BLInvalidCurrencyCodeError,
+	BLInvalidDebitBalanceError,
+	BLInvalidIdError,
+	BLInvalidJournalEntryAmountError,
+	BLInvalidTimestampError, BLJournalEntryAlreadyExistsError,
+	BLSameDebitedAndCreditedAccountsError,
+	BLUnauthorizedError
 } from "../../domain";
 import {BuiltinLedgerAggregate} from "../../domain/aggregate";
 import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
@@ -130,47 +129,47 @@ export class GrpcHandlers {
 		try {
 			accountIds = await this.aggregate.createAccounts(builtinLedgerAccountDtos, this.securityContext);
 		} catch (error: unknown) {
-			if (error instanceof UnauthorizedError) {
+			if (error instanceof BLUnauthorizedError) {
 				callback(
 					{code: status.PERMISSION_DENIED, details: error.message},
 					null
 				);
-			} else if (error instanceof InvalidDebitBalanceError) {
+			} else if (error instanceof BLInvalidDebitBalanceError) {
 				callback(
 					{code: status.INVALID_ARGUMENT, details: error.message},
 					null
 				);
-			} else if (error instanceof InvalidCreditBalanceError) {
+			} else if (error instanceof BLInvalidCreditBalanceError) {
 				callback(
 					{code: status.INVALID_ARGUMENT, details: error.message},
 					null
 				);
-			} else if (error instanceof InvalidTimestampError) {
+			} else if (error instanceof BLInvalidTimestampError) {
 				callback(
 					{code: status.INVALID_ARGUMENT, details: error.message},
 					null
 				);
-			} else if (error instanceof InvalidIdError) {
+			} else if (error instanceof BLInvalidIdError) {
 				callback(
 					{code: status.INVALID_ARGUMENT, details: error.message},
 					null
 				);
-			} else if (error instanceof InvalidAccountStateError) {
+			/*} else if (error instanceof BLInvalidAccountStateError) {
 				callback(
 					{code: status.INVALID_ARGUMENT, details: error.message},
 					null
 				);
-			} else if (error instanceof InvalidAccountTypeError) {
+			} else if (error instanceof BLInvalidAccountTypeError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);*/
+			} else if (error instanceof BLInvalidCurrencyCodeError) {
 				callback(
 					{code: status.INVALID_ARGUMENT, details: error.message},
 					null
 				);
-			} else if (error instanceof InvalidCurrencyCodeError) {
-				callback(
-					{code: status.INVALID_ARGUMENT, details: error.message},
-					null
-				);
-			} else if (error instanceof AccountAlreadyExistsError) {
+			} else if (error instanceof BLAccountAlreadyExistsError) {
 				callback(
 					{code: status.ALREADY_EXISTS, details: error.message},
 					null
@@ -225,62 +224,62 @@ export class GrpcHandlers {
 			journalEntryIds
 				= await this.aggregate.createJournalEntries(builtinLedgerJournalEntryDtos, this.securityContext);
 		} catch (error: unknown) {
-			if (error instanceof UnauthorizedError) {
+			if (error instanceof BLUnauthorizedError) {
 				callback(
 					{code: status.PERMISSION_DENIED, details: error.message},
 					null
 				);
-			} else if (error instanceof InvalidTimestampError) {
+			} else if (error instanceof BLInvalidTimestampError) {
 				callback(
 					{code: status.INVALID_ARGUMENT, details: error.message},
 					null
 				);
-			} else if (error instanceof InvalidIdError) {
+			} else if (error instanceof BLInvalidIdError) {
 				callback(
 					{code: status.INVALID_ARGUMENT, details: error.message},
 					null
 				);
-			} else if (error instanceof InvalidCurrencyCodeError) {
+			} else if (error instanceof BLInvalidCurrencyCodeError) {
 				callback(
 					{code: status.INVALID_ARGUMENT, details: error.message},
 					null
 				);
-			} else if (error instanceof InvalidJournalEntryAmountError) {
+			} else if (error instanceof BLInvalidJournalEntryAmountError) {
 				callback(
 					{code: status.INVALID_ARGUMENT, details: error.message},
 					null
 				);
-			} else if (error instanceof SameDebitedAndCreditedAccountsError) {
+			} else if (error instanceof BLSameDebitedAndCreditedAccountsError) {
 				callback(
 					{code: status.INVALID_ARGUMENT, details: error.message},
 					null
 				);
-			} else if (error instanceof DebitedAccountNotFoundError) {
+			} else if (error instanceof BLDebitedAccountNotFoundError) {
 				callback(
 					{code: status.INVALID_ARGUMENT, details: error.message},
 					null
 				);
-			} else if (error instanceof CreditedAccountNotFoundError) {
+			} else if (error instanceof BLCreditedAccountNotFoundError) {
 				callback(
 					{code: status.INVALID_ARGUMENT, details: error.message},
 					null
 				);
-			} else if (error instanceof CurrencyCodesDifferError) {
+			} else if (error instanceof BLCurrencyCodesDifferError) {
 				callback(
 					{code: status.INVALID_ARGUMENT, details: error.message},
 					null
 				);
-			/*} else if (error instanceof DebitBalanceExceedsCreditBalanceError) {
+			/*} else if (error instanceof BLDebitBalanceExceedsCreditBalanceError) {
 				callback(
 					{code: status.INVALID_ARGUMENT, details: error.message},
 					null
 				);
-			} else if (error instanceof CreditBalanceExceedsDebitBalanceError) {
+			} else if (error instanceof BLCreditBalanceExceedsDebitBalanceError) {
 				callback(
 					{code: status.INVALID_ARGUMENT, details: error.message},
 					null
 				);*/
-			} else if (error instanceof JournalEntryAlreadyExistsError) {
+			} else if (error instanceof BLJournalEntryAlreadyExistsError) {
 				callback(
 					{code: status.ALREADY_EXISTS, details: error.message},
 					null
@@ -324,7 +323,7 @@ export class GrpcHandlers {
 		try {
 			builtinLedgerAccountDtos = await this.aggregate.getAccountsByIds(accountIds, this.securityContext);
 		} catch (error: unknown) {
-			if (error instanceof UnauthorizedError) {
+			if (error instanceof BLUnauthorizedError) {
 				callback(
 					{code: status.PERMISSION_DENIED, details: error.message},
 					null
@@ -372,7 +371,7 @@ export class GrpcHandlers {
 			builtinLedgerJournalEntryDtos
 				= await this.aggregate.getJournalEntriesByAccountId(accountId, this.securityContext);
 		} catch (error: unknown) {
-			if (error instanceof UnauthorizedError) {
+			if (error instanceof BLUnauthorizedError) {
 				callback(
 					{code: status.PERMISSION_DENIED, details: error.message},
 					null
@@ -424,9 +423,14 @@ export class GrpcHandlers {
 		try {
 			await this.aggregate.deleteAccountsByIds(accountIds, this.securityContext);
 		} catch (error: unknown) {
-			if (error instanceof UnauthorizedError) {
+			if (error instanceof BLUnauthorizedError) {
 				callback(
 					{code: status.PERMISSION_DENIED, details: error.message},
+					null
+				);
+			} else if (error instanceof BLAccountNotFoundError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
 					null
 				);
 			} else {
@@ -464,9 +468,14 @@ export class GrpcHandlers {
 		try {
 			await this.aggregate.deactivateAccountsByIds(accountIds, this.securityContext);
 		} catch (error: unknown) {
-			if (error instanceof UnauthorizedError) {
+			if (error instanceof BLUnauthorizedError) {
 				callback(
 					{code: status.PERMISSION_DENIED, details: error.message},
+					null
+				);
+			} else if (error instanceof BLAccountNotFoundError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
 					null
 				);
 			} else {
@@ -504,9 +513,14 @@ export class GrpcHandlers {
 		try {
 			await this.aggregate.activateAccountsByIds(accountIds, this.securityContext);
 		} catch (error: unknown) {
-			if (error instanceof UnauthorizedError) {
+			if (error instanceof BLUnauthorizedError) {
 				callback(
 					{code: status.PERMISSION_DENIED, details: error.message},
+					null
+				);
+			} else if (error instanceof BLAccountNotFoundError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
 					null
 				);
 			} else {

@@ -29,8 +29,8 @@
 
 "use strict";
 
-export * from "./grpc_service";
+export * from "./grpc_svc";
 
-import {GrpcService} from "./grpc_service";
+import {GrpcService} from "./grpc_svc";
 
 GrpcService.start();

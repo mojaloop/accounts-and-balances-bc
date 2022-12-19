@@ -30,3 +30,4 @@
 "use strict";
 
 export * from "./domain";
+export * from "./implementations";

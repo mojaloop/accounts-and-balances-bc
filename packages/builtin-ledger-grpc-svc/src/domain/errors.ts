@@ -30,36 +30,32 @@
 "use strict";
 
 // Account.
-export class InvalidAccountStateError extends Error {readonly message = "invalid account state";}
-export class InvalidAccountTypeError extends Error {readonly message = "invalid account type";}
-export class InvalidDebitBalanceError extends Error {readonly message = "invalid debit balance";}
-export class InvalidCreditBalanceError extends Error {readonly message = "invalid credit balance";}
+// export class BLInvalidAccountStateError extends Error {readonly message = "invalid account state";}
+// export class BLInvalidAccountTypeError extends Error {readonly message = "invalid account type";}
+export class BLInvalidDebitBalanceError extends Error {readonly message = "invalid debit balance";}
+export class BLInvalidCreditBalanceError extends Error {readonly message = "invalid credit balance";}
 // JournalEntry.
-export class InvalidJournalEntryAmountError extends Error {readonly message = "invalid journal entry amount";}
-export class SameDebitedAndCreditedAccountsError extends Error {readonly message = "same debited and credited accounts";}
-export class DebitedAccountNotFoundError extends Error {readonly message = "debited account not found";}
-export class CreditedAccountNotFoundError extends Error {readonly message = "credited account not found";}
-export class CurrencyCodesDifferError extends Error {readonly message = "currency codes differ";}
-export class DebitBalanceExceedsCreditBalanceError extends Error {readonly message = "debit balance exceeds credit balance";}
-export class CreditBalanceExceedsDebitBalanceError extends Error {readonly message = "credit balance exceeds debit balance";}
+export class BLInvalidJournalEntryAmountError extends Error {readonly message = "invalid journal entry amount";}
+export class BLSameDebitedAndCreditedAccountsError extends Error {readonly message = "same debited and credited accounts";}
+export class BLDebitedAccountNotFoundError extends Error {readonly message = "debited account not found";}
+export class BLCreditedAccountNotFoundError extends Error {readonly message = "credited account not found";}
+export class BLCurrencyCodesDifferError extends Error {readonly message = "currency codes differ";}
+// export class BLDebitBalanceExceedsCreditBalanceError extends Error {readonly message = "debit balance exceeds credit balance";}
+// export class BLCreditBalanceExceedsDebitBalanceError extends Error {readonly message = "credit balance exceeds debit balance";}
 // Common.
-export class InvalidIdError extends Error {readonly message = "invalid id";}
-export class InvalidExternalIdError extends Error {readonly message = "invalid external id";}
-export class InvalidCurrencyCodeError extends Error {readonly message = "invalid currency code";}
-export class InvalidCurrencyDecimalsError extends Error {readonly message = "invalid currency decimals";}
-export class InvalidTimestampError extends Error {readonly message = "invalid timestamp";}
+export class BLInvalidIdError extends Error {readonly message = "invalid id";}
+export class BLInvalidCurrencyCodeError extends Error {readonly message = "invalid currency code";}
+export class BLInvalidTimestampError extends Error {readonly message = "invalid timestamp";}
 // Repos.
-export class UnableToInitRepoError extends Error {readonly message = "unable to init repo";}
-export class AccountAlreadyExistsError extends Error {readonly message = "account already exists";}
-export class AccountNotFoundError extends Error {readonly message = "account not found";}
-export class UnableToStoreAccountError extends Error {readonly message = "unable to store account";}
-export class UnableToGetAccountError extends Error {readonly message = "unable to get account";}
-export class UnableToGetAccountsError extends Error {readonly message = "unable to get accounts";}
-export class UnableToUpdateAccountError extends Error {readonly message = "unable to update account";}
-export class UnableToUpdateAccountsError extends Error {readonly message = "unable to update accounts";}
-export class JournalEntryAlreadyExistsError extends Error {readonly message = "journal entry already exists";}
-export class UnableToStoreJournalEntryError extends Error {readonly message = "unable to store journal entry";}
-export class UnableToGetJournalEntryError extends Error {readonly message = "unable to get journal entry";}
-export class UnableToGetJournalEntriesError extends Error {readonly message = "unable to get journal entries";}
+export class BLUnableToInitRepoError extends Error {readonly message = "unable to init repo";}
+export class BLAccountAlreadyExistsError extends Error {readonly message = "account already exists";}
+export class BLAccountNotFoundError extends Error {readonly message = "account not found";}
+export class BLUnableToStoreAccountError extends Error {readonly message = "unable to store account";}
+export class BLUnableToGetAccountsError extends Error {readonly message = "unable to get accounts";}
+export class BLUnableToUpdateAccountError extends Error {readonly message = "unable to update account";}
+export class BLUnableToUpdateAccountsError extends Error {readonly message = "unable to update accounts";}
+export class BLJournalEntryAlreadyExistsError extends Error {readonly message = "journal entry already exists";}
+export class BLUnableToStoreJournalEntryError extends Error {readonly message = "unable to store journal entry";}
+export class BLUnableToGetJournalEntriesError extends Error {readonly message = "unable to get journal entries";}
 // Others.
-export class UnauthorizedError extends Error {readonly message = "unauthorized";}
+export class BLUnauthorizedError extends Error {readonly message = "unauthorized";}

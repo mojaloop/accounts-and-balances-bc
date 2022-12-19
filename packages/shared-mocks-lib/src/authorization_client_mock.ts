@@ -29,25 +29,15 @@
 
 "use strict";
 
-import {BuiltinLedgerJournalEntry} from "../../src/domain/entities";
-import {
-	JournalEntryAlreadyExistsError,
-	UnableToGetJournalEntriesError,
-	UnableToStoreJournalEntryError
-} from "../../src/domain/errors";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {IBuiltinLedgerJournalEntriesRepo} from "../../src/domain/infrastructure";
+import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
 
-export class BuiltinLedgerJournalEntriesMemoryRepo implements IBuiltinLedgerJournalEntriesRepo {
-	// Properties received through the constructor.
+// TODO: should anything by logged?
+export class AuthorizationClientMock implements IAuthorizationClient {
 	private readonly logger: ILogger;
-	// Other properties.
-	readonly journalEntries: Map<string, BuiltinLedgerJournalEntry>;
 
 	constructor(logger: ILogger) {
 		this.logger = logger.createChild(this.constructor.name);
-
-		this.journalEntries = new Map();
 	}
 
 	async init(): Promise<void> {
@@ -58,35 +48,21 @@ export class BuiltinLedgerJournalEntriesMemoryRepo implements IBuiltinLedgerJour
 		return;
 	}
 
-	async storeNewJournalEntry(builtinLedgerJournalEntry: BuiltinLedgerJournalEntry): Promise<void> {
-		let journalEntryExists: boolean;
-		try {
-			journalEntryExists = this.journalEntries.has(builtinLedgerJournalEntry.id);
-		} catch (error: unknown) {
-			throw new UnableToStoreJournalEntryError();
-		}
-		if (journalEntryExists) {
-			throw new JournalEntryAlreadyExistsError();
-		}
-		try {
-			this.journalEntries.set(builtinLedgerJournalEntry.id, builtinLedgerJournalEntry);
-		} catch (error: unknown) {
-			throw new UnableToStoreJournalEntryError();
-		}
+	roleHasPrivilege(roleId: string, privilegeId: string): boolean {
+		return true;
 	}
 
-	async getJournalEntriesByAccountId(accountId: string): Promise<BuiltinLedgerJournalEntry[]> {
-		const builtinLedgerJournalEntries: BuiltinLedgerJournalEntry[] = [];
-		try {
-			for (const builtinLedgerJournalEntry of this.journalEntries.values()) {
-				if (builtinLedgerJournalEntry.debitedAccountId === accountId
-					|| builtinLedgerJournalEntry.creditedAccountId === accountId) {
-					builtinLedgerJournalEntries.push(builtinLedgerJournalEntry);
-				}
-			}
-		} catch (error: unknown) {
-			throw new UnableToGetJournalEntriesError();
-		}
-		return builtinLedgerJournalEntries;
+	addPrivilege(privId: string, labelName: string, description: string): void {
+		return;
+	}
+
+	addPrivilegesArray(
+		privsArray: {
+			privId: string;
+			labelName: string;
+			description: string
+		}[]
+	): void {
+		return;
 	}
 }

@@ -215,7 +215,7 @@ export class ChartOfAccountsMongoRepo implements IChartOfAccountsRepo {
         return accounts;
     }
 
-    async updateAccountStatesByIds(accountIds: string[], accountState: AccountState): Promise<void> {
+    async updateAccountStatesByInternalIds(accountIds: string[], accountState: AccountState): Promise<void> {
         let updateResult: any; // TODO: verify type.
         try {
             updateResult = await this.collection.updateMany(

@@ -36,23 +36,21 @@ import {Account, JournalEntry} from "@mojaloop/accounts-and-balances-bc-public-t
 import {randomUUID} from "crypto";
 import {
 	GrpcService
-} from "../../packages/grpc-svc/src/application/grpc_service";
+} from "../../packages/grpc-svc/src/application/grpc_svc";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
 import {
-	IBuiltinLedgerAccountsRepo, IBuiltinLedgerJournalEntriesRepo
-} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc/dist/domain/infrastructure";
-import {
-	BuiltinLedgerAccountsMongoRepo
-} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc/dist/implementations/builtin_ledger_accounts_mongo_repo";
-import {BuiltinLedgerAccount} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc/dist/domain/entities";
-import {AuthorizationClientMock} from "./authorization_client_mock";
-import {BuiltinLedgerGrpcService} from "../../packages/builtin-ledger-grpc-svc/src/application/builtin_ledger_grpc_service";
+	BuiltinLedgerAccount,
+	BuiltinLedgerAccountsMongoRepo,
+	BuiltinLedgerJournalEntriesMongoRepo,
+	IBuiltinLedgerAccountsRepo,
+	IBuiltinLedgerJournalEntriesRepo
+} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc";
+import {AuthorizationClientMock} from "@mojaloop/accounts-and-balances-bc-shared-mocks-lib";
+import {BuiltinLedgerGrpcService} from "../../packages/builtin-ledger-grpc-svc/src/application/builtin_ledger_grpc_svc";
 import {IChartOfAccountsRepo} from "../../packages/grpc-svc/src/domain/infrastructure-types/chart_of_accounts_repo";
 import {CoaAccount} from "../../packages/grpc-svc/src/domain/coa_account";
-import {
-	BuiltinLedgerJournalEntriesMongoRepo
-} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc/dist/implementations/builtin_ledger_journal_entries_mongo_repo";
 import {ChartOfAccountsMongoRepo} from "../../packages/grpc-svc/src/implementations/chart_of_accounts_mongo_repo";
+import {stringToBigint} from "../../packages/grpc-svc/src/domain/converters";
 
 /* ********** Constants Begin ********** */
 
@@ -87,7 +85,8 @@ const ACCOUNTS_AND_BALANCES_GRPC_CLIENT_TIMEOUT_MS: number = 5_000;
 
 // Hub account.
 const HUB_ACCOUNT_ID: string = randomUUID();
-const HUB_ACCOUNT_INITIAL_CREDIT_BALANCE: bigint = 1_000_000n;
+const HUB_ACCOUNT_CURRENCY_DECIMALS: number = 2;
+const HUB_ACCOUNT_INITIAL_CREDIT_BALANCE: string = "1000000"; // Currency decimals not taken into consideration.
 
 /* ********** Constants End ********** */
 
@@ -148,15 +147,17 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 		await chartOfAccountRepo.init();
 
 		// Create the hub account, used to credit other accounts, on the built-in ledger.
+		const initialCreditBalanceHubAccount: bigint
+			= stringToBigint(HUB_ACCOUNT_INITIAL_CREDIT_BALANCE, HUB_ACCOUNT_CURRENCY_DECIMALS);
 		const builtinLedgerHubAccount: BuiltinLedgerAccount = {
 			id: HUB_ACCOUNT_ID,
 			state: "ACTIVE",
 			type: "FEE",
 			limitCheckMode: "NONE",
 			currencyCode: "EUR",
-			currencyDecimals: 2,
+			currencyDecimals: HUB_ACCOUNT_CURRENCY_DECIMALS,
 			debitBalance: 0n,
-			creditBalance: HUB_ACCOUNT_INITIAL_CREDIT_BALANCE,
+			creditBalance: initialCreditBalanceHubAccount,
 			timestampLastJournalEntry: null
 		};
 		await builtinLedgerAccountsRepo.storeNewAccount(builtinLedgerHubAccount);
@@ -169,7 +170,7 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 			state: "ACTIVE",
 			type: "FEE",
 			currencyCode: "EUR",
-			currencyDecimals: 2
+			currencyDecimals: HUB_ACCOUNT_CURRENCY_DECIMALS
 		};
 		await chartOfAccountRepo.storeAccounts([coaHubAccount]);
 

@@ -1,6 +1,6 @@
 {
   "name": "@mojaloop/accounts-and-balances-bc-grpc-svc",
-  "version": "0.0.3",
+  "version": "0.0.1",
   "description": "Accounts and Balances BC - gRPC service",
   "license": "Apache-2.0",
   "repository": {
@@ -14,6 +14,7 @@
     "Gonçalo Garcia <goncalogarcia99@gmail.com>",
     "Pedro Sousa Barreto <pedrob@crosslaketech.com>"
   ],
+  "private": true,
   "main": "dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
@@ -28,17 +29,18 @@
     "audit:fix": "npm audit fix",
     "lint": "eslint src",
     "build": "tsc",
+    "postbuild": "cp ./src/domain/currencies.json ./dist/domain/",
     "test:unit": "jest",
-    "test:unit-single": "jest --coverage false -t",
-    "pub": "npm version patch && npm publish --tag latest --access public"
+    "test:unit-single": "jest --coverage false -t"
   },
   "devDependencies": {
     "@grpc/proto-loader": "~0.7.4",
-    "@mojaloop/accounts-and-balances-bc-public-types-lib": "~0.0.3"
+    "@mojaloop/accounts-and-balances-bc-public-types-lib": "~0.0.4"
   },
   "dependencies": {
     "@grpc/grpc-js": "~1.8.0",
     "@mojaloop/logging-bc-public-types-lib": "~0.1.14",
-    "@mojaloop/logging-bc-client-lib": "~0.1.17"
+    "@mojaloop/logging-bc-client-lib": "~0.1.17",
+    "mongodb": "~4.12.1"
   }
 }

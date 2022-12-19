@@ -32,15 +32,15 @@
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {Collection, Db, MongoClient, MongoServerError, UpdateResult} from "mongodb";
 import {
-    AccountAlreadyExistsError,
-    AccountNotFoundError,
+    BLAccountAlreadyExistsError,
+    BLAccountNotFoundError,
     BuiltinLedgerAccount,
     IBuiltinLedgerAccountsRepo,
-    UnableToGetAccountsError,
-    UnableToInitRepoError,
-    UnableToStoreAccountError,
-    UnableToUpdateAccountError,
-    UnableToUpdateAccountsError
+    BLUnableToGetAccountsError,
+    BLUnableToInitRepoError,
+    BLUnableToStoreAccountError,
+    BLUnableToUpdateAccountError,
+    BLUnableToUpdateAccountsError
 } from "../domain";
 import {AccountState} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
@@ -141,7 +141,7 @@ export class BuiltinLedgerAccountsMongoRepo implements IBuiltinLedgerAccountsRep
                 validator: {$jsonSchema: BUILTIN_LEDGER_ACCOUNT_MONGO_SCHEMA}
             });
         } catch (error: unknown) {
-            throw new UnableToInitRepoError((error as any)?.message);
+            throw new BLUnableToInitRepoError((error as any)?.message);
         }
     }
 
@@ -171,9 +171,9 @@ export class BuiltinLedgerAccountsMongoRepo implements IBuiltinLedgerAccountsRep
                 error instanceof MongoServerError
                 && error.code === BuiltinLedgerAccountsMongoRepo.DUPLICATE_KEY_ERROR_CODE
             ) { // TODO: should this be done?
-                throw new AccountAlreadyExistsError();
+                throw new BLAccountAlreadyExistsError();
             }
-            throw new UnableToStoreAccountError((error as any)?.message);
+            throw new BLUnableToStoreAccountError((error as any)?.message);
         }
     }
 
@@ -182,7 +182,7 @@ export class BuiltinLedgerAccountsMongoRepo implements IBuiltinLedgerAccountsRep
         try {
             accounts = await this.collection.find({_id: {$in: ids}}).toArray(); // TODO: verify filter; is there a simpler way to find by _id?
         } catch (error: unknown) {
-            throw new UnableToGetAccountsError((error as any)?.message);
+            throw new BLUnableToGetAccountsError((error as any)?.message);
         }
 
         // Convert Mongo's _id to BuiltinLedgerAccount's id.
@@ -209,11 +209,11 @@ export class BuiltinLedgerAccountsMongoRepo implements IBuiltinLedgerAccountsRep
                 {$set: {debitBalance: debitBalance.toString(), timestampLastJournalEntry: timestampLastJournalEntry}}
             );
         } catch (error: unknown) {
-            throw new UnableToUpdateAccountError((error as any)?.message);
+            throw new BLUnableToUpdateAccountError((error as any)?.message);
         }
 
         if (updateResult.modifiedCount === 0) { // TODO: use "!updateResult.modifiedCount" instead?
-            throw new AccountNotFoundError();
+            throw new BLAccountNotFoundError();
         }
     }
 
@@ -229,11 +229,11 @@ export class BuiltinLedgerAccountsMongoRepo implements IBuiltinLedgerAccountsRep
                 {$set: {creditBalance: creditBalance.toString(), timestampLastJournalEntry: timestampLastJournalEntry}}
             );
         } catch (error: unknown) {
-            throw new UnableToUpdateAccountError((error as any)?.message);
+            throw new BLUnableToUpdateAccountError((error as any)?.message);
         }
 
         if (updateResult.modifiedCount === 0) { // TODO: use "!updateResult.modifiedCount" instead?
-            throw new AccountNotFoundError();
+            throw new BLAccountNotFoundError();
         }
     }
 
@@ -245,11 +245,11 @@ export class BuiltinLedgerAccountsMongoRepo implements IBuiltinLedgerAccountsRep
                 {$set: {accountState: accountState}}
             );
         } catch (error: unknown) {
-            throw new UnableToUpdateAccountsError((error as any)?.message);
+            throw new BLUnableToUpdateAccountsError((error as any)?.message);
         }
 
         if (updateResult.modifiedCount === 0) { // TODO: use "!updateResult.modifiedCount" instead?
-            throw new AccountNotFoundError();
+            throw new BLAccountNotFoundError();
         }
     }
 }
