@@ -30,162 +30,257 @@
 "use strict";
 
 import {
-    ILedgerAdapter,
-    LedgerAdapterAccount,
-    LedgerAdapterJournalEntry, LedgerAdapterRequestId
+	ILedgerAdapter,
+	LedgerAdapterAccount,
+	LedgerAdapterJournalEntry, LedgerAdapterRequestId
 } from "../domain/infrastructure-types/ledger_adapter";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {
-    BuiltinLedgerGrpcAccount, BuiltinLedgerGrpcAccount__Output, BuiltinLedgerGrpcClient, BuiltinLedgerGrpcId,
-    BuiltinLedgerGrpcJournalEntry, BuiltinLedgerGrpcJournalEntry__Output
+	BuiltinLedgerGrpcAccount,
+	BuiltinLedgerGrpcAccount__Output, BuiltinLedgerGrpcAccountArray__Output,
+	BuiltinLedgerGrpcClient,
+	BuiltinLedgerGrpcId,
+	BuiltinLedgerGrpcIdArray__Output,
+	BuiltinLedgerGrpcJournalEntry,
+	BuiltinLedgerGrpcJournalEntry__Output, BuiltinLedgerGrpcJournalEntryArray__Output
 } from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-client-lib";
 import {AccountState, AccountType} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import {LedgerError} from "../domain";
 
 export class BuiltinLedgerAdapter implements ILedgerAdapter {
-    // Properties received through the constructor.
-    private readonly logger: ILogger;
-    // Other properties.
-    private readonly builtinLedgerClient: BuiltinLedgerGrpcClient;
+	// Properties received through the constructor.
+	private readonly logger: ILogger;
+	// Other properties.
+	private readonly builtinLedgerClient: BuiltinLedgerGrpcClient;
 
-    constructor(
-        logger: ILogger,
-        host: string,
-        portNo: number,
-        timeoutMs: number
-    ) {
-        this.logger = logger.createChild(this.constructor.name);
-        //this.logger = logger;
+	constructor(
+		logger: ILogger,
+		host: string,
+		portNo: number,
+		timeoutMs: number
+	) {
+		this.logger = logger.createChild(this.constructor.name);
 
-        this.builtinLedgerClient = new BuiltinLedgerGrpcClient(
-            logger,
-            host,
-            portNo,
-            timeoutMs
-        );
-    }
+		this.builtinLedgerClient = new BuiltinLedgerGrpcClient(
+			logger,
+			host,
+			portNo,
+			timeoutMs
+		);
+	}
 
-    async init(): Promise<void> {
-        await this.builtinLedgerClient.init();
-    }
+	async init(): Promise<void> {
+		await this.builtinLedgerClient.init();
+	}
 
-    async destroy(): Promise<void> {
-        await this.builtinLedgerClient.destroy();
-    }
+	async destroy(): Promise<void> {
+		await this.builtinLedgerClient.destroy();
+	}
 
-    // TODO: currency decimals ignored here, right?
-    async createAccounts(ledgerAdapterAccounts: LedgerAdapterAccount[]): Promise<string[]> {
-        const builtinLedgerGrpcAccounts: BuiltinLedgerGrpcAccount[]
-            = ledgerAdapterAccounts.map((ledgerAdapterAccount) => {
-            const builtinLedgerGrpcAccount: BuiltinLedgerGrpcAccount = {
-                id: ledgerAdapterAccount.id ?? undefined, // TODO: ?? or ||?
-                state: ledgerAdapterAccount.state,
-                type: ledgerAdapterAccount.type,
-                currencyCode: ledgerAdapterAccount.currencyCode,
-                debitBalance: ledgerAdapterAccount.debitBalance ?? undefined, // TODO: ?? or ||?
-                creditBalance: ledgerAdapterAccount.creditBalance ?? undefined, // TODO: ?? or ||?
-                timestampLastJournalEntry: ledgerAdapterAccount.timestampLastJournalEntry ?? undefined // TODO: ?? or ||?
-            };
-            return builtinLedgerGrpcAccount;
-        });
+	// TODO: currency decimals ignored here, right?
+	async createAccounts(ledgerAdapterAccounts: LedgerAdapterAccount[]): Promise<string[]> {
+		const builtinLedgerGrpcAccounts: BuiltinLedgerGrpcAccount[]
+			= ledgerAdapterAccounts.map((ledgerAdapterAccount) => {
+			const builtinLedgerGrpcAccount: BuiltinLedgerGrpcAccount = {
+				id: ledgerAdapterAccount.id ?? undefined, // TODO: ?? or ||?
+				state: ledgerAdapterAccount.state,
+				type: ledgerAdapterAccount.type,
+				currencyCode: ledgerAdapterAccount.currencyCode,
+				debitBalance: ledgerAdapterAccount.debitBalance ?? undefined, // TODO: ?? or ||?
+				creditBalance: ledgerAdapterAccount.creditBalance ?? undefined, // TODO: ?? or ||?
+				timestampLastJournalEntry: ledgerAdapterAccount.timestampLastJournalEntry ?? undefined // TODO: ?? or ||?
+			};
+			return builtinLedgerGrpcAccount;
+		});
 
-        const accountIds: string[] = (await this.builtinLedgerClient.createAccounts(
-            {builtinLedgerGrpcAccountArray: builtinLedgerGrpcAccounts}
-        )).builtinLedgerGrpcIdArray!.map((id) => {return id.builtinLedgerGrpcId!});
-        return accountIds;
-    }
+		let builtinLedgerGrpcIdArrayOutput: BuiltinLedgerGrpcIdArray__Output;
+		try {
+			builtinLedgerGrpcIdArrayOutput
+				= await this.builtinLedgerClient.createAccounts({builtinLedgerGrpcAccountArray: builtinLedgerGrpcAccounts});
+		} catch (error: unknown) {
+			throw new LedgerError((error as any)?.message);
+		}
 
-    // TODO: currency decimals ignored here, right?
-    async createJournalEntries(ledgerAdapterJournalEntries: LedgerAdapterJournalEntry[]): Promise<string[]> {
-        const builtinLedgerGrpcJournalEntries: BuiltinLedgerGrpcJournalEntry[]
-            = ledgerAdapterJournalEntries.map((ledgerAdapterJournalEntry) => {
-            const builtinLedgerGrpcJournalEntry: BuiltinLedgerGrpcJournalEntry = {
-                id: ledgerAdapterJournalEntry.id ?? undefined, // TODO: ?? or ||?
-                ownerId: ledgerAdapterJournalEntry.ownerId ?? undefined,
-                currencyCode: ledgerAdapterJournalEntry.currencyCode,
-                amount: ledgerAdapterJournalEntry.amount,
-                debitedAccountId: ledgerAdapterJournalEntry.debitedAccountId,
-                creditedAccountId: ledgerAdapterJournalEntry.creditedAccountId,
-                timestamp: ledgerAdapterJournalEntry.timestamp ?? undefined // TODO: ?? or ||?
-            };
-            return builtinLedgerGrpcJournalEntry;
-        });
+		if (!builtinLedgerGrpcIdArrayOutput.builtinLedgerGrpcIdArray) {
+			throw new Error();
+		}
 
-        const journalEntryIds: string[] = (await this.builtinLedgerClient.createJournalEntries(
-            {builtinLedgerGrpcJournalEntryArray: builtinLedgerGrpcJournalEntries}
-        )).builtinLedgerGrpcIdArray!.map((id) => {return id.builtinLedgerGrpcId!});
-        return journalEntryIds;
-    }
+		const accountIds: string[] =
+			builtinLedgerGrpcIdArrayOutput.builtinLedgerGrpcIdArray.map((builtinLedgerGrpcIdOutput) => {
+				if (!builtinLedgerGrpcIdOutput.builtinLedgerGrpcId) {
+					throw new Error();
+				}
+				return builtinLedgerGrpcIdOutput.builtinLedgerGrpcId
+			});
+		return accountIds;
+	}
 
-    // TODO: currency decimals ignored here, right?
-    async getAccountsByIds(ledgerAccountIds: LedgerAdapterRequestId[]): Promise<LedgerAdapterAccount[]> {
-        const builtinLedgerGrpcAccountIds: BuiltinLedgerGrpcId[] = ledgerAccountIds.map((ledgerAccountId) => {
-            return {builtinLedgerGrpcId: ledgerAccountId.id};
-        });
+	// TODO: currency decimals ignored here, right?
+	async createJournalEntries(ledgerAdapterJournalEntries: LedgerAdapterJournalEntry[]): Promise<string[]> {
+		const builtinLedgerGrpcJournalEntries: BuiltinLedgerGrpcJournalEntry[]
+			= ledgerAdapterJournalEntries.map((ledgerAdapterJournalEntry) => {
+			const builtinLedgerGrpcJournalEntry: BuiltinLedgerGrpcJournalEntry = {
+				id: ledgerAdapterJournalEntry.id ?? undefined, // TODO: ?? or ||?
+				ownerId: ledgerAdapterJournalEntry.ownerId ?? undefined,
+				currencyCode: ledgerAdapterJournalEntry.currencyCode,
+				amount: ledgerAdapterJournalEntry.amount,
+				debitedAccountId: ledgerAdapterJournalEntry.debitedAccountId,
+				creditedAccountId: ledgerAdapterJournalEntry.creditedAccountId,
+				timestamp: ledgerAdapterJournalEntry.timestamp ?? undefined // TODO: ?? or ||?
+			};
+			return builtinLedgerGrpcJournalEntry;
+		});
 
-        const builtinLedgerGrpcAccountsOutput: BuiltinLedgerGrpcAccount__Output[]
-            = (await this.builtinLedgerClient.getAccountsByIds({builtinLedgerGrpcIdArray: builtinLedgerGrpcAccountIds}))
-            .builtinLedgerGrpcAccountArray!;
+		let builtinLedgerGrpcIdArrayOutput: BuiltinLedgerGrpcIdArray__Output;
+		try {
+			builtinLedgerGrpcIdArrayOutput = await this.builtinLedgerClient.createJournalEntries(
+				{builtinLedgerGrpcJournalEntryArray: builtinLedgerGrpcJournalEntries}
+			);
+		} catch (error: unknown) {
+			throw new LedgerError((error as any)?.message);
+		}
 
-        const ledgerAdapterAccounts: LedgerAdapterAccount[]
-            = builtinLedgerGrpcAccountsOutput.map((builtinLedgerGrpcAccountOutput) => {
-            if (
-                !builtinLedgerGrpcAccountOutput.state
-                || !builtinLedgerGrpcAccountOutput.type
-                || !builtinLedgerGrpcAccountOutput.currencyCode
-                || !builtinLedgerGrpcAccountOutput.debitBalance
-                || !builtinLedgerGrpcAccountOutput.creditBalance
-            ) {
-                throw new Error(); // TODO: create custom error.
-            }
+		if (!builtinLedgerGrpcIdArrayOutput.builtinLedgerGrpcIdArray) {
+			throw new Error();
+		}
 
-            const ledgerAdapterAccount: LedgerAdapterAccount = {
-                id: builtinLedgerGrpcAccountOutput.id ?? null, // TODO: ?? or ||?
-                state: builtinLedgerGrpcAccountOutput.state as AccountState,
-                type: builtinLedgerGrpcAccountOutput.type as AccountType,
-                currencyCode: builtinLedgerGrpcAccountOutput.currencyCode,
-                currencyDecimals: null, // TODO: null?
-                debitBalance: builtinLedgerGrpcAccountOutput.debitBalance,
-                creditBalance: builtinLedgerGrpcAccountOutput.creditBalance,
-                timestampLastJournalEntry: builtinLedgerGrpcAccountOutput.timestampLastJournalEntry ?? null // TODO: ?? or ||?
-            };
-            return ledgerAdapterAccount;
-        });
-        return ledgerAdapterAccounts;
-    }
+		const journalEntryIds: string[]
+			= builtinLedgerGrpcIdArrayOutput.builtinLedgerGrpcIdArray.map((builtinLedgerGrpcIdOutput) => {
+			if (!builtinLedgerGrpcIdOutput.builtinLedgerGrpcId) {
+				throw new Error();
+			}
+			return builtinLedgerGrpcIdOutput.builtinLedgerGrpcId
+		});
+		return journalEntryIds;
+	}
 
-    // TODO: currency decimals ignored here, right?
-    async getJournalEntriesByAccountId(
-        ledgerAccountId: string,
-        currencyDecimals: number
-    ): Promise<LedgerAdapterJournalEntry[]> {
-        const builtinLedgerGrpcJournalEntriesOutput: BuiltinLedgerGrpcJournalEntry__Output[]
-            = (await this.builtinLedgerClient.getJournalEntriesByAccountId({builtinLedgerGrpcId: ledgerAccountId}))
-            .builtinLedgerGrpcJournalEntryArray!;
+	// TODO: currency decimals ignored here, right?
+	async getAccountsByIds(ledgerAccountIds: LedgerAdapterRequestId[]): Promise<LedgerAdapterAccount[]> {
+		const builtinLedgerGrpcAccountIds: BuiltinLedgerGrpcId[]
+			= ledgerAccountIds.map((ledgerAccountId) => {
+			return {builtinLedgerGrpcId: ledgerAccountId.id};
+		});
 
-        const ledgerAdapterJournalEntries: LedgerAdapterJournalEntry[] =
-            builtinLedgerGrpcJournalEntriesOutput.map((builtinLedgerGrpcJournalEntryOutput) => {
-            if (
-                !builtinLedgerGrpcJournalEntryOutput.currencyCode
-                || !builtinLedgerGrpcJournalEntryOutput.amount
-                || !builtinLedgerGrpcJournalEntryOutput.debitedAccountId
-                || !builtinLedgerGrpcJournalEntryOutput.creditedAccountId
-            ) {
-                throw new Error(); // TODO: create custom error.
-            }
+		let builtinLedgerGrpcAccountArrayOutput: BuiltinLedgerGrpcAccountArray__Output;
+		try {
+			builtinLedgerGrpcAccountArrayOutput
+				= await this.builtinLedgerClient.getAccountsByIds({builtinLedgerGrpcIdArray: builtinLedgerGrpcAccountIds});
+		} catch (error: unknown) {
+			throw new LedgerError((error as any)?.message);
+		}
 
-            const ledgerAdapterJournalEntry: LedgerAdapterJournalEntry = {
-                id: builtinLedgerGrpcJournalEntryOutput.id ?? null, // TODO: ?? or ||?
-                ownerId: builtinLedgerGrpcJournalEntryOutput.ownerId ?? null,
-                currencyCode: builtinLedgerGrpcJournalEntryOutput.currencyCode,
-                currencyDecimals: null, // TODO: null?
-                amount: builtinLedgerGrpcJournalEntryOutput.amount,
-                debitedAccountId: builtinLedgerGrpcJournalEntryOutput.debitedAccountId,
-                creditedAccountId: builtinLedgerGrpcJournalEntryOutput.creditedAccountId,
-                timestamp: builtinLedgerGrpcJournalEntryOutput.timestamp ?? null // TODO: ?? or ||?
-            };
-            return ledgerAdapterJournalEntry;
-        });
+		if (!builtinLedgerGrpcAccountArrayOutput.builtinLedgerGrpcAccountArray) {
+			throw new Error();
+		}
 
-        return ledgerAdapterJournalEntries;
-    }
+		const ledgerAdapterAccounts: LedgerAdapterAccount[]
+			= builtinLedgerGrpcAccountArrayOutput.builtinLedgerGrpcAccountArray
+			.map((builtinLedgerGrpcAccountOutput) => {
+				if (
+					!builtinLedgerGrpcAccountOutput.state
+					|| !builtinLedgerGrpcAccountOutput.type
+					|| !builtinLedgerGrpcAccountOutput.currencyCode
+					|| !builtinLedgerGrpcAccountOutput.debitBalance
+					|| !builtinLedgerGrpcAccountOutput.creditBalance
+				) {
+					throw new Error(); // TODO: create custom error.
+				}
+
+				const ledgerAdapterAccount: LedgerAdapterAccount = {
+					id: builtinLedgerGrpcAccountOutput.id ?? null, // TODO: ?? or ||?
+					state: builtinLedgerGrpcAccountOutput.state as AccountState,
+					type: builtinLedgerGrpcAccountOutput.type as AccountType,
+					currencyCode: builtinLedgerGrpcAccountOutput.currencyCode,
+					currencyDecimals: null, // TODO: null?
+					debitBalance: builtinLedgerGrpcAccountOutput.debitBalance,
+					creditBalance: builtinLedgerGrpcAccountOutput.creditBalance,
+					timestampLastJournalEntry: builtinLedgerGrpcAccountOutput.timestampLastJournalEntry ?? null // TODO: ?? or ||?
+				};
+				return ledgerAdapterAccount;
+			});
+		return ledgerAdapterAccounts;
+	}
+
+	// TODO: currency decimals ignored here, right?
+	async getJournalEntriesByAccountId(
+		ledgerAccountId: string,
+		currencyDecimals: number
+	): Promise<LedgerAdapterJournalEntry[]> {
+		let builtinLedgerGrpcJournalEntryArrayOutput: BuiltinLedgerGrpcJournalEntryArray__Output;
+		try {
+			builtinLedgerGrpcJournalEntryArrayOutput
+				= await this.builtinLedgerClient.getJournalEntriesByAccountId({builtinLedgerGrpcId: ledgerAccountId});
+		} catch (error: unknown) {
+			throw new LedgerError((error as any)?.message);
+		}
+
+		if (!builtinLedgerGrpcJournalEntryArrayOutput.builtinLedgerGrpcJournalEntryArray) {
+			throw new Error();
+		}
+
+		const ledgerAdapterJournalEntries: LedgerAdapterJournalEntry[] =
+			builtinLedgerGrpcJournalEntryArrayOutput.builtinLedgerGrpcJournalEntryArray
+				.map((builtinLedgerGrpcJournalEntryOutput) => {
+					if (
+						!builtinLedgerGrpcJournalEntryOutput.currencyCode
+						|| !builtinLedgerGrpcJournalEntryOutput.amount
+						|| !builtinLedgerGrpcJournalEntryOutput.debitedAccountId
+						|| !builtinLedgerGrpcJournalEntryOutput.creditedAccountId
+					) {
+						throw new Error(); // TODO: create custom error.
+					}
+
+					const ledgerAdapterJournalEntry: LedgerAdapterJournalEntry = {
+						id: builtinLedgerGrpcJournalEntryOutput.id ?? null, // TODO: ?? or ||?
+						ownerId: builtinLedgerGrpcJournalEntryOutput.ownerId ?? null,
+						currencyCode: builtinLedgerGrpcJournalEntryOutput.currencyCode,
+						currencyDecimals: null, // TODO: null?
+						amount: builtinLedgerGrpcJournalEntryOutput.amount,
+						debitedAccountId: builtinLedgerGrpcJournalEntryOutput.debitedAccountId,
+						creditedAccountId: builtinLedgerGrpcJournalEntryOutput.creditedAccountId,
+						timestamp: builtinLedgerGrpcJournalEntryOutput.timestamp ?? null // TODO: ?? or ||?
+					};
+					return ledgerAdapterJournalEntry;
+				});
+
+		return ledgerAdapterJournalEntries;
+	}
+
+	async deleteAccountsByIds(ledgerAccountIds: string[]): Promise<void> {
+		const builtinLedgerGrpcAccountIds: BuiltinLedgerGrpcId[] = ledgerAccountIds.map((ledgerAccountId) => {
+			return {builtinLedgerGrpcId: ledgerAccountId};
+		});
+
+		try {
+			await this.builtinLedgerClient.deleteAccountsByIds({builtinLedgerGrpcIdArray: builtinLedgerGrpcAccountIds});
+		} catch (error: unknown) {
+			throw new LedgerError((error as any)?.message);
+		}
+	}
+
+	async deactivateAccountsByIds(ledgerAccountIds: string[]): Promise<void> {
+		const builtinLedgerGrpcAccountIds: BuiltinLedgerGrpcId[] = ledgerAccountIds.map((ledgerAccountId) => {
+			return {builtinLedgerGrpcId: ledgerAccountId};
+		});
+
+		try {
+			await this.builtinLedgerClient
+				.deactivateAccountsByIds({builtinLedgerGrpcIdArray: builtinLedgerGrpcAccountIds});
+		} catch (error: unknown) {
+			throw new LedgerError((error as any)?.message);
+		}
+	}
+
+	async activateAccountsByIds(ledgerAccountIds: string[]): Promise<void> {
+		const builtinLedgerGrpcAccountIds: BuiltinLedgerGrpcId[] = ledgerAccountIds.map((ledgerAccountId) => {
+			return {builtinLedgerGrpcId: ledgerAccountId};
+		});
+
+		try {
+			await this.builtinLedgerClient
+				.activateAccountsByIds({builtinLedgerGrpcIdArray: builtinLedgerGrpcAccountIds});
+		} catch (error: unknown) {
+			throw new LedgerError((error as any)?.message);
+		}
+	}
 }

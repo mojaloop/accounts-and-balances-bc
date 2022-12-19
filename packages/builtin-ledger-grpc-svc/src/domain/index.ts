@@ -29,36 +29,6 @@
 
 "use strict";
 
-import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
-import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-
-// TODO: should anything by logged?
-export class AuthorizationClientMock implements IAuthorizationClient {
-	// Properties received through the constructor.
-	private readonly logger: ILogger;
-
-	constructor(logger: ILogger) {
-		this.logger = logger.createChild(this.constructor.name);
-        //this.logger = logger;
-	}
-
-	async init(): Promise<void> {
-		return;
-	}
-
-	async destroy(): Promise<void> {
-		return;
-	}
-
-	roleHasPrivilege(roleId: string, privilegeId: string): boolean {
-		return true;
-	}
-
-	addPrivilege(privId: string, labelName: string, description: string): void {
-		return;
-	}
-
-	addPrivilegesArray(privsArray: { privId: string; labelName: string; description: string }[]): void {
-		return;
-	}
-}
+export * from "./entities";
+export * from "./errors";
+export * from "./infrastructure";

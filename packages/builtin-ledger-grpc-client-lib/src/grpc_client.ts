@@ -32,10 +32,10 @@
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {loadSync, Options, PackageDefinition} from "@grpc/proto-loader";
 import {credentials, GrpcObject, loadPackageDefinition, Deadline} from "@grpc/grpc-js";
-
 import {
+	UnableToActivateAccountsError,
 	UnableToCreateAccountsError,
-	UnableToCreateJournalEntriesError,
+	UnableToCreateJournalEntriesError, UnableToDeactivateAccountsError, UnableToDeleteAccountsError,
 	UnableToGetAccountsError,
 	UnableToGetJournalEntriesError
 } from "./errors";
@@ -45,9 +45,7 @@ import {
 	BuiltinLedgerGrpcAccountArray,
 	BuiltinLedgerGrpcAccountArray__Output
 } from "./types/BuiltinLedgerGrpcAccountArray";
-import {BuiltinLedgerGrpcJournalEntry__Output} from "./types/BuiltinLedgerGrpcJournalEntry";
-import {BuiltinLedgerGrpcId, BuiltinLedgerGrpcId__Output} from "./types/BuiltinLedgerGrpcId";
-import {BuiltinLedgerGrpcAccount__Output} from "./types/BuiltinLedgerGrpcAccount";
+import {BuiltinLedgerGrpcId} from "./types/BuiltinLedgerGrpcId";
 import {BuiltinLedgerGrpcIdArray, BuiltinLedgerGrpcIdArray__Output} from "./types/BuiltinLedgerGrpcIdArray";
 import {
 	BuiltinLedgerGrpcJournalEntryArray,
@@ -73,7 +71,6 @@ export class BuiltinLedgerGrpcClient {
 		timeoutMs: number
 	) {
 		this.logger = logger.createChild(this.constructor.name);
-        //this.logger = logger;
 		this.TIMEOUT_MS = timeoutMs;
 
 		const protoFileAbsolutePath: string = join(__dirname, BuiltinLedgerGrpcClient.PROTO_FILE_NAME);
@@ -213,6 +210,60 @@ export class BuiltinLedgerGrpcClient {
 					resolve(builtinLedgerGrpcJournalEntriesOutput);*/
 
 					resolve(builtinLedgerGrpcJournalEntryArrayOutput);
+				}
+			);
+		});
+	}
+
+	async deleteAccountsByIds(
+		builtinLedgerGrpcAccountIdArray: BuiltinLedgerGrpcIdArray
+	): Promise<void> {
+		return new Promise((resolve, reject) => {
+			this.client.deleteAccountsByIds(
+				builtinLedgerGrpcAccountIdArray,
+				(error) => {
+					if (error) {
+						reject(new UnableToDeleteAccountsError(error.details));
+						return;
+					}
+
+					resolve();
+				}
+			);
+		});
+	}
+
+	async deactivateAccountsByIds(
+		builtinLedgerGrpcAccountIdArray: BuiltinLedgerGrpcIdArray
+	): Promise<void> {
+		return new Promise((resolve, reject) => {
+			this.client.deactivateAccountsByIds(
+				builtinLedgerGrpcAccountIdArray,
+				(error) => {
+					if (error) {
+						reject(new UnableToDeactivateAccountsError(error.details));
+						return;
+					}
+
+					resolve();
+				}
+			);
+		});
+	}
+
+	async activateAccountsByIds(
+		builtinLedgerGrpcAccountIdArray: BuiltinLedgerGrpcIdArray
+	): Promise<void> {
+		return new Promise((resolve, reject) => {
+			this.client.activateAccountsByIds(
+				builtinLedgerGrpcAccountIdArray,
+				(error) => {
+					if (error) {
+						reject(new UnableToActivateAccountsError(error.details));
+						return;
+					}
+
+					resolve();
 				}
 			);
 		});

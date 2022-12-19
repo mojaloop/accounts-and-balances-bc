@@ -29,21 +29,24 @@
 
 "use strict";
 
-import {IChartOfAccountsRepo} from "../../src/domain/infrastructure-types/chart_of_accounts_repo";
-import {CoaAccount} from "../../src/domain/coa_account";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {AccountAlreadyExistsError, UnableToGetAccountsError, UnableToStoreAccountsError} from "../../src/domain/errors";
+import {
+	AccountAlreadyExistsError,
+	CoaAccount,
+	IChartOfAccountsRepo
+} from "@mojaloop/accounts-and-balances-bc-grpc-svc";
+import {AccountState} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
-export class ChartOfAccountsMemoryRepo implements IChartOfAccountsRepo {
+export class ChartOfAccountsMockRepo implements IChartOfAccountsRepo {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
 	// Other properties.
-	readonly accounts: Map<string, CoaAccount>;
+	readonly chartOfAccounts: Map<string, CoaAccount>;
 
 	constructor(logger: ILogger) {
-		//this.logger = logger;
+		this.logger = logger.createChild(this.constructor.name);
 
-		this.accounts = new Map();
+		this.chartOfAccounts = new Map();
 	}
 
 	async init(): Promise<void> {
@@ -55,9 +58,9 @@ export class ChartOfAccountsMemoryRepo implements IChartOfAccountsRepo {
 	}
 
 	async accountsExistByInternalIds(internalIds: string[]): Promise<boolean> {
-		for (const coaAccount of this.accounts.values()) {
-			for (const id of internalIds) {
-				if (coaAccount.internalId === id) {
+		for (const coaAccount of this.chartOfAccounts.values()) {
+			for (const internalId of internalIds) {
+				if (coaAccount.internalId === internalId) {
 					return true;
 				}
 			}
@@ -66,56 +69,45 @@ export class ChartOfAccountsMemoryRepo implements IChartOfAccountsRepo {
 	}
 
 	async storeAccounts(coaAccounts: CoaAccount[]): Promise<void> {
-		let accountsExists: boolean = false;
-		try {
-			for (const coaAccount of coaAccounts) {
-				 if (this.accounts.has(coaAccount.internalId)) {
-					 accountsExists = true;
-					 break;
-				 }
+		for (const coaAccount of coaAccounts) {
+			if (this.chartOfAccounts.has(coaAccount.internalId)) {
+				throw new AccountAlreadyExistsError();
 			}
-		} catch (error: unknown) {
-			throw new UnableToStoreAccountsError((error as any)?.message);
 		}
-		if (accountsExists) {
-			throw new AccountAlreadyExistsError();
-		}
-		try {
-			for (const coaAccount of coaAccounts) {
-				this.accounts.set(coaAccount.internalId, coaAccount);
-			}
-		} catch (error: unknown) {
-			throw new UnableToStoreAccountsError((error as any)?.message);
+		for (const coaAccount of coaAccounts) {
+			this.chartOfAccounts.set(coaAccount.internalId, coaAccount);
 		}
 	}
 
 	async getAccountsByInternalIds(internalIds: string[]): Promise<CoaAccount[]> {
-		try {
-			const coaAccounts: CoaAccount[] = [];
-			for (const coaAccount of this.accounts.values()) {
-				for (const id of internalIds) {
-					if (coaAccount.internalId === id) {
-						coaAccounts.push(coaAccount);
-					}
-				}
-			}
-			return coaAccounts;
-		} catch (error: unknown) {
-			throw new UnableToGetAccountsError((error as any)?.message);
-		}
-	}
-
-	async getAccountsByOwnerId(ownerId: string): Promise<CoaAccount[]> {
-		try {
-			const coaAccounts: CoaAccount[] = [];
-			for (const coaAccount of this.accounts.values()) {
-				if (coaAccount.ownerId === ownerId) {
+		const coaAccounts: CoaAccount[] = [];
+		for (const coaAccount of this.chartOfAccounts.values()) {
+			for (const internalId of internalIds) {
+				if (coaAccount.internalId === internalId) {
 					coaAccounts.push(coaAccount);
 				}
 			}
-			return coaAccounts;
-		} catch (error: unknown) {
-			throw new UnableToGetAccountsError((error as any)?.message);
+		}
+		return coaAccounts;
+	}
+
+	async getAccountsByOwnerId(ownerId: string): Promise<CoaAccount[]> {
+		const coaAccounts: CoaAccount[] = [];
+		for (const coaAccount of this.chartOfAccounts.values()) {
+			if (coaAccount.ownerId === ownerId) {
+				coaAccounts.push(coaAccount);
+			}
+		}
+		return coaAccounts;
+	}
+
+	async updateAccountStatesByInternalIds(internalIds: string[], accountState: AccountState): Promise<void> {
+		for (const coaAccount of this.chartOfAccounts.values()) {
+			for (const internalId of internalIds) {
+				if (coaAccount.internalId === internalId) {
+					coaAccount.state = accountState;
+				}
+			}
 		}
 	}
 }

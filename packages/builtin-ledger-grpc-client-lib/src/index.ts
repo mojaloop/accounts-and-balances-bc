@@ -39,4 +39,5 @@ export * from "./types/BuiltinLedgerGrpcId";
 export * from "./types/BuiltinLedgerGrpcIdArray";
 export * from "./types/BuiltinLedgerGrpcJournalEntry";
 export * from "./types/BuiltinLedgerGrpcJournalEntryArray";
+export * from "./types/google/protobuf/Empty";
 export * from "./types/GrpcBuiltinLedger";

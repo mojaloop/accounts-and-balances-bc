@@ -29,57 +29,31 @@
 
 "use strict";
 
-import {AccountState, AccountType} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
+import {AuditEntryLabel, AuditSecurityContext, IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 
-// TODO: does it make sense to have DTO and non-DTO types?
+// TODO: should anything by logged?
+export class AuditClientMock implements IAuditClient {
+	private readonly logger: ILogger;
 
-export type BuiltinLedgerAccountDto = {
-	id: string | null;
-	state: AccountState;
-	type: AccountType;
-	currencyCode: string;
-	// TODO: currency decimals not needed, right?
-	debitBalance: string | null;
-	creditBalance: string | null;
-	timestampLastJournalEntry: number | null;
-};
+	constructor(logger: ILogger) {
+		this.logger = logger.createChild(this.constructor.name);
+	}
 
-// TODO: find a better name.
-export type LimitCheckMode =
-	"NONE"
-	| "CREDIT_BALANCE_CANNOT_EXCEED_DEBIT_BALANCE"
-	| "DEBIT_BALANCE_CANNOT_EXCEED_CREDIT_BALANCE";
+	async init(): Promise<void> {
+		return;
+	}
 
-export type BuiltinLedgerAccount = {
-	id: string;
-	state: AccountState;
-	type: AccountType;
-	limitCheckMode: LimitCheckMode;
-	currencyCode: string;
-	currencyDecimals: number;
-	debitBalance: bigint;
-	creditBalance: bigint;
-	timestampLastJournalEntry: number | null;
-};
+	async destroy(): Promise<void> {
+		return;
+	}
 
-export type BuiltinLedgerJournalEntryDto = {
-	id: string | null;
-	ownerId: string | null;
-	currencyCode: string;
-	// TODO: currency decimals not needed, right?
-	amount: string;
-	debitedAccountId: string;
-	creditedAccountId: string;
-	timestamp: number | null;
-};
-
-export type BuiltinLedgerJournalEntry = {
-	id: string;
-	ownerId: string | null;
-	currencyCode: string;
-	currencyDecimals: number;
-	amount: bigint;
-	debitedAccountId: string;
-	creditedAccountId: string;
-	timestamp: number;
-};
+	async audit(
+		actionType: string,
+		actionSuccessful: boolean,
+		securityContext?: AuditSecurityContext,
+		labels?: AuditEntryLabel[]
+	): Promise<void> {
+		return;
+	}
+}

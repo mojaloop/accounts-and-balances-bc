@@ -31,10 +31,25 @@
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {ServerUnaryCall, sendUnaryData, status} from "@grpc/grpc-js";
-import {UnauthorizedError} from "../../domain/errors";
+import {
+	BLAccountAlreadyExistsError,
+	BLAccountNotFoundError,
+	BuiltinLedgerAccountDto,
+	BuiltinLedgerJournalEntryDto,
+	BLCreditedAccountNotFoundError,
+	BLCurrencyCodesDifferError,
+	BLDebitedAccountNotFoundError,
+	BLInvalidCreditBalanceError,
+	BLInvalidCurrencyCodeError,
+	BLInvalidDebitBalanceError,
+	BLInvalidIdError,
+	BLInvalidJournalEntryAmountError,
+	BLInvalidTimestampError, BLJournalEntryAlreadyExistsError,
+	BLSameDebitedAndCreditedAccountsError,
+	BLUnauthorizedError
+} from "../../domain";
 import {BuiltinLedgerAggregate} from "../../domain/aggregate";
 import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
-import {BuiltinLedgerAccountDto, BuiltinLedgerJournalEntryDto} from "../../domain/entities";
 import {
 	BuiltinLedgerGrpcAccount,
 	BuiltinLedgerGrpcAccount__Output,
@@ -47,6 +62,7 @@ import {
 	BuiltinLedgerGrpcJournalEntry, BuiltinLedgerGrpcJournalEntry__Output,
 	BuiltinLedgerGrpcJournalEntryArray,
 	BuiltinLedgerGrpcJournalEntryArray__Output,
+	Empty,
 	GrpcBuiltinLedgerHandlers
 } from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-client-lib";
 import {AccountState, AccountType} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
@@ -69,7 +85,6 @@ export class GrpcHandlers {
 		aggregate: BuiltinLedgerAggregate
 	) {
 		this.logger = logger.createChild(this.constructor.name);
-        //this.logger = logger;
 		this.aggregate = aggregate;
 	}
 
@@ -78,7 +93,10 @@ export class GrpcHandlers {
 			"CreateAccounts": this.createAccounts.bind(this),
 			"CreateJournalEntries": this.createJournalEntries.bind(this),
 			"GetAccountsByIds": this.getAccountsByIds.bind(this),
-			"GetJournalEntriesByAccountId": this.getJournalEntriesByAccountId.bind(this)
+			"GetJournalEntriesByAccountId": this.getJournalEntriesByAccountId.bind(this),
+			"DeleteAccountsByIds": this.deleteAccountsByIds.bind(this),
+			"DeactivateAccountsByIds": this.deactivateAccountsByIds.bind(this),
+			"ActivateAccountsByIds": this.activateAccountsByIds.bind(this)
 		};
 	}
 
@@ -111,9 +129,49 @@ export class GrpcHandlers {
 		try {
 			accountIds = await this.aggregate.createAccounts(builtinLedgerAccountDtos, this.securityContext);
 		} catch (error: unknown) {
-			if (error instanceof UnauthorizedError) {
+			if (error instanceof BLUnauthorizedError) {
 				callback(
 					{code: status.PERMISSION_DENIED, details: error.message},
+					null
+				);
+			} else if (error instanceof BLInvalidDebitBalanceError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof BLInvalidCreditBalanceError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof BLInvalidTimestampError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof BLInvalidIdError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			/*} else if (error instanceof BLInvalidAccountStateError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof BLInvalidAccountTypeError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);*/
+			} else if (error instanceof BLInvalidCurrencyCodeError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof BLAccountAlreadyExistsError) {
+				callback(
+					{code: status.ALREADY_EXISTS, details: error.message},
 					null
 				);
 			} else {
@@ -166,9 +224,64 @@ export class GrpcHandlers {
 			journalEntryIds
 				= await this.aggregate.createJournalEntries(builtinLedgerJournalEntryDtos, this.securityContext);
 		} catch (error: unknown) {
-			if (error instanceof UnauthorizedError) {
+			if (error instanceof BLUnauthorizedError) {
 				callback(
 					{code: status.PERMISSION_DENIED, details: error.message},
+					null
+				);
+			} else if (error instanceof BLInvalidTimestampError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof BLInvalidIdError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof BLInvalidCurrencyCodeError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof BLInvalidJournalEntryAmountError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof BLSameDebitedAndCreditedAccountsError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof BLDebitedAccountNotFoundError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof BLCreditedAccountNotFoundError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof BLCurrencyCodesDifferError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			/*} else if (error instanceof BLDebitBalanceExceedsCreditBalanceError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof BLCreditBalanceExceedsDebitBalanceError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);*/
+			} else if (error instanceof BLJournalEntryAlreadyExistsError) {
+				callback(
+					{code: status.ALREADY_EXISTS, details: error.message},
 					null
 				);
 			} else {
@@ -210,7 +323,7 @@ export class GrpcHandlers {
 		try {
 			builtinLedgerAccountDtos = await this.aggregate.getAccountsByIds(accountIds, this.securityContext);
 		} catch (error: unknown) {
-			if (error instanceof UnauthorizedError) {
+			if (error instanceof BLUnauthorizedError) {
 				callback(
 					{code: status.PERMISSION_DENIED, details: error.message},
 					null
@@ -258,7 +371,7 @@ export class GrpcHandlers {
 			builtinLedgerJournalEntryDtos
 				= await this.aggregate.getJournalEntriesByAccountId(accountId, this.securityContext);
 		} catch (error: unknown) {
-			if (error instanceof UnauthorizedError) {
+			if (error instanceof BLUnauthorizedError) {
 				callback(
 					{code: status.PERMISSION_DENIED, details: error.message},
 					null
@@ -285,5 +398,140 @@ export class GrpcHandlers {
 			return builtinLedgerGrpcJournalEntry;
 		});
 		callback(null, {builtinLedgerGrpcJournalEntryArray: builtinLedgerGrpcJournalEntries});
+	}
+
+	private async deleteAccountsByIds(
+		call: ServerUnaryCall<BuiltinLedgerGrpcIdArray__Output, Empty>,
+		callback: sendUnaryData<Empty>
+	): Promise<void> {
+		const builtinLedgerGrpcAccountIdsOutput: BuiltinLedgerGrpcId__Output[]
+			= call.request.builtinLedgerGrpcIdArray || [];
+
+		const accountIds: string[] = [];
+		for (const builtinLedgerGrpcAccountIdOutput of builtinLedgerGrpcAccountIdsOutput) {
+			// const accountId: string | undefined = builtinLedgerGrpcAccountIdOutput.builtinLedgerGrpcId; TODO: use this auxiliary variable?
+			if (!builtinLedgerGrpcAccountIdOutput.builtinLedgerGrpcId) {
+				callback(
+					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
+					null
+				);
+				return;
+			}
+			accountIds.push(builtinLedgerGrpcAccountIdOutput.builtinLedgerGrpcId);
+		}
+
+		try {
+			await this.aggregate.deleteAccountsByIds(accountIds, this.securityContext);
+		} catch (error: unknown) {
+			if (error instanceof BLUnauthorizedError) {
+				callback(
+					{code: status.PERMISSION_DENIED, details: error.message},
+					null
+				);
+			} else if (error instanceof BLAccountNotFoundError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else {
+				callback(
+					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
+					null
+				);
+			}
+			return;
+		}
+
+		callback(null, {});
+	}
+
+	private async deactivateAccountsByIds(
+		call: ServerUnaryCall<BuiltinLedgerGrpcIdArray__Output, Empty>,
+		callback: sendUnaryData<Empty>
+	): Promise<void> {
+		const builtinLedgerGrpcAccountIdsOutput: BuiltinLedgerGrpcId__Output[]
+			= call.request.builtinLedgerGrpcIdArray || [];
+
+		const accountIds: string[] = [];
+		for (const builtinLedgerGrpcAccountIdOutput of builtinLedgerGrpcAccountIdsOutput) {
+			// const accountId: string | undefined = builtinLedgerGrpcAccountIdOutput.builtinLedgerGrpcId; TODO: use this auxiliary variable?
+			if (!builtinLedgerGrpcAccountIdOutput.builtinLedgerGrpcId) {
+				callback(
+					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
+					null
+				);
+				return;
+			}
+			accountIds.push(builtinLedgerGrpcAccountIdOutput.builtinLedgerGrpcId);
+		}
+
+		try {
+			await this.aggregate.deactivateAccountsByIds(accountIds, this.securityContext);
+		} catch (error: unknown) {
+			if (error instanceof BLUnauthorizedError) {
+				callback(
+					{code: status.PERMISSION_DENIED, details: error.message},
+					null
+				);
+			} else if (error instanceof BLAccountNotFoundError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else {
+				callback(
+					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
+					null
+				);
+			}
+			return;
+		}
+
+		callback(null, {});
+	}
+
+	private async activateAccountsByIds(
+		call: ServerUnaryCall<BuiltinLedgerGrpcIdArray__Output, Empty>,
+		callback: sendUnaryData<Empty>
+	): Promise<void> {
+		const builtinLedgerGrpcAccountIdsOutput: BuiltinLedgerGrpcId__Output[]
+			= call.request.builtinLedgerGrpcIdArray || [];
+
+		const accountIds: string[] = [];
+		for (const builtinLedgerGrpcAccountIdOutput of builtinLedgerGrpcAccountIdsOutput) {
+			// const accountId: string | undefined = builtinLedgerGrpcAccountIdOutput.builtinLedgerGrpcId; TODO: use this auxiliary variable?
+			if (!builtinLedgerGrpcAccountIdOutput.builtinLedgerGrpcId) {
+				callback(
+					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
+					null
+				);
+				return;
+			}
+			accountIds.push(builtinLedgerGrpcAccountIdOutput.builtinLedgerGrpcId);
+		}
+
+		try {
+			await this.aggregate.activateAccountsByIds(accountIds, this.securityContext);
+		} catch (error: unknown) {
+			if (error instanceof BLUnauthorizedError) {
+				callback(
+					{code: status.PERMISSION_DENIED, details: error.message},
+					null
+				);
+			} else if (error instanceof BLAccountNotFoundError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else {
+				callback(
+					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
+					null
+				);
+			}
+			return;
+		}
+
+		callback(null, {});
 	}
 }

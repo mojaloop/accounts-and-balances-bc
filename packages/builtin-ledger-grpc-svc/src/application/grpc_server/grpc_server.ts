@@ -38,7 +38,6 @@ import {
 	ServiceDefinition
 } from "@grpc/grpc-js";
 import {loadSync, Options, PackageDefinition} from "@grpc/proto-loader";
-
 import {TokenHelper} from "@mojaloop/security-bc-client-lib";
 import {BuiltinLedgerAggregate} from "../../domain/aggregate";
 import {
@@ -55,7 +54,7 @@ export class GrpcServer {
 	private readonly PORT_NO: number;
 	// Other properties.
 	private static readonly PROTO_FILE_RELATIVE_PATH: string =
-		"../../../builtin-ledger-grpc-client-lib/src/builtin_ledger.proto";
+		"../../../../builtin-ledger-grpc-client-lib/src/builtin_ledger.proto";
 	private static readonly LOAD_PROTO_OPTIONS: Options = {
 		longs: Number
 	};
@@ -69,11 +68,10 @@ export class GrpcServer {
 		portNo: number
 	) {
 		this.logger = logger.createChild(this.constructor.name);
-        //this.logger = logger;
 		this.HOST = host;
 		this.PORT_NO = portNo;
 
-		const protoFileAbsolutePath: string = join(__dirname, "../../../../builtin-ledger-grpc-client-lib/src/builtin_ledger.proto");
+		const protoFileAbsolutePath: string = join(__dirname, GrpcServer.PROTO_FILE_RELATIVE_PATH);
 		const packageDefinition: PackageDefinition = loadSync(
 			protoFileAbsolutePath,
 			GrpcServer.LOAD_PROTO_OPTIONS

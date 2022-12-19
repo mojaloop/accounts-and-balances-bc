@@ -32,6 +32,7 @@
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {ServerUnaryCall, sendUnaryData, status} from "@grpc/grpc-js";
 import {
+	Empty,
 	GrpcAccount,
 	GrpcAccount__Output, GrpcAccountArray,
 	GrpcAccountArray__Output, GrpcAccountsAndBalancesHandlers,
@@ -45,6 +46,12 @@ import {
 import {AccountsAndBalancesAggregate} from "../../domain/aggregate";
 import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
 import {Account, AccountState, AccountType, JournalEntry} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import {
+	AccountAlreadyExistsError,
+	AccountNotFoundError, InvalidBalanceError,
+	InvalidCreditBalanceError, InvalidCurrencyCodeError,
+	InvalidDebitBalanceError, InvalidIdError, InvalidOwnerIdError, InvalidTimestampError, LedgerError
+} from "../../domain";
 
 export class GrpcHandlers {
 	// Properties received through the constructor.
@@ -64,7 +71,6 @@ export class GrpcHandlers {
 		aggregate: AccountsAndBalancesAggregate
 	) {
 		this.logger = logger.createChild(this.constructor.name);
-        //this.logger = logger;
 		this.aggregate = aggregate;
 	}
 
@@ -74,7 +80,10 @@ export class GrpcHandlers {
 			"CreateJournalEntries": this.createJournalEntries.bind(this),
 			"GetAccountsByIds": this.getAccountsByIds.bind(this),
 			"GetAccountsByOwnerId": this.getAccountsByOwnerId.bind(this),
-			"GetJournalEntriesByAccountId": this.getJournalEntriesByAccountId.bind(this)
+			"GetJournalEntriesByAccountId": this.getJournalEntriesByAccountId.bind(this),
+			"DeleteAccountsByIds": this.deleteAccountsByIds.bind(this),
+			"DeactivateAccountsByIds": this.deactivateAccountsByIds.bind(this),
+			"ActivateAccountsByIds": this.activateAccountsByIds.bind(this)
 		};
 	}
 
@@ -86,7 +95,7 @@ export class GrpcHandlers {
 
 		const accounts: Account[] = grpcAccountsOutput.map((grpcAccountOutput) => {
 			if (
-				!grpcAccountOutput.ownerId
+				grpcAccountOutput.ownerId === undefined // TODO: "" might be passed - what should I do here?
 				|| !grpcAccountOutput.state
 				|| !grpcAccountOutput.type
 				|| !grpcAccountOutput.currencyCode
@@ -112,10 +121,57 @@ export class GrpcHandlers {
 		try {
 			accountIds = await this.aggregate.createAccounts(accounts);
 		} catch (error: unknown) {
-			callback(
-				{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
-				null
-			);
+			if (error instanceof AccountAlreadyExistsError) {
+				callback(
+					{code: status.ALREADY_EXISTS, details: error.message},
+					null
+				);
+			} else if (error instanceof InvalidDebitBalanceError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof InvalidCreditBalanceError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof InvalidBalanceError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof InvalidTimestampError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof InvalidIdError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof InvalidOwnerIdError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof InvalidCurrencyCodeError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof LedgerError) {
+				callback(
+					{code: status.UNKNOWN, details: error.message}, // TODO: unknown?
+					null
+				);
+			} else {
+				callback(
+					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
+					null
+				);
+			}
 			return;
 		}
 
@@ -157,10 +213,37 @@ export class GrpcHandlers {
 		try {
 			journalEntryIds = await this.aggregate.createJournalEntries(journalEntries);
 		} catch (error: unknown) {
-			callback(
-				{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
-				null
-			);
+			if (error instanceof InvalidTimestampError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof InvalidIdError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof InvalidOwnerIdError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof InvalidCurrencyCodeError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof LedgerError) {
+				callback(
+					{code: status.UNKNOWN, details: error.message}, // TODO: unknown?
+					null
+				);
+			} else {
+				callback(
+					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
+					null
+				);
+			}
 			return;
 		}
 
@@ -193,10 +276,17 @@ export class GrpcHandlers {
 		try {
 			accounts = await this.aggregate.getAccountsByIds(accountIds);
 		} catch (error: unknown) {
-			callback(
-				{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
-				null
-			);
+			if (error instanceof LedgerError) {
+				callback(
+					{code: status.UNKNOWN, details: error.message}, // TODO: unknown?
+					null
+				);
+			} else {
+				callback(
+					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
+					null
+				);
+			}
 			return;
 		}
 
@@ -223,10 +313,17 @@ export class GrpcHandlers {
 		try {
 			accounts = await this.aggregate.getAccountsByOwnerId(ownerId);
 		} catch (error: unknown) {
-			callback(
-				{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
-				null
-			);
+			if (error instanceof LedgerError) {
+				callback(
+					{code: status.UNKNOWN, details: error.message}, // TODO: unknown?
+					null
+				);
+			} else {
+				callback(
+					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
+					null
+				);
+			}
 			return;
 		}
 
@@ -253,10 +350,17 @@ export class GrpcHandlers {
 		try {
 			journalEntries = await this.aggregate.getJournalEntriesByAccountId(accountId);
 		} catch (error: unknown) {
-			callback(
-				{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
-				null
-			);
+			if (error instanceof LedgerError) {
+				callback(
+					{code: status.UNKNOWN, details: error.message}, // TODO: unknown?
+					null
+				);
+			} else {
+				callback(
+					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
+					null
+				);
+			}
 			return;
 		}
 
@@ -273,6 +377,138 @@ export class GrpcHandlers {
 			return grpcJournalEntry;
 		});
 		callback(null, {grpcJournalEntryArray: grpcJournalEntries});
+	}
+
+	private async deleteAccountsByIds(
+		call: ServerUnaryCall<GrpcIdArray__Output, Empty>,
+		callback: sendUnaryData<Empty>
+	): Promise<void> {
+		const grpcAccountIdsOutput: GrpcId__Output[] = call.request.grpcIdArray || [];
+
+		const accountIds: string[] = [];
+		for (const grpcAccountIdOutput of grpcAccountIdsOutput) {
+			// const accountId: string | undefined = grpcAccountIdOutput.grpcId; // TODO: use this auxiliary variable?
+			if (!grpcAccountIdOutput.grpcId) {
+				callback(
+					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
+					null
+				);
+				return;
+			}
+			accountIds.push(grpcAccountIdOutput.grpcId);
+		}
+
+		try {
+			await this.aggregate.deleteAccountsByIds(accountIds);
+		} catch (error: unknown) {
+			if (error instanceof AccountNotFoundError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof LedgerError) {
+				callback(
+					{code: status.UNKNOWN, details: error.message}, // TODO: unknown?
+					null
+				);
+			} else {
+				callback(
+					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
+					null
+				);
+			}
+			return;
+		}
+
+		callback(null, {});
+	}
+
+	private async deactivateAccountsByIds(
+		call: ServerUnaryCall<GrpcIdArray__Output, Empty>,
+		callback: sendUnaryData<Empty>
+	): Promise<void> {
+		const grpcAccountIdsOutput: GrpcId__Output[] = call.request.grpcIdArray || [];
+
+		const accountIds: string[] = [];
+		for (const grpcAccountIdOutput of grpcAccountIdsOutput) {
+			// const accountId: string | undefined = grpcAccountIdOutput.grpcId; // TODO: use this auxiliary variable?
+			if (!grpcAccountIdOutput.grpcId) {
+				callback(
+					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
+					null
+				);
+				return;
+			}
+			accountIds.push(grpcAccountIdOutput.grpcId);
+		}
+
+		try {
+			await this.aggregate.deactivateAccountsByIds(accountIds);
+		} catch (error: unknown) {
+			if (error instanceof AccountNotFoundError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof LedgerError) {
+				callback(
+					{code: status.UNKNOWN, details: error.message}, // TODO: unknown?
+					null
+				);
+			} else {
+				callback(
+					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
+					null
+				);
+			}
+			return;
+		}
+
+		callback(null, {});
+	}
+
+	private async activateAccountsByIds(
+		call: ServerUnaryCall<GrpcIdArray__Output, Empty>,
+		callback: sendUnaryData<Empty>
+	): Promise<void> {
+		const grpcAccountIdsOutput: GrpcId__Output[] = call.request.grpcIdArray || [];
+
+		const accountIds: string[] = [];
+		for (const grpcAccountIdOutput of grpcAccountIdsOutput) {
+			// const accountId: string | undefined = grpcAccountIdOutput.grpcId; // TODO: use this auxiliary variable?
+			if (!grpcAccountIdOutput.grpcId) {
+				callback(
+					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
+					null
+				);
+				return;
+			}
+			accountIds.push(grpcAccountIdOutput.grpcId);
+		}
+
+		try {
+			await this.aggregate.activateAccountsByIds(accountIds);
+		} catch (error: unknown) {
+			if (error instanceof AccountNotFoundError) {
+				callback(
+					{code: status.INVALID_ARGUMENT, details: error.message},
+					null
+				);
+			} else if (error instanceof LedgerError) {
+				callback(
+					{code: status.UNKNOWN, details: error.message}, // TODO: unknown?
+					null
+				);
+			} else {
+				callback(
+					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
+					null
+				);
+			}
+			return;
+		}
+
+		callback(null, {});
 	}
 
 	private accountToGrpcAccount(account: Account): GrpcAccount {

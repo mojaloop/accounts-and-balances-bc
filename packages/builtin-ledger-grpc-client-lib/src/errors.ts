@@ -34,3 +34,7 @@ export class UnableToCreateJournalEntriesError extends Error{}
 
 export class UnableToGetAccountsError extends Error{}
 export class UnableToGetJournalEntriesError extends Error{}
+
+export class UnableToDeleteAccountsError extends Error{}
+export class UnableToDeactivateAccountsError extends Error{}
+export class UnableToActivateAccountsError extends Error{}

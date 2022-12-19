@@ -123,7 +123,6 @@ export class BuiltinLedgerGrpcService {
 		// Logger.
 		if (logger !== undefined) {
 			this.logger = logger.createChild(this.name);
-			//this.logger = logger;
 		} else {
 			this.logger = new KafkaLogger(
 				BOUNDED_CONTEXT_NAME,

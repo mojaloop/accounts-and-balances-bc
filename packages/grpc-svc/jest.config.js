@@ -1,15 +1,22 @@
 "use strict";
 
 const fullPackageName = require("./package.json").name;
-const shortPackageName = fullPackageName.replace("@mojaloop/", "");
+const shortPackageName = fullPackageName.replace("@mojaloop/accounts-and-balances-bc-", "");
 
 const config = {
 	preset: "ts-jest",
 	clearMocks: true,
 	testMatch: ["**/test/unit/**/*.test.ts"],
 	collectCoverage: true,
-	collectCoverageFrom: ["./src/domain/**/*.ts"],
-	coveragePathIgnorePatterns: [/*"./src/application/index.ts", "./src/application/accounts_and_balances_grpc_service.ts", "./src/implementations/"*/, "./src/domain/errors.ts"],
+	collectCoverageFrom: ["./src/**/*.ts"],
+	coveragePathIgnorePatterns: [
+		"./src/index.ts",
+		"./src/application/index.ts",
+		"./src/application/grpc_svc.ts",
+		"./src/application/grpc_server/grpc_handlers.ts",
+		"./src/domain/errors.ts",
+		"./src/implementations/"
+	],
 	coverageDirectory: `../../coverage/unit/${shortPackageName}/`,
 	coverageReporters: ["text", "lcov"],
 	coverageThreshold: {

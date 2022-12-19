@@ -30,6 +30,7 @@
 "use strict";
 
 import {CoaAccount} from "../coa_account";
+import {AccountState} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 export interface IChartOfAccountsRepo {
     init(): Promise<void>;
@@ -41,4 +42,6 @@ export interface IChartOfAccountsRepo {
 
     getAccountsByInternalIds(internalIds: string[]): Promise<CoaAccount[]>;
     getAccountsByOwnerId(ownerId: string): Promise<CoaAccount[]>;
+
+    updateAccountStatesByInternalIds(internalIds: string[], accountState: AccountState): Promise<void>;
 }

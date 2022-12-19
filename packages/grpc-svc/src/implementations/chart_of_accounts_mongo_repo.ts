@@ -31,14 +31,17 @@
 
 import {IChartOfAccountsRepo} from "../domain/infrastructure-types/chart_of_accounts_repo";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {Collection, Db, MongoClient, MongoServerError} from "mongodb";
+import {Collection, Db, MongoClient, MongoServerError, UpdateResult} from "mongodb";
 import {
     AccountAlreadyExistsError,
+    AccountNotFoundError,
     UnableToGetAccountsError,
     UnableToInitRepoError,
-    UnableToStoreAccountsError
+    UnableToStoreAccountsError,
+    UnableToUpdateAccountsError
 } from "../domain/errors";
 import {CoaAccount} from "../domain/coa_account";
+import {AccountState} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 export const COA_ACCOUNT_MONGO_SCHEMA: any = {
     bsonType: "object",
@@ -91,7 +94,6 @@ export class ChartOfAccountsMongoRepo implements IChartOfAccountsRepo {
         collectionName: string
     ) {
         this.logger = logger.createChild(this.constructor.name);
-        //this.logger = logger;
         this.HOST = host;
         this.PORT_NO = portNo;
         this.TIMEOUT_MS = timeoutMs;
@@ -211,5 +213,21 @@ export class ChartOfAccountsMongoRepo implements IChartOfAccountsRepo {
             delete account._id;
         });
         return accounts;
+    }
+
+    async updateAccountStatesByInternalIds(accountIds: string[], accountState: AccountState): Promise<void> {
+        let updateResult: any; // TODO: verify type.
+        try {
+            updateResult = await this.collection.updateMany(
+                {_id: {$in: accountIds}},
+                {$set: {accountState: accountState}}
+            );
+        } catch (error: unknown) {
+            throw new UnableToUpdateAccountsError((error as any)?.message);
+        }
+
+        if (updateResult.modifiedCount === 0) { // TODO: use "!updateResult.modifiedCount" instead?
+            throw new AccountNotFoundError();
+        }
     }
 }
