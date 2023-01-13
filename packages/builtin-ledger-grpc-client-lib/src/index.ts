@@ -27,8 +27,6 @@
  --------------
  ******/
 
-"use strict";
-
 export * from "./grpc_client";
 export * from "./errors";
 

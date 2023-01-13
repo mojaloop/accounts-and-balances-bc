@@ -27,8 +27,6 @@
  --------------
  ******/
 
-"use strict";
-
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
 

@@ -27,10 +27,6 @@
  --------------
  ******/
 
-"use strict";
-
-export * from "./builtin_ledger_grpc_svc";
-
 import {BuiltinLedgerGrpcService} from "./builtin_ledger_grpc_svc";
 
 BuiltinLedgerGrpcService.start();

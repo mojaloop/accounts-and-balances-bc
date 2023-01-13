@@ -27,8 +27,6 @@
  --------------
  ******/
 
-"use strict";
-
 export type AccountState = "ACTIVE" | "DELETED" | "INACTIVE";
 
 export type AccountType = "FEE" | "MULTILATERAL" | "POSITION" | "RECON" | "SETTLEMENT";

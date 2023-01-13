@@ -27,8 +27,6 @@
  --------------
  ******/
 
-"use strict";
-
 import {AccountState, AccountType} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 // TODO: does it make sense to have DTO and non-DTO types?
@@ -47,8 +45,8 @@ export type BuiltinLedgerAccountDto = {
 // TODO: find a better name.
 export type LimitCheckMode =
 	"NONE"
-	| "CREDIT_BALANCE_CANNOT_EXCEED_DEBIT_BALANCE"
-	| "DEBIT_BALANCE_CANNOT_EXCEED_CREDIT_BALANCE";
+	| "DEBITS_CANNOT_EXCEED_CREDITS"
+	| "CREDITS_CANNOT_EXCEED_DEBITS";
 
 export type BuiltinLedgerAccount = {
 	id: string;

@@ -127,3 +127,4 @@ devspace*
 
 # Certificates.
 *.crt
+*.pem

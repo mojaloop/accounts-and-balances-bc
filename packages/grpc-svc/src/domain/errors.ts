@@ -27,10 +27,9 @@
  --------------
  ******/
 
-"use strict";
-
 export class AccountAlreadyExistsError extends Error {readonly message = "account already exists";}
 export class AccountNotFoundError extends Error {readonly message = "account not found";}
+export class InvalidAccountStateError extends Error {readonly message = "invalid account state";}
 export class InvalidDebitBalanceError extends Error {readonly message = "invalid debit balance";}
 export class InvalidCreditBalanceError extends Error {readonly message = "invalid credit balance";}
 export class InvalidBalanceError extends Error {readonly message = "invalid balance";}

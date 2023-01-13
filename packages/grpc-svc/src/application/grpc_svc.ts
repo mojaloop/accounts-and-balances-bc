@@ -27,8 +27,6 @@
  --------------
  ******/
 
-"use strict";
-
 import {ILogger, LogLevel} from "@mojaloop/logging-bc-public-types-lib";
 import {KafkaLogger} from "@mojaloop/logging-bc-client-lib";
 import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
@@ -41,41 +39,20 @@ import {ILedgerAdapter} from "../domain/infrastructure-types/ledger_adapter";
 
 /* ********** Constants Begin ********** */
 
-// General.
-const BOUNDED_CONTEXT_NAME: string = "accounts-and-balances-bc";
-const SERVICE_NAME: string = "grpc-svc";
-const SERVICE_VERSION: string = "0.0.1";
+const BC_NAME: string = "accounts-and-balances-bc";
+const SVC_NAME: string = "grpc-svc";
+const SVC_VERSION: string = process.env.npm_package_version || "0.0.1"; // TODO: is this correct?
 
-// Event streamer.
-const EVENT_STREAMER_HOST: string = process.env["ACCOUNTS_AND_BALANCES_BC_EVENT_STREAMER_HOST"] ?? "localhost";
-const EVENT_STREAMER_PORT_NO: number =
-    parseInt(process.env["ACCOUNTS_AND_BALANCES_BC_EVENT_STREAMER_PORT_NO"] ?? "") || 9092;
+const KAFKA_URL: string = process.env.KAFKA_URL || "localhost:9092";
 
-// Logging.
-const LOGGING_LEVEL: LogLevel = LogLevel.INFO;
-const LOGGING_TOPIC: string = process.env["ACCOUNTS_AND_BALANCES_BC_LOGGING_TOPIC"] ?? "logs";
+const LOG_LEVEL: LogLevel = process.env.LOG_LEVEL as LogLevel || LogLevel.DEBUG;
+const KAFKA_LOGS_TOPIC: string = process.env.KAFKA_LOGS_TOPIC || "logs";
 
-// Repository.
-const MONGO_HOST: string = process.env["ACCOUNTS_AND_BALANCES_BC_MONGO_HOST"] ?? "localhost";
-const MONGO_PORT_NO: number = parseInt(process.env["ACCOUNTS_AND_BALANCES_BC_MONGO_PORT_NO"] ?? "") || 27017;
-const MONGO_TIMEOUT_MS: number =
-    parseInt(process.env["ACCOUNTS_AND_BALANCES_BC_MONGO_TIMEOUT_MS"] ?? "") || 5_000;
-const MONGO_USERNAME: string = process.env["ACCOUNTS_AND_BALANCES_BC_MONGO_USERNAME"] ?? "accounts-and-balances-bc";
-const MONGO_PASSWORD: string = process.env["ACCOUNTS_AND_BALANCES_BC_MONGO_PASSWORD"] ?? "123456789";
-const MONGO_DB_NAME: string = process.env["ACCOUNTS_AND_BALANCES_BC_MONGO_DB_NAME"] ?? "accounts_and_balances_bc";
-const MONGO_CHART_OF_ACCOUNTS_COLLECTION_NAME: string =
-    process.env["ACCOUNTS_AND_BALANCES_BC_MONGO_CHART_OF_ACCOUNTS_COLLECTION_NAME"] ?? "chart_of_accounts";
+const MONGO_URL: string = process.env.MONGO_URL || "mongodb://root:mongoDbPas42@localhost:27017";
 
-// Ledger adapter.
-const LEDGER_ADAPTER_HOST: string = process.env["ACCOUNTS_AND_BALANCES_BC_LEDGER_ADAPTER_HOST"] ?? "localhost";
-const LEDGER_ADAPTER_PORT_NO: number
-    = parseInt(process.env["ACCOUNTS_AND_BALANCES_BC_LEDGER_ADAPTER_PORT_NO"] ?? "") || 5678;
-const LEDGER_ADAPTER_TIMEOUT: number
-    = parseInt(process.env["ACCOUNTS_AND_BALANCES_BC_LEDGER_ADAPTER_TIMEOUT"] ?? "") || 5_000;
+const LEDGER_URL: string = process.env.LEDGER_URL || "localhost:5678";
 
-// gRPC Service.
-const GRPC_SVC_HOST: string = process.env["ACCOUNTS_AND_BALANCES_BC_GRPC_SVC_HOST"] ?? "localhost";
-const GRPC_SVC_PORT_NO: number = parseInt(process.env["ACCOUNTS_AND_BALANCES_BC_SVC_PORT_NO"] ?? "") || 1234;
+const ACCOUNTS_AND_BALANCES_URL: string = process.env.GRPC_SVC_URL || "localhost:1234";
 
 /* ********** Constants End ********** */
 
@@ -86,6 +63,8 @@ export class GrpcService {
     private static ledgerAdapter: ILedgerAdapter;
     private static grpcServer: GrpcServer;
 
+    private static loggerIsChild: boolean; // TODO: avoid this.
+
     static async start(
         logger?: ILogger,
         chartOfAccountsRepo?: IChartOfAccountsRepo,
@@ -94,15 +73,17 @@ export class GrpcService {
         // Logger.
         if (logger !== undefined) {
             this.logger = logger.createChild(this.name);
+            this.loggerIsChild = true;
         } else {
             this.logger = new KafkaLogger(
-                BOUNDED_CONTEXT_NAME,
-                SERVICE_NAME,
-                SERVICE_VERSION,
-                {kafkaBrokerList: `${EVENT_STREAMER_HOST}:${EVENT_STREAMER_PORT_NO}`},
-                LOGGING_TOPIC,
-                LOGGING_LEVEL
+                BC_NAME,
+                SVC_NAME,
+                SVC_VERSION,
+                {kafkaBrokerList: KAFKA_URL},
+                KAFKA_LOGS_TOPIC,
+                LOG_LEVEL
             );
+            this.loggerIsChild = false;
             try {
                 await (this.logger as KafkaLogger).init();
             } catch (error: unknown) {
@@ -118,13 +99,7 @@ export class GrpcService {
         } else {
             this.chartOfAccountsRepo = new ChartOfAccountsMongoRepo(
                 this.logger,
-                MONGO_HOST,
-                MONGO_PORT_NO,
-                MONGO_TIMEOUT_MS,
-                MONGO_USERNAME,
-                MONGO_PASSWORD,
-                MONGO_DB_NAME,
-                MONGO_CHART_OF_ACCOUNTS_COLLECTION_NAME
+                MONGO_URL
             );
             try {
                 await this.chartOfAccountsRepo.init();
@@ -141,9 +116,7 @@ export class GrpcService {
         } else {
             this.ledgerAdapter = new BuiltinLedgerAdapter(
                 this.logger,
-                LEDGER_ADAPTER_HOST,
-                LEDGER_ADAPTER_PORT_NO,
-                LEDGER_ADAPTER_TIMEOUT
+                LEDGER_URL
             );
             try {
                 await this.ledgerAdapter.init();
@@ -165,8 +138,7 @@ export class GrpcService {
         this.grpcServer = new GrpcServer(
             this.logger,
             accountsAndBalancesAggregate,
-            GRPC_SVC_HOST,
-            GRPC_SVC_PORT_NO
+            ACCOUNTS_AND_BALANCES_URL
         );
         try {
             await this.grpcServer.start();
@@ -190,7 +162,7 @@ export class GrpcService {
         if (this.auditingClient !== undefined) {
             await this.auditingClient.destroy();
         }
-        if (this.logger instanceof KafkaLogger) {
+        if (this.logger instanceof KafkaLogger && !this.loggerIsChild) {
             await this.logger.destroy();
         }
     }
@@ -205,5 +177,5 @@ async function handleSignals(signal: NodeJS.Signals): Promise<void> {
 process.on("SIGINT", handleSignals); // SIGINT = 2 (Ctrl + c).
 process.on("SIGTERM", handleSignals); // SIGTERM = 15.
 process.on("exit", () => {
-    console.info(`exiting ${SERVICE_NAME}`);
+    console.info(`exiting ${SVC_NAME}`);
 });

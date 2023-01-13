@@ -25,7 +25,6 @@
  --------------
  ******/
 
-"use strict";
 
 export * from "./audit_client_mock";
 export * from "./authentication_service_mock";

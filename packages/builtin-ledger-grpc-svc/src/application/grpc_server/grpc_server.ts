@@ -27,8 +27,6 @@
  --------------
  ******/
 
-"use strict";
-
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {
 	GrpcObject,
@@ -50,8 +48,7 @@ import {join} from "path";
 export class GrpcServer {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
-	private readonly HOST: string;
-	private readonly PORT_NO: number;
+	private readonly URL: string;
 	// Other properties.
 	private static readonly PROTO_FILE_RELATIVE_PATH: string =
 		"../../../../builtin-ledger-grpc-client-lib/src/builtin_ledger.proto";
@@ -64,12 +61,10 @@ export class GrpcServer {
 		logger: ILogger,
 		tokenHelper: TokenHelper,
 		aggregate: BuiltinLedgerAggregate,
-		host: string,
-		portNo: number
+		url: string
 	) {
 		this.logger = logger.createChild(this.constructor.name);
-		this.HOST = host;
-		this.PORT_NO = portNo;
+		this.URL = url;
 
 		const protoFileAbsolutePath: string = join(__dirname, GrpcServer.PROTO_FILE_RELATIVE_PATH);
 		const packageDefinition: PackageDefinition = loadSync(
@@ -96,7 +91,7 @@ export class GrpcServer {
 	async start(): Promise<void> {
 		return new Promise((resolve, reject) => {
 			this.server.bindAsync(
-				`${this.HOST}:${this.PORT_NO}`,
+				this.URL,
 				ServerCredentials.createInsecure(),
 				(error) => {
 					if (error !== null) {
@@ -107,8 +102,7 @@ export class GrpcServer {
 					this.server.start();
 					this.logger.info("* * * * * * * * * * * * * * * * * * * *");
 					this.logger.info("gRPC server started 🚀");
-					this.logger.info(`Host: ${this.HOST}`);
-					this.logger.info(`Port: ${this.PORT_NO}`);
+					this.logger.info(`URL: ${this.URL}`);
 					this.logger.info("* * * * * * * * * * * * * * * * * * * *");
 					resolve();
 				}

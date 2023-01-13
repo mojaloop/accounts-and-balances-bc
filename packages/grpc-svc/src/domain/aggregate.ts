@@ -27,8 +27,6 @@
  --------------
  ******/
 
-"use strict";
-
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {
 	ILedgerAdapter,
@@ -38,7 +36,7 @@ import {
 import {CoaAccount} from "./coa_account";
 import {
 	AccountAlreadyExistsError,
-	AccountNotFoundError,
+	AccountNotFoundError, InvalidAccountStateError,
 	InvalidBalanceError,
 	InvalidCreditBalanceError,
 	InvalidCurrencyCodeError,
@@ -103,9 +101,12 @@ export class AccountsAndBalancesAggregate {
 		const coaAccounts: CoaAccount[] = [];
 		const ledgerAdapterAccounts: LedgerAdapterAccount[] = [];
 		for (const account of accounts) {
-			// When creating an account, debitBalance, creditBalance, balance and timestampLastJournalEntry are
-			// supposed to be null. For consistency purposes, and to make sure whoever calls this function knows that,
-			// if those values aren't respected, errors are thrown.
+			// When creating an account, state is supposed to "ACTIVE" and debitBalance, creditBalance, balance and
+			// timestampLastJournalEntry are supposed to be null. For consistency purposes, and to make sure whoever
+			// calls this function knows that, if those values aren't respected, errors are thrown.
+			if (account.state !== "ACTIVE") {
+				throw new InvalidAccountStateError();
+			}
 			if (account.debitBalance) { // TODO: use "!== null" instead?
 				throw new InvalidDebitBalanceError();
 			}

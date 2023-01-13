@@ -26,13 +26,3 @@
 
  --------------
  ******/
-
-"use strict";
-
-describe("gRPC client lib - unit tests", () => {
-	beforeAll(async () => {
-	});
-
-	afterAll(async () => {
-	});
-});

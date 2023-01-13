@@ -27,8 +27,6 @@
  --------------
  ******/
 
-"use strict";
-
 import {BuiltinLedgerAccount, BuiltinLedgerJournalEntry} from "./entities";
 import {AccountState} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 

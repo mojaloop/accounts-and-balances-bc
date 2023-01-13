@@ -27,61 +27,45 @@
  --------------
  ******/
 
-"use strict";
-
 import {LogLevel} from "@mojaloop/logging-bc-public-types-lib";
 import {KafkaLogger} from "@mojaloop/logging-bc-client-lib";
 import {GrpcClient} from "@mojaloop/accounts-and-balances-bc-grpc-client-lib";
 import {Account, JournalEntry} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {randomUUID} from "crypto";
-import {
-	GrpcService
-} from "../../packages/grpc-svc/src/application/grpc_svc";
+import {GrpcService} from "@mojaloop/accounts-and-balances-bc-grpc-svc/dist/application/grpc_svc";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
 import {
 	BuiltinLedgerAccount,
-	BuiltinLedgerAccountsMongoRepo,
-	BuiltinLedgerJournalEntriesMongoRepo,
-	IBuiltinLedgerAccountsRepo,
-	IBuiltinLedgerJournalEntriesRepo
-} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc";
+	IBuiltinLedgerAccountsRepo
+} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc/dist/domain";
+import {
+	BuiltinLedgerAccountsMongoRepo
+} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc/dist/implementations/builtin_ledger_accounts_mongo_repo";
 import {AuthorizationClientMock} from "@mojaloop/accounts-and-balances-bc-shared-mocks-lib";
-import {BuiltinLedgerGrpcService} from "../../packages/builtin-ledger-grpc-svc/src/application/builtin_ledger_grpc_svc";
-import {IChartOfAccountsRepo} from "../../packages/grpc-svc/src/domain/infrastructure-types/chart_of_accounts_repo";
-import {CoaAccount} from "../../packages/grpc-svc/src/domain/coa_account";
-import {ChartOfAccountsMongoRepo} from "../../packages/grpc-svc/src/implementations/chart_of_accounts_mongo_repo";
-import {stringToBigint} from "../../packages/grpc-svc/src/domain/converters";
+import {
+	BuiltinLedgerGrpcService
+} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc/dist/application/builtin_ledger_grpc_svc";
+import {IChartOfAccountsRepo} from "@mojaloop/accounts-and-balances-bc-grpc-svc/dist/domain";
+import {CoaAccount} from "@mojaloop/accounts-and-balances-bc-grpc-svc/dist/domain/coa_account";
+import {
+	ChartOfAccountsMongoRepo
+} from "@mojaloop/accounts-and-balances-bc-grpc-svc/dist/implementations/chart_of_accounts_mongo_repo";
+import {stringToBigint} from "@mojaloop/accounts-and-balances-bc-grpc-svc/dist/domain/converters";
 
 /* ********** Constants Begin ********** */
 
-// General.
-const BOUNDED_CONTEXT_NAME: string = "accounts-and-balances-bc";
-const SERVICE_NAME: string = "integration-tests-builtin-ledger";
-const SERVICE_VERSION: string = "0.0.1";
+const BC_NAME: string = "accounts-and-balances-bc";
+const SVC_NAME: string = "integration-tests";
+const SVC_VERSION: string = "0.0.1";
 
-// Event streamer.
-const EVENT_STREAMER_HOST: string = "localhost";
-const EVENT_STREAMER_PORT_NO: number = 9092;
+const KAFKA_URL: string = "localhost:9092";
 
-// Logging.
-const LOGGING_LEVEL: LogLevel = LogLevel.INFO;
-const LOGGING_TOPIC: string = "logs";
+const LOG_LEVEL: LogLevel = LogLevel.DEBUG;
+const KAFKA_LOGS_TOPIC: string = "logs";
 
-// Repo.
-const MONGO_HOST: string = "localhost";
-const MONGO_PORT_NO: number = 27017;
-const MONGO_TIMEOUT_MS: number = 5_000;
-const MONGO_USERNAME: string = "accounts-and-balances-bc";
-const MONGO_PASSWORD: string = "123456789";
-const MONGO_DB_NAME: string = "accounts_and_balances_bc";
-const MONGO_BUILTIN_LEDGER_ACCOUNTS_COLLECTION_NAME: string = "accounts";
-const MONGO_BUILTIN_LEDGER_JOURNAL_ENTRIES_COLLECTION_NAME: string = "journal_entries";
-const MONGO_CHART_OF_ACCOUNTS_COLLECTION_NAME: string = "chart_of_accounts";
+const MONGO_URL: string = "mongodb://root:mongoDbPas42@localhost:27017";
 
-// Accounts and Balances gRPC client.
-const ACCOUNTS_AND_BALANCES_GRPC_SVC_HOST: string = "localhost";
-const ACCOUNTS_AND_BALANCES_GRPC_SVC_PORT_NO: number = 1234;
-const ACCOUNTS_AND_BALANCES_GRPC_CLIENT_TIMEOUT_MS: number = 5_000;
+const ACCOUNTS_AND_BALANCES_URL: string = "localhost:1234";
 
 // Hub account.
 const HUB_ACCOUNT_ID: string = randomUUID();
@@ -92,57 +76,32 @@ const HUB_ACCOUNT_INITIAL_CREDIT_BALANCE: string = "1000000"; // Currency decima
 
 let kafkaLogger: KafkaLogger;
 let builtinLedgerAccountsRepo: IBuiltinLedgerAccountsRepo;
-let builtinLedgerJournalEntriesRepo: IBuiltinLedgerJournalEntriesRepo;
 let chartOfAccountRepo: IChartOfAccountsRepo;
 let grpcClient: GrpcClient;
 
 describe("accounts and balances - integration tests with the built-in ledger", () => {
 	beforeAll(async () => {
 		kafkaLogger = new KafkaLogger(
-			BOUNDED_CONTEXT_NAME,
-			SERVICE_NAME,
-			SERVICE_VERSION,
-			{kafkaBrokerList: `${EVENT_STREAMER_HOST}:${EVENT_STREAMER_PORT_NO}`},
-			LOGGING_TOPIC,
-			LOGGING_LEVEL
+			BC_NAME,
+			SVC_NAME,
+			SVC_VERSION,
+			{kafkaBrokerList: KAFKA_URL},
+			KAFKA_LOGS_TOPIC,
+			LOG_LEVEL
 		);
 		await kafkaLogger.init();
 
-		const authorizationClient: IAuthorizationClient = new AuthorizationClientMock(kafkaLogger);
+		const authorizationClient: IAuthorizationClient = new AuthorizationClientMock(kafkaLogger); // TODO: remove mock.
 
 		builtinLedgerAccountsRepo = new BuiltinLedgerAccountsMongoRepo(
 			kafkaLogger,
-			MONGO_HOST,
-			MONGO_PORT_NO,
-			MONGO_TIMEOUT_MS,
-			MONGO_USERNAME,
-			MONGO_PASSWORD,
-			MONGO_DB_NAME,
-			MONGO_BUILTIN_LEDGER_ACCOUNTS_COLLECTION_NAME
+			MONGO_URL
 		);
 		await builtinLedgerAccountsRepo.init();
 
-		builtinLedgerJournalEntriesRepo = new BuiltinLedgerJournalEntriesMongoRepo(
-			kafkaLogger,
-			MONGO_HOST,
-			MONGO_PORT_NO,
-			MONGO_TIMEOUT_MS,
-			MONGO_USERNAME,
-			MONGO_PASSWORD,
-			MONGO_DB_NAME,
-			MONGO_BUILTIN_LEDGER_JOURNAL_ENTRIES_COLLECTION_NAME
-		);
-		await builtinLedgerJournalEntriesRepo.init();
-
 		chartOfAccountRepo = new ChartOfAccountsMongoRepo(
 			kafkaLogger,
-			MONGO_HOST,
-			MONGO_PORT_NO,
-			MONGO_TIMEOUT_MS,
-			MONGO_USERNAME,
-			MONGO_PASSWORD,
-			MONGO_DB_NAME,
-			MONGO_CHART_OF_ACCOUNTS_COLLECTION_NAME
+			MONGO_URL
 		);
 		await chartOfAccountRepo.init();
 
@@ -178,8 +137,7 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 			kafkaLogger,
 			authorizationClient,
 			undefined,
-			builtinLedgerAccountsRepo,
-			builtinLedgerJournalEntriesRepo
+			builtinLedgerAccountsRepo
 		);
 
 		await GrpcService.start(
@@ -189,17 +147,16 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 
 		grpcClient = new GrpcClient(
 			kafkaLogger,
-			ACCOUNTS_AND_BALANCES_GRPC_SVC_HOST,
-			ACCOUNTS_AND_BALANCES_GRPC_SVC_PORT_NO,
-			ACCOUNTS_AND_BALANCES_GRPC_CLIENT_TIMEOUT_MS
+			ACCOUNTS_AND_BALANCES_URL
 		);
 		await grpcClient.init();
 	});
 
 	afterAll(async () => {
 		await grpcClient.destroy();
-		/*await GrpcService.stop();
-		await BuiltinLedgerGrpcService.stop();*/
+		await GrpcService.stop();
+		await BuiltinLedgerGrpcService.stop();
+		await kafkaLogger.destroy();
 	});
 
 	/* createAccounts() */
@@ -247,14 +204,16 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 	test("createJournalEntries()", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: Account[] = await createAndCredit2Accounts();
+		const idAccountA: string = accounts[0].id!;
+		const idAccountB: string = accounts[1].id!;
 
 		const journalEntryA: JournalEntry = {
 			id: null,
 			ownerId: null,
 			currencyCode: "EUR",
 			amount: "5",
-			debitedAccountId: accounts[0].id!,
-			creditedAccountId: accounts[1].id!,
+			debitedAccountId: idAccountA,
+			creditedAccountId: idAccountB,
 			timestamp: null
 		};
 
@@ -262,14 +221,14 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 			id: null,
 			ownerId: null,
 			currencyCode: "EUR",
-			amount: "10",
-			debitedAccountId: accounts[1].id!,
-			creditedAccountId: accounts[0].id!,
+			amount: "5",
+			debitedAccountId: idAccountB,
+			creditedAccountId: idAccountA,
 			timestamp: null
 		};
 
-		const journalEntryIds: string[]
-			= await grpcClient.createJournalEntries([journalEntryA, journalEntryB]);
+		const journalEntryIds: string[] =
+			await grpcClient.createJournalEntries([journalEntryA, journalEntryB]);
 		const idJournalEntryA: string | undefined = journalEntryIds[0];
 		const idJournalEntryB: string | undefined = journalEntryIds[1];
 
@@ -330,32 +289,35 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 
 		expect(accounts.length).toEqual(2); // Accounts A and C.
 
-		expect(accounts[0].id).toEqual(idAccountA);
-		expect(accounts[0].ownerId).toEqual(accountA.ownerId);
-		expect(accounts[0].state).toEqual(accountA.state);
-		expect(accounts[0].type).toEqual(accountA.type);
-		expect(accounts[0].currencyCode).toEqual(accountA.currencyCode);
-		expect(accounts[0].debitBalance).toEqual("0");
-		expect(accounts[0].creditBalance).toEqual("0");
-		expect(accounts[0].balance).toEqual("0");
-		expect(accounts[0].timestampLastJournalEntry).toEqual(accountA.timestampLastJournalEntry);
+		const receivedAccountA: Account = accounts[0].id === idAccountA ? accounts[0] : accounts[1];
+		const receivedAccountC: Account = accounts[1].id === idAccountC ? accounts[1] : accounts[0];
 
-		expect(accounts[1].id).toEqual(idAccountC);
-		expect(accounts[1].ownerId).toEqual(accountC.ownerId);
-		expect(accounts[1].state).toEqual(accountC.state);
-		expect(accounts[1].type).toEqual(accountC.type);
-		expect(accounts[1].currencyCode).toEqual(accountC.currencyCode);
-		expect(accounts[1].debitBalance).toEqual("0");
-		expect(accounts[1].creditBalance).toEqual("0");
-		expect(accounts[1].balance).toEqual("0");
-		expect(accounts[1].timestampLastJournalEntry).toEqual(accountB.timestampLastJournalEntry);
+		expect(receivedAccountA.id).toEqual(idAccountA);
+		expect(receivedAccountA.ownerId).toEqual(accountA.ownerId);
+		expect(receivedAccountA.state).toEqual(accountA.state);
+		expect(receivedAccountA.type).toEqual(accountA.type);
+		expect(receivedAccountA.currencyCode).toEqual(accountA.currencyCode);
+		expect(receivedAccountA.debitBalance).toEqual("0");
+		expect(receivedAccountA.creditBalance).toEqual("0");
+		expect(receivedAccountA.balance).toEqual("0");
+		expect(receivedAccountA.timestampLastJournalEntry).toEqual(accountA.timestampLastJournalEntry);
+
+		expect(receivedAccountC.id).toEqual(idAccountC);
+		expect(receivedAccountC.ownerId).toEqual(accountC.ownerId);
+		expect(receivedAccountC.state).toEqual(accountC.state);
+		expect(receivedAccountC.type).toEqual(accountC.type);
+		expect(receivedAccountC.currencyCode).toEqual(accountC.currencyCode);
+		expect(receivedAccountC.debitBalance).toEqual("0");
+		expect(receivedAccountC.creditBalance).toEqual("0");
+		expect(receivedAccountC.balance).toEqual("0");
+		expect(receivedAccountC.timestampLastJournalEntry).toEqual(accountB.timestampLastJournalEntry);
 	});
 
 	/* getAccountsByOwnerId() */
 
 	test("getAccountsByOwnerId()", async () => {
-		const ownerIdA: string = "a";
-		const ownerIdB: string = "b";
+		const ownerIdA: string = randomUUID();
+		const ownerIdB: string = randomUUID();
 
 		const accountA: Account = {
 			id: null,
@@ -402,25 +364,28 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 
 		expect(accounts.length).toEqual(2); // Accounts A and C.
 
-		expect(accounts[0].id).toEqual(idAccountA);
-		expect(accounts[0].ownerId).toEqual(accountA.ownerId);
-		expect(accounts[0].state).toEqual(accountA.state);
-		expect(accounts[0].type).toEqual(accountA.type);
-		expect(accounts[0].currencyCode).toEqual(accountA.currencyCode);
-		expect(accounts[0].debitBalance).toEqual("0");
-		expect(accounts[0].creditBalance).toEqual("0");
-		expect(accounts[0].balance).toEqual("0");
-		expect(accounts[0].timestampLastJournalEntry).toEqual(accountA.timestampLastJournalEntry);
+		const receivedAccountA: Account = accounts[0].id === idAccountA ? accounts[0] : accounts[1];
+		const receivedAccountC: Account = accounts[1].id === idAccountC ? accounts[1] : accounts[0];
 
-		expect(accounts[1].id).toEqual(idAccountC);
-		expect(accounts[1].ownerId).toEqual(accountC.ownerId);
-		expect(accounts[1].state).toEqual(accountC.state);
-		expect(accounts[1].type).toEqual(accountC.type);
-		expect(accounts[1].currencyCode).toEqual(accountC.currencyCode);
-		expect(accounts[1].debitBalance).toEqual("0");
-		expect(accounts[1].creditBalance).toEqual("0");
-		expect(accounts[1].balance).toEqual("0");
-		expect(accounts[1].timestampLastJournalEntry).toEqual(accountB.timestampLastJournalEntry);
+		expect(receivedAccountA.id).toEqual(idAccountA);
+		expect(receivedAccountA.ownerId).toEqual(accountA.ownerId);
+		expect(receivedAccountA.state).toEqual(accountA.state);
+		expect(receivedAccountA.type).toEqual(accountA.type);
+		expect(receivedAccountA.currencyCode).toEqual(accountA.currencyCode);
+		expect(receivedAccountA.debitBalance).toEqual("0");
+		expect(receivedAccountA.creditBalance).toEqual("0");
+		expect(receivedAccountA.balance).toEqual("0");
+		expect(receivedAccountA.timestampLastJournalEntry).toEqual(accountA.timestampLastJournalEntry);
+
+		expect(receivedAccountC.id).toEqual(idAccountC);
+		expect(receivedAccountC.ownerId).toEqual(accountC.ownerId);
+		expect(receivedAccountC.state).toEqual(accountC.state);
+		expect(receivedAccountC.type).toEqual(accountC.type);
+		expect(receivedAccountC.currencyCode).toEqual(accountC.currencyCode);
+		expect(receivedAccountC.debitBalance).toEqual("0");
+		expect(receivedAccountC.creditBalance).toEqual("0");
+		expect(receivedAccountC.balance).toEqual("0");
+		expect(receivedAccountC.timestampLastJournalEntry).toEqual(accountB.timestampLastJournalEntry);
 	});
 
 	/* getJournalEntriesByAccountId() */

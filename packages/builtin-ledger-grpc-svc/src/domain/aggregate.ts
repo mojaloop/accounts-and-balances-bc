@@ -27,8 +27,6 @@ GetJournalEntriesByAccountId
  --------------
  ******/
 
-"use strict";
-
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {randomUUID} from "crypto";
 import {
@@ -44,7 +42,11 @@ import {
 	BLInvalidIdError,
 	BLInvalidCurrencyCodeError,
 	BLInvalidCreditBalanceError,
-	BLInvalidDebitBalanceError, BLAccountNotFoundError,
+	BLInvalidDebitBalanceError,
+	BLAccountNotFoundError,
+	BLDebitsExceedCreditsError,
+	BLCreditsExceedDebitsError,
+	CurrencyDecimalsDifferError, BLInvalidAccountStateError, BLInvalidAccountTypeError,
 } from "./errors";
 import {IAuditClient, AuditSecurityContext} from "@mojaloop/auditing-bc-public-types-lib";
 import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
@@ -124,7 +126,7 @@ export class BuiltinLedgerAggregate {
 		builtinLedgerAccountDtos: BuiltinLedgerAccountDto[],
 		securityContext: CallSecurityContext
 	): Promise<string[]> {
-		this.enforcePrivilege(securityContext, Privileges.CREATE_ACCOUNT); // TODO: enforce privilege here and on createAccount()?
+		this.enforcePrivilege(securityContext, Privileges.CREATE_ACCOUNT);
 
 		const accountIds: string[] = [];
 		for (const builtinLedgerAccountDto of builtinLedgerAccountDtos) {
@@ -140,9 +142,12 @@ export class BuiltinLedgerAggregate {
 	): Promise<string> {
 		this.enforcePrivilege(securityContext, Privileges.CREATE_ACCOUNT);
 
-		// When creating an account, debitBalance, creditBalance and timestampLastJournalEntry are supposed to be null.
-		// For consistency purposes, and to make sure whoever calls this function knows that, if those values aren't
-		// respected, errors are thrown.
+		// When creating an account, state is supposed to "ACTIVE" and debitBalance, creditBalance and
+		// timestampLastJournalEntry are supposed to be null. For consistency purposes, and to make sure whoever calls
+		// this function knows that, if those values aren't respected, errors are thrown.
+		if (builtinLedgerAccountDto.state !== "ACTIVE") {
+			throw new BLInvalidAccountStateError();
+		}
 		if (builtinLedgerAccountDto.debitBalance) { // TODO: use "!== null" instead?
 			throw new BLInvalidDebitBalanceError();
 		}
@@ -159,11 +164,8 @@ export class BuiltinLedgerAggregate {
 		// Generate a random UUId, if needed. TODO: randomUUID() can generate an id that already exists.
 		const accountId: string = builtinLedgerAccountDto.id ?? randomUUID(); // TODO: should this be done? ?? or ||?
 
-		// Validate the account's state and type. TODO: how to do this?
-		/*if (!Object.values(AccountState).includes(builtinLedgerAccountDto.state)) {
-			throw new BLInvalidAccountStateError();
-		}
-		if (!Object.values(AccountType).includes(builtinLedgerAccountDto.type)) {
+		// Validate the account's type. TODO: how to do this?
+		/*if (!Object.values(AccountType).includes(builtinLedgerAccountDto.type)) {
 			throw new BLInvalidAccountTypeError();
 		}*/
 
@@ -216,7 +218,7 @@ export class BuiltinLedgerAggregate {
 		builtinLedgerJournalEntryDtos: BuiltinLedgerJournalEntryDto[],
 		securityContext: CallSecurityContext
 	): Promise<string[]> {
-		this.enforcePrivilege(securityContext, Privileges.CREATE_JOURNAL_ENTRY); // TODO: enforce privilege here and on createJournalEntry()?
+		this.enforcePrivilege(securityContext, Privileges.CREATE_JOURNAL_ENTRY);
 
 		const journalEntryIds: string[] = [];
 		for (const builtinLedgerJournalEntryDto of builtinLedgerJournalEntryDtos) {
@@ -234,15 +236,15 @@ export class BuiltinLedgerAggregate {
 
 		// When creating a journal entry, timestamp is supposed to be null. For consistency purposes, and to make sure
 		// whoever calls this function knows that, if this value isn't respected, an error is thrown.
-		if (builtinLedgerJournalEntryDto.timestamp) { // TODO: use "!== null" instead?
+		if (builtinLedgerJournalEntryDto.timestamp) { // FIXME: use "!== null" instead?
 			throw new BLInvalidTimestampError();
 		}
 
 		if (builtinLedgerJournalEntryDto.id === "") {
 			throw new BLInvalidIdError();
 		}
-		// Generate a random UUId, if needed. TODO: randomUUID() can generate an id that already exists.
-		const journalEntryId: string = builtinLedgerJournalEntryDto.id ?? randomUUID(); // TODO: should this be done? ?? or ||?
+		// Generate a random UUId, if needed.
+		const journalEntryId: string = builtinLedgerJournalEntryDto.id || randomUUID();
 
 		// Validate the currency code and get the currency.
 		const currency: {code: string, decimals: number} | undefined
@@ -321,23 +323,21 @@ export class BuiltinLedgerAggregate {
 		// Check if the currency decimals of the debited and credited accounts and the journal entry match.
 		if (debitedBuiltinLedgerAccount.currencyDecimals !== creditedBuiltinLedgerAccount.currencyDecimals
 			|| debitedBuiltinLedgerAccount.currencyDecimals !== builtinLedgerJournalEntry.currencyDecimals) {
-			// TODO: does it make sense to create a custom error?
-			this.logger.error("currency decimals differ");
-			throw new Error();
+			throw new CurrencyDecimalsDifferError();
 		}
 
-		// Check the balances. TODO: verify.
+		// Check the balances. // TODO: verify.
 		/*if (
-			debitedBuiltinLedgerAccount.limitCheckMode === "DEBIT_BALANCE_CANNOT_EXCEED_CREDIT_BALANCE"
+			debitedBuiltinLedgerAccount.limitCheckMode === "DEBITS_CANNOT_EXCEED_CREDITS"
 			&& debitedBuiltinLedgerAccount.debitBalance > debitedBuiltinLedgerAccount.creditBalance
 		) {
-			throw new BLDebitBalanceExceedsCreditBalanceError();
+			throw new BLDebitsExceedCreditsError();
 		}
 		if (
-			debitedBuiltinLedgerAccount.limitCheckMode === "CREDIT_BALANCE_CANNOT_EXCEED_DEBIT_BALANCE"
+			debitedBuiltinLedgerAccount.limitCheckMode === "CREDITS_CANNOT_EXCEED_DEBITS"
 			&& debitedBuiltinLedgerAccount.creditBalance > debitedBuiltinLedgerAccount.debitBalance
 		) {
-			throw new BLCreditBalanceExceedsDebitBalanceError();
+			throw new BLCreditsExceedDebitsError();
 		}*/
 
 		// Store the journal entry.
@@ -369,7 +369,7 @@ export class BuiltinLedgerAggregate {
 			= creditedBuiltinLedgerAccount.creditBalance + builtinLedgerJournalEntry.amount;
 		try {
 			await this.builtinLedgerAccountsRepo.updateAccountCreditBalanceAndTimestampById(
-				builtinLedgerJournalEntry.debitedAccountId,
+				builtinLedgerJournalEntry.creditedAccountId,
 				updatedCreditBalance,
 				builtinLedgerJournalEntry.timestamp
 			);

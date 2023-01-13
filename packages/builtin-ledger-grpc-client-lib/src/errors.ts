@@ -27,8 +27,6 @@
  --------------
  ******/
 
-"use strict";
-
 export class UnableToCreateAccountsError extends Error{}
 export class UnableToCreateJournalEntriesError extends Error{}
 

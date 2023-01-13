@@ -27,7 +27,5 @@
  --------------
  ******/
 
-"use strict";
-
 // setCurrencies saves currencies in memory.
 // currency conversion happens here.
