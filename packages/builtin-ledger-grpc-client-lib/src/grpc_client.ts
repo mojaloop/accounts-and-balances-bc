@@ -27,8 +27,6 @@
  --------------
  ******/
 
-"use strict";
-
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {loadSync, Options, PackageDefinition} from "@grpc/proto-loader";
 import {credentials, GrpcObject, loadPackageDefinition, Deadline} from "@grpc/grpc-js";
@@ -56,22 +54,19 @@ import {join} from "path";
 export class BuiltinLedgerGrpcClient {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
-	private readonly TIMEOUT_MS: number;
 	// Other properties.
 	private static readonly PROTO_FILE_NAME: string = "builtin_ledger.proto";
 	private static readonly LOAD_PROTO_OPTIONS: Options = {
 		longs: Number
 	};
+	private static readonly TIMEOUT_MS: number = 5_000;
 	private readonly client: GrpcBuiltinLedgerClient;
 
 	constructor(
 		logger: ILogger,
-		host: string,
-		portNo: number,
-		timeoutMs: number
+		url: string
 	) {
 		this.logger = logger.createChild(this.constructor.name);
-		this.TIMEOUT_MS = timeoutMs;
 
 		const protoFileAbsolutePath: string = join(__dirname, BuiltinLedgerGrpcClient.PROTO_FILE_NAME);
 		const packageDefinition: PackageDefinition = loadSync(
@@ -80,14 +75,14 @@ export class BuiltinLedgerGrpcClient {
 		);
 		const grpcObject: GrpcObject = loadPackageDefinition(packageDefinition);
 		this.client = new (grpcObject as unknown as ProtoGrpcType).GrpcBuiltinLedger(
-			`${host}:${portNo}`,
+			url,
 			credentials.createInsecure()
 		);
 	}
 
 	async init(): Promise<void> {
 		return new Promise((resolve, reject) => {
-			const deadline: Deadline = Date.now() + this.TIMEOUT_MS;
+			const deadline: Deadline = Date.now() + BuiltinLedgerGrpcClient.TIMEOUT_MS;
 
 			this.client.waitForReady(
 				deadline,

@@ -27,8 +27,6 @@
  --------------
  ******/
 
-"use strict";
-
 export enum Privileges {
 	CREATE_ACCOUNT = "CREATE_ACCOUNT",
 	CREATE_JOURNAL_ENTRY = "CREATE_JOURNAL_ENTRY",

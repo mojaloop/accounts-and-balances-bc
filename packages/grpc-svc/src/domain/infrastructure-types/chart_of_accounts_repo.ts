@@ -27,8 +27,6 @@
  --------------
  ******/
 
-"use strict";
-
 import {CoaAccount} from "../coa_account";
 import {AccountState} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 

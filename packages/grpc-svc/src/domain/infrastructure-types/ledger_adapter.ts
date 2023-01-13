@@ -27,8 +27,6 @@
  --------------
  ******/
 
-"use strict";
-
 import {AccountState, AccountType} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 export type LedgerAdapterAccount = {

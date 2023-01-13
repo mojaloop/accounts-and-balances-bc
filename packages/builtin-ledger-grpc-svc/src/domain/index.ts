@@ -27,8 +27,6 @@
  --------------
  ******/
 
-"use strict";
-
 export * from "./entities";
 export * from "./errors";
 export * from "./infrastructure";

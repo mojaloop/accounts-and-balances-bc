@@ -27,8 +27,6 @@
  --------------
  ******/
 
-"use strict";
-
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {ServerUnaryCall, sendUnaryData, status} from "@grpc/grpc-js";
 import {
@@ -48,7 +46,7 @@ import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
 import {Account, AccountState, AccountType, JournalEntry} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {
 	AccountAlreadyExistsError,
-	AccountNotFoundError, InvalidBalanceError,
+	AccountNotFoundError, InvalidAccountStateError, InvalidBalanceError,
 	InvalidCreditBalanceError, InvalidCurrencyCodeError,
 	InvalidDebitBalanceError, InvalidIdError, InvalidOwnerIdError, InvalidTimestampError, LedgerError
 } from "../../domain";
@@ -121,57 +119,24 @@ export class GrpcHandlers {
 		try {
 			accountIds = await this.aggregate.createAccounts(accounts);
 		} catch (error: unknown) {
+			let grpcError = {code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE};
 			if (error instanceof AccountAlreadyExistsError) {
-				callback(
-					{code: status.ALREADY_EXISTS, details: error.message},
-					null
-				);
-			} else if (error instanceof InvalidDebitBalanceError) {
-				callback(
-					{code: status.INVALID_ARGUMENT, details: error.message},
-					null
-				);
-			} else if (error instanceof InvalidCreditBalanceError) {
-				callback(
-					{code: status.INVALID_ARGUMENT, details: error.message},
-					null
-				);
-			} else if (error instanceof InvalidBalanceError) {
-				callback(
-					{code: status.INVALID_ARGUMENT, details: error.message},
-					null
-				);
-			} else if (error instanceof InvalidTimestampError) {
-				callback(
-					{code: status.INVALID_ARGUMENT, details: error.message},
-					null
-				);
-			} else if (error instanceof InvalidIdError) {
-				callback(
-					{code: status.INVALID_ARGUMENT, details: error.message},
-					null
-				);
-			} else if (error instanceof InvalidOwnerIdError) {
-				callback(
-					{code: status.INVALID_ARGUMENT, details: error.message},
-					null
-				);
-			} else if (error instanceof InvalidCurrencyCodeError) {
-				callback(
-					{code: status.INVALID_ARGUMENT, details: error.message},
-					null
-				);
+				grpcError = {code: status.ALREADY_EXISTS, details: error.message};
+			} else if (
+				error instanceof InvalidAccountStateError
+				|| error instanceof InvalidDebitBalanceError
+				|| error instanceof InvalidCreditBalanceError
+				|| error instanceof InvalidBalanceError
+				|| error instanceof InvalidTimestampError
+				|| error instanceof InvalidIdError
+				|| error instanceof InvalidOwnerIdError
+				|| error instanceof InvalidCurrencyCodeError
+			) {
+				grpcError = {code: status.INVALID_ARGUMENT, details: error.message};
 			} else if (error instanceof LedgerError) {
-				callback(
-					{code: status.UNKNOWN, details: error.message}, // TODO: unknown?
-					null
-				);
-			} else {
-				callback(
-					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
-					null
-				);
+				grpcError = {code: status.UNKNOWN, details: error.message}; // TODO: unknown?
 			}
+			callback(grpcError, null);
 			return;
 		}
 
@@ -213,37 +178,18 @@ export class GrpcHandlers {
 		try {
 			journalEntryIds = await this.aggregate.createJournalEntries(journalEntries);
 		} catch (error: unknown) {
-			if (error instanceof InvalidTimestampError) {
-				callback(
-					{code: status.INVALID_ARGUMENT, details: error.message},
-					null
-				);
-			} else if (error instanceof InvalidIdError) {
-				callback(
-					{code: status.INVALID_ARGUMENT, details: error.message},
-					null
-				);
-			} else if (error instanceof InvalidOwnerIdError) {
-				callback(
-					{code: status.INVALID_ARGUMENT, details: error.message},
-					null
-				);
-			} else if (error instanceof InvalidCurrencyCodeError) {
-				callback(
-					{code: status.INVALID_ARGUMENT, details: error.message},
-					null
-				);
+			let grpcError = {code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE};
+			if (
+				error instanceof InvalidTimestampError
+				|| error instanceof InvalidIdError
+				|| error instanceof InvalidOwnerIdError
+				|| error instanceof InvalidCurrencyCodeError
+			) {
+				grpcError = {code: status.INVALID_ARGUMENT, details: error.message};
 			} else if (error instanceof LedgerError) {
-				callback(
-					{code: status.UNKNOWN, details: error.message}, // TODO: unknown?
-					null
-				);
-			} else {
-				callback(
-					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
-					null
-				);
+				grpcError = {code: status.UNKNOWN, details: error.message}; // TODO: unknown?
 			}
+			callback(grpcError, null);
 			return;
 		}
 
@@ -276,17 +222,11 @@ export class GrpcHandlers {
 		try {
 			accounts = await this.aggregate.getAccountsByIds(accountIds);
 		} catch (error: unknown) {
+			let grpcError = {code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE};
 			if (error instanceof LedgerError) {
-				callback(
-					{code: status.UNKNOWN, details: error.message}, // TODO: unknown?
-					null
-				);
-			} else {
-				callback(
-					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
-					null
-				);
+				grpcError = {code: status.UNKNOWN, details: error.message}; // TODO: unknown?
 			}
+			callback(grpcError, null);
 			return;
 		}
 
@@ -313,17 +253,11 @@ export class GrpcHandlers {
 		try {
 			accounts = await this.aggregate.getAccountsByOwnerId(ownerId);
 		} catch (error: unknown) {
+			let grpcError = {code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE};
 			if (error instanceof LedgerError) {
-				callback(
-					{code: status.UNKNOWN, details: error.message}, // TODO: unknown?
-					null
-				);
-			} else {
-				callback(
-					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
-					null
-				);
+				grpcError = {code: status.UNKNOWN, details: error.message}; // TODO: unknown?
 			}
+			callback(grpcError, null);
 			return;
 		}
 
@@ -350,17 +284,11 @@ export class GrpcHandlers {
 		try {
 			journalEntries = await this.aggregate.getJournalEntriesByAccountId(accountId);
 		} catch (error: unknown) {
+			let grpcError = {code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE};
 			if (error instanceof LedgerError) {
-				callback(
-					{code: status.UNKNOWN, details: error.message}, // TODO: unknown?
-					null
-				);
-			} else {
-				callback(
-					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
-					null
-				);
+				grpcError = {code: status.UNKNOWN, details: error.message}; // TODO: unknown?
 			}
+			callback(grpcError, null);
 			return;
 		}
 
@@ -401,22 +329,13 @@ export class GrpcHandlers {
 		try {
 			await this.aggregate.deleteAccountsByIds(accountIds);
 		} catch (error: unknown) {
+			let grpcError = {code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE};
 			if (error instanceof AccountNotFoundError) {
-				callback(
-					{code: status.INVALID_ARGUMENT, details: error.message},
-					null
-				);
+				grpcError = {code: status.NOT_FOUND, details: error.message};
 			} else if (error instanceof LedgerError) {
-				callback(
-					{code: status.UNKNOWN, details: error.message}, // TODO: unknown?
-					null
-				);
-			} else {
-				callback(
-					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
-					null
-				);
+				grpcError = {code: status.UNKNOWN, details: error.message}; // TODO: unknown?
 			}
+			callback(grpcError, null);
 			return;
 		}
 
@@ -445,22 +364,13 @@ export class GrpcHandlers {
 		try {
 			await this.aggregate.deactivateAccountsByIds(accountIds);
 		} catch (error: unknown) {
+			let grpcError = {code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE};
 			if (error instanceof AccountNotFoundError) {
-				callback(
-					{code: status.INVALID_ARGUMENT, details: error.message},
-					null
-				);
+				grpcError = {code: status.NOT_FOUND, details: error.message};
 			} else if (error instanceof LedgerError) {
-				callback(
-					{code: status.UNKNOWN, details: error.message}, // TODO: unknown?
-					null
-				);
-			} else {
-				callback(
-					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
-					null
-				);
+				grpcError = {code: status.UNKNOWN, details: error.message}; // TODO: unknown?
 			}
+			callback(grpcError, null);
 			return;
 		}
 
@@ -489,22 +399,13 @@ export class GrpcHandlers {
 		try {
 			await this.aggregate.activateAccountsByIds(accountIds);
 		} catch (error: unknown) {
+			let grpcError = {code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE};
 			if (error instanceof AccountNotFoundError) {
-				callback(
-					{code: status.INVALID_ARGUMENT, details: error.message},
-					null
-				);
+				grpcError = {code: status.NOT_FOUND, details: error.message};
 			} else if (error instanceof LedgerError) {
-				callback(
-					{code: status.UNKNOWN, details: error.message}, // TODO: unknown?
-					null
-				);
-			} else {
-				callback(
-					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
-					null
-				);
+				grpcError = {code: status.UNKNOWN, details: error.message}; // TODO: unknown?
 			}
+			callback(grpcError, null);
 			return;
 		}
 

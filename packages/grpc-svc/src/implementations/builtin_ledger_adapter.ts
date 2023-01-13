@@ -27,8 +27,6 @@
  --------------
  ******/
 
-"use strict";
-
 import {
 	ILedgerAdapter,
 	LedgerAdapterAccount,
@@ -37,12 +35,12 @@ import {
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {
 	BuiltinLedgerGrpcAccount,
-	BuiltinLedgerGrpcAccount__Output, BuiltinLedgerGrpcAccountArray__Output,
+	BuiltinLedgerGrpcAccountArray__Output,
 	BuiltinLedgerGrpcClient,
 	BuiltinLedgerGrpcId,
 	BuiltinLedgerGrpcIdArray__Output,
 	BuiltinLedgerGrpcJournalEntry,
-	BuiltinLedgerGrpcJournalEntry__Output, BuiltinLedgerGrpcJournalEntryArray__Output
+	BuiltinLedgerGrpcJournalEntryArray__Output
 } from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-client-lib";
 import {AccountState, AccountType} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {LedgerError} from "../domain";
@@ -55,17 +53,13 @@ export class BuiltinLedgerAdapter implements ILedgerAdapter {
 
 	constructor(
 		logger: ILogger,
-		host: string,
-		portNo: number,
-		timeoutMs: number
+		url: string
 	) {
 		this.logger = logger.createChild(this.constructor.name);
 
 		this.builtinLedgerClient = new BuiltinLedgerGrpcClient(
 			logger,
-			host,
-			portNo,
-			timeoutMs
+			url
 		);
 	}
 

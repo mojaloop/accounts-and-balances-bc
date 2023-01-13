@@ -27,8 +27,6 @@
  --------------
  ******/
 
-"use strict";
-
 // TODO: this file was copied from the built-in ledger svc, is that ok?
 
 const REGEX: RegExp = /^([0]|([1-9][0-9]{0,17}))([.][0-9]{0,3}[1-9])?$/;

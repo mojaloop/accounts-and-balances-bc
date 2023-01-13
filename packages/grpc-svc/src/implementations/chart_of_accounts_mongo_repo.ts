@@ -27,20 +27,18 @@
  --------------
  ******/
 
-"use strict";
-
 import {IChartOfAccountsRepo} from "../domain/infrastructure-types/chart_of_accounts_repo";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {Collection, Db, MongoClient, MongoServerError, UpdateResult} from "mongodb";
 import {
     AccountAlreadyExistsError,
     AccountNotFoundError,
+    CoaAccount,
     UnableToGetAccountsError,
     UnableToInitRepoError,
     UnableToStoreAccountsError,
     UnableToUpdateAccountsError
-} from "../domain/errors";
-import {CoaAccount} from "../domain/coa_account";
+} from "../domain";
 import {AccountState} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 export const COA_ACCOUNT_MONGO_SCHEMA: any = {
@@ -71,65 +69,46 @@ export const COA_ACCOUNT_MONGO_SCHEMA: any = {
 export class ChartOfAccountsMongoRepo implements IChartOfAccountsRepo {
     // Properties received through the constructor.
     private readonly logger: ILogger;
-    private readonly HOST: string;
-    private readonly PORT_NO: number;
-    private readonly TIMEOUT_MS: number;
-    private readonly USERNAME: string; // TODO: store the username here?
-    private readonly PASSWORD: string; // TODO: store the password here?
-    private readonly DB_NAME: string;
-    private readonly COLLECTION_NAME: string;
+    private readonly URL: string; // TODO: store the username and password here?
     // Other properties.
+    private static readonly TIMEOUT_MS: number = 5_000;
+    private static readonly DB_NAME: string = "accounts_and_balances_bc";
+    private static readonly COLLECTION_NAME: string = "chart_of_accounts";
     private static readonly DUPLICATE_KEY_ERROR_CODE: number = 11000;
     private client: MongoClient;
     private collection: Collection;
 
     constructor(
         logger: ILogger,
-        host: string,
-        portNo: number,
-        timeoutMs: number,
-        username: string,
-        password: string,
-        dbName: string,
-        collectionName: string
+        url: string
     ) {
         this.logger = logger.createChild(this.constructor.name);
-        this.HOST = host;
-        this.PORT_NO = portNo;
-        this.TIMEOUT_MS = timeoutMs;
-        this.USERNAME = username;
-        this.PASSWORD = password;
-        this.DB_NAME = dbName;
-        this.COLLECTION_NAME = collectionName;
+        this.URL = url;
     }
 
     async init(): Promise<void> {
         try {
             // TODO: investigate other types of timeouts; configure TLS.
-            this.client = new MongoClient(`mongodb://${this.HOST}:${this.PORT_NO}`, {
-                serverSelectionTimeoutMS: this.TIMEOUT_MS,
-                auth: {
-                    username: this.USERNAME,
-                    password: this.PASSWORD
-                }
+            this.client = new MongoClient(this.URL, {
+                serverSelectionTimeoutMS: ChartOfAccountsMongoRepo.TIMEOUT_MS
             });
             await this.client.connect();
 
-            const db: Db = this.client.db(this.DB_NAME);
+            const db: Db = this.client.db(ChartOfAccountsMongoRepo.DB_NAME);
 
             // Check if the collection already exists.
             const collections: any[] = await db.listCollections().toArray(); // TODO: verify type.
             const collectionExists: boolean = collections.some((collection) => {
-                return collection.name === this.COLLECTION_NAME;
+                return collection.name === ChartOfAccountsMongoRepo.COLLECTION_NAME;
             });
 
             // collection() creates the collection if it doesn't already exist, however, it doesn't allow for a schema
             // to be passed as an argument.
             if (collectionExists) {
-                this.collection = db.collection(this.COLLECTION_NAME);
+                this.collection = db.collection(ChartOfAccountsMongoRepo.COLLECTION_NAME);
                 return;
             }
-            this.collection = await db.createCollection(this.COLLECTION_NAME, {
+            this.collection = await db.createCollection(ChartOfAccountsMongoRepo.COLLECTION_NAME, {
                 validator: {$jsonSchema: COA_ACCOUNT_MONGO_SCHEMA}
             });
         } catch (error: unknown) {

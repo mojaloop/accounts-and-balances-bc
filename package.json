@@ -2,7 +2,6 @@
   "name": "@mojaloop/accounts-and-balances-bc",
   "version": "0.0.1",
   "description": "Accounts and Balances Bounded Context",
-  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/mojaloop/accounts-and-balances-bc"
@@ -10,6 +9,7 @@
   "bugs": {
     "url": "https://github.com/mojaloop/accounts-and-balances-bc/issues"
   },
+  "license": "Apache-2.0",
   "contributors": [
     "Gonçalo Garcia <goncalogarcia99@gmail.com>",
     "Pedro Sousa Barreto <pedrob@crosslaketech.com>"
@@ -17,33 +17,42 @@
   "private": true,
   "scripts": {
     "prepare": "husky install",
-    "clean:dist": "rm -fr ./dist/ && npm -ws -p run clean:dist",
+    "clean:dist": "rm -fr dist && npm -ws -p run clean:dist",
+    "clean:npm": "rm -fr node_modules package-lock.json",
+    "clean:log": "rm -f *.log && npm -ws -p run clean:log",
+    "clean:all": "npm run clean:dist && npm run clean:npm && npm run clean:log",
     "dep:check": "ncu -e 2 && npm -ws -p run dep:check",
     "dep:upgrade": "ncu -u && npm -ws -p run dep:upgrade",
-    "audit:check": "npm -ws -p run audit:check",
-    "audit:fix": "npm -ws -p run audit:fix",
-    "lint": "npm -ws -p run lint",
+    "lint": "eslint test && npm -ws -p run lint",
     "build": "npm -ws run build",
     "test:unit": "npm -ws run test:unit",
-    "test:integration": "jest ./test/integration/",
+    "test:integration": "jest test/integration",
     "start:builtin-ledger-grpc-svc": "npm -w @mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc start",
     "start:grpc-svc": "npm -w @mojaloop/accounts-and-balances-bc-grpc-svc start",
     "publish:public-types-lib": "npm -w @mojaloop/accounts-and-balances-bc-public-types-lib run pub",
     "publish:grpc-client-lib": "npm -w @mojaloop/accounts-and-balances-bc-grpc-client-lib run pub"
   },
   "devDependencies": {
-    "@types/jest": "~29.2.4",
-    "@typescript-eslint/eslint-plugin": "~5.46.1",
-    "@typescript-eslint/parser": "~5.46.1",
-    "eslint": "~8.30.0",
-    "husky": "~8.0.2",
+    "@types/jest": "~29.2.5",
+    "@typescript-eslint/eslint-plugin": "~5.48.1",
+    "@typescript-eslint/parser": "~5.48.1",
+    "eslint": "~8.31.0",
+    "husky": "~8.0.3",
     "jest": "~29.3.1",
-    "npm-check-updates": "~16.6.0",
-    "ts-jest": "~29.0.3",
+    "npm-check-updates": "~16.6.2",
+    "ts-jest": "~29.0.4",
     "typescript": "~4.9.4"
   },
+  "dependencies": {
+    "tslib": "~2.4.1"
+  },
   "workspaces": [
-    "packages/public-types-lib/",
+    "packages/public-types-lib",
+    "packages/builtin-ledger-grpc-client-lib",
+    "packages/builtin-ledger-grpc-svc",
+    "packages/grpc-client-lib",
+    "packages/grpc-svc",
+    "packages/shared-mocks-lib",
     "packages/*"
   ]
 }

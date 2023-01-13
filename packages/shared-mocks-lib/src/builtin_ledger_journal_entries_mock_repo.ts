@@ -27,14 +27,12 @@
  --------------
  ******/
 
-"use strict";
-
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {
 	BuiltinLedgerJournalEntry,
 	IBuiltinLedgerJournalEntriesRepo,
 	BLJournalEntryAlreadyExistsError
-} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc";
+} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc/dist/domain";
 // import {BLJournalEntryAlreadyExistsError} from "../../builtin-ledger-grpc-svc/src/domain/errors";
 
 

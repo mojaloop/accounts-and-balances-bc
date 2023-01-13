@@ -27,8 +27,6 @@
  --------------
  ******/
 
-"use strict";
-
 import {randomUUID} from "crypto";
 import {
 	BuiltinLedgerGrpcAccount,
@@ -54,7 +52,10 @@ import {
 	BuiltinLedgerAccountsMockRepo,
 	BuiltinLedgerJournalEntriesMockRepo
 } from "@mojaloop/accounts-and-balances-bc-shared-mocks-lib";
-import {bigintToString, stringToBigint} from "../../src/domain/converters";
+import {
+	bigintToString,
+	stringToBigint
+} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc/dist/domain/converters";
 import {
 	BLAccountAlreadyExistsError,
 	BuiltinLedgerAccount,
@@ -72,18 +73,18 @@ import {
 	BLJournalEntryAlreadyExistsError,
 	BLSameDebitedAndCreditedAccountsError,
 	BLUnauthorizedError
-} from "../../src";
-import {BuiltinLedgerGrpcService} from "../../src/application/builtin_ledger_grpc_svc";
-import {BuiltinLedgerAggregate} from "../../src/domain/aggregate";
+} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc/dist/domain";
+import {
+	BuiltinLedgerGrpcService
+} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc/dist/application/builtin_ledger_grpc_svc";
+import {BuiltinLedgerAggregate} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc/dist/domain/aggregate";
 import fs from "fs";
 
-const BOUNDED_CONTEXT_NAME: string = "accounts-and-balances-bc";
-const SERVICE_NAME: string = "builtin-ledger-grpc-svc-unit-tests";
-const SERVICE_VERSION: string = "0.0.1";
+const BC_NAME: string = "accounts-and-balances-bc";
+const SVC_NAME: string = "builtin-ledger-grpc-svc-unit-tests";
+const SVC_VERSION: string = "0.0.1";
 
-const ACCOUNTS_AND_BALANCES_BUILTIN_LEDGER_GRPC_SVC_HOST: string = "localhost";
-const ACCOUNTS_AND_BALANCES_BUILTIN_LEDGER_GRPC_SVC_PORT_NO: number = 5678;
-const ACCOUNTS_AND_BALANCES_BUILTIN_LEDGER_GRPC_CLIENT_TIMEOUT_MS: number = 5_000;
+const BUILTIN_LEDGER_URL: string = "localhost:5678";
 
 const UNKNOWN_ERROR_MESSAGE: string = "unknown error";
 
@@ -100,7 +101,7 @@ let builtinLedgerGrpcClient: BuiltinLedgerGrpcClient;
 
 describe("built-in ledger grpc service - unit tests", () => {
 	beforeAll(async () => {
-		logger = new DefaultLogger(BOUNDED_CONTEXT_NAME, SERVICE_NAME, SERVICE_VERSION);
+		logger = new DefaultLogger(BC_NAME, SVC_NAME, SVC_VERSION);
 		new AuthenticationServiceMock(logger); // No reference needed.
 		authorizationClient = new AuthorizationClientMock(logger);
 		auditingClient = new AuditClientMock(logger);
@@ -133,9 +134,7 @@ describe("built-in ledger grpc service - unit tests", () => {
 
 		builtinLedgerGrpcClient = new BuiltinLedgerGrpcClient(
 			logger,
-			ACCOUNTS_AND_BALANCES_BUILTIN_LEDGER_GRPC_SVC_HOST,
-			ACCOUNTS_AND_BALANCES_BUILTIN_LEDGER_GRPC_SVC_PORT_NO,
-			ACCOUNTS_AND_BALANCES_BUILTIN_LEDGER_GRPC_CLIENT_TIMEOUT_MS
+			BUILTIN_LEDGER_URL
 		);
 		await builtinLedgerGrpcClient.init();
 	});
@@ -1407,7 +1406,7 @@ describe("built-in ledger grpc service - unit tests", () => {
 	test("activateAccountsByIds() - accounts repo updateAccountStatesByIds() error", async () => {
 		const builtinLedgerGrpcAccount: BuiltinLedgerGrpcAccount = {
 			id: undefined,
-			state: "INACTIVE",
+			state: "ACTIVE",
 			type: "FEE",
 			currencyCode: "EUR",
 			debitBalance: undefined,
@@ -1422,6 +1421,11 @@ describe("built-in ledger grpc service - unit tests", () => {
 
 		const accountId: string | undefined
 			= builtinLedgerGrpcIdArrayOutput.builtinLedgerGrpcIdArray![0].builtinLedgerGrpcId;
+
+		// Accounts can't be inactive when created - deactivateAccountsByIds() has to be used.
+		await builtinLedgerGrpcClient.deactivateAccountsByIds(
+			{builtinLedgerGrpcIdArray: [{builtinLedgerGrpcId: accountId}]}
+		);
 
 		jest.spyOn(builtinLedgerAccountsRepo, "updateAccountStatesByIds").mockImplementationOnce(() => {
 			throw new Error();

@@ -27,11 +27,9 @@
  --------------
  ******/
 
-"use strict";
-
 // Account.
-// export class BLInvalidAccountStateError extends Error {readonly message = "invalid account state";}
-// export class BLInvalidAccountTypeError extends Error {readonly message = "invalid account type";}
+export class BLInvalidAccountStateError extends Error {readonly message = "invalid account state";}
+export class BLInvalidAccountTypeError extends Error {readonly message = "invalid account type";}
 export class BLInvalidDebitBalanceError extends Error {readonly message = "invalid debit balance";}
 export class BLInvalidCreditBalanceError extends Error {readonly message = "invalid credit balance";}
 // JournalEntry.
@@ -40,8 +38,9 @@ export class BLSameDebitedAndCreditedAccountsError extends Error {readonly messa
 export class BLDebitedAccountNotFoundError extends Error {readonly message = "debited account not found";}
 export class BLCreditedAccountNotFoundError extends Error {readonly message = "credited account not found";}
 export class BLCurrencyCodesDifferError extends Error {readonly message = "currency codes differ";}
-// export class BLDebitBalanceExceedsCreditBalanceError extends Error {readonly message = "debit balance exceeds credit balance";}
-// export class BLCreditBalanceExceedsDebitBalanceError extends Error {readonly message = "credit balance exceeds debit balance";}
+export class CurrencyDecimalsDifferError extends Error {readonly message = "currency decimals differ";}
+export class BLDebitsExceedCreditsError extends Error {readonly message = "debits exceed credits";}
+export class BLCreditsExceedDebitsError extends Error {readonly message = "credits exceed debits";}
 // Common.
 export class BLInvalidIdError extends Error {readonly message = "invalid id";}
 export class BLInvalidCurrencyCodeError extends Error {readonly message = "invalid currency code";}
