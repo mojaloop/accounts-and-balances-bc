@@ -44,9 +44,8 @@ import {
 	BLInvalidCreditBalanceError,
 	BLInvalidDebitBalanceError,
 	BLAccountNotFoundError,
-	BLDebitsExceedCreditsError,
-	BLCreditsExceedDebitsError,
-	CurrencyDecimalsDifferError, BLInvalidAccountStateError, BLInvalidAccountTypeError,
+	BLInvalidAccountStateError,
+	CurrencyDecimalsDifferError
 } from "./errors";
 import {IAuditClient, AuditSecurityContext} from "@mojaloop/auditing-bc-public-types-lib";
 import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";

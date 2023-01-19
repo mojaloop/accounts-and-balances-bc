@@ -33,23 +33,24 @@ import {credentials, GrpcObject, loadPackageDefinition, Deadline} from "@grpc/gr
 import {
 	UnableToActivateAccountsError,
 	UnableToCreateAccountsError,
-	UnableToCreateJournalEntriesError, UnableToDeactivateAccountsError, UnableToDeleteAccountsError,
+	UnableToCreateJournalEntriesError,
+	UnableToDeactivateAccountsError,
+	UnableToDeleteAccountsError,
 	UnableToGetAccountsError,
 	UnableToGetJournalEntriesError
 } from "./errors";
-import {GrpcBuiltinLedgerClient} from "./types/GrpcBuiltinLedger";
-import {ProtoGrpcType} from "./types/builtin_ledger";
+import {join} from "path";
 import {
 	BuiltinLedgerGrpcAccountArray,
-	BuiltinLedgerGrpcAccountArray__Output
-} from "./types/BuiltinLedgerGrpcAccountArray";
-import {BuiltinLedgerGrpcId} from "./types/BuiltinLedgerGrpcId";
-import {BuiltinLedgerGrpcIdArray, BuiltinLedgerGrpcIdArray__Output} from "./types/BuiltinLedgerGrpcIdArray";
-import {
+	BuiltinLedgerGrpcAccountArray__Output,
+	BuiltinLedgerGrpcId,
+	BuiltinLedgerGrpcIdArray,
+	BuiltinLedgerGrpcIdArray__Output,
 	BuiltinLedgerGrpcJournalEntryArray,
-	BuiltinLedgerGrpcJournalEntryArray__Output
-} from "./types/BuiltinLedgerGrpcJournalEntryArray";
-import {join} from "path";
+	BuiltinLedgerGrpcJournalEntryArray__Output,
+	GrpcBuiltinLedgerClient,
+	ProtoGrpcType
+} from "./types";
 
 export class BuiltinLedgerGrpcClient {
 	// Properties received through the constructor.

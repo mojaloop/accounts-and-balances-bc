@@ -27,6 +27,7 @@
  --------------
  ******/
 
+export * from "./aggregate";
 export * from "./coa_account";
 export * from "./errors";
-export * from "./infrastructure-types/chart_of_accounts_repo";
+export * from "./infrastructure-types";

@@ -2,18 +2,19 @@
 
 const config = {
 	preset: "ts-jest",
+	testMatch: ["**/test/integration/**/*.test.ts"],
 	clearMocks: true,
-	testMatch: ["<rootDir>/test/integration/**/*.test.ts"],
 	collectCoverage: false,
-	collectCoverageFrom: ["./packages/**/src/**/*.ts"],
-	coverageDirectory: "./coverage/integration/",
+	collectCoverageFrom: ["packages/*/src/**/*.ts"],
+	coveragePathIgnorePatterns: [],
+	coverageDirectory: "coverage/integration",
 	coverageReporters: ["text", "lcov"],
 	coverageThreshold: {
-		"global": {
-			"branches": 90,
-			"functions": 90,
-			"lines": 90,
-			"statements": -10
+		global: {
+			branches: 90,
+			functions: 90,
+			lines: 90,
+			statements: -10
 		}
 	}
 };

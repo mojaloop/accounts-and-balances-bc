@@ -17,21 +17,19 @@
   "private": true,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": [
-    "dist"
-  ],
   "scripts": {
     "clean:dist": "rm -fr dist",
     "clean:log": "rm -f *.log",
     "dep:check": "ncu -e 2",
     "dep:upgrade": "ncu -u",
-    "lint": "eslint src test",
+    "lint": "eslint src",
     "build": "tsc",
     "test:unit": "echo \"shared-mocks-lib doesn't have unit tests\""
   },
   "devDependencies": {},
   "dependencies": {
     "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc": "~0.0.1",
+    "@mojaloop/accounts-and-balances-bc-grpc-svc": "~0.0.4",
     "@mojaloop/accounts-and-balances-bc-public-types-lib": "~0.0.5",
     "@mojaloop/auditing-bc-public-types-lib": "~0.0.11",
     "@mojaloop/logging-bc-public-types-lib": "~0.1.14",

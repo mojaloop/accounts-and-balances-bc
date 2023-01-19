@@ -14,6 +14,7 @@
     "Gonçalo Garcia <goncalogarcia99@gmail.com>",
     "Pedro Sousa Barreto <pedrob@crosslaketech.com>"
   ],
+  "private": false,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
@@ -22,7 +23,7 @@
   "scripts": {
     "clean:dist": "rm -fr dist",
     "clean:log": "rm -f *.log",
-    "clean:types": "rm -fr src/types",
+    "clean:types": "rm -fr src/types/proto-gen",
     "dep:check": "ncu -e 2",
     "dep:upgrade": "ncu -u",
     "lint": "eslint src test",
@@ -31,15 +32,18 @@
     "build": "tsc",
     "postbuild": "cp src/accounts_and_balances.proto dist",
     "test:unit": "echo \"for now, grpc-client-lib doesn't have unit tests\"",
-    "test:unit-single": "jest --coverage false -t",
-    "pub": "npm version patch && npm publish --tag latest --access public"
+    "clean:debug": "find dist -name \"*.js.map\" | xargs rm -f",
+    "pub": "npm run clean:deug && npm version patch && npm publish --access public"
+  },
+  "engines": {
+    "node": ">=18.13.0"
   },
   "devDependencies": {
-    "@grpc/proto-loader": "~0.7.4",
-    "@mojaloop/accounts-and-balances-bc-public-types-lib": "~0.0.5"
   },
   "dependencies": {
     "@grpc/grpc-js": "~1.8.4",
+    "@grpc/proto-loader": "~0.7.4",
+    "@mojaloop/accounts-and-balances-bc-public-types-lib": "~0.0.5",
     "@mojaloop/logging-bc-public-types-lib": "~0.1.14",
     "tslib": "~2.4.1"
   }

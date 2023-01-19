@@ -27,39 +27,12 @@
  --------------
  ******/
 
-import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
-import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-
-export class AuthorizationClientMock implements IAuthorizationClient {
-	private readonly logger: ILogger;
-
-	constructor(logger: ILogger) {
-		this.logger = logger.createChild(this.constructor.name);
-	}
-
-	async init(): Promise<void> {
-		return;
-	}
-
-	async destroy(): Promise<void> {
-		return;
-	}
-
-	roleHasPrivilege(roleId: string, privilegeId: string): boolean {
-		return true;
-	}
-
-	addPrivilege(privId: string, labelName: string, description: string): void {
-		return;
-	}
-
-	addPrivilegesArray(
-		privsArray: {
-			privId: string;
-			labelName: string;
-			description: string
-		}[]
-	): void {
-		return;
-	}
-}
+export * from "./proto-gen/accounts_and_balances";
+export * from "./proto-gen/google/protobuf/Empty";
+export * from "./proto-gen/GrpcAccount";
+export * from "./proto-gen/GrpcAccountArray";
+export * from "./proto-gen/GrpcAccountsAndBalances";
+export * from "./proto-gen/GrpcId";
+export * from "./proto-gen/GrpcIdArray";
+export * from "./proto-gen/GrpcJournalEntry";
+export * from "./proto-gen/GrpcJournalEntryArray";

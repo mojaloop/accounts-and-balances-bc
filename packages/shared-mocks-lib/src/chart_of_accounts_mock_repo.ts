@@ -27,12 +27,12 @@
  --------------
  ******/
 
-import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {
 	AccountAlreadyExistsError,
 	CoaAccount,
 	IChartOfAccountsRepo
 } from "@mojaloop/accounts-and-balances-bc-grpc-svc/dist/domain";
+import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {AccountState} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 export class ChartOfAccountsMockRepo implements IChartOfAccountsRepo {

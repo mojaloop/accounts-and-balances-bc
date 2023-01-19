@@ -29,8 +29,10 @@
 
 describe("built-in ledger gRPC client lib - unit tests", () => {
 	beforeAll(async () => {
+		return;
 	});
 
 	afterAll(async () => {
+		return;
 	});
 });

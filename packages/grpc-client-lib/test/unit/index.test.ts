@@ -26,3 +26,13 @@
 
  --------------
  ******/
+
+describe("gRPC client lib - unit tests", () => {
+	beforeAll(async () => {
+		return;
+	});
+
+	afterAll(async () => {
+		return;
+	});
+});

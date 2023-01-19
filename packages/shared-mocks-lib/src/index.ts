@@ -25,7 +25,6 @@
  --------------
  ******/
 
-
 export * from "./audit_client_mock";
 export * from "./authentication_service_mock";
 export * from "./authorization_client_mock";

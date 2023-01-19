@@ -50,8 +50,11 @@ import {Account, JournalEntry} from "@mojaloop/accounts-and-balances-bc-public-t
 import {randomUUID} from "crypto";
 import {
 	GrpcClient,
-	UnableToActivateAccountsError, UnableToDeactivateAccountsError,
-	UnableToDeleteAccountsError, UnableToGetAccountsError, UnableToGetJournalEntriesError
+	UnableToActivateAccountsError,
+	UnableToDeactivateAccountsError,
+	UnableToDeleteAccountsError,
+	UnableToGetAccountsError,
+	UnableToGetJournalEntriesError
 } from "@mojaloop/accounts-and-balances-bc-grpc-client-lib";
 import {
 	AuditClientMock,
@@ -61,8 +64,8 @@ import {
 	BuiltinLedgerJournalEntriesMockRepo,
 	ChartOfAccountsMockRepo
 } from "@mojaloop/accounts-and-balances-bc-shared-mocks-lib";
-import {GrpcService} from "@mojaloop/accounts-and-balances-bc-grpc-svc/dist/application/grpc_svc";
-import {bigintToString, stringToBigint} from "@mojaloop/accounts-and-balances-bc-grpc-svc/dist/domain/converters";
+import {GrpcService} from "../../src/application/grpc_svc";
+import {bigintToString, stringToBigint} from "../../src/domain/converters";
 import {
 	UnableToCreateAccountsError,
 	UnableToCreateJournalEntriesError
@@ -78,15 +81,10 @@ import {
 	InvalidIdError,
 	InvalidOwnerIdError,
 	InvalidTimestampError
-} from "@mojaloop/accounts-and-balances-bc-grpc-svc/dist/domain";
+} from "../../src/domain";
 import fs from "fs";
-import {AccountsAndBalancesAggregate} from "@mojaloop/accounts-and-balances-bc-grpc-svc/dist/domain/aggregate";
-import {
-	ILedgerAdapter
-} from "@mojaloop/accounts-and-balances-bc-grpc-svc/dist/domain/infrastructure-types/ledger_adapter";
-import {
-	BuiltinLedgerAdapter
-} from "@mojaloop/accounts-and-balances-bc-grpc-svc/dist/implementations/builtin_ledger_adapter";
+import {AccountsAndBalancesAggregate, ILedgerAdapter} from "../../src/domain";
+import {BuiltinLedgerAdapter} from "../../src/implementations";
 
 const BC_NAME: string = "accounts-and-balances-bc";
 const SVC_NAME: string = "grpc-svc-unit-tests";
@@ -716,7 +714,6 @@ describe("accounts and balances grpc service - unit tests with the built-in ledg
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: Account[] = await createAndCredit2Accounts();
 		const idAccountA: string = accounts[0].id!;
-		const idAccountB: string = accounts[1].id!;
 
 		const journalEntry: JournalEntry = {
 			id: null,
@@ -743,7 +740,6 @@ describe("accounts and balances grpc service - unit tests with the built-in ledg
 	test("createJournalEntries() - non-existent debited account", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: Account[] = await createAndCredit2Accounts();
-		const idAccountA: string = accounts[0].id!;
 		const idAccountB: string = accounts[1].id!;
 
 		const journalEntry: JournalEntry = {
@@ -772,7 +768,6 @@ describe("accounts and balances grpc service - unit tests with the built-in ledg
 		// Before creating a journal entry, the respective accounts need to be created.
 		const accounts: Account[] = await createAndCredit2Accounts();
 		const idAccountA: string = accounts[0].id!;
-		const idAccountB: string = accounts[1].id!;
 
 		const journalEntry: JournalEntry = {
 			id: null,
@@ -1005,7 +1000,6 @@ describe("accounts and balances grpc service - unit tests with the built-in ledg
 
 		const accountIds: string[] = await grpcClient.createAccounts([accountA, accountB, accountC]);
 		const idAccountA: string | undefined = accountIds[0];
-		const idAccountB: string | undefined = accountIds[1];
 		const idAccountC: string | undefined = accountIds[2];
 
 		const accounts: Account[] = await grpcClient.getAccountsByOwnerId(ownerIdA);
@@ -1115,7 +1109,6 @@ describe("accounts and balances grpc service - unit tests with the built-in ledg
 
 		const journalEntryIds: string[] = await grpcClient.createJournalEntries([journalEntryA, journalEntryB, journalEntryC]);
 		const idJournalEntryA: string | undefined = journalEntryIds[0];
-		const idJournalEntryB: string | undefined = journalEntryIds[1];
 		const idJournalEntryC: string | undefined = journalEntryIds[2];
 
 		const journalEntries: JournalEntry[] = await grpcClient.getJournalEntriesByAccountId(idAccountB);
