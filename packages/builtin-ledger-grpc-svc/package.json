@@ -1,6 +1,6 @@
 {
   "name": "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Accounts and Balances BC - Builtin Ledger gRPC Service",
   "repository": {
     "type": "git",
