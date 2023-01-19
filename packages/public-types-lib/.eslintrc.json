@@ -1,0 +1,16 @@
+{
+  "extends": [
+    "../../.eslintrc.json"
+  ],
+  "rules": { // Added to the ones specified on the parent file.
+  },
+  "overrides": [
+    {
+      "files": [
+        ""
+      ],
+      "rules": {
+      }
+    }
+  ]
+}

@@ -1,29 +1,31 @@
 "use strict";
 
-const fullPackageName = require("./package.json").name;
-const shortPackageName = fullPackageName.replace("@mojaloop/accounts-and-balances-bc-", "");
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const {name: fullPackageName} = require("./package.json");
+
+const abbreviatedPackageName = fullPackageName.replace("@mojaloop/accounts-and-balances-bc-", "");
 
 const config = {
 	preset: "ts-jest",
-	clearMocks: true,
 	testMatch: ["**/test/unit/**/*.test.ts"],
+	clearMocks: true,
 	collectCoverage: true,
-	collectCoverageFrom: ["./src/**/*.ts"],
+	collectCoverageFrom: ["src/**/*.ts"],
 	coveragePathIgnorePatterns: [
-		"./src/application/index.ts",
-		"./src/application/builtin_ledger_grpc_svc.ts",
-		"./src/application/grpc_server/grpc_handlers.ts",
-		"./src/domain/errors.ts",
-		"./src/implementations/"
+		"src/application/index.ts",
+		"src/application/builtin_ledger_grpc_svc.ts",
+		"src/application/grpc_server/grpc_handlers.ts",
+		"src/domain/errors.ts",
+		"src/implementations"
 	],
-	coverageDirectory: `../../coverage/unit/${shortPackageName}/`,
+	coverageDirectory: `../../coverage/unit/${abbreviatedPackageName}`,
 	coverageReporters: ["text", "lcov"],
 	coverageThreshold: {
-		"global": {
-			"branches": 90,
-			"functions": 90,
-			"lines": 90,
-			"statements": -10
+		global: {
+			branches: 90,
+			functions: 90,
+			lines: 90,
+			statements: -10
 		}
 	}
 };

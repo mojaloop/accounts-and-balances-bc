@@ -27,13 +27,13 @@
  --------------
  ******/
 
-import {IChartOfAccountsRepo} from "../domain/infrastructure-types/chart_of_accounts_repo";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {Collection, Db, MongoClient, MongoServerError, UpdateResult} from "mongodb";
+import {Collection, Db, MongoClient, MongoServerError} from "mongodb";
 import {
     AccountAlreadyExistsError,
     AccountNotFoundError,
     CoaAccount,
+    IChartOfAccountsRepo,
     UnableToGetAccountsError,
     UnableToInitRepoError,
     UnableToStoreAccountsError,

@@ -27,15 +27,6 @@
  --------------
  ******/
 
-export * from "./grpc_client";
+export * from "./types";
 export * from "./errors";
-
-export * from "./types/builtin_ledger";
-export * from "./types/BuiltinLedgerGrpcAccount";
-export * from "./types/BuiltinLedgerGrpcAccountArray";
-export * from "./types/BuiltinLedgerGrpcId";
-export * from "./types/BuiltinLedgerGrpcIdArray";
-export * from "./types/BuiltinLedgerGrpcJournalEntry";
-export * from "./types/BuiltinLedgerGrpcJournalEntryArray";
-export * from "./types/google/protobuf/Empty";
-export * from "./types/GrpcBuiltinLedger";
+export * from "./grpc_client";

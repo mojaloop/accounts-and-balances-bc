@@ -31,11 +31,6 @@ import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {loadSync, Options, PackageDefinition} from "@grpc/proto-loader";
 import {credentials, GrpcObject, loadPackageDefinition, Deadline} from "@grpc/grpc-js";
 import {Account, AccountState, AccountType, JournalEntry} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
-import {GrpcId, GrpcId__Output} from "./types/GrpcId";
-import {GrpcAccount, GrpcAccount__Output} from "./types/GrpcAccount";
-import {GrpcJournalEntry, GrpcJournalEntry__Output} from "./types/GrpcJournalEntry";
-import {GrpcAccountsAndBalancesClient} from "./types/GrpcAccountsAndBalances";
-import {ProtoGrpcType} from "./types/accounts_and_balances";
 import {
 	UnableToActivateAccountsError,
 	UnableToCreateAccountsError,
@@ -44,6 +39,16 @@ import {
 	UnableToGetJournalEntriesError
 } from "./errors";
 import {join} from "path";
+import {
+	GrpcAccount,
+	GrpcAccount__Output,
+	GrpcAccountsAndBalancesClient,
+	GrpcId,
+	GrpcId__Output,
+	GrpcJournalEntry,
+	GrpcJournalEntry__Output,
+	ProtoGrpcType
+} from "./types";
 
 export class GrpcClient {
 	// Properties received through the constructor.

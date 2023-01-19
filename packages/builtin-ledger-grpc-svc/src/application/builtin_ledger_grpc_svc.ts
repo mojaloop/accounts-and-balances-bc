@@ -45,7 +45,6 @@ import {BuiltinLedgerJournalEntriesMongoRepo} from "../implementations/builtin_l
 import {BuiltinLedgerAggregate} from "../domain/aggregate";
 import {Privileges} from "../domain/privileges";
 import {resolve} from "path";
-import {AuthorizationClientMock} from "@mojaloop/accounts-and-balances-bc-shared-mocks-lib";
 
 /* ********** Constants Begin ********** */
 

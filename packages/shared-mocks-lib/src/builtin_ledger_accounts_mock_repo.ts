@@ -27,13 +27,13 @@
  --------------
  ******/
 
-import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {
 	BLAccountAlreadyExistsError,
 	BLAccountNotFoundError,
 	BuiltinLedgerAccount,
 	IBuiltinLedgerAccountsRepo
 } from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc/dist/domain";
+import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {AccountState} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 export class BuiltinLedgerAccountsMockRepo implements IBuiltinLedgerAccountsRepo {

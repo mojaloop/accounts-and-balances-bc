@@ -32,23 +32,34 @@ import {ServerUnaryCall, sendUnaryData, status} from "@grpc/grpc-js";
 import {
 	Empty,
 	GrpcAccount,
-	GrpcAccount__Output, GrpcAccountArray,
-	GrpcAccountArray__Output, GrpcAccountsAndBalancesHandlers,
+	GrpcAccount__Output,
+	GrpcAccountArray,
+	GrpcAccountArray__Output,
+	GrpcAccountsAndBalancesHandlers,
 	GrpcId,
 	GrpcId__Output,
 	GrpcIdArray,
-	GrpcIdArray__Output, GrpcJournalEntry,
-	GrpcJournalEntry__Output, GrpcJournalEntryArray,
+	GrpcIdArray__Output,
+	GrpcJournalEntry,
+	GrpcJournalEntry__Output,
+	GrpcJournalEntryArray,
 	GrpcJournalEntryArray__Output
 } from "@mojaloop/accounts-and-balances-bc-grpc-client-lib";
-import {AccountsAndBalancesAggregate} from "../../domain/aggregate";
 import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
 import {Account, AccountState, AccountType, JournalEntry} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {
 	AccountAlreadyExistsError,
-	AccountNotFoundError, InvalidAccountStateError, InvalidBalanceError,
-	InvalidCreditBalanceError, InvalidCurrencyCodeError,
-	InvalidDebitBalanceError, InvalidIdError, InvalidOwnerIdError, InvalidTimestampError, LedgerError
+	AccountNotFoundError,
+	AccountsAndBalancesAggregate,
+	InvalidAccountStateError,
+	InvalidBalanceError,
+	InvalidCreditBalanceError,
+	InvalidCurrencyCodeError,
+	InvalidDebitBalanceError,
+	InvalidIdError,
+	InvalidOwnerIdError,
+	InvalidTimestampError,
+	LedgerError
 } from "../../domain";
 
 export class GrpcHandlers {

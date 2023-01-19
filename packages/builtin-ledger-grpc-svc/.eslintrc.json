@@ -1,0 +1,20 @@
+{
+  "extends": [
+    "../../.eslintrc.json"
+  ],
+  "rules": { // Added to the ones specified on the parent file.
+  },
+  "overrides": [
+    { // On some implementation files, the type any is often necessary.
+      "files": [
+        "./src/implementations/builtin_ledger_accounts_mongo_repo.ts",
+        "./src/implementations/builtin_ledger_journal_entries_mongo_repo.ts"
+      ],
+      "rules": {
+        "@typescript-eslint/no-explicit-any": [
+          "off"
+        ]
+      }
+    }
+  ]
+}

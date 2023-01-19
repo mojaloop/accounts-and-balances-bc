@@ -27,14 +27,12 @@
  --------------
  ******/
 
-import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {
+	BLJournalEntryAlreadyExistsError,
 	BuiltinLedgerJournalEntry,
-	IBuiltinLedgerJournalEntriesRepo,
-	BLJournalEntryAlreadyExistsError
+	IBuiltinLedgerJournalEntriesRepo
 } from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc/dist/domain";
-// import {BLJournalEntryAlreadyExistsError} from "../../builtin-ledger-grpc-svc/src/domain/errors";
-
+import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 
 export class BuiltinLedgerJournalEntriesMockRepo implements IBuiltinLedgerJournalEntriesRepo {
 	// Properties received through the constructor.

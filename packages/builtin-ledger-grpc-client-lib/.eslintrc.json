@@ -1,0 +1,25 @@
+{
+  "extends": [
+    "../../.eslintrc.json"
+  ],
+  "rules": { // Added to the ones specified on the parent file.
+  },
+  "overrides": [
+    { // Some exceptions need to be made for the automatically-generated files regarding the gRPC types.
+      "files": [
+        "./src/types/proto-gen/**/*.ts"
+      ],
+      "rules": {
+        "semi": [
+          "off"
+        ],
+        "@typescript-eslint/no-explicit-any": [
+          "off"
+        ],
+        "@typescript-eslint/no-empty-interface": [
+          "off"
+        ]
+      }
+    }
+  ]
+}

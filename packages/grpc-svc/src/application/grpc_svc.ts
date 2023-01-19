@@ -31,11 +31,8 @@ import {ILogger, LogLevel} from "@mojaloop/logging-bc-public-types-lib";
 import {KafkaLogger} from "@mojaloop/logging-bc-client-lib";
 import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {GrpcServer} from "./grpc_server/grpc_server";
-import {IChartOfAccountsRepo} from "../domain/infrastructure-types/chart_of_accounts_repo";
-import {ChartOfAccountsMongoRepo} from "../implementations/chart_of_accounts_mongo_repo";
-import {AccountsAndBalancesAggregate} from "../domain/aggregate";
-import {BuiltinLedgerAdapter} from "../implementations/builtin_ledger_adapter";
-import {ILedgerAdapter} from "../domain/infrastructure-types/ledger_adapter";
+import {BuiltinLedgerAdapter, ChartOfAccountsMongoRepo} from "../implementations";
+import {AccountsAndBalancesAggregate, IChartOfAccountsRepo, ILedgerAdapter} from "../domain";
 
 /* ********** Constants Begin ********** */
 

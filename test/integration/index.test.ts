@@ -282,7 +282,6 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 
 		const accountIds: string[] = await grpcClient.createAccounts([accountA, accountB, accountC]);
 		const idAccountA: string | undefined = accountIds[0];
-		const idAccountB: string | undefined = accountIds[1];
 		const idAccountC: string | undefined = accountIds[2];
 
 		const accounts: Account[] = await grpcClient.getAccountsByIds([idAccountA, idAccountC]);
@@ -357,7 +356,6 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 
 		const accountIds: string[] = await grpcClient.createAccounts([accountA, accountB, accountC]);
 		const idAccountA: string | undefined = accountIds[0];
-		const idAccountB: string | undefined = accountIds[1];
 		const idAccountC: string | undefined = accountIds[2];
 
 		const accounts: Account[] = await grpcClient.getAccountsByOwnerId(ownerIdA);
@@ -464,7 +462,6 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 
 		const journalEntryIds: string[] = await grpcClient.createJournalEntries([journalEntryA, journalEntryB, journalEntryC]);
 		const idJournalEntryA: string | undefined = journalEntryIds[0];
-		const idJournalEntryB: string | undefined = journalEntryIds[1];
 		const idJournalEntryC: string | undefined = journalEntryIds[2];
 
 		const journalEntries: JournalEntry[] = await grpcClient.getJournalEntriesByAccountId(idAccountB);

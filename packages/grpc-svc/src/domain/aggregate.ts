@@ -29,14 +29,17 @@
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {
+	IChartOfAccountsRepo,
 	ILedgerAdapter,
 	LedgerAdapterAccount,
-	LedgerAdapterJournalEntry, LedgerAdapterRequestId
-} from "./infrastructure-types/ledger_adapter";
+	LedgerAdapterJournalEntry,
+	LedgerAdapterRequestId
+} from "./infrastructure-types";
 import {CoaAccount} from "./coa_account";
 import {
 	AccountAlreadyExistsError,
-	AccountNotFoundError, InvalidAccountStateError,
+	AccountNotFoundError,
+	InvalidAccountStateError,
 	InvalidBalanceError,
 	InvalidCreditBalanceError,
 	InvalidCurrencyCodeError,
@@ -46,7 +49,6 @@ import {
 	InvalidTimestampError, LedgerError
 } from "./errors";
 import {Account, JournalEntry} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
-import {IChartOfAccountsRepo} from "./infrastructure-types/chart_of_accounts_repo";
 import {randomUUID} from "crypto";
 import {join} from "path";
 import {readFileSync} from "fs";
@@ -54,9 +56,9 @@ import {bigintToString, stringToBigint} from "./converters";
 
 export class AccountsAndBalancesAggregate {
 	// Properties received through the constructor.
-	private logger: ILogger;
-	private chartOfAccounts: IChartOfAccountsRepo;
-	private ledgerAdapter: ILedgerAdapter;
+	private readonly logger: ILogger;
+	private readonly chartOfAccounts: IChartOfAccountsRepo;
+	private readonly ledgerAdapter: ILedgerAdapter;
 	private readonly currencies: {code: string, decimals: number}[];
 	// Other properties.
 	private static readonly CURRENCIES_FILE_NAME: string = "currencies.json";

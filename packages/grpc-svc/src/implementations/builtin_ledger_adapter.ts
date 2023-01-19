@@ -30,8 +30,10 @@
 import {
 	ILedgerAdapter,
 	LedgerAdapterAccount,
-	LedgerAdapterJournalEntry, LedgerAdapterRequestId
-} from "../domain/infrastructure-types/ledger_adapter";
+	LedgerAdapterJournalEntry,
+	LedgerAdapterRequestId,
+	LedgerError
+} from "../domain";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {
 	BuiltinLedgerGrpcAccount,
@@ -43,7 +45,6 @@ import {
 	BuiltinLedgerGrpcJournalEntryArray__Output
 } from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-client-lib";
 import {AccountState, AccountType} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
-import {LedgerError} from "../domain";
 
 export class BuiltinLedgerAdapter implements ILedgerAdapter {
 	// Properties received through the constructor.
@@ -104,7 +105,7 @@ export class BuiltinLedgerAdapter implements ILedgerAdapter {
 				if (!builtinLedgerGrpcIdOutput.builtinLedgerGrpcId) {
 					throw new Error();
 				}
-				return builtinLedgerGrpcIdOutput.builtinLedgerGrpcId
+				return builtinLedgerGrpcIdOutput.builtinLedgerGrpcId;
 			});
 		return accountIds;
 	}
@@ -143,7 +144,7 @@ export class BuiltinLedgerAdapter implements ILedgerAdapter {
 			if (!builtinLedgerGrpcIdOutput.builtinLedgerGrpcId) {
 				throw new Error();
 			}
-			return builtinLedgerGrpcIdOutput.builtinLedgerGrpcId
+			return builtinLedgerGrpcIdOutput.builtinLedgerGrpcId;
 		});
 		return journalEntryIds;
 	}
@@ -198,6 +199,7 @@ export class BuiltinLedgerAdapter implements ILedgerAdapter {
 	// TODO: currency decimals ignored here, right?
 	async getJournalEntriesByAccountId(
 		ledgerAccountId: string,
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		currencyDecimals: number
 	): Promise<LedgerAdapterJournalEntry[]> {
 		let builtinLedgerGrpcJournalEntryArrayOutput: BuiltinLedgerGrpcJournalEntryArray__Output;

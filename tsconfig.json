@@ -3,20 +3,22 @@
     // Language and Environment.
     "target": "es2022",
     // Modules.
-    "module": "commonjs",
+    "module": "commonjs", // Sets moduleResolution to "node" ("classic" by default).
     // Emit.
-    "declaration": true, // For type generation (.d.ts files).
+    "declaration": true, // Generate type declarations (.d.ts files).
     "importHelpers": true, // tslib required as a dependency!
     "outDir": "dist",
     "removeComments": true,
     "sourceMap": true, // For debugging (.js.map files).
     // Interop Constraints.
-    "esModuleInterop": true,
+    "esModuleInterop": true, // Enables allowSyntheticDefaultImports (disabled by default).
     "forceConsistentCasingInFileNames": true,
     // Type Checking.
     "noImplicitReturns": true,
     "strict": true,
-    "strictPropertyInitialization": false
+    "strictPropertyInitialization": false,
+    // Completeness.
+    "skipLibCheck": true // Enabling this option speeds up the build process.
   },
   "include": [
     "packages/*/src"

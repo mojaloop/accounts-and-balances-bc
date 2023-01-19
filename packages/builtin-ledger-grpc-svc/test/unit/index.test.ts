@@ -55,9 +55,8 @@ import {
 import {
 	bigintToString,
 	stringToBigint
-} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc/dist/domain/converters";
+} from "../../src/domain/converters";
 import {
-	BLAccountAlreadyExistsError,
 	BuiltinLedgerAccount,
 	BLCreditedAccountNotFoundError,
 	BLCurrencyCodesDifferError,
@@ -70,14 +69,13 @@ import {
 	BLInvalidIdError,
 	BLInvalidJournalEntryAmountError,
 	BLInvalidTimestampError,
-	BLJournalEntryAlreadyExistsError,
 	BLSameDebitedAndCreditedAccountsError,
 	BLUnauthorizedError
-} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc/dist/domain";
+} from "../../src/domain";
 import {
 	BuiltinLedgerGrpcService
-} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc/dist/application/builtin_ledger_grpc_svc";
-import {BuiltinLedgerAggregate} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc/dist/domain/aggregate";
+} from "../../src/application/builtin_ledger_grpc_svc";
+import {BuiltinLedgerAggregate} from "../../src/domain/aggregate";
 import fs from "fs";
 
 const BC_NAME: string = "accounts-and-balances-bc";
@@ -678,7 +676,6 @@ describe("built-in ledger grpc service - unit tests", () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const builtinLedgerGrpcAccountsOutput: BuiltinLedgerGrpcAccount__Output[] = await createAndCredit2Accounts();
 		const idAccountA: string = builtinLedgerGrpcAccountsOutput[0].id!;
-		const idAccountB: string = builtinLedgerGrpcAccountsOutput[1].id!;
 
 		const builtinLedgerGrpcJournalEntry: BuiltinLedgerGrpcJournalEntry = {
 			id: undefined,
@@ -709,7 +706,6 @@ describe("built-in ledger grpc service - unit tests", () => {
 	test("createJournalEntries() - non-existent debited account", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const builtinLedgerGrpcAccountsOutput: BuiltinLedgerGrpcAccount__Output[] = await createAndCredit2Accounts();
-		const idAccountA: string = builtinLedgerGrpcAccountsOutput[0].id!;
 		const idAccountB: string = builtinLedgerGrpcAccountsOutput[1].id!;
 
 		const builtinLedgerGrpcJournalEntry: BuiltinLedgerGrpcJournalEntry = {
@@ -742,7 +738,6 @@ describe("built-in ledger grpc service - unit tests", () => {
 		// Before creating a journal entry, the respective accounts need to be created.
 		const builtinLedgerGrpcAccountsOutput: BuiltinLedgerGrpcAccount__Output[] = await createAndCredit2Accounts();
 		const idAccountA: string = builtinLedgerGrpcAccountsOutput[0].id!;
-		const idAccountB: string = builtinLedgerGrpcAccountsOutput[1].id!;
 
 		const builtinLedgerGrpcJournalEntry: BuiltinLedgerGrpcJournalEntry = {
 			id: undefined,
@@ -1180,8 +1175,6 @@ describe("built-in ledger grpc service - unit tests", () => {
 
 		const idJournalEntryA: string | undefined
 			= builtinLedgerGrpcJournalEntryIdArrayOutput.builtinLedgerGrpcIdArray![0].builtinLedgerGrpcId;
-		const idJournalEntryB: string | undefined
-			= builtinLedgerGrpcJournalEntryIdArrayOutput.builtinLedgerGrpcIdArray![1].builtinLedgerGrpcId;
 		const idJournalEntryC: string | undefined
 			= builtinLedgerGrpcJournalEntryIdArrayOutput.builtinLedgerGrpcIdArray![2].builtinLedgerGrpcId;
 

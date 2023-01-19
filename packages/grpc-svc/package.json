@@ -17,9 +17,6 @@
   "private": true,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": [
-    "dist"
-  ],
   "scripts": {
     "clean:dist": "rm -fr dist",
     "clean:log": "rm -f *.log",
@@ -29,18 +26,19 @@
     "lint": "eslint src test",
     "build": "tsc",
     "postbuild": "cp src/domain/currencies.json dist/domain",
-    "test:unit": "jest",
-    "test:unit-single": "jest --coverage false -t",
+    "test:unit": "",
     "start": "npm run service",
     "start:dev": "npm run build && npm run service",
     "service": "node dist/application/index.js"
   },
   "devDependencies": {
-    "@grpc/proto-loader": "~0.7.4",
-    "@mojaloop/accounts-and-balances-bc-public-types-lib": "~0.0.5"
+    "@mojaloop/accounts-and-balances-bc-shared-mocks-lib": "~0.0.1"
   },
   "dependencies": {
     "@grpc/grpc-js": "~1.8.4",
+    "@grpc/proto-loader": "~0.7.4",
+    "@mojaloop/accounts-and-balances-bc-grpc-client-lib": "~0.0.5",
+    "@mojaloop/accounts-and-balances-bc-public-types-lib": "~0.0.5",
     "@mojaloop/logging-bc-public-types-lib": "~0.1.14",
     "@mojaloop/logging-bc-client-lib": "~0.1.17",
     "mongodb": "~4.13.0"

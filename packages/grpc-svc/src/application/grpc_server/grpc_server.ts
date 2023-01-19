@@ -36,8 +36,7 @@ import {
 	ServiceDefinition
 } from "@grpc/grpc-js";
 import {loadSync, Options, PackageDefinition} from "@grpc/proto-loader";
-
-import {AccountsAndBalancesAggregate} from "../../domain/aggregate";
+import {AccountsAndBalancesAggregate} from "../../domain";
 import {GrpcHandlers} from "./grpc_handlers";
 import {GrpcAccountsAndBalancesHandlers, ProtoGrpcType} from "@mojaloop/accounts-and-balances-bc-grpc-client-lib";
 import {join} from "path";

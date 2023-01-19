@@ -27,10 +27,9 @@
  --------------
  ******/
 
-import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {AuditEntryLabel, AuditSecurityContext, IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
+import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 
-// TODO: should anything by logged?
 export class AuditClientMock implements IAuditClient {
 	private readonly logger: ILogger;
 
