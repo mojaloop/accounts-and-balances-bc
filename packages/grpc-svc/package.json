@@ -1,6 +1,6 @@
 {
   "name": "@mojaloop/accounts-and-balances-bc-grpc-svc",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Accounts and Balances BC - gRPC service",
   "repository": {
     "type": "git",
