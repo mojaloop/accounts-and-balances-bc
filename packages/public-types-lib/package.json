@@ -29,7 +29,7 @@
     "build": "tsc",
     "test:unit": "echo \"public-types-lib doesn't have unit tests\"",
     "clean:debug": "find dist -name \"*.js.map\" | xargs rm -f",
-    "pub": "npm run clean:deug && npm version patch && npm publish --access public"
+    "pub": "npm run clean:debug && npm version patch && npm publish --access public"
   },
   "engines": {
     "node": ">=18.13.0"

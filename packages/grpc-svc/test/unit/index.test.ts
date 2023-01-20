@@ -27,8 +27,7 @@
  --------------
  ******/
 
-import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {DefaultLogger} from "@mojaloop/logging-bc-client-lib";
+import {ConsoleLogger, ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
 import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {
@@ -86,10 +85,6 @@ import fs from "fs";
 import {AccountsAndBalancesAggregate, ILedgerAdapter} from "../../src/domain";
 import {BuiltinLedgerAdapter} from "../../src/implementations";
 
-const BC_NAME: string = "accounts-and-balances-bc";
-const SVC_NAME: string = "grpc-svc-unit-tests";
-const SVC_VERSION: string = "0.0.1";
-
 const ACCOUNTS_AND_BALANCES_URL: string = "localhost:1234";
 
 const BUILTIN_LEDGER_URL: string = "localhost:5678";
@@ -100,7 +95,7 @@ const HUB_ACCOUNT_ID: string = randomUUID();
 const HUB_ACCOUNT_CURRENCY_DECIMALS: number = 2;
 const HUB_ACCOUNT_INITIAL_CREDIT_BALANCE: string = "1000000"; // Currency decimals not taken into consideration.
 
-let logger: ILogger = new DefaultLogger(BC_NAME, SVC_NAME, SVC_VERSION);
+let logger: ILogger;
 let authorizationClient: IAuthorizationClient;
 let chartOfAccountRepo: IChartOfAccountsRepo;
 let ledgerAdapter: ILedgerAdapter;
@@ -108,7 +103,7 @@ let grpcClient: GrpcClient;
 
 describe("accounts and balances grpc service - unit tests with the built-in ledger", () => {
 	beforeAll(async () => {
-		logger = new DefaultLogger(BC_NAME, SVC_NAME, SVC_VERSION);
+		logger = new ConsoleLogger();
 		new AuthenticationServiceMock(logger); // No reference needed.
 		authorizationClient = new AuthorizationClientMock(logger);
 		const auditingClient: IAuditClient = new AuditClientMock(logger);

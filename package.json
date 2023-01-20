@@ -29,8 +29,8 @@
     "test:integration": "jest test/integration",
     "start:builtin-ledger-grpc-svc": "npm -w @mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc start",
     "start:grpc-svc": "npm -w @mojaloop/accounts-and-balances-bc-grpc-svc start",
-    "publish:public-types-lib": "npm -w @mojaloop/accounts-and-balances-bc-public-types-lib run pub",
-    "publish:grpc-client-lib": "npm -w @mojaloop/accounts-and-balances-bc-grpc-client-lib run pub"
+    "pub:public-types-lib": "npm -w @mojaloop/accounts-and-balances-bc-public-types-lib run pub",
+    "pub:grpc-client-lib": "npm -w @mojaloop/accounts-and-balances-bc-grpc-client-lib run pub"
   },
   "engines": {
     "node": ">=18.13.0"

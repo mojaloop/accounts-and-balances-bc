@@ -41,8 +41,7 @@ import {
 	UnableToGetAccountsError,
 	UnableToGetJournalEntriesError
 } from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-client-lib";
-import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {DefaultLogger} from "@mojaloop/logging-bc-client-lib";
+import {ConsoleLogger, ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
 import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {
@@ -78,10 +77,6 @@ import {
 import {BuiltinLedgerAggregate} from "../../src/domain/aggregate";
 import fs from "fs";
 
-const BC_NAME: string = "accounts-and-balances-bc";
-const SVC_NAME: string = "builtin-ledger-grpc-svc-unit-tests";
-const SVC_VERSION: string = "0.0.1";
-
 const BUILTIN_LEDGER_URL: string = "localhost:5678";
 
 const UNKNOWN_ERROR_MESSAGE: string = "unknown error";
@@ -99,7 +94,7 @@ let builtinLedgerGrpcClient: BuiltinLedgerGrpcClient;
 
 describe("built-in ledger grpc service - unit tests", () => {
 	beforeAll(async () => {
-		logger = new DefaultLogger(BC_NAME, SVC_NAME, SVC_VERSION);
+		logger = new ConsoleLogger();
 		new AuthenticationServiceMock(logger); // No reference needed.
 		authorizationClient = new AuthorizationClientMock(logger);
 		auditingClient = new AuditClientMock(logger);

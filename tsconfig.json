@@ -1,24 +1,26 @@
 {
   "compilerOptions": { // https://www.typescriptlang.org/tsconfig
-    // Language and Environment.
+    /* Language and Environment */
     "target": "es2022",
-    // Modules.
+    /* Modules */
     "module": "commonjs", // Sets moduleResolution to "node" ("classic" by default).
-    // Emit.
+    /* Emit */
     "declaration": true, // Generate type declarations (.d.ts files).
     "importHelpers": true, // tslib required as a dependency!
     "outDir": "dist",
     "removeComments": true,
     "sourceMap": true, // For debugging (.js.map files).
-    // Interop Constraints.
+    /* Interop Constraints */
     "esModuleInterop": true, // Enables allowSyntheticDefaultImports (disabled by default).
     "forceConsistentCasingInFileNames": true,
-    // Type Checking.
+    /* Type Checking */
     "noImplicitReturns": true,
     "strict": true,
     "strictPropertyInitialization": false,
-    // Completeness.
-    "skipLibCheck": true // Enabling this option speeds up the build process.
+    /* Projects */
+    "incremental": true, // Speeds up the build process (tsconfig.tsbuildinfo files) - not everything is rebuilt.
+    /* Completeness */
+    "skipLibCheck": true // Enabling this option speeds up the build process - .d.ts files are not type checked.
   },
   "include": [
     "packages/*/src"

@@ -33,7 +33,7 @@
     "postbuild": "cp src/accounts_and_balances.proto dist",
     "test:unit": "echo \"for now, grpc-client-lib doesn't have unit tests\"",
     "clean:debug": "find dist -name \"*.js.map\" | xargs rm -f",
-    "pub": "npm run clean:deug && npm version patch && npm publish --access public"
+    "pub": "npm run clean:debug && npm version patch && npm publish --access public"
   },
   "engines": {
     "node": ">=18.13.0"
@@ -43,7 +43,7 @@
   "dependencies": {
     "@grpc/grpc-js": "~1.8.4",
     "@grpc/proto-loader": "~0.7.4",
-    "@mojaloop/accounts-and-balances-bc-public-types-lib": "~0.0.7",
+    "@mojaloop/accounts-and-balances-bc-public-types-lib": "~0.0.8",
     "@mojaloop/logging-bc-public-types-lib": "~0.1.14",
     "tslib": "~2.4.1"
   }

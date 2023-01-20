@@ -10,6 +10,12 @@ COPY ["package.json", "package-lock.json", "./"]
 
 RUN npm install
 
+RUN npm run build
+
 COPY . .
 
 CMD ["node", "server.js"]
+
+EXPOSE 1234
+
+CMD npm run start:accounts-and-balances-svc
