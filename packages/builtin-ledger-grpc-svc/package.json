@@ -25,7 +25,7 @@
     "lint": "eslint src test",
     "build": "tsc",
     "postbuild": "cp src/domain/currencies.json dist/domain",
-    "test:unit": "",
+    "test:unit": "jest",
     "start": "npm run service",
     "start:dev": "npm run build && npm run service",
     "service": "node dist/application/index.js"
