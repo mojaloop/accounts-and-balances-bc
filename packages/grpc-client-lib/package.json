@@ -32,8 +32,10 @@
     "build": "tsc",
     "postbuild": "cp src/accounts_and_balances.proto dist",
     "test:unit": "echo \"for now, grpc-client-lib doesn't have unit tests\"",
-    "prepublishOnly": "find dist -name \"*.js.map\" | xargs rm -f",
-    "pub": "npm run clean:debug && npm version patch && npm publish --access public"
+    "clean:debug": "find dist -name \"*.js.map\" | xargs rm -f",
+    "clean:tsbuildinfo": "rm -f dist/tsconfig.tsbuildinfo",
+    "prepublishOnly": "npm run clean:debug && npm run clean:tsbuildinfo && npm version patch",
+    "pub": "npm publish --access public"
   },
   "engines": {
     "node": ">=18.13.0"
