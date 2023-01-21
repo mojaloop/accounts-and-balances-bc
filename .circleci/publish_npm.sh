@@ -93,20 +93,20 @@ do
 
   PACKAGE_PATH=${ROOT}/$PACKAGE
   PACKAGE_NAME=$(cat ${PACKAGE_PATH}/package.json | grep name | head -1 | awk -F: '{ print $2 }' | sed 's/[ ",]//g' )
-  PACKAGE_CUR_VERSION=$(cat ${PACKAGE_PATH}/package.json | grep version | head -1 | awk -F: '{ print $2 }' | sed 's/[ ",]//g' )
-
-  ## increase patch version only
-  npm -w ${PACKAGE_NAME} version patch
-  PACKAGE_NEW_VERSION=$(cat ${PACKAGE_PATH}/package.json | grep version | head -1 | awk -F: '{ print $2 }' | sed 's/[ ",]//g')
+  PACKAGE_CUR_VERSION=$(cat ${PACKAGE_PATH}/package.json | grep version | head -1 | awk -F: '{ print $2 }' | sed 's/[ ",]//g')
 
   echo -e "Package full name: ${PACKAGE_NAME}"
-  echo -e "Package current version: ${PACKAGE_CUR_VERSION} new version: ${PACKAGE_NEW_VERSION} (to be published)"
+  echo -e "Package current version: ${PACKAGE_CUR_VERSION}"
   echo -e "Publishing..."
 
   echo -e "---------------- PUBLISH START ----------------------\n"
   # actual publish command
-  npm -w ${PACKAGE_NAME} publish --tag=latest --access public
+  npm -w ${PACKAGE_NAME} run pub
   echo -e "\n----------------- PUBLISH END -----------------------"
+
+  PACKAGE_NEW_VERSION=$(cat ${PACKAGE_PATH}/package.json | grep version | head -1 | awk -F: '{ print $2 }' | sed 's/[ ",]//g')
+
+  echo -e "Package new version: ${PACKAGE_NEW_VERSION}"
 
   if [[ $? -eq 0 ]]; then
     PUBLISHED_PACKAGES_COUNT=$((PUBLISHED_PACKAGES_COUNT + 1))
