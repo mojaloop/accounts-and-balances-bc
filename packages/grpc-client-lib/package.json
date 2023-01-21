@@ -32,7 +32,7 @@
     "build": "tsc",
     "postbuild": "cp src/accounts_and_balances.proto dist",
     "test:unit": "echo \"for now, grpc-client-lib doesn't have unit tests\"",
-    "clean:debug": "find dist -name \"*.js.map\" | xargs rm -f",
+    "prepublishOnly": "find dist -name \"*.js.map\" | xargs rm -f",
     "pub": "npm run clean:debug && npm version patch && npm publish --access public"
   },
   "engines": {
