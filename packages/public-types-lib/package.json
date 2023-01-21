@@ -30,8 +30,8 @@
     "test:unit": "echo \"public-types-lib doesn't have unit tests\"",
     "clean:debug": "find dist -name \"*.js.map\" | xargs rm -f",
     "clean:tsbuildinfo": "rm -f dist/tsconfig.tsbuildinfo",
-    "prepublishOnly": "npm run clean:debug && npm run clean:tsbuildinfo && npm version patch",
-    "pub": "npm publish --access public"
+    "some-script": "npm run clean:debug && npm run clean:tsbuildinfo && npm version patch",
+    "pub": "npm run some-script && npm publish --access public"
   },
   "engines": {
     "node": ">=18.13.0"
