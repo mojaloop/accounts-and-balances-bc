@@ -37,8 +37,8 @@
   "dependencies": {
     "@grpc/grpc-js": "~1.8.4",
     "@grpc/proto-loader": "~0.7.4",
-    "@mojaloop/accounts-and-balances-bc-grpc-client-lib": "~0.0.8",
-    "@mojaloop/accounts-and-balances-bc-public-types-lib": "~0.0.8",
+    "@mojaloop/accounts-and-balances-bc-grpc-client-lib": "~0.0.13",
+    "@mojaloop/accounts-and-balances-bc-public-types-lib": "~0.0.13",
     "@mojaloop/logging-bc-public-types-lib": "~0.1.14",
     "@mojaloop/logging-bc-client-lib": "~0.1.17",
     "mongodb": "~4.13.0"
