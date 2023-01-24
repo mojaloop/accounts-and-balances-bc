@@ -22,7 +22,7 @@
     "clean:log": "rm -f *.log",
     "clean:types": "rm -fr src/types",
     "dep:check": "ncu -e 2",
-    "dep:upgrade": "ncu -u",
+    "dep:update": "ncu -u",
     "lint": "eslint src test",
     "build": "tsc",
     "postbuild": "cp src/domain/currencies.json dist/domain",
@@ -35,7 +35,7 @@
     "@mojaloop/accounts-and-balances-bc-shared-mocks-lib": "~0.0.1"
   },
   "dependencies": {
-    "@grpc/grpc-js": "~1.8.4",
+    "@grpc/grpc-js": "~1.8.5",
     "@grpc/proto-loader": "~0.7.4",
     "@mojaloop/accounts-and-balances-bc-grpc-client-lib": "~0.0.13",
     "@mojaloop/accounts-and-balances-bc-public-types-lib": "~0.0.13",

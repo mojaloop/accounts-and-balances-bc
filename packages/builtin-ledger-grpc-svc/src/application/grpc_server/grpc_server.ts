@@ -50,8 +50,7 @@ export class GrpcServer {
 	private readonly logger: ILogger;
 	private readonly URL: string;
 	// Other properties.
-	private static readonly PROTO_FILE_RELATIVE_PATH: string =
-		"../../../../builtin-ledger-grpc-client-lib/src/builtin_ledger.proto";
+	private static readonly PROTO_FILE_RELATIVE_PATH: string = "../../builtin_ledger.proto";
 	private static readonly LOAD_PROTO_OPTIONS: Options = {
 		longs: Number
 	};
@@ -91,7 +90,7 @@ export class GrpcServer {
 	async start(): Promise<void> {
 		return new Promise((resolve, reject) => {
 			this.server.bindAsync(
-				this.URL,
+				this.URL, // 0.0.0.0 for IPV4 only, [::] for both IPV4 and IPV6.
 				ServerCredentials.createInsecure(),
 				(error) => {
 					if (error !== null) {
@@ -100,10 +99,7 @@ export class GrpcServer {
 					}
 
 					this.server.start();
-					this.logger.info("* * * * * * * * * * * * * * * * * * * *");
-					this.logger.info("gRPC server started 🚀");
-					this.logger.info(`URL: ${this.URL}`);
-					this.logger.info("* * * * * * * * * * * * * * * * * * * *");
+					this.logger.info(`🚀 gRPC server started (${this.URL})`);
 					resolve();
 				}
 			);
@@ -121,9 +117,7 @@ export class GrpcServer {
 					return;
 				}
 
-				this.logger.info("* * * * * * * * * * * * * * * * * * * *");
-				this.logger.info("gRPC server stopped 🏁");
-				this.logger.info("* * * * * * * * * * * * * * * * * * * *");
+				this.logger.info("🏁 gRPC server stopped");
 				resolve();
 			});
 		});

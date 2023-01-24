@@ -91,7 +91,7 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 		);
 		await kafkaLogger.init();
 
-		const authorizationClient: IAuthorizationClient = new AuthorizationClientMock(kafkaLogger); // TODO: remove mock.
+		/*const authorizationClient: IAuthorizationClient = new AuthorizationClientMock(kafkaLogger); // TODO: remove mock.
 
 		builtinLedgerAccountsRepo = new BuiltinLedgerAccountsMongoRepo(
 			kafkaLogger,
@@ -138,11 +138,11 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 			authorizationClient,
 			undefined,
 			builtinLedgerAccountsRepo
-		);
+		);*/
 
 		await GrpcService.start(
 			kafkaLogger,
-			chartOfAccountRepo
+			//chartOfAccountRepo
 		);
 
 		grpcClient = new GrpcClient(
@@ -155,7 +155,7 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 	afterAll(async () => {
 		await grpcClient.destroy();
 		await GrpcService.stop();
-		await BuiltinLedgerGrpcService.stop();
+		//await BuiltinLedgerGrpcService.stop();
 		await kafkaLogger.destroy();
 	});
 

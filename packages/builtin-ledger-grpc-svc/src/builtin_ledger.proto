@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+service GrpcBuiltinLedger {
+  // All unary RPCs.
+  rpc CreateAccounts(BuiltinLedgerGrpcAccountArray) returns (BuiltinLedgerGrpcIdArray);
+  rpc CreateJournalEntries(BuiltinLedgerGrpcJournalEntryArray) returns (BuiltinLedgerGrpcIdArray);
+  rpc GetAccountsByIds(BuiltinLedgerGrpcIdArray) returns (BuiltinLedgerGrpcAccountArray);
+  rpc GetJournalEntriesByAccountId(BuiltinLedgerGrpcId) returns (BuiltinLedgerGrpcJournalEntryArray);
+  rpc DeleteAccountsByIds(BuiltinLedgerGrpcIdArray) returns (google.protobuf.Empty);
+  rpc DeactivateAccountsByIds(BuiltinLedgerGrpcIdArray) returns (google.protobuf.Empty);
+  rpc ActivateAccountsByIds(BuiltinLedgerGrpcIdArray) returns (google.protobuf.Empty);
+}
+
+/* Id. */
+
+message BuiltinLedgerGrpcId {
+  string builtinLedgerGrpcId = 1;
+}
+
+message BuiltinLedgerGrpcIdArray {
+  repeated BuiltinLedgerGrpcId builtinLedgerGrpcIdArray = 1;
+}
+
+/* Account. */
+
+message BuiltinLedgerGrpcAccount {
+  string id = 1;
+  string state = 2;
+  string type = 3;
+	string currencyCode = 4;
+  string debitBalance = 5;
+  string creditBalance = 6;
+  uint64 timestampLastJournalEntry = 7;
+}
+
+message BuiltinLedgerGrpcAccountArray {
+  repeated BuiltinLedgerGrpcAccount builtinLedgerGrpcAccountArray = 1;
+}
+
+/* Journal entry. */
+
+message BuiltinLedgerGrpcJournalEntry {
+  string id = 1;
+  string ownerId = 2;
+	string currencyCode = 3;
+	string amount = 4;
+	string debitedAccountId = 5;
+  string creditedAccountId = 6;
+  uint64 timestamp = 7;
+}
+
+message BuiltinLedgerGrpcJournalEntryArray {
+  repeated BuiltinLedgerGrpcJournalEntry builtinLedgerGrpcJournalEntryArray = 1;
+}

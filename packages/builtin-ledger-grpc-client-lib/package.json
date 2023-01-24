@@ -22,7 +22,7 @@
     "clean:log": "rm -f *.log",
     "clean:types": "rm -fr src/types/proto-gen",
     "dep:check": "ncu -e 2",
-    "dep:upgrade": "ncu -u",
+    "dep:update": "ncu -u",
     "lint": "eslint src test",
     "gen-types": "sh gen-types.sh",
     "prebuild": "npm run gen-types",
@@ -32,7 +32,7 @@
   },
   "devDependencies": {},
   "dependencies": {
-    "@grpc/grpc-js": "~1.8.4",
+    "@grpc/grpc-js": "~1.8.5",
     "@grpc/proto-loader": "~0.7.4",
     "@mojaloop/logging-bc-public-types-lib": "~0.1.14"
   }

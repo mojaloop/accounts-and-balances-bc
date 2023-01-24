@@ -38,13 +38,14 @@ import {existsSync} from "fs";
 import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {AuthorizationClient, TokenHelper} from "@mojaloop/security-bc-client-lib";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
-import {IBuiltinLedgerAccountsRepo, IBuiltinLedgerJournalEntriesRepo} from "../domain/infrastructure";
+import {IBuiltinLedgerAccountsRepo, IBuiltinLedgerJournalEntriesRepo} from "../domain";
 import {GrpcServer} from "./grpc_server/grpc_server";
 import {BuiltinLedgerAccountsMongoRepo} from "../implementations/builtin_ledger_accounts_mongo_repo";
 import {BuiltinLedgerJournalEntriesMongoRepo} from "../implementations/builtin_ledger_journal_entries_mongo_repo";
 import {BuiltinLedgerAggregate} from "../domain/aggregate";
 import {Privileges} from "../domain/privileges";
 import {resolve} from "path";
+import {AuthorizationClientMock} from "@mojaloop/accounts-and-balances-bc-shared-mocks-lib";
 
 /* ********** Constants Begin ********** */
 
@@ -129,7 +130,7 @@ export class BuiltinLedgerGrpcService {
 		}
 
 		// Authorization.
-		if (authorizationClient === undefined) {
+		/*if (authorizationClient === undefined) {
 			authorizationClient = new AuthorizationClient(
 				BC_NAME,
 				SVC_NAME,
@@ -140,7 +141,8 @@ export class BuiltinLedgerGrpcService {
 			this.addPrivileges(authorizationClient as AuthorizationClient);
 			await (authorizationClient as AuthorizationClient).bootstrap(true);
 			await (authorizationClient as AuthorizationClient).fetch();
-		}
+		}*/
+		authorizationClient = new AuthorizationClientMock(this.logger); // TODO: remove mock.
 
 		// Auditing.
 		if (auditingClient !== undefined) {

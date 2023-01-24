@@ -21,10 +21,11 @@
     "clean:dist": "rm -fr dist",
     "clean:log": "rm -f *.log",
     "dep:check": "ncu -e 2",
-    "dep:upgrade": "ncu -u",
+    "dep:update": "ncu -u",
     "lint": "eslint src test",
+    "prebuild": "cp ../builtin-ledger-grpc-client-lib/src/builtin_ledger.proto src/",
     "build": "tsc",
-    "postbuild": "cp src/domain/currencies.json dist/domain",
+    "postbuild": "cp src/domain/currencies.json dist/domain && cp src/builtin_ledger.proto dist/",
     "test:unit": "jest",
     "start": "npm run service",
     "start:dev": "npm run build && npm run service",
@@ -34,7 +35,7 @@
     "@mojaloop/accounts-and-balances-bc-shared-mocks-lib": "~0.0.1"
   },
   "dependencies": {
-    "@grpc/grpc-js": "~1.8.4",
+    "@grpc/grpc-js": "~1.8.5",
     "@grpc/proto-loader": "~0.7.4",
     "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-client-lib": "~0.0.1",
     "@mojaloop/accounts-and-balances-bc-public-types-lib": "~0.0.13",
