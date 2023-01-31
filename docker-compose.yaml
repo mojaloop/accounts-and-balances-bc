@@ -1,0 +1,41 @@
+version: "3.9"
+
+services:
+  builtin-ledger-grpc-svc:
+    build:
+      # In order to be able to copy files from parent directories on Dockerfiles, the following build properties are
+      # required.
+      context: "."
+      dockerfile: "packages/builtin-ledger-grpc-svc/Dockerfile"
+    ports:
+      - "5678:5678"
+    stdin_open: true
+    tty: true
+    environment:
+      CONFIG_SVC_BASEURL: "http://platform-configuration-svc:3100"
+      KAFKA_URL: "kafka:19092"
+      AUTH_N_SVC_BASEURL: "http://authentication-svc:3201"
+      AUTH_Z_SVC_BASEURL: "http://authorization-svc:3202"
+      AUDIT_KEY_FILE_PATH: "/app/data/audit_private_key.pem"
+      MONGO_URL: "mongodb://root:mongoDbPas42@mongo:27017"
+      BUILTIN_LEDGER_URL: "[::]:5678"
+  grpc-svc:
+    build:
+      # In order to be able to copy files from parent directories on Dockerfiles, the following build properties are
+      # required.
+      context: "."
+      dockerfile: "packages/grpc-svc/Dockerfile"
+    ports:
+      - "1234:1234"
+    stdin_open: true
+    tty: true
+    environment:
+      CONFIG_SVC_BASEURL: "http://platform-configuration-svc:3100"
+      KAFKA_URL: "kafka:19092"
+      MONGO_URL: "mongodb://root:mongoDbPas42@mongo:27017"
+      LEDGER_URL: "[::]:5678"
+
+networks:
+  default:
+    name: "ml_vnext_default"
+    external: true

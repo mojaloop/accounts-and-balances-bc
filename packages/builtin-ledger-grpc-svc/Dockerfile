@@ -28,22 +28,20 @@ ENV NODE_ENV=$NODE_ENV
 # are not included in the image (which "npm ci" doesn't do).
 
 # Copy package-lock.json and package.json files.
-COPY ["package-lock.json", "package.json", "./"]
-COPY ["packages/public-types-lib/package.json", "packages/public-types-lib/"]
-COPY ["packages/builtin-ledger-grpc-svc/package.json", "packages/builtin-ledger-grpc-svc/"]
-COPY ["packages/grpc-svc/package.json", "packages/grpc-svc/"]
+COPY ["../../package-lock.json", "../../package.json", "./"]
+COPY ["../packages/public-types-lib/package.json", "packages/public-types-lib/"]
+COPY ["../packages/builtin-ledger-grpc-svc/package.json", "packages/builtin-ledger-grpc-svc/"]
 # TODO: remove mocks.
-COPY ["packages/shared-mocks-lib/package.json", "packages/shared-mocks-lib/"]
+COPY ["../packages/shared-mocks-lib/package.json", "packages/shared-mocks-lib/"]
 
 # Install npm dependencies.
 RUN npm ci
 
 # Copy dist directories.
-COPY ["packages/public-types-lib/dist", "packages/public-types-lib/dist"]
-COPY ["packages/builtin-ledger-grpc-svc/dist", "packages/builtin-ledger-grpc-svc/dist"]
-COPY ["packages/grpc-svc/dist", "packages/grpc-svc/dist"]
+COPY ["../packages/public-types-lib/dist", "packages/public-types-lib/dist"]
+COPY ["../packages/builtin-ledger-grpc-svc/dist", "packages/builtin-ledger-grpc-svc/dist"]
 # TODO: remove mocks.
-COPY ["packages/shared-mocks-lib/dist", "packages/shared-mocks-lib/dist"]
+COPY ["../packages/shared-mocks-lib/dist", "packages/shared-mocks-lib/dist"]
 
 # TODO: remove.
 RUN mkdir data

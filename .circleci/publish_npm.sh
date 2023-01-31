@@ -133,7 +133,7 @@ if [[ PUBLISHED_PACKAGES_COUNT -gt 0 ]]; then
   echo -e "${PUBLISHED_PACKAGES_COUNT} package(s) were published, committing changed 'package.json' files..."
 
 # git status
-  git commit -nm "CI/CD auto commit for: $(git log -1 --pretty=%B) [ci skip]"
+  git commit -nm "[ci skip] CI/CD auto commit for: '$(git log -1 --pretty=%B)'"
 
   echo -e "Pushing commits..."
 #  git status
