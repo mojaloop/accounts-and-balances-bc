@@ -28,5 +28,4 @@
  ******/
 
 export * from "./types";
-export * from "./errors";
 export * from "./grpc_client";

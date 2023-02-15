@@ -27,6 +27,8 @@
  --------------
  ******/
 
-import {BuiltinLedgerGrpcService} from "./builtin_ledger_grpc_svc";
+import {BuiltinLedgerGrpcService} from "./service";
 
-BuiltinLedgerGrpcService.start();
+BuiltinLedgerGrpcService.start().then(() => {
+	console.log("BuiltinLedgerGrpcService start complete");
+});

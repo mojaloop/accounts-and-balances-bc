@@ -19,20 +19,23 @@
  their names indented and be marked with a '-'. Email address can be added
  optionally within square brackets <email>.
 
+ * Gates Foundation
+ - Name Surname <name.surname@gatesfoundation.com>
+
  * Crosslake
  - Pedro Sousa Barreto <pedrob@crosslaketech.com>
-
- * Gonçalo Garcia <goncalogarcia99@gmail.com>
 
  --------------
  ******/
 
-export class UnableToCreateAccountsError extends Error{}
-export class UnableToCreateJournalEntriesError extends Error{}
+"use strict";
 
-export class UnableToGetAccountsError extends Error{}
-export class UnableToGetJournalEntriesError extends Error{}
-
-export class UnableToDeleteAccountsError extends Error{}
-export class UnableToDeactivateAccountsError extends Error{}
-export class UnableToActivateAccountsError extends Error{}
+export enum ChartOfAccountsPrivilegeNames {
+    COA_CREATE_ACCOUNT= "COA_CREATE_ACCOUNT",
+    COA_CREATE_JOURNAL_ENTRY = "COA_CREATE_JOURNAL_ENTRY",
+    COA_VIEW_ACCOUNT = "COA_VIEW_ACCOUNT",
+    COA_VIEW_JOURNAL_ENTRY = "COA_VIEW_JOURNAL_ENTRY",
+    COA_DEACTIVATE_ACCOUNT = "COA_DEACTIVATE_ACCOUNT",
+    COA_REACTIVATE_ACCOUNT = "COA_REACTIVATE_ACCOUNT",
+    COA_DELETE_ACCOUNT = "COA_DELETE_ACCOUNT"
+}

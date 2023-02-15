@@ -26,6 +26,7 @@
 
  --------------
  ******/
+/*
 
 // Account.
 export class BLInvalidAccountStateError extends Error {readonly message = "invalid account state";}
@@ -56,5 +57,5 @@ export class BLUnableToUpdateAccountsError extends Error {readonly message = "un
 export class BLJournalEntryAlreadyExistsError extends Error {readonly message = "journal entry already exists";}
 export class BLUnableToStoreJournalEntryError extends Error {readonly message = "unable to store journal entry";}
 export class BLUnableToGetJournalEntriesError extends Error {readonly message = "unable to get journal entries";}
-// Others.
-export class BLUnauthorizedError extends Error {readonly message = "unauthorized";}
+
+*/

@@ -37,15 +37,16 @@ import {
 } from "@grpc/grpc-js";
 import {loadSync, Options, PackageDefinition} from "@grpc/proto-loader";
 import {TokenHelper} from "@mojaloop/security-bc-client-lib";
+
 import {BuiltinLedgerAggregate} from "../../domain/aggregate";
 import {
 	GrpcBuiltinLedgerHandlers,
 	ProtoGrpcType
 } from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-client-lib";
-import {GrpcHandlers} from "./grpc_handlers";
+import {BuiltinLedgerGrpcHandlers} from "./grpc_handlers";
 import {join} from "path";
 
-export class GrpcServer {
+export class BuiltinLedgerGrpcServer {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
 	private readonly URL: string;
@@ -66,17 +67,18 @@ export class GrpcServer {
 		this.logger = logger.createChild(this.constructor.name);
 		this.URL = url;
 
-		const protoFileAbsolutePath: string = join(__dirname, GrpcServer.PROTO_FILE_RELATIVE_PATH);
+		const protoFileAbsolutePath: string = join(__dirname, BuiltinLedgerGrpcServer.PROTO_FILE_RELATIVE_PATH);
 		const packageDefinition: PackageDefinition = loadSync(
 			protoFileAbsolutePath,
-			GrpcServer.LOAD_PROTO_OPTIONS
+			BuiltinLedgerGrpcServer.LOAD_PROTO_OPTIONS
 		);
 		const grpcObject: GrpcObject = loadPackageDefinition(packageDefinition);
 		const serviceDefinition: ServiceDefinition =
 			(grpcObject as unknown as ProtoGrpcType).GrpcBuiltinLedger.service;
 
-		const grpcHandlers: GrpcHandlers = new GrpcHandlers(
+		const grpcHandlers: BuiltinLedgerGrpcHandlers = new BuiltinLedgerGrpcHandlers(
 			this.logger,
+			tokenHelper,
 			aggregate
 		);
 		const serviceImplementation: GrpcBuiltinLedgerHandlers = grpcHandlers.getHandlers();

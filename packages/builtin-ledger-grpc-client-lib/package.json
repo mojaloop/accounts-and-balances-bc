@@ -18,12 +18,14 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
+    "clean:npm": "rm -fr node_modules",
     "clean:dist": "rm -fr dist",
     "clean:log": "rm -f *.log",
     "clean:types": "rm -fr src/types/proto-gen",
     "dep:check": "ncu -e 2",
-    "dep:upgrade": "ncu -u",
-    "lint": "eslint src test",
+    "dep:update": "ncu -u",
+    "lint": "eslint ./src",
+    "lint:fix": "eslint ./src --fix",
     "gen-types": "sh gen-types.sh",
     "prebuild": "npm run gen-types",
     "build": "tsc",
@@ -32,8 +34,11 @@
   },
   "devDependencies": {},
   "dependencies": {
-    "@grpc/grpc-js": "~1.8.4",
+    "@grpc/grpc-js": "~1.8.8",
     "@grpc/proto-loader": "~0.7.4",
-    "@mojaloop/logging-bc-public-types-lib": "~0.1.14"
+    "@mojaloop/logging-bc-public-types-lib": "~0.1.14",
+    "@mojaloop/security-bc-client-lib": "~0.1.10",
+    "@mojaloop/security-bc-public-types-lib": "~0.1.10",
+    "tslib": "~2.5.0"
   }
 }

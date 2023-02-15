@@ -21,11 +21,13 @@
     "dist"
   ],
   "scripts": {
+    "clean:npm": "rm -fr node_modules",
     "clean:dist": "rm -fr dist",
     "clean:log": "rm -f *.log",
     "dep:check": "ncu -e 2",
-    "dep:upgrade": "ncu -u",
-    "lint": "eslint src",
+    "dep:update": "ncu -u",
+    "lint": "eslint ./src",
+    "lint:fix": "eslint ./src --fix",
     "build": "tsc",
     "test:unit": "echo \"public-types-lib doesn't have unit tests\"",
     "clean:debug": "find dist -name \"*.js.map\" | xargs rm -f",
@@ -38,6 +40,6 @@
   },
   "devDependencies": {},
   "dependencies": {
-    "tslib": "~2.4.1"
+    "tslib": "~2.5.0"
   }
 }

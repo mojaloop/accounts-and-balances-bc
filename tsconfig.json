@@ -1,28 +1,52 @@
 {
-  "compilerOptions": { // https://www.typescriptlang.org/tsconfig
-    /* Language and Environment */
-    "target": "es2022",
-    /* Modules */
-    "module": "commonjs", // Sets moduleResolution to "node" ("classic" by default).
-    /* Emit */
-    "declaration": true, // Generate type declarations (.d.ts files).
-    "importHelpers": true, // tslib required as a dependency!
-    "outDir": "dist",
-    "removeComments": true,
-    "sourceMap": true, // For debugging (.js.map files).
-    /* Interop Constraints */
-    "esModuleInterop": true, // Enables allowSyntheticDefaultImports (disabled by default).
-    "forceConsistentCasingInFileNames": true,
-    /* Type Checking */
-    "noImplicitReturns": true,
-    "strict": true,
-    "strictPropertyInitialization": false,
-    /* Projects */
-    "incremental": true, // Speeds up the build process - not everything is rebuilt (tsconfig.tsbuildinfo files).
-    /* Completeness */
-    "skipLibCheck": true // Enabling this option speeds up the build process - .d.ts files are not type checked.
-  },
   "include": [
-    "packages/*/src"
-  ]
+	"**/src/**/*.ts"
+  ],
+  "exclude": [
+	"node_modules",
+	"**/*.spec.ts",
+	"test",
+	"lib",
+	"coverage"
+  ],
+  "compilerOptions": {
+	"outDir": ".",
+	// prevents this tsconfig from compiling any files
+	"target": "ES2022",
+	"module": "commonjs",
+	"lib": [
+	  "ES2022"
+	],
+	"importHelpers": true,
+	"declaration": true,
+	"sourceMap": true,
+	"skipLibCheck": true,
+	"strict": true,
+	// this includes all string enforcing rules ?
+	"noImplicitAny": true,
+	"strictNullChecks": true,
+	"strictFunctionTypes": true,
+	"strictPropertyInitialization": false,
+	"noImplicitThis": true,
+	"alwaysStrict": true,
+	"resolveJsonModule": true,
+	"noUnusedLocals": false,
+	"noUnusedParameters": false,
+	"noImplicitReturns": true,
+	"noFallthroughCasesInSwitch": true,
+	// Needed for CommonJS modules
+	"allowSyntheticDefaultImports": true,
+	"moduleResolution": "node",
+	"baseUrl": "./",
+	"paths": {
+	  "*": [
+		"src/*",
+		"node_modules/*"
+	  ]
+	},
+	"esModuleInterop": true,
+	"types": [
+	  "node"
+	]
+  }
 }

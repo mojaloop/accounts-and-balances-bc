@@ -29,24 +29,18 @@
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {Collection, Db, MongoClient, MongoServerError} from "mongodb";
-import {
-    AccountAlreadyExistsError,
-    AccountNotFoundError,
-    CoaAccount,
-    IChartOfAccountsRepo,
-    UnableToGetAccountsError,
-    UnableToInitRepoError,
-    UnableToStoreAccountsError,
-    UnableToUpdateAccountsError
-} from "../domain";
-import {AccountState} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+
+import {AccountsAndBalancesAccountState} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import { IChartOfAccountsRepo } from "../domain/infrastructure-types/chart_of_accounts_repo";
+import { CoaAccount } from "../domain/coa_account";
 
 export const COA_ACCOUNT_MONGO_SCHEMA: any = {
     bsonType: "object",
     title: "Chart of Account's Account Mongo Schema",
     required: [
         "_id", // internalId.
-        "externalId",
+        "id",
+        "ledgerAccountId",
         "ownerId",
         "state",
         "type",
@@ -54,14 +48,14 @@ export const COA_ACCOUNT_MONGO_SCHEMA: any = {
         "currencyDecimals"
     ],
     properties: {
-        // TODO: type vs bsonType; binData BSON type; check if _id can be replaced.
-        _id: {/*type: "string",*/ bsonType: "string"},
-        externalId: {/*type: "string",*/ bsonType: "string"},
-        ownerId: {/*type: "string",*/ bsonType: "string"},
-        state: {/*type: "string",*/ bsonType: "string"},
-        type: {/*type: "string",*/ bsonType: "string"},
-        currencyCode: {/*type: "string",*/ bsonType: "string"},
-        currencyDecimals: {/*type: "number",*/ bsonType: "int"}
+        _id: {bsonType: "objectId"},
+        id: {bsonType: "string"},
+        ledgerAccountId: {bsonType: ["string", "null"]},
+        ownerId: {bsonType: ["string", "null"]},
+        state: {bsonType: "string"},
+        type: {bsonType: "string"},
+        currencyCode: {bsonType: "string"},
+        currencyDecimals: {bsonType: "int"}
     },
     additionalProperties: false
 };
@@ -69,10 +63,10 @@ export const COA_ACCOUNT_MONGO_SCHEMA: any = {
 export class ChartOfAccountsMongoRepo implements IChartOfAccountsRepo {
     // Properties received through the constructor.
     private readonly logger: ILogger;
-    private readonly URL: string; // TODO: store the username and password here?
+    private readonly URL: string;
     // Other properties.
     private static readonly TIMEOUT_MS: number = 5_000;
-    private static readonly DB_NAME: string = "accounts_and_balances_bc";
+    private static readonly DB_NAME: string = "accounts_and_balances_bc_coa";
     private static readonly COLLECTION_NAME: string = "chart_of_accounts";
     private static readonly DUPLICATE_KEY_ERROR_CODE: number = 11000;
     private client: MongoClient;
@@ -97,7 +91,7 @@ export class ChartOfAccountsMongoRepo implements IChartOfAccountsRepo {
             const db: Db = this.client.db(ChartOfAccountsMongoRepo.DB_NAME);
 
             // Check if the collection already exists.
-            const collections: any[] = await db.listCollections().toArray(); // TODO: verify type.
+            const collections: any[] = await db.listCollections().toArray();
             const collectionExists: boolean = collections.some((collection) => {
                 return collection.name === ChartOfAccountsMongoRepo.COLLECTION_NAME;
             });
@@ -112,7 +106,8 @@ export class ChartOfAccountsMongoRepo implements IChartOfAccountsRepo {
                 validator: {$jsonSchema: COA_ACCOUNT_MONGO_SCHEMA}
             });
         } catch (error: unknown) {
-            throw new UnableToInitRepoError((error as any)?.message);
+            this.logger.error(error);
+            throw error;
         }
     }
 
@@ -120,93 +115,67 @@ export class ChartOfAccountsMongoRepo implements IChartOfAccountsRepo {
         await this.client.close();
     }
 
-    // TODO: handle case in which the array received is empty (currently, true is returned).
     async accountsExistByInternalIds(internalIds: string[]): Promise<boolean> {
-        let accounts: any[]; // TODO: verify type.
+        let accounts: any[];
         try {
-            accounts = await this.collection.find({_id: {$in: internalIds}}).toArray(); // TODO: verify filter; is there a simpler way to find by _id?
+            accounts = await this.collection.find({id: {$in: internalIds}}).toArray();
         } catch (error: unknown) {
-            throw new UnableToGetAccountsError((error as any)?.message);
+            this.logger.error(error);
+            throw error;
         }
-        const accountsExist: boolean = accounts.length === internalIds.length;
+        const accountsExist = accounts.length === internalIds.length;
         return accountsExist;
     }
 
     async storeAccounts(coaAccounts: CoaAccount[]): Promise<void> {
-        // Convert CoaAccount's internalId to Mongo's _id.
-        // TODO: is this the best way to do it?
-        const mongoAccounts: any[] = coaAccounts.map((coaAccount) => { // TODO: verify type.
-            return {
-                _id: coaAccount.internalId,
-                externalId: coaAccount.externalId,
-                ownerId: coaAccount.ownerId,
-                state: coaAccount.state,
-                type: coaAccount.type,
-                currencyCode: coaAccount.currencyCode,
-                currencyDecimals: coaAccount.currencyDecimals
-            };
-        });
-
         try {
-            await this.collection.insertMany(mongoAccounts);
+            await this.collection.insertMany(coaAccounts);
         } catch (error: unknown) {
-            if (
-                error instanceof MongoServerError
-                && error.code === ChartOfAccountsMongoRepo.DUPLICATE_KEY_ERROR_CODE
-            ) { // TODO: should this be done?
-                throw new AccountAlreadyExistsError();
-            }
-            throw new UnableToStoreAccountsError((error as any)?.message);
+            this.logger.error(error);
+            throw error;
         }
     }
 
     async getAccountsByInternalIds(internalIds: string[]): Promise<CoaAccount[]> {
-        let accounts: any[]; // TODO: verify type.
+        let accounts: any[];
         try {
-            accounts = await this.collection.find({_id: {$in: internalIds}}).toArray(); // TODO: verify filter; is there a simpler way to find by _id?
+            accounts = await this.collection.find({id: {$in: internalIds}}).project({_id: 0}).toArray();
         } catch (error: unknown) {
-            throw new UnableToGetAccountsError((error as any)?.message);
+            this.logger.error(error);
+            throw error;
         }
 
-        // Convert Mongo's _id to CoaAccount's internalId.
-        // TODO: is this the best way to do it? will internalId be placed at the end of account?
-        accounts.forEach((account) => {
-            account.internalId = account._id;
-            delete account._id;
-        });
         return accounts;
     }
 
     async getAccountsByOwnerId(ownerId: string): Promise<CoaAccount[]> {
-        let accounts: any[]; // TODO: verify type.
+        let accounts: any[];
         try {
-            accounts = await this.collection.find({ownerId: ownerId}).toArray();
+            accounts = await this.collection.find({ownerId: ownerId}).project({_id: 0}).toArray();
         } catch (error: unknown) {
-            throw new UnableToGetAccountsError((error as any)?.message);
+            this.logger.error(error);
+            throw error;
         }
 
-        // Convert Mongo's _id to CoaAccount's internalId.
-        // TODO: is this the best way to do it? will internalId be placed at the end of account?
-        accounts.forEach((account) => {
-            account.internalId = account._id;
-            delete account._id;
-        });
         return accounts;
     }
 
-    async updateAccountStatesByInternalIds(accountIds: string[], accountState: AccountState): Promise<void> {
-        let updateResult: any; // TODO: verify type.
+    async updateAccountStatesByInternalIds(accountIds: string[], accountState: AccountsAndBalancesAccountState): Promise<void> {
+        let updateResult: any;
         try {
             updateResult = await this.collection.updateMany(
-                {_id: {$in: accountIds}},
+                {id: {$in: accountIds}},
                 {$set: {accountState: accountState}}
             );
         } catch (error: unknown) {
-            throw new UnableToUpdateAccountsError((error as any)?.message);
+            this.logger.error(error);
+            throw error;
         }
 
-        if (updateResult.modifiedCount === 0) { // TODO: use "!updateResult.modifiedCount" instead?
-            throw new AccountNotFoundError();
+        if (updateResult.modifiedCount !==accountIds.length) {
+            const err = new Error("Could not updateAccountStatesByInternalIds");
+            this.logger.error(err);
+            throw err;
         }
     }
 }

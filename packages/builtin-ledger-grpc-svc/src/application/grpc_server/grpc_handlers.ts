@@ -26,33 +26,16 @@
 
  --------------
  ******/
+"use strict";
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {ServerUnaryCall, sendUnaryData, status} from "@grpc/grpc-js";
-import {
-	BLAccountAlreadyExistsError,
-	BLAccountNotFoundError,
-	BuiltinLedgerAccountDto,
-	BuiltinLedgerJournalEntryDto,
-	BLCreditedAccountNotFoundError,
-	BLCurrencyCodesDifferError,
-	BLDebitedAccountNotFoundError,
-	BLInvalidCreditBalanceError,
-	BLInvalidCurrencyCodeError,
-	BLInvalidDebitBalanceError,
-	BLInvalidIdError,
-	BLInvalidJournalEntryAmountError,
-	BLInvalidTimestampError,
-	BLJournalEntryAlreadyExistsError,
-	BLSameDebitedAndCreditedAccountsError,
-	BLUnauthorizedError,
-	BLInvalidAccountStateError,
-	BLInvalidAccountTypeError,
-	BLDebitsExceedCreditsError,
-	BLCreditsExceedDebitsError
-} from "../../domain";
+import {ServerUnaryCall, sendUnaryData, status, ServerErrorResponse, Metadata, MetadataValue} from "@grpc/grpc-js";
+import {TokenHelper} from "@mojaloop/security-bc-client-lib";
+import {BuiltinLedgerJournalEntryDto, CreatedIdMapResponse} from "../../domain/entities";
 import {BuiltinLedgerAggregate} from "../../domain/aggregate";
 import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
+import {ForbiddenError, UnauthorizedError} from "@mojaloop/security-bc-public-types-lib";
+
 import {
 	BuiltinLedgerGrpcAccount,
 	BuiltinLedgerGrpcAccount__Output,
@@ -62,183 +45,188 @@ import {
 	BuiltinLedgerGrpcId__Output,
 	BuiltinLedgerGrpcIdArray,
 	BuiltinLedgerGrpcIdArray__Output,
-	BuiltinLedgerGrpcJournalEntry, BuiltinLedgerGrpcJournalEntry__Output,
+	BuiltinLedgerGrpcJournalEntry,
+	BuiltinLedgerGrpcJournalEntry__Output,
 	BuiltinLedgerGrpcJournalEntryArray,
+	BuiltinLedgerGrpcCreateAccountArray,
+	BuiltinLedgerGrpcCreatedId,
+	BuiltinLedgerGrpcCreateIdsResponse__Output,
+	BuiltinLedgerGrpcCreateAccount,
+	BuiltinLedgerGrpcCreateJournalEntry,
+	BuiltinLedgerGrpcCreateJournalEntryArray,
 	BuiltinLedgerGrpcJournalEntryArray__Output,
 	Empty,
 	GrpcBuiltinLedgerHandlers
 } from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-client-lib";
-import {AccountState, AccountType} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import {
+	AccountNotFoundError,
+	AccountsAndBalancesAccountState,
+	AccountsAndBalancesAccountType
+} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import { BuiltinLedgerAccountDto } from "../../domain/entities";
 
-export class GrpcHandlers {
+const UNKNOWN_ERROR_MESSAGE = "unknown error";
+
+export class BuiltinLedgerGrpcHandlers {
 	// Properties received through the constructor.
-	private readonly logger: ILogger;
-	private readonly aggregate: BuiltinLedgerAggregate;
-	// Other properties.
-	private static readonly UNKNOWN_ERROR_MESSAGE: string = "unknown error";
-	private readonly securityContext: CallSecurityContext = {
-		username: "",
-		clientId: "",
-		rolesIds: [""],
-		accessToken: ""
-	};
+	private readonly _logger: ILogger;
+	private readonly _aggregate: BuiltinLedgerAggregate;
+	private readonly _tokenHelper: TokenHelper;
 
 	constructor(
 		logger: ILogger,
+		tokenHelper: TokenHelper,
 		aggregate: BuiltinLedgerAggregate
 	) {
-		this.logger = logger.createChild(this.constructor.name);
-		this.aggregate = aggregate;
+		this._logger = logger.createChild(this.constructor.name);
+		this._tokenHelper = tokenHelper;
+		this._aggregate = aggregate;
 	}
 
 	getHandlers(): GrpcBuiltinLedgerHandlers {
 		return {
-			"CreateAccounts": this.createAccounts.bind(this),
-			"CreateJournalEntries": this.createJournalEntries.bind(this),
-			"GetAccountsByIds": this.getAccountsByIds.bind(this),
-			"GetJournalEntriesByAccountId": this.getJournalEntriesByAccountId.bind(this),
-			"DeleteAccountsByIds": this.deleteAccountsByIds.bind(this),
-			"DeactivateAccountsByIds": this.deactivateAccountsByIds.bind(this),
-			"ActivateAccountsByIds": this.activateAccountsByIds.bind(this)
+			"CreateAccounts": this._createAccounts.bind(this),
+			"CreateJournalEntries": this._createJournalEntries.bind(this),
+			"GetAccountsByIds": this._getAccountsByIds.bind(this),
+			"GetJournalEntriesByAccountId": this._getJournalEntriesByAccountId.bind(this),
+			"DeleteAccountsByIds": this._deleteAccountsByIds.bind(this),
+			"DeactivateAccountsByIds": this._deactivateAccountsByIds.bind(this),
+			"ActivateAccountsByIds": this._activateAccountsByIds.bind(this)
 		};
 	}
 
-	private async createAccounts(
-		call: ServerUnaryCall<BuiltinLedgerGrpcAccountArray__Output, BuiltinLedgerGrpcIdArray>,
-		callback: sendUnaryData<BuiltinLedgerGrpcIdArray>
-	): Promise<void> {
-		const builtinLedgerGrpcAccountsOutput: BuiltinLedgerGrpcAccount__Output[]
-			= call.request.builtinLedgerGrpcAccountArray || [];
+	/**
+	 * This will return the secCtx if successful, 
+	 * if not will call the callback with the correct err and return null 
+	 * @param call ServerUnaryCall
+	 * @param callback sendUnaryData
+	 * @private
+	 */
+	private async _getSecCtxFromCall(call: ServerUnaryCall<any, any>, callback: sendUnaryData<any>): Promise<CallSecurityContext | null> {
+		const returnUnauthorized = ()=>{
+			callback(this._handleAggregateError(new UnauthorizedError()));
+			return null;
+		};
+		
+		const callTokenMeta = call.metadata.get("TOKEN");
+		if (!callTokenMeta) return returnUnauthorized();
+			
+		const bearerToken = callTokenMeta[0] as string;
+		if (!bearerToken) return returnUnauthorized();
 
-		const builtinLedgerAccountDtos: BuiltinLedgerAccountDto[]
-			= builtinLedgerGrpcAccountsOutput.map((builtinLedgerGrpcAccountOutput) => {
-			if (!builtinLedgerGrpcAccountOutput.currencyCode) {
-				throw new Error(); // TODO: create custom error.
-			}
-
-			const builtinLedgerAccountDto: BuiltinLedgerAccountDto = {
-				id: builtinLedgerGrpcAccountOutput.id ?? null, // TODO: ?? or ||?
-				state: builtinLedgerGrpcAccountOutput.state as AccountState, // TODO: cast?
-				type: builtinLedgerGrpcAccountOutput.type as AccountType, // TODO: cast?
-				currencyCode: builtinLedgerGrpcAccountOutput.currencyCode,
-				debitBalance: builtinLedgerGrpcAccountOutput.debitBalance ?? null, // TODO: ?? or ||?
-				creditBalance: builtinLedgerGrpcAccountOutput.creditBalance ?? null, // TODO: ?? or ||?
-				timestampLastJournalEntry: builtinLedgerGrpcAccountOutput.timestampLastJournalEntry ?? null // TODO: ?? or ||?
-			};
-			return builtinLedgerAccountDto;
-		});
-
-		let accountIds: string[];
+		let verified;
 		try {
-			accountIds = await this.aggregate.createAccounts(builtinLedgerAccountDtos, this.securityContext);
-		} catch (error: unknown) {
-			let grpcError = {code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE};
-			if (error instanceof BLUnauthorizedError) {
-				grpcError = {code: status.PERMISSION_DENIED, details: error.message};
-			} else if (error instanceof BLAccountAlreadyExistsError) {
-				grpcError = {code: status.ALREADY_EXISTS, details: error.message};
-			} else if (
-				error instanceof BLInvalidAccountStateError
-				|| error instanceof BLInvalidDebitBalanceError
-				|| error instanceof BLInvalidCreditBalanceError
-				|| error instanceof BLInvalidTimestampError
-				|| error instanceof BLInvalidIdError
-				|| error instanceof BLInvalidAccountTypeError
-				|| error instanceof BLInvalidCurrencyCodeError
-			) {
-				grpcError = {code: status.INVALID_ARGUMENT, details: error.message};
-			}
-			callback(grpcError, null);
-			return;
+			verified = await this._tokenHelper.verifyToken(bearerToken);
+		} catch (err) {
+			this._logger.error(err, "unable to verify token");
+			return returnUnauthorized();
+		}
+		if (!verified) return returnUnauthorized();
+
+		const decoded = this._tokenHelper.decodeToken(bearerToken);
+		if (!decoded.sub || decoded.sub.indexOf("::")== -1) {
+			return returnUnauthorized();
 		}
 
-		const builtinLedgerGrpcAccountIds: BuiltinLedgerGrpcId[] = accountIds.map((accountId) => {
-			return {builtinLedgerGrpcId: accountId};
-		});
-		callback(null, {builtinLedgerGrpcIdArray: builtinLedgerGrpcAccountIds});
+		const subSplit = decoded.sub.split("::");
+		const subjectType = subSplit[0];
+		const subject = subSplit[1];
+
+		return {
+			accessToken: bearerToken,
+			clientId: subjectType.toUpperCase().startsWith("APP") ? subject:null,
+			username: subjectType.toUpperCase().startsWith("USER") ? subject:null,
+			rolesIds: decoded.roles
+		};
 	}
 
-	private async createJournalEntries(
-		call: ServerUnaryCall<BuiltinLedgerGrpcJournalEntryArray__Output, BuiltinLedgerGrpcIdArray>,
-		callback: sendUnaryData<BuiltinLedgerGrpcIdArray>
+	private async _createAccounts(
+		call: ServerUnaryCall<BuiltinLedgerGrpcCreateAccountArray, BuiltinLedgerGrpcCreateIdsResponse__Output>,
+		callback: sendUnaryData<BuiltinLedgerGrpcCreateIdsResponse__Output>
 	): Promise<void> {
-		const builtinLedgerGrpcJournalEntriesOutput: BuiltinLedgerGrpcJournalEntry__Output[]
-			= call.request.builtinLedgerGrpcJournalEntryArray || [];
+		const secCtx = await this._getSecCtxFromCall(call, callback);
+		if(!secCtx) return; // callback was called by _getSecCtxFromCall()
+		
+		const requestArray: BuiltinLedgerGrpcCreateAccount[] = call.request.accountsToCreate || [];
 
-		const builtinLedgerJournalEntryDtos: BuiltinLedgerJournalEntryDto[]
-			= builtinLedgerGrpcJournalEntriesOutput.map((builtinLedgerGrpcJournalEntryOutput) => {
-			if (
-				!builtinLedgerGrpcJournalEntryOutput.currencyCode
-				|| !builtinLedgerGrpcJournalEntryOutput.amount
-				|| !builtinLedgerGrpcJournalEntryOutput.debitedAccountId
-				|| !builtinLedgerGrpcJournalEntryOutput.creditedAccountId
-			) {
-				throw new Error(); // TODO: create custom error.
-			}
-
-			const builtinLedgerJournalEntryDto: BuiltinLedgerJournalEntryDto = {
-				id: builtinLedgerGrpcJournalEntryOutput.id ?? null, // TODO: ?? or ||?
-				ownerId: builtinLedgerGrpcJournalEntryOutput.ownerId ?? null,
-				currencyCode: builtinLedgerGrpcJournalEntryOutput.currencyCode,
-				amount: builtinLedgerGrpcJournalEntryOutput.amount,
-				debitedAccountId: builtinLedgerGrpcJournalEntryOutput.debitedAccountId,
-				creditedAccountId: builtinLedgerGrpcJournalEntryOutput.creditedAccountId,
-				timestamp: builtinLedgerGrpcJournalEntryOutput.timestamp ?? null // TODO: ?? or ||?
+		const createAccountReqs: {requestedId: string, accountType: AccountsAndBalancesAccountType, currencyCode: string }[]
+			= requestArray.map(value => {
+			return {
+				requestedId: value.requestedId!,
+				accountType: value.type! as AccountsAndBalancesAccountType,
+				currencyCode: value.currencyCode!
 			};
-			return builtinLedgerJournalEntryDto;
 		});
 
-		let journalEntryIds: string[];
+		let accountIds: CreatedIdMapResponse[];
 		try {
-			journalEntryIds
-				= await this.aggregate.createJournalEntries(builtinLedgerJournalEntryDtos, this.securityContext);
+			accountIds = await this._aggregate.createAccounts(secCtx, createAccountReqs);
 		} catch (error: unknown) {
-			let grpcError = {code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE};
-			if (error instanceof BLUnauthorizedError) {
-				grpcError = {code: status.PERMISSION_DENIED, details: error.message};
-			} else if (
-				error instanceof BLDebitedAccountNotFoundError
-				|| error instanceof BLCreditedAccountNotFoundError
-			) {
-				grpcError = {code: status.NOT_FOUND, details: error.message};
-			} else if (error instanceof BLJournalEntryAlreadyExistsError) {
-				grpcError = {code: status.ALREADY_EXISTS, details: error.message};
-			} else if (
-				error instanceof BLInvalidTimestampError
-				|| error instanceof BLInvalidIdError
-				|| error instanceof BLInvalidCurrencyCodeError
-				|| error instanceof BLInvalidJournalEntryAmountError
-				|| error instanceof BLSameDebitedAndCreditedAccountsError
-				|| error instanceof BLCurrencyCodesDifferError
-				// CurrencyDecimalsDifferError is "ignored" on purpose.
-				|| error instanceof BLDebitsExceedCreditsError
-				|| error instanceof BLCreditsExceedDebitsError
-			) {
-				grpcError = {code: status.INVALID_ARGUMENT, details: error.message};
-			}
-			callback(grpcError, null);
-			return;
+			return callback(this._handleAggregateError(error));
 		}
 
-		const builtinLedgerGrpcJournalEntryIds: BuiltinLedgerGrpcId[] = journalEntryIds.map((journalEntryId) => {
-			return {builtinLedgerGrpcId: journalEntryId};
+		const resp: BuiltinLedgerGrpcCreatedId[] = accountIds.map(value => {
+			return {requestedId: value.requestedId, attributedId: value.attributedId};
 		});
-		callback(null, {builtinLedgerGrpcIdArray: builtinLedgerGrpcJournalEntryIds});
+		callback(null, {ids: resp});
 	}
 
-	private async getAccountsByIds(
-		call: ServerUnaryCall<BuiltinLedgerGrpcIdArray__Output, BuiltinLedgerGrpcAccountArray>,
-		callback: sendUnaryData<BuiltinLedgerGrpcAccountArray>
+
+	private async _createJournalEntries(
+		call: ServerUnaryCall<BuiltinLedgerGrpcCreateJournalEntryArray, BuiltinLedgerGrpcCreateIdsResponse__Output>,
+		callback: sendUnaryData<BuiltinLedgerGrpcCreateIdsResponse__Output>
 	): Promise<void> {
-		const builtinLedgerGrpcAccountIdsOutput: BuiltinLedgerGrpcId__Output[]
-			= call.request.builtinLedgerGrpcIdArray || [];
+		const secCtx = await this._getSecCtxFromCall(call, callback);
+		if (!secCtx) return;
+		
+		const requestArray: BuiltinLedgerGrpcCreateJournalEntry[] = call.request.entriesToCreate || [];
+
+		const now = Date.now();
+
+		const createEntriesRequests: {
+			requestedId: string, amountStr: string, currencyCode: string,
+			creditedAccountId: string, debitedAccountId: string, timestamp: number, ownerId: string, pending: boolean
+		}[] = requestArray.map(value => {
+			return {
+				requestedId: value.requestedId!,
+				amountStr: value.amount!,
+				pending: value.pending!,
+				creditedAccountId: value.creditedAccountId!,
+				debitedAccountId: value.debitedAccountId!,
+				currencyCode: value.currencyCode!,
+				ownerId: value.ownerId!,
+				timestamp: now
+			};
+		});
+
+		let createdIds: CreatedIdMapResponse[];
+		try {
+			createdIds = await this._aggregate.createJournalEntries(secCtx, createEntriesRequests);
+		} catch (error: any) {
+			return callback(this._handleAggregateError(error));
+		}
+
+		const resp: BuiltinLedgerGrpcCreatedId[] = createdIds.map(value => {
+			return {requestedId: value.requestedId, attributedId: value.attributedId};
+		});
+		callback(null, {ids: resp});
+	}
+
+	private async _getAccountsByIds(
+		call: ServerUnaryCall<BuiltinLedgerGrpcIdArray, BuiltinLedgerGrpcAccountArray__Output>,
+		callback: sendUnaryData<BuiltinLedgerGrpcAccountArray__Output>
+	): Promise<void> {
+		const secCtx = await this._getSecCtxFromCall(call, callback);
+		if (!secCtx) return;
+		
+		const requestIds: BuiltinLedgerGrpcId__Output[] = call.request.builtinLedgerGrpcIdArray || [];
 
 		const accountIds: string[] = [];
-		for (const builtinLedgerGrpcAccountIdOutput of builtinLedgerGrpcAccountIdsOutput) {
+		for (const builtinLedgerGrpcAccountIdOutput of requestIds) {
 			// const accountId: string | undefined = builtinLedgerGrpcAccountIdOutput.builtinLedgerGrpcId; TODO: use this auxiliary variable?
 			if (!builtinLedgerGrpcAccountIdOutput.builtinLedgerGrpcId) {
 				callback(
-					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
+					{code: status.UNKNOWN, details: UNKNOWN_ERROR_MESSAGE},
 					null
 				);
 				return;
@@ -246,180 +234,147 @@ export class GrpcHandlers {
 			accountIds.push(builtinLedgerGrpcAccountIdOutput.builtinLedgerGrpcId);
 		}
 
-		let builtinLedgerAccountDtos: BuiltinLedgerAccountDto[];
+		let foundAccountsDtos: BuiltinLedgerAccountDto[];
 		try {
-			builtinLedgerAccountDtos = await this.aggregate.getAccountsByIds(accountIds, this.securityContext);
-		} catch (error: unknown) {
-			let grpcError = {code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE};
-			if (error instanceof BLUnauthorizedError) {
-				grpcError = {code: status.PERMISSION_DENIED, details: error.message};
-			}
-			callback(grpcError, null);
-			return;
+			foundAccountsDtos = await this._aggregate.getAccountsByIds(secCtx, accountIds);
+		} catch (error: any) {
+			return callback(this._handleAggregateError(error));
 		}
 
-		const builtinLedgerGrpcAccounts: BuiltinLedgerGrpcAccount[]
-			= builtinLedgerAccountDtos.map((builtinLedgerAccountDto) => {
-			const builtinLedgerGrpcAccount: BuiltinLedgerGrpcAccount = {
-				id: builtinLedgerAccountDto.id ?? undefined, // TODO: ?? or ||?
-				state: builtinLedgerAccountDto.state,
-				type: builtinLedgerAccountDto.type,
-				currencyCode: builtinLedgerAccountDto.currencyCode,
-				debitBalance: builtinLedgerAccountDto.debitBalance ?? undefined, // TODO: ?? or ||?
-				creditBalance: builtinLedgerAccountDto.creditBalance ?? undefined, // TODO: ?? or ||?
-				timestampLastJournalEntry: builtinLedgerAccountDto.timestampLastJournalEntry ?? undefined // TODO: ?? or ||?
+		const returnAccounts = foundAccountsDtos.map((accountDto) => {
+			const grpcAccount: BuiltinLedgerGrpcAccount__Output = {
+				id: accountDto.id ?? undefined,
+				state: accountDto.state,
+				type: accountDto.type,
+				currencyCode: accountDto.currencyCode,
+				postedDebitBalance: accountDto.postedDebitBalance ?? undefined,
+				pendingDebitBalance: accountDto.pendingDebitBalance ?? undefined,
+				postedCreditBalance: accountDto.postedCreditBalance ?? undefined,
+				pendingCreditBalance: accountDto.pendingCreditBalance ?? undefined,
+				timestampLastJournalEntry: accountDto.timestampLastJournalEntry ?? undefined
 			};
-			return builtinLedgerGrpcAccount;
+			return grpcAccount;
 		});
-		callback(null, {builtinLedgerGrpcAccountArray: builtinLedgerGrpcAccounts});
+
+		callback(null, {builtinLedgerGrpcAccountArray: returnAccounts});
 	}
 
-	private async getJournalEntriesByAccountId(
-		call: ServerUnaryCall<BuiltinLedgerGrpcId__Output, BuiltinLedgerGrpcJournalEntryArray>,
-		callback: sendUnaryData<BuiltinLedgerGrpcJournalEntryArray>
+	private async _getJournalEntriesByAccountId(
+		call: ServerUnaryCall<BuiltinLedgerGrpcId, BuiltinLedgerGrpcJournalEntryArray__Output>,
+		callback: sendUnaryData<BuiltinLedgerGrpcJournalEntryArray__Output>
 	): Promise<void> {
+		const secCtx = await this._getSecCtxFromCall(call, callback);
+		if (!secCtx) return;
+		
 		const accountId: string | undefined = call.request.builtinLedgerGrpcId;
 		if (!accountId) {
 			callback(
-				{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
+				{code: status.UNKNOWN, details: UNKNOWN_ERROR_MESSAGE},
 				null
 			);
 			return;
 		}
 
-		let builtinLedgerJournalEntryDtos: BuiltinLedgerJournalEntryDto[];
+		let foundDtos: BuiltinLedgerJournalEntryDto[];
 		try {
-			builtinLedgerJournalEntryDtos
-				= await this.aggregate.getJournalEntriesByAccountId(accountId, this.securityContext);
+			foundDtos = await this._aggregate.getJournalEntriesByAccountId(secCtx, accountId);
 		} catch (error: unknown) {
-			let grpcError = {code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE};
-			if (error instanceof BLUnauthorizedError) {
-				grpcError = {code: status.PERMISSION_DENIED, details: error.message};
-			}
-			callback(grpcError, null);
-			return;
+			return callback(this._handleAggregateError(error));
 		}
 
-		const builtinLedgerGrpcJournalEntries: BuiltinLedgerGrpcJournalEntry[]
-			= builtinLedgerJournalEntryDtos.map((builtinLedgerJournalEntryDto) => {
-			const builtinLedgerGrpcJournalEntry: BuiltinLedgerGrpcJournalEntry = {
-				id: builtinLedgerJournalEntryDto.id ?? undefined, // TODO: ?? or ||?
-				currencyCode: builtinLedgerJournalEntryDto.currencyCode,
-				amount: builtinLedgerJournalEntryDto.amount,
-				debitedAccountId: builtinLedgerJournalEntryDto.debitedAccountId,
-				creditedAccountId: builtinLedgerJournalEntryDto.creditedAccountId,
-				timestamp: builtinLedgerJournalEntryDto.timestamp ?? undefined // TODO: ?? or ||?
+		const returnEntries: BuiltinLedgerGrpcJournalEntry__Output[] = foundDtos.map((dto) => {
+			const grpcJournalEntry: BuiltinLedgerGrpcJournalEntry__Output = {
+				id: dto.id ?? undefined,
+				currencyCode: dto.currencyCode,
+				amount: dto.amount,
+				debitedAccountId: dto.debitedAccountId,
+				creditedAccountId: dto.creditedAccountId,
+				timestamp: dto.timestamp || undefined
 			};
-			return builtinLedgerGrpcJournalEntry;
+			return grpcJournalEntry;
 		});
-		callback(null, {builtinLedgerGrpcJournalEntryArray: builtinLedgerGrpcJournalEntries});
+
+		callback(null, {builtinLedgerGrpcJournalEntryArray: returnEntries});
 	}
 
-	private async deleteAccountsByIds(
+	private async _deleteAccountsByIds(
 		call: ServerUnaryCall<BuiltinLedgerGrpcIdArray__Output, Empty>,
 		callback: sendUnaryData<Empty>
 	): Promise<void> {
-		const builtinLedgerGrpcAccountIdsOutput: BuiltinLedgerGrpcId__Output[]
-			= call.request.builtinLedgerGrpcIdArray || [];
+		const secCtx = await this._getSecCtxFromCall(call, callback);
+		if(!secCtx) return; // callback was called by _getSecCtxFromCall()
+		
+		const inputAccountIds: BuiltinLedgerGrpcId__Output[] = call.request.builtinLedgerGrpcIdArray || [];
 
-		const accountIds: string[] = [];
-		for (const builtinLedgerGrpcAccountIdOutput of builtinLedgerGrpcAccountIdsOutput) {
-			// const accountId: string | undefined = builtinLedgerGrpcAccountIdOutput.builtinLedgerGrpcId; TODO: use this auxiliary variable?
-			if (!builtinLedgerGrpcAccountIdOutput.builtinLedgerGrpcId) {
-				callback(
-					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
-					null
-				);
-				return;
-			}
-			accountIds.push(builtinLedgerGrpcAccountIdOutput.builtinLedgerGrpcId);
-		}
+		// map request to struct used to send to the aggregate
+		const accountIds: string[] = inputAccountIds.map(value => value.builtinLedgerGrpcId!);
 
 		try {
-			await this.aggregate.deleteAccountsByIds(accountIds, this.securityContext);
-		} catch (error: unknown) {
-			let grpcError = {code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE};
-			if (error instanceof BLUnauthorizedError) {
-				grpcError = {code: status.PERMISSION_DENIED, details: error.message};
-			} else if (error instanceof BLAccountNotFoundError) {
-				grpcError = {code: status.NOT_FOUND, details: error.message};
-			}
-			callback(grpcError, null);
-			return;
+			await this._aggregate.deleteAccountsByIds(secCtx, accountIds);
+		} catch (error: any) {
+			return callback(this._handleAggregateError(error));
 		}
 
 		callback(null, {});
 	}
 
-	private async deactivateAccountsByIds(
+	private async _deactivateAccountsByIds(
 		call: ServerUnaryCall<BuiltinLedgerGrpcIdArray__Output, Empty>,
 		callback: sendUnaryData<Empty>
 	): Promise<void> {
-		const builtinLedgerGrpcAccountIdsOutput: BuiltinLedgerGrpcId__Output[]
-			= call.request.builtinLedgerGrpcIdArray || [];
+		const secCtx = await this._getSecCtxFromCall(call, callback);
+		if(!secCtx) return; // callback was called by _getSecCtxFromCall()
+		
+		const inputAccountIds: BuiltinLedgerGrpcId__Output[] = call.request.builtinLedgerGrpcIdArray || [];
 
-		const accountIds: string[] = [];
-		for (const builtinLedgerGrpcAccountIdOutput of builtinLedgerGrpcAccountIdsOutput) {
-			// const accountId: string | undefined = builtinLedgerGrpcAccountIdOutput.builtinLedgerGrpcId; TODO: use this auxiliary variable?
-			if (!builtinLedgerGrpcAccountIdOutput.builtinLedgerGrpcId) {
-				callback(
-					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
-					null
-				);
-				return;
-			}
-			accountIds.push(builtinLedgerGrpcAccountIdOutput.builtinLedgerGrpcId);
-		}
+		// map request to struct used to send to the aggregate
+		const accountIds: string[] = inputAccountIds.map(value => value.builtinLedgerGrpcId!);
 
 		try {
-			await this.aggregate.deactivateAccountsByIds(accountIds, this.securityContext);
-		} catch (error: unknown) {
-			let grpcError = {code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE};
-			if (error instanceof BLUnauthorizedError) {
-				grpcError = {code: status.PERMISSION_DENIED, details: error.message};
-			} else if (error instanceof BLAccountNotFoundError) {
-				grpcError = {code: status.NOT_FOUND, details: error.message};
-			}
-			callback(grpcError, null);
-			return;
+			await this._aggregate.deactivateAccountsByIds(secCtx, accountIds);
+		} catch (error: any) {
+			return callback(this._handleAggregateError(error));
 		}
 
 		callback(null, {});
 	}
 
-	private async activateAccountsByIds(
-		call: ServerUnaryCall<BuiltinLedgerGrpcIdArray__Output, Empty>,
+	private async _activateAccountsByIds(
+		call: ServerUnaryCall<BuiltinLedgerGrpcIdArray, Empty>,
 		callback: sendUnaryData<Empty>
 	): Promise<void> {
-		const builtinLedgerGrpcAccountIdsOutput: BuiltinLedgerGrpcId__Output[]
-			= call.request.builtinLedgerGrpcIdArray || [];
+		const secCtx = await this._getSecCtxFromCall(call, callback);
+		if(!secCtx) return; // callback was called by _getSecCtxFromCall()
+		
+		const inputAccountIds: BuiltinLedgerGrpcId__Output[] = call.request.builtinLedgerGrpcIdArray || [];
 
-		const accountIds: string[] = [];
-		for (const builtinLedgerGrpcAccountIdOutput of builtinLedgerGrpcAccountIdsOutput) {
-			// const accountId: string | undefined = builtinLedgerGrpcAccountIdOutput.builtinLedgerGrpcId; TODO: use this auxiliary variable?
-			if (!builtinLedgerGrpcAccountIdOutput.builtinLedgerGrpcId) {
-				callback(
-					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
-					null
-				);
-				return;
-			}
-			accountIds.push(builtinLedgerGrpcAccountIdOutput.builtinLedgerGrpcId);
-		}
+		// map request to struct used to send to the aggregate
+		const accountIds: string[] = inputAccountIds.map(value => value.builtinLedgerGrpcId!);
 
 		try {
-			await this.aggregate.activateAccountsByIds(accountIds, this.securityContext);
-		} catch (error: unknown) {
-			let grpcError = {code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE};
-			if (error instanceof BLUnauthorizedError) {
-				grpcError = {code: status.PERMISSION_DENIED, details: error.message};
-			} else if (error instanceof BLAccountNotFoundError) {
-				grpcError = {code: status.NOT_FOUND, details: error.message};
-			}
-			callback(grpcError, null);
-			return;
+			await this._aggregate.activateAccountsByIds(secCtx, accountIds);
+		} catch (error: any) {
+			return callback(this._handleAggregateError(error));
 		}
 
 		callback(null, {});
+	}
+
+	private _handleAggregateError(error:any): ServerErrorResponse{
+		const srvError: ServerErrorResponse = {
+			name: error.constructor.name,
+			message: error.message || ""
+		};
+
+		if (error instanceof UnauthorizedError) {
+			srvError.code = status.UNAUTHENTICATED;
+		} else if (error instanceof ForbiddenError) {
+			srvError.code = status.PERMISSION_DENIED;
+		} else if (error instanceof AccountNotFoundError) {
+			srvError.code = status.NOT_FOUND;
+		} else {
+			srvError.code = status.UNKNOWN;
+		}
+		return srvError;
 	}
 }

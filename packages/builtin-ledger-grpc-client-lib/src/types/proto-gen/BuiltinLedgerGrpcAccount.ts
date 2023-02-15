@@ -7,8 +7,10 @@ export interface BuiltinLedgerGrpcAccount {
   'state'?: (string);
   'type'?: (string);
   'currencyCode'?: (string);
-  'debitBalance'?: (string);
-  'creditBalance'?: (string);
+  'postedDebitBalance'?: (string);
+  'pendingDebitBalance'?: (string);
+  'postedCreditBalance'?: (string);
+  'pendingCreditBalance'?: (string);
   'timestampLastJournalEntry'?: (number | string | Long);
 }
 
@@ -17,7 +19,9 @@ export interface BuiltinLedgerGrpcAccount__Output {
   'state'?: (string);
   'type'?: (string);
   'currencyCode'?: (string);
-  'debitBalance'?: (string);
-  'creditBalance'?: (string);
+  'postedDebitBalance'?: (string);
+  'pendingDebitBalance'?: (string);
+  'postedCreditBalance'?: (string);
+  'pendingCreditBalance'?: (string);
   'timestampLastJournalEntry'?: (number);
 }

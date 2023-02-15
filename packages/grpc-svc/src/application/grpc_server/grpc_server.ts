@@ -26,6 +26,7 @@
 
  --------------
  ******/
+"use strict";
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {
@@ -36,7 +37,8 @@ import {
 	ServiceDefinition
 } from "@grpc/grpc-js";
 import {loadSync, Options, PackageDefinition} from "@grpc/proto-loader";
-import {AccountsAndBalancesAggregate} from "../../domain";
+import {TokenHelper} from "@mojaloop/security-bc-client-lib";
+import {AccountsAndBalancesAggregate} from "../../domain/aggregate";
 import {GrpcHandlers} from "./grpc_handlers";
 import {GrpcAccountsAndBalancesHandlers, ProtoGrpcType} from "@mojaloop/accounts-and-balances-bc-grpc-client-lib";
 import {join} from "path";
@@ -45,6 +47,7 @@ export class GrpcServer {
 	// Properties received through the constructor.
 	private readonly logger: ILogger;
 	private readonly URL: string;
+
 	// Other properties.
 	private static readonly PROTO_FILE_RELATIVE_PATH: string =
 		"../../../../grpc-client-lib/src/accounts_and_balances.proto";
@@ -55,7 +58,7 @@ export class GrpcServer {
 
 	constructor(
 		logger: ILogger,
-		//tokenHelper: TokenHelper,
+		tokenHelper: TokenHelper,
 		aggregate: AccountsAndBalancesAggregate,
 		url: string
 	) {
@@ -73,6 +76,7 @@ export class GrpcServer {
 
 		const grpcHandlers: GrpcHandlers = new GrpcHandlers(
 			this.logger,
+			tokenHelper,
 			aggregate
 		);
 		const serviceImplementation: GrpcAccountsAndBalancesHandlers = grpcHandlers.getHandlers();

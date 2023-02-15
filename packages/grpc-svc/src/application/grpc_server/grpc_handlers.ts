@@ -26,7 +26,9 @@
 
  --------------
  ******/
+"use strict";
 
+import {ServerErrorResponse} from "@grpc/grpc-js/build/src/index";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {ServerUnaryCall, sendUnaryData, status} from "@grpc/grpc-js";
 import {
@@ -45,64 +47,100 @@ import {
 	GrpcJournalEntryArray,
 	GrpcJournalEntryArray__Output
 } from "@mojaloop/accounts-and-balances-bc-grpc-client-lib";
-import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
-import {Account, AccountState, AccountType, JournalEntry} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
-import {
-	AccountAlreadyExistsError,
-	AccountNotFoundError,
-	AccountsAndBalancesAggregate,
-	InvalidAccountStateError,
-	InvalidBalanceError,
-	InvalidCreditBalanceError,
-	InvalidCurrencyCodeError,
-	InvalidDebitBalanceError,
-	InvalidIdError,
-	InvalidOwnerIdError,
-	InvalidTimestampError,
-	LedgerError
-} from "../../domain";
+import {UnauthorizedError} from "@mojaloop/security-bc-public-types-lib";
+import {TokenHelper, CallSecurityContext} from "@mojaloop/security-bc-client-lib";
+import {AccountNotFoundError, AccountsAndBalancesAccount, AccountsAndBalancesAccountState, AccountsAndBalancesAccountType,
+	AcountsAndBalancesJournalEntry} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import {ForbiddenError} from "@mojaloop/security-bc-public-types-lib/dist/index";
+import {AccountsAndBalancesAggregate} from "../../domain/aggregate";
+
+const UNKNOWN_ERROR_MESSAGE ="unknown error"; 
 
 export class GrpcHandlers {
 	// Properties received through the constructor.
-	private readonly logger: ILogger;
-	private readonly aggregate: AccountsAndBalancesAggregate;
-	// Other properties.
-	private static readonly UNKNOWN_ERROR_MESSAGE: string = "unknown error";
-	private readonly securityContext: CallSecurityContext = {
-		username: "",
-		clientId: "",
-		rolesIds: [""],
-		accessToken: ""
-	};
-
+	private readonly _logger: ILogger;
+	private readonly _aggregate: AccountsAndBalancesAggregate;
+	private readonly _tokenHelper: TokenHelper;
+	
 	constructor(
 		logger: ILogger,
+		tokenHelper: TokenHelper,
 		aggregate: AccountsAndBalancesAggregate
 	) {
-		this.logger = logger.createChild(this.constructor.name);
-		this.aggregate = aggregate;
+		this._logger = logger.createChild(this.constructor.name);
+		this._tokenHelper = tokenHelper;
+		this._aggregate = aggregate;
 	}
 
 	getHandlers(): GrpcAccountsAndBalancesHandlers {
 		return {
-			"CreateAccounts": this.createAccounts.bind(this),
-			"CreateJournalEntries": this.createJournalEntries.bind(this),
-			"GetAccountsByIds": this.getAccountsByIds.bind(this),
-			"GetAccountsByOwnerId": this.getAccountsByOwnerId.bind(this),
-			"GetJournalEntriesByAccountId": this.getJournalEntriesByAccountId.bind(this),
-			"DeleteAccountsByIds": this.deleteAccountsByIds.bind(this),
-			"DeactivateAccountsByIds": this.deactivateAccountsByIds.bind(this),
-			"ActivateAccountsByIds": this.activateAccountsByIds.bind(this)
+			"CreateAccounts": this._createAccounts.bind(this),
+			"CreateJournalEntries": this._createJournalEntries.bind(this),
+			"GetAccountsByIds": this._getAccountsByIds.bind(this),
+			"GetAccountsByOwnerId": this._getAccountsByOwnerId.bind(this),
+			"GetJournalEntriesByAccountId": this._getJournalEntriesByAccountId.bind(this),
+			"DeleteAccountsByIds": this._deleteAccountsByIds.bind(this),
+			"DeactivateAccountsByIds": this._deactivateAccountsByIds.bind(this),
+			"ActivateAccountsByIds": this._activateAccountsByIds.bind(this)
 		};
 	}
 
-	private async createAccounts(
+	/**
+	 * This will return the secCtx if successful,
+	 * if not will call the callback with the correct err and return null
+	 * @param call ServerUnaryCall
+	 * @param callback sendUnaryData
+	 * @private
+	 */
+	private async _getSecCtxFromCall(call: ServerUnaryCall<any, any>, callback: sendUnaryData<any>): Promise<CallSecurityContext | null> {
+		const returnUnauthorized = () => {
+			callback(this._handleAggregateError(new UnauthorizedError()));
+			return null;
+		};
+
+		const callTokenMeta = call.metadata.get("TOKEN");
+		if (!callTokenMeta) return returnUnauthorized();
+
+		const bearerToken = callTokenMeta[0] as string;
+		if (!bearerToken) return returnUnauthorized();
+
+		let verified;
+		try {
+			verified = await this._tokenHelper.verifyToken(bearerToken);
+		} catch (err) {
+			this._logger.error(err, "unable to verify token");
+			return returnUnauthorized();
+		}
+		if (!verified) return returnUnauthorized();
+
+		const decoded = this._tokenHelper.decodeToken(bearerToken);
+		if (!decoded.sub || decoded.sub.indexOf("::")== -1) {
+			return returnUnauthorized();
+		}
+
+		const subSplit = decoded.sub.split("::");
+		const subjectType = subSplit[0];
+		const subject = subSplit[1];
+
+		return {
+			accessToken: bearerToken,
+			clientId: subjectType.toUpperCase().startsWith("APP") ? subject:null,
+			username: subjectType.toUpperCase().startsWith("USER") ? subject:null,
+			rolesIds: decoded.roles
+		};
+	}
+
+
+	private async _createAccounts(
 		call: ServerUnaryCall<GrpcAccountArray__Output, GrpcIdArray>,
 		callback: sendUnaryData<GrpcIdArray>
 	): Promise<void> {
+		const secCtx = await this._getSecCtxFromCall(call, callback);
+		if (!secCtx) return; // callback was called by _getSecCtxFromCall()
+
 		const grpcAccountsOutput: GrpcAccount__Output[] = call.request.grpcAccountArray || [];
 
-		const accounts: Account[] = grpcAccountsOutput.map((grpcAccountOutput) => {
+		const accounts: AccountsAndBalancesAccount[] = grpcAccountsOutput.map((grpcAccountOutput) => {
 			if (
 				grpcAccountOutput.ownerId === undefined // TODO: "" might be passed - what should I do here?
 				|| !grpcAccountOutput.state
@@ -112,43 +150,27 @@ export class GrpcHandlers {
 				throw new Error(); // TODO: create custom error.
 			}
 
-			const account: Account = {
-				id: grpcAccountOutput.id ?? null, // TODO: ?? or ||?
+			const account: AccountsAndBalancesAccount = {
+				id: grpcAccountOutput.id ?? null, 
 				ownerId: grpcAccountOutput.ownerId,
-				state: grpcAccountOutput.state as AccountState, // TODO: cast?
-				type: grpcAccountOutput.type as AccountType, // TODO: cast?
+				state: grpcAccountOutput.state as AccountsAndBalancesAccountState, // TODO: cast?
+				type: grpcAccountOutput.type as AccountsAndBalancesAccountType, // TODO: cast?
 				currencyCode: grpcAccountOutput.currencyCode,
-				debitBalance: grpcAccountOutput.debitBalance ?? null, // TODO: ?? or ||?
-				creditBalance: grpcAccountOutput.creditBalance ?? null, // TODO: ?? or ||?
-				balance: grpcAccountOutput.balance ?? null, // TODO: ?? or ||?
-				timestampLastJournalEntry: grpcAccountOutput.timestampLastJournalEntry ?? null // TODO: ?? or ||?
+				postedDebitBalance: grpcAccountOutput.postedDebitBalance ?? null,
+				pendingDebitBalance: grpcAccountOutput.pendingDebitBalance ?? null,
+				postedCreditBalance: grpcAccountOutput.postedCreditBalance ?? null,
+				pendingCreditBalance: grpcAccountOutput.pendingCreditBalance ?? null,
+				balance: grpcAccountOutput.balance ?? null, 
+				timestampLastJournalEntry: grpcAccountOutput.timestampLastJournalEntry ?? null 
 			};
 			return account;
 		});
 
 		let accountIds: string[];
 		try {
-			accountIds = await this.aggregate.createAccounts(accounts);
-		} catch (error: unknown) {
-			let grpcError = {code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE};
-			if (error instanceof AccountAlreadyExistsError) {
-				grpcError = {code: status.ALREADY_EXISTS, details: error.message};
-			} else if (
-				error instanceof InvalidAccountStateError
-				|| error instanceof InvalidDebitBalanceError
-				|| error instanceof InvalidCreditBalanceError
-				|| error instanceof InvalidBalanceError
-				|| error instanceof InvalidTimestampError
-				|| error instanceof InvalidIdError
-				|| error instanceof InvalidOwnerIdError
-				|| error instanceof InvalidCurrencyCodeError
-			) {
-				grpcError = {code: status.INVALID_ARGUMENT, details: error.message};
-			} else if (error instanceof LedgerError) {
-				grpcError = {code: status.UNKNOWN, details: error.message}; // TODO: unknown?
-			}
-			callback(grpcError, null);
-			return;
+			accountIds = await this._aggregate.createAccounts(secCtx, accounts);
+		} catch (error: any) {
+			return callback(this._handleAggregateError(error));
 		}
 
 		const grpcAccountIds: GrpcId[] = accountIds.map((accountId) => {
@@ -157,51 +179,43 @@ export class GrpcHandlers {
 		callback(null, {grpcIdArray: grpcAccountIds});
 	}
 
-	private async createJournalEntries(
+	private async _createJournalEntries(
 		call: ServerUnaryCall<GrpcJournalEntryArray__Output, GrpcIdArray>,
 		callback: sendUnaryData<GrpcIdArray>
 	): Promise<void> {
+		const secCtx = await this._getSecCtxFromCall(call, callback);
+		if (!secCtx) return; // callback was called by _getSecCtxFromCall()
+
 		const grpcJournalEntriesOutput: GrpcJournalEntry__Output[] = call.request.grpcJournalEntryArray || [];
 
-		const journalEntries: JournalEntry[] = grpcJournalEntriesOutput.map((grpcJournalEntryOutput) => {
+		const journalEntries: AcountsAndBalancesJournalEntry[] = grpcJournalEntriesOutput.map((grpcJournalEntryOutput) => {
 			if (
 				!grpcJournalEntryOutput.currencyCode
 				|| !grpcJournalEntryOutput.amount
 				|| !grpcJournalEntryOutput.debitedAccountId
 				|| !grpcJournalEntryOutput.creditedAccountId
 			) {
-				throw new Error(); // TODO: create custom error.
+				throw new Error();
 			}
 
-			const journalEntry: JournalEntry = {
-				id: grpcJournalEntryOutput.id ?? null, // TODO: ?? or ||?
-				ownerId: grpcJournalEntryOutput.ownerId ?? null, // TODO: ?? or ||?
+			const journalEntry: AcountsAndBalancesJournalEntry = {
+				id: grpcJournalEntryOutput.id ?? null, 
+				ownerId: grpcJournalEntryOutput.ownerId ?? null, 
 				currencyCode: grpcJournalEntryOutput.currencyCode,
 				amount: grpcJournalEntryOutput.amount,
+				pending: grpcJournalEntryOutput.pending!,
 				debitedAccountId: grpcJournalEntryOutput.debitedAccountId,
 				creditedAccountId: grpcJournalEntryOutput.creditedAccountId,
-				timestamp: grpcJournalEntryOutput.timestamp ?? null // TODO: ?? or ||?
+				timestamp: grpcJournalEntryOutput.timestamp ?? null 
 			};
 			return journalEntry;
 		});
 
 		let journalEntryIds: string[];
 		try {
-			journalEntryIds = await this.aggregate.createJournalEntries(journalEntries);
+			journalEntryIds = await this._aggregate.createJournalEntries(secCtx, journalEntries);
 		} catch (error: unknown) {
-			let grpcError = {code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE};
-			if (
-				error instanceof InvalidTimestampError
-				|| error instanceof InvalidIdError
-				|| error instanceof InvalidOwnerIdError
-				|| error instanceof InvalidCurrencyCodeError
-			) {
-				grpcError = {code: status.INVALID_ARGUMENT, details: error.message};
-			} else if (error instanceof LedgerError) {
-				grpcError = {code: status.UNKNOWN, details: error.message}; // TODO: unknown?
-			}
-			callback(grpcError, null);
-			return;
+			return callback(this._handleAggregateError(error));
 		}
 
 		const grpcJournalEntryIds: GrpcId[] = journalEntryIds.map((journalEntryId) => {
@@ -210,18 +224,20 @@ export class GrpcHandlers {
 		callback(null, {grpcIdArray: grpcJournalEntryIds});
 	}
 
-	private async getAccountsByIds(
+	private async _getAccountsByIds(
 		call: ServerUnaryCall<GrpcIdArray__Output, GrpcAccountArray>,
 		callback: sendUnaryData<GrpcAccountArray>
 	): Promise<void> {
+		const secCtx = await this._getSecCtxFromCall(call, callback);
+		if (!secCtx) return; // callback was called by _getSecCtxFromCall()
+
 		const grpcAccountIdsOutput: GrpcId__Output[] = call.request.grpcIdArray || [];
 
 		const accountIds: string[] = [];
 		for (const grpcAccountIdOutput of grpcAccountIdsOutput) {
-			// const accountId: string | undefined = grpcAccountIdOutput.grpcId; // TODO: use this auxiliary variable?
 			if (!grpcAccountIdOutput.grpcId) {
 				callback(
-					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
+					{code: status.UNKNOWN, details: UNKNOWN_ERROR_MESSAGE},
 					null
 				);
 				return;
@@ -229,107 +245,101 @@ export class GrpcHandlers {
 			accountIds.push(grpcAccountIdOutput.grpcId);
 		}
 
-		let accounts: Account[];
+		let accounts: AccountsAndBalancesAccount[];
 		try {
-			accounts = await this.aggregate.getAccountsByIds(accountIds);
+			accounts = await this._aggregate.getAccountsByIds(secCtx, accountIds);
 		} catch (error: unknown) {
-			let grpcError = {code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE};
-			if (error instanceof LedgerError) {
-				grpcError = {code: status.UNKNOWN, details: error.message}; // TODO: unknown?
-			}
-			callback(grpcError, null);
-			return;
+			return callback(this._handleAggregateError(error));
 		}
 
 		const grpcAccounts: GrpcAccount[] = accounts.map((account) => {
-			return this.accountToGrpcAccount(account);
+			return this._accountToGrpcAccount(account);
 		});
 		callback(null, {grpcAccountArray: grpcAccounts});
 	}
 
-	private async getAccountsByOwnerId(
+	private async _getAccountsByOwnerId(
 		call: ServerUnaryCall<GrpcId__Output, GrpcAccountArray>,
 		callback: sendUnaryData<GrpcAccountArray>
 	): Promise<void> {
-		const ownerId: string | undefined = call.request.grpcId; // TODO: use this auxiliary variable?
+		const secCtx = await this._getSecCtxFromCall(call, callback);
+		if(!secCtx) return; // callback was called by _getSecCtxFromCall()
+
+		const ownerId: string | undefined = call.request.grpcId;
 		if (!ownerId) {
 			callback(
-				{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
+				{code: status.UNKNOWN, details: UNKNOWN_ERROR_MESSAGE},
 				null
 			);
 			return;
 		}
 
-		let accounts: Account[];
+		let accounts: AccountsAndBalancesAccount[];
 		try {
-			accounts = await this.aggregate.getAccountsByOwnerId(ownerId);
+			accounts = await this._aggregate.getAccountsByOwnerId(secCtx, ownerId);
 		} catch (error: unknown) {
-			let grpcError = {code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE};
-			if (error instanceof LedgerError) {
-				grpcError = {code: status.UNKNOWN, details: error.message}; // TODO: unknown?
-			}
-			callback(grpcError, null);
-			return;
+			return callback(this._handleAggregateError(error));
 		}
 
 		const grpcAccounts: GrpcAccount[] = accounts.map((account) => {
-			return this.accountToGrpcAccount(account);
+			return this._accountToGrpcAccount(account);
 		});
 		callback(null, {grpcAccountArray: grpcAccounts});
 	}
 
-	private async getJournalEntriesByAccountId(
+	private async _getJournalEntriesByAccountId(
 		call: ServerUnaryCall<GrpcId__Output, GrpcJournalEntryArray>,
 		callback: sendUnaryData<GrpcJournalEntryArray>
 	): Promise<void> {
-		const accountId: string | undefined = call.request.grpcId; // TODO: use this auxiliary variable?
+		const secCtx = await this._getSecCtxFromCall(call, callback);
+		if(!secCtx) return; // callback was called by _getSecCtxFromCall()
+
+		const accountId: string | undefined = call.request.grpcId;
 		if (!accountId) {
 			callback(
-				{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
+				{code: status.UNKNOWN, details: UNKNOWN_ERROR_MESSAGE},
 				null
 			);
 			return;
 		}
 
-		let journalEntries: JournalEntry[];
+		let journalEntries: AcountsAndBalancesJournalEntry[];
 		try {
-			journalEntries = await this.aggregate.getJournalEntriesByAccountId(accountId);
+			journalEntries = await this._aggregate.getJournalEntriesByAccountId(secCtx, accountId);
 		} catch (error: unknown) {
-			let grpcError = {code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE};
-			if (error instanceof LedgerError) {
-				grpcError = {code: status.UNKNOWN, details: error.message}; // TODO: unknown?
-			}
-			callback(grpcError, null);
-			return;
+			return callback(this._handleAggregateError(error));
 		}
 
 		const grpcJournalEntries: GrpcJournalEntry[] = journalEntries.map((journalEntry) => {
 			const grpcJournalEntry: GrpcJournalEntry = {
-				id: journalEntry.id ?? undefined, // TODO: ?? or ||?
-				ownerId: journalEntry.ownerId ?? undefined, // TODO: ?? or ||?
+				id: journalEntry.id ?? undefined, 
+				ownerId: journalEntry.ownerId ?? undefined, 
 				currencyCode: journalEntry.currencyCode,
 				amount: journalEntry.amount,
 				debitedAccountId: journalEntry.debitedAccountId,
 				creditedAccountId: journalEntry.creditedAccountId,
-				timestamp: journalEntry.timestamp ?? undefined // TODO: ?? or ||?
+				timestamp: journalEntry.timestamp ?? undefined 
 			};
 			return grpcJournalEntry;
 		});
 		callback(null, {grpcJournalEntryArray: grpcJournalEntries});
 	}
 
-	private async deleteAccountsByIds(
+	private async _deleteAccountsByIds(
 		call: ServerUnaryCall<GrpcIdArray__Output, Empty>,
 		callback: sendUnaryData<Empty>
 	): Promise<void> {
+		const secCtx = await this._getSecCtxFromCall(call, callback);
+		if(!secCtx) return; // callback was called by _getSecCtxFromCall()
+
 		const grpcAccountIdsOutput: GrpcId__Output[] = call.request.grpcIdArray || [];
 
 		const accountIds: string[] = [];
 		for (const grpcAccountIdOutput of grpcAccountIdsOutput) {
-			// const accountId: string | undefined = grpcAccountIdOutput.grpcId; // TODO: use this auxiliary variable?
+
 			if (!grpcAccountIdOutput.grpcId) {
 				callback(
-					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
+					{code: status.UNKNOWN, details: UNKNOWN_ERROR_MESSAGE},
 					null
 				);
 				return;
@@ -338,33 +348,28 @@ export class GrpcHandlers {
 		}
 
 		try {
-			await this.aggregate.deleteAccountsByIds(accountIds);
+			await this._aggregate.deleteAccountsByIds(secCtx, accountIds);
 		} catch (error: unknown) {
-			let grpcError = {code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE};
-			if (error instanceof AccountNotFoundError) {
-				grpcError = {code: status.NOT_FOUND, details: error.message};
-			} else if (error instanceof LedgerError) {
-				grpcError = {code: status.UNKNOWN, details: error.message}; // TODO: unknown?
-			}
-			callback(grpcError, null);
-			return;
+			return callback(this._handleAggregateError(error));
 		}
 
 		callback(null, {});
 	}
 
-	private async deactivateAccountsByIds(
+	private async _deactivateAccountsByIds(
 		call: ServerUnaryCall<GrpcIdArray__Output, Empty>,
 		callback: sendUnaryData<Empty>
 	): Promise<void> {
+		const secCtx = await this._getSecCtxFromCall(call, callback);
+		if(!secCtx) return; // callback was called by _getSecCtxFromCall()
+
 		const grpcAccountIdsOutput: GrpcId__Output[] = call.request.grpcIdArray || [];
 
 		const accountIds: string[] = [];
 		for (const grpcAccountIdOutput of grpcAccountIdsOutput) {
-			// const accountId: string | undefined = grpcAccountIdOutput.grpcId; // TODO: use this auxiliary variable?
 			if (!grpcAccountIdOutput.grpcId) {
 				callback(
-					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
+					{code: status.UNKNOWN, details: UNKNOWN_ERROR_MESSAGE},
 					null
 				);
 				return;
@@ -373,33 +378,29 @@ export class GrpcHandlers {
 		}
 
 		try {
-			await this.aggregate.deactivateAccountsByIds(accountIds);
+			await this._aggregate.deactivateAccountsByIds(secCtx, accountIds);
 		} catch (error: unknown) {
-			let grpcError = {code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE};
-			if (error instanceof AccountNotFoundError) {
-				grpcError = {code: status.NOT_FOUND, details: error.message};
-			} else if (error instanceof LedgerError) {
-				grpcError = {code: status.UNKNOWN, details: error.message}; // TODO: unknown?
-			}
-			callback(grpcError, null);
-			return;
+			return callback(this._handleAggregateError(error));
 		}
 
 		callback(null, {});
 	}
 
-	private async activateAccountsByIds(
+	private async _activateAccountsByIds(
 		call: ServerUnaryCall<GrpcIdArray__Output, Empty>,
 		callback: sendUnaryData<Empty>
 	): Promise<void> {
+		const secCtx = await this._getSecCtxFromCall(call, callback);
+		if(!secCtx) return; // callback was called by _getSecCtxFromCall()
+
 		const grpcAccountIdsOutput: GrpcId__Output[] = call.request.grpcIdArray || [];
 
 		const accountIds: string[] = [];
 		for (const grpcAccountIdOutput of grpcAccountIdsOutput) {
-			// const accountId: string | undefined = grpcAccountIdOutput.grpcId; // TODO: use this auxiliary variable?
+			// const accountId: string | undefined = grpcAccountIdOutput.grpcId;
 			if (!grpcAccountIdOutput.grpcId) {
 				callback(
-					{code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE},
+					{code: status.UNKNOWN, details: UNKNOWN_ERROR_MESSAGE},
 					null
 				);
 				return;
@@ -408,33 +409,46 @@ export class GrpcHandlers {
 		}
 
 		try {
-			await this.aggregate.activateAccountsByIds(accountIds);
+			await this._aggregate.reactivateAccountsByIds(secCtx, accountIds);
 		} catch (error: unknown) {
-			let grpcError = {code: status.UNKNOWN, details: GrpcHandlers.UNKNOWN_ERROR_MESSAGE};
-			if (error instanceof AccountNotFoundError) {
-				grpcError = {code: status.NOT_FOUND, details: error.message};
-			} else if (error instanceof LedgerError) {
-				grpcError = {code: status.UNKNOWN, details: error.message}; // TODO: unknown?
-			}
-			callback(grpcError, null);
-			return;
+			return callback(this._handleAggregateError(error));
 		}
 
 		callback(null, {});
 	}
 
-	private accountToGrpcAccount(account: Account): GrpcAccount {
+	private _accountToGrpcAccount(account: AccountsAndBalancesAccount): GrpcAccount {
 		const grpcAccount: GrpcAccount = {
-			id: account.id ?? undefined, // TODO: ?? or ||?
+			id: account.id ?? undefined, 
 			ownerId: account.ownerId,
-			state: account.state as AccountState, // TODO: cast?
-			type: account.type as AccountType, // TODO: cast?
+			state: account.state as AccountsAndBalancesAccountState,
+			type: account.type as AccountsAndBalancesAccountType,
 			currencyCode: account.currencyCode,
-			debitBalance: account.debitBalance ?? undefined, // TODO: ?? or ||?
-			creditBalance: account.creditBalance ?? undefined, // TODO: ?? or ||?
-			balance: account.balance ?? undefined, // TODO: ?? or ||?
-			timestampLastJournalEntry: account.timestampLastJournalEntry ?? undefined // TODO: ?? or ||?
+			postedDebitBalance: account.postedDebitBalance ?? undefined,
+			pendingDebitBalance: account.pendingDebitBalance ?? undefined,
+			postedCreditBalance: account.postedCreditBalance ?? undefined,
+			pendingCreditBalance: account.pendingCreditBalance ?? undefined,
+			balance: account.balance ?? undefined,
+			timestampLastJournalEntry: account.timestampLastJournalEntry ?? undefined 
 		};
 		return grpcAccount;
+	}
+
+	private _handleAggregateError(error: any): ServerErrorResponse {
+		const srvError: ServerErrorResponse = {
+			name: error.constructor.name,
+			message: error.message || ""
+		};
+
+		if (error instanceof UnauthorizedError) {
+			srvError.code = status.UNAUTHENTICATED;
+		} else if (error instanceof ForbiddenError) {
+			srvError.code = status.PERMISSION_DENIED;
+		} else if (error instanceof AccountNotFoundError) {
+			srvError.code = status.NOT_FOUND;
+		} else {
+			srvError.code = status.UNKNOWN;
+		}
+		return srvError;
 	}
 }

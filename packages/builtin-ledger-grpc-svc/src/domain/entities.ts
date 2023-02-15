@@ -26,19 +26,30 @@
 
  --------------
  ******/
+"use strict";
 
-import {AccountState, AccountType} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import {AccountsAndBalancesAccountState, AccountsAndBalancesAccountType} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
-// TODO: does it make sense to have DTO and non-DTO types?
+
+
+export type CreatedIdMapResponse = {
+	requestedId:string;
+	attributedId: string
+}
 
 export type BuiltinLedgerAccountDto = {
 	id: string | null;
-	state: AccountState;
-	type: AccountType;
+	state: AccountsAndBalancesAccountState;
+	type: AccountsAndBalancesAccountType;
 	currencyCode: string;
-	// TODO: currency decimals not needed, right?
-	debitBalance: string | null;
-	creditBalance: string | null;
+
+	postedDebitBalance: string | null;
+	postedCreditBalance: string | null;
+	pendingDebitBalance: string | null;
+	pendingCreditBalance: string | null;
+
+	// debitBalance: string | null;
+	// creditBalance: string | null;
 	timestampLastJournalEntry: number | null;
 };
 
@@ -50,13 +61,19 @@ export type LimitCheckMode =
 
 export type BuiltinLedgerAccount = {
 	id: string;
-	state: AccountState;
-	type: AccountType;
+	state: AccountsAndBalancesAccountState;
+	type: AccountsAndBalancesAccountType;
 	limitCheckMode: LimitCheckMode;
 	currencyCode: string;
 	currencyDecimals: number;
-	debitBalance: bigint;
-	creditBalance: bigint;
+
+	postedDebitBalance: bigint;
+	postedCreditBalance: bigint;
+	pendingDebitBalance: bigint;
+	pendingCreditBalance: bigint;
+
+	// debitBalance: bigint;
+	// creditBalance: bigint;
 	timestampLastJournalEntry: number | null;
 };
 
@@ -64,8 +81,8 @@ export type BuiltinLedgerJournalEntryDto = {
 	id: string | null;
 	ownerId: string | null;
 	currencyCode: string;
-	// TODO: currency decimals not needed, right?
 	amount: string;
+	pending: boolean;							// use pending balances instead of posted balances
 	debitedAccountId: string;
 	creditedAccountId: string;
 	timestamp: number | null;
@@ -77,6 +94,7 @@ export type BuiltinLedgerJournalEntry = {
 	currencyCode: string;
 	currencyDecimals: number;
 	amount: bigint;
+	pending: boolean;							// use pending balances instead of posted balances
 	debitedAccountId: string;
 	creditedAccountId: string;
 	timestamp: number;

@@ -69,15 +69,15 @@ import {
 	BLInvalidJournalEntryAmountError,
 	BLInvalidTimestampError,
 	BLSameDebitedAndCreditedAccountsError,
-	BLUnauthorizedError
+	UnauthorizedError
 } from "../../src/domain";
 import {
 	BuiltinLedgerGrpcService
-} from "../../src/application/builtin_ledger_grpc_svc";
+} from "packages/builtin-ledger-grpc-svc/src/application/service";
 import {BuiltinLedgerAggregate} from "../../src/domain/aggregate";
 import fs from "fs";
 
-const BUILTIN_LEDGER_URL: string = "localhost:5678";
+const BUILTIN_LEDGER_URL: string = "localhost:3350";
 
 const UNKNOWN_ERROR_MESSAGE: string = "unknown error";
 
@@ -111,8 +111,8 @@ describe("built-in ledger grpc service - unit tests", () => {
 			limitCheckMode: "NONE",
 			currencyCode: "EUR",
 			currencyDecimals: HUB_ACCOUNT_CURRENCY_DECIMALS,
-			debitBalance: 0n,
-			creditBalance: initialCreditBalanceHubAccount,
+			postedDebitBalance: 0n,
+			postedCreditBalance: initialCreditBalanceHubAccount,
 			timestampLastJournalEntry: null
 		};
 		await builtinLedgerAccountsRepo.storeNewAccount(builtinLedgerHubAccount);
@@ -232,7 +232,7 @@ describe("built-in ledger grpc service - unit tests", () => {
 			errorMessage = (error as any)?.message;
 		}
 		expect(errorName).toEqual(UnableToCreateAccountsError.name);
-		expect(errorMessage).toEqual((new BLUnauthorizedError()).message); // TODO: any other way to get the message?
+		expect(errorMessage).toEqual((new UnauthorizedError()).message); // TODO: any other way to get the message?
 	});
 
 	test("createAccounts() - non-undefined debit balance", async () => {
@@ -536,7 +536,7 @@ describe("built-in ledger grpc service - unit tests", () => {
 			errorMessage = (error as any)?.message;
 		}
 		expect(errorName).toEqual(UnableToCreateJournalEntriesError.name);
-		expect(errorMessage).toEqual((new BLUnauthorizedError()).message); // TODO: any other way to get the message?
+		expect(errorMessage).toEqual((new UnauthorizedError()).message); // TODO: any other way to get the message?
 	});
 
 	test("createJournalEntries() - non-undefined timestamp", async () => {
@@ -809,8 +809,8 @@ describe("built-in ledger grpc service - unit tests", () => {
 			limitCheckMode: "NONE",
 			currencyCode: "EUR",
 			currencyDecimals: currencyDecimalsAccountsAAndB,
-			debitBalance: 0n,
-			creditBalance: creditBalanceAccountA,
+			postedDebitBalance: 0n,
+			postedCreditBalance: creditBalanceAccountA,
 			timestampLastJournalEntry: null
 		};
 		await builtinLedgerAccountsRepo.storeNewAccount(builtinLedgerAccountA);
@@ -823,8 +823,8 @@ describe("built-in ledger grpc service - unit tests", () => {
 			limitCheckMode: "NONE",
 			currencyCode: "EUR",
 			currencyDecimals: currencyDecimalsAccountsAAndB,
-			debitBalance: 0n,
-			creditBalance: 0n,
+			postedDebitBalance: 0n,
+			postedCreditBalance: 0n,
 			timestampLastJournalEntry: null
 		};
 		await builtinLedgerAccountsRepo.storeNewAccount(builtinLedgerAccountB);
@@ -983,7 +983,7 @@ describe("built-in ledger grpc service - unit tests", () => {
 			timestamp: undefined
 		};
 
-		jest.spyOn(builtinLedgerAccountsRepo, "updateAccountDebitBalanceAndTimestampById")
+		jest.spyOn(builtinLedgerAccountsRepo, "updateAccountDebitBalanceAndTimestamp")
 			.mockImplementationOnce(() => {
 				throw new Error();
 			});
@@ -1020,7 +1020,7 @@ describe("built-in ledger grpc service - unit tests", () => {
 			timestamp: undefined
 		};
 
-		jest.spyOn(builtinLedgerAccountsRepo, "updateAccountCreditBalanceAndTimestampById")
+		jest.spyOn(builtinLedgerAccountsRepo, "updateAccountCreditBalanceAndTimestamp")
 			.mockImplementationOnce(() => {
 				throw new Error();
 			});

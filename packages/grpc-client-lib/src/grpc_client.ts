@@ -26,18 +26,20 @@
 
  --------------
  ******/
+"use strict";
+
+import * as grpc from "@grpc/grpc-js";
+import * as protoLoader from "@grpc/proto-loader";
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {loadSync, Options, PackageDefinition} from "@grpc/proto-loader";
-import {credentials, GrpcObject, loadPackageDefinition, Deadline} from "@grpc/grpc-js";
-import {Account, AccountState, AccountType, JournalEntry} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import {AccountsAndBalancesAccount,
+	AccountsAndBalancesAccountState,
+	AccountsAndBalancesAccountType,
+	AcountsAndBalancesJournalEntry
+} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {
-	UnableToActivateAccountsError,
-	UnableToCreateAccountsError,
-	UnableToCreateJournalEntriesError, UnableToDeactivateAccountsError, UnableToDeleteAccountsError,
-	UnableToGetAccountsError,
-	UnableToGetJournalEntriesError
-} from "./errors";
+
+} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {join} from "path";
 import {
 	GrpcAccount,
@@ -49,41 +51,61 @@ import {
 	GrpcJournalEntry__Output,
 	ProtoGrpcType
 } from "./types";
+import {LoginHelper} from "@mojaloop/security-bc-client-lib";
+import {UnauthorizedError} from "@mojaloop/security-bc-public-types-lib";
 
-export class GrpcClient {
+const PROTO_FILE_NAME = "accounts_and_balances.proto";
+const LOAD_PROTO_OPTIONS: protoLoader.Options = {
+	longs: Number
+};
+const TIMEOUT_MS = 5_000;
+
+export class AccountsAndBalancesGrpcClient {
 	// Properties received through the constructor.
-	private readonly logger: ILogger;
-	// Other properties.
-	private static readonly PROTO_FILE_NAME: string = "accounts_and_balances.proto";
-	private static readonly LOAD_PROTO_OPTIONS: Options = {
-		longs: Number
-	};
-	private static readonly TIMEOUT_MS: number = 5_000;
-	private readonly client: GrpcAccountsAndBalancesClient;
+	private readonly _logger: ILogger;
+	private readonly _callMetadata: grpc.Metadata;
+	private readonly _client: GrpcAccountsAndBalancesClient;
+	private readonly _loginHelper:LoginHelper;
 
 	constructor(
-		logger: ILogger,
-		url: string
+		url: string,
+		loginHelper: LoginHelper,
+		logger: ILogger
 	) {
-		this.logger = logger.createChild(this.constructor.name);
+		this._logger = logger.createChild(this.constructor.name);
+		this._loginHelper = loginHelper;
 
-		const protoFileAbsolutePath: string = join(__dirname, GrpcClient.PROTO_FILE_NAME);
-		const packageDefinition: PackageDefinition = loadSync(
+		const protoFileAbsolutePath: string = join(__dirname, PROTO_FILE_NAME);
+		const packageDefinition: protoLoader.PackageDefinition = protoLoader.loadSync(
 			protoFileAbsolutePath,
-			GrpcClient.LOAD_PROTO_OPTIONS
+			LOAD_PROTO_OPTIONS
 		);
-		const grpcObject: GrpcObject = loadPackageDefinition(packageDefinition);
-		this.client = new (grpcObject as unknown as ProtoGrpcType).GrpcAccountsAndBalances(
+		const grpcObject: grpc.GrpcObject = grpc.loadPackageDefinition(packageDefinition);
+
+		this._callMetadata = new grpc.Metadata();
+
+		this._client = new (grpcObject as unknown as ProtoGrpcType).GrpcAccountsAndBalances(
 			url,
-			credentials.createInsecure()
+			grpc.credentials.createInsecure()
 		);
 	}
 
-	async init(): Promise<void> {
-		return new Promise((resolve, reject) => {
-			const deadline: Deadline = Date.now() + GrpcClient.TIMEOUT_MS;
+	private async _updateCallMetadata(): Promise<void> {
+		// this can throw and UnauthorizedError, let it
+		const token = await this._loginHelper.getToken();
+		//this._callMetadata.remove("TOKEN");
+		this._callMetadata.set("TOKEN", token.accessToken);
+		return Promise.resolve();
+	}
 
-			this.client.waitForReady(
+	async init(): Promise<void> {
+		// we don't use credentials here, but want to try fetching a token to fail early
+		await this._updateCallMetadata();
+
+		return new Promise((resolve, reject) => {
+			const deadline: grpc.Deadline = Date.now() + TIMEOUT_MS;
+
+			this._client.waitForReady(
 				deadline,
 				(error) => {
 					if (error !== undefined) {
@@ -91,7 +113,7 @@ export class GrpcClient {
 						return;
 					}
 
-					this.logger.info("gRPC client initialized 🚀");
+					this._logger.info("gRPC client initialized 🚀");
 					resolve();
 				}
 			);
@@ -99,42 +121,43 @@ export class GrpcClient {
 	}
 
 	async destroy(): Promise<void> {
-		this.client.close();
-		this.logger.info("gRPC client destroyed 🏁");
+		this._client.close();
+		this._logger.info("gRPC client destroyed 🏁");
 	}
 
-	async createAccounts(accounts: Account[]): Promise<string[]> {
+	async createAccounts(accounts: AccountsAndBalancesAccount[]): Promise<string[]> {
 		const grpcAccounts: GrpcAccount[] = accounts.map((account) => {
 			const grpcAccount: GrpcAccount = {
-				id: account.id ?? undefined, // TODO: ?? or ||?
+				id: account.id ?? undefined, 
 				ownerId: account.ownerId,
 				state: account.state,
 				type: account.type,
 				currencyCode: account.currencyCode,
-				debitBalance: account.debitBalance ?? undefined, // TODO: ?? or ||?
-				creditBalance: account.creditBalance ?? undefined, // TODO: ?? or ||?
-				balance: account.balance ?? undefined, // TODO: ?? or ||?
-				timestampLastJournalEntry: account.timestampLastJournalEntry ?? undefined // TODO: ?? or ||?
+				postedDebitBalance: account.postedDebitBalance ?? undefined,
+				pendingDebitBalance: account.pendingDebitBalance ?? undefined,
+				postedCreditBalance: account.postedCreditBalance ?? undefined,
+				pendingCreditBalance: account.pendingCreditBalance ?? undefined,
+				balance: account.balance ?? undefined, 
+				timestampLastJournalEntry: account.timestampLastJournalEntry ?? undefined 
 			};
 			return grpcAccount;
 		});
-		
-		return new Promise((resolve, reject) => {
-			this.client.createAccounts(
-				{grpcAccountArray: grpcAccounts},
-				(error, grpcIdArrayOutput) => {
-					if (error || !grpcIdArrayOutput) {
-						reject(new UnableToCreateAccountsError(error?.details));
-						return;
-					}
 
-					const grpcIdsOutput: GrpcId__Output[]
-						= grpcIdArrayOutput.grpcIdArray || [];
+		await this._updateCallMetadata();
+
+		return new Promise((resolve, reject) => {
+			this._client.createAccounts(
+				{grpcAccountArray: grpcAccounts},
+				this._callMetadata,
+				(error, resp) => {
+					if (error || !resp) return reject(error);
+
+					const grpcIdsOutput: GrpcId__Output[] = resp.grpcIdArray || [];
 
 					const accountIds: string[] = [];
 					for (const grpcIdOutput of grpcIdsOutput) {
 						if (!grpcIdOutput.grpcId) {
-							reject(new UnableToCreateAccountsError());
+							reject(new Error()); // todo cleanup
 							return;
 						}
 						accountIds.push(grpcIdOutput.grpcId);
@@ -145,36 +168,33 @@ export class GrpcClient {
 		});
 	}
 
-	async createJournalEntries(journalEntries: JournalEntry[]): Promise<string[]> {
+	async createJournalEntries(journalEntries: AcountsAndBalancesJournalEntry[]): Promise<string[]> {
 		const grpcJournalEntries: GrpcJournalEntry[] = journalEntries.map((journalEntry) => {
 			const grpcJournalEntry: GrpcJournalEntry = {
-				id: journalEntry.id ?? undefined, // TODO: ?? or ||?
-				ownerId: journalEntry.ownerId ?? undefined, // TODO: ?? or ||?
+				id: journalEntry.id ?? undefined, 
+				ownerId: journalEntry.ownerId ?? undefined, 
 				currencyCode: journalEntry.currencyCode,
 				amount: journalEntry.amount,
 				debitedAccountId: journalEntry.debitedAccountId,
 				creditedAccountId: journalEntry.creditedAccountId,
-				timestamp: journalEntry.timestamp ?? undefined // TODO: ?? or ||?
+				timestamp: journalEntry.timestamp ?? undefined 
 			};
 			return grpcJournalEntry;
 		});
-		
-		return new Promise((resolve, reject) => {
-			this.client.createJournalEntries(
-				{grpcJournalEntryArray: grpcJournalEntries},
-				(error, grpcIdArrayOutput) => {
-					if (error || !grpcIdArrayOutput) {
-						reject(new UnableToCreateJournalEntriesError(error?.details));
-						return;
-					}
 
-					const grpcIdsOutput: GrpcId__Output[]
-						= grpcIdArrayOutput.grpcIdArray || [];
+		await this._updateCallMetadata();
+
+		return new Promise((resolve, reject) => {
+			this._client.createJournalEntries(
+				{grpcJournalEntryArray: grpcJournalEntries},this._callMetadata, (error, resp) => {
+					if (error || !resp) return reject(error);
+
+					const grpcIdsOutput: GrpcId__Output[] = resp.grpcIdArray || [];
 
 					const journalEntryIds: string[] = [];
 					for (const grpcIdOutput of grpcIdsOutput) {
 						if (!grpcIdOutput.grpcId) {
-							reject(new UnableToCreateJournalEntriesError());
+							reject(new Error()); // todo cleanup
 							return;
 						}
 						journalEntryIds.push(grpcIdOutput.grpcId);
@@ -185,65 +205,52 @@ export class GrpcClient {
 		});
 	}
 
-	async getAccountsByIds(accountIds: string[]): Promise<Account[]> {
+	async getAccountsByIds(accountIds: string[]): Promise<AccountsAndBalancesAccount[]> {
 		const grpcAccountIds: GrpcId[] = accountIds.map((accountId) => {
 			return {grpcId: accountId};
 		});
 
+		await this._updateCallMetadata();
+
 		return new Promise((resolve, reject) => {
-			this.client.getAccountsByIds(
-				{grpcIdArray: grpcAccountIds},
-				(error, grpcAccountArrayOutput) => {
-					if (error || !grpcAccountArrayOutput) {
-						reject(new UnableToGetAccountsError(error?.details));
-						return;
-					}
+			this._client.getAccountsByIds(
+				{grpcIdArray: grpcAccountIds}, this._callMetadata, (error, resp) => {
+					if (error || !resp) return reject(error);
 
-					const grpcAccountsOutput: GrpcAccount__Output[] = grpcAccountArrayOutput.grpcAccountArray || [];
-					// resolve(grpcAccountsOutput);
-
-					const accounts: Account[] = this.grpcAccountsOutputToAccounts(grpcAccountsOutput);
+					const accounts: AccountsAndBalancesAccount[] = this._grpcAccountsOutputToAccounts(resp.grpcAccountArray || []);
 					resolve(accounts);
 				}
 			);
 		});
 	}
 
-	async getAccountsByOwnerId(ownerId: string): Promise<Account[]> {
+	async getAccountsByOwnerId(ownerId: string): Promise<AccountsAndBalancesAccount[]> {
+		await this._updateCallMetadata();
+
 		return new Promise((resolve, reject) => {
-			this.client.getAccountsByOwnerId(
-				{grpcId: ownerId},
-				(error, grpcAccountArrayOutput) => {
-					if (error || !grpcAccountArrayOutput) {
-						reject(new UnableToGetAccountsError(error?.details));
-						return;
-					}
+			this._client.getAccountsByOwnerId({grpcId: ownerId}, this._callMetadata, (error, resp) => {
+				if (error || !resp) return reject(error);
 
-					const grpcAccountsOutput: GrpcAccount__Output[] = grpcAccountArrayOutput.grpcAccountArray || [];
-					// resolve(grpcAccountsOutput);
-
-					const accounts: Account[] = this.grpcAccountsOutputToAccounts(grpcAccountsOutput);
-					resolve(accounts);
-				}
-			);
+				const accounts: AccountsAndBalancesAccount[] = this._grpcAccountsOutputToAccounts(resp.grpcAccountArray || []);
+				resolve(accounts);
+			});
 		});
 	}
 
-	async getJournalEntriesByAccountId(accountId: string): Promise<JournalEntry[]> {
+	async getJournalEntriesByAccountId(accountId: string): Promise<AcountsAndBalancesJournalEntry[]> {
+		await this._updateCallMetadata();
+
 		return new Promise((resolve, reject) => {
-			this.client.getJournalEntriesByAccountId(
+			this._client.getJournalEntriesByAccountId(
 				{grpcId: accountId},
-				(error, grpcJournalEntryArrayOutput) => {
-					if (error || !grpcJournalEntryArrayOutput) {
-						reject(new UnableToGetJournalEntriesError(error?.details));
-						return;
-					}
+				this._callMetadata,
+				(error, resp) => {
+					if (error || !resp) return reject(error);
 
-					const grpcJournalEntriesOutput: GrpcJournalEntry__Output[] =
-						grpcJournalEntryArrayOutput.grpcJournalEntryArray || [];
+					const grpcJournalEntriesOutput: GrpcJournalEntry__Output[] = resp.grpcJournalEntryArray || [];
 					// resolve(grpcJournalEntriesOutput);
 
-					const journalEntries: JournalEntry[] =
+					const journalEntries: AcountsAndBalancesJournalEntry[] =
 						grpcJournalEntriesOutput.map((grpcJournalEntryOutput) => {
 						if (
 							!grpcJournalEntryOutput.currencyCode
@@ -254,14 +261,15 @@ export class GrpcClient {
 							throw new Error(); // TODO: create custom error.
 						}
 
-						const journalEntry: JournalEntry = {
-							id: grpcJournalEntryOutput.id ?? null, // TODO: ?? or ||?
-							ownerId: grpcJournalEntryOutput.ownerId ?? null, // TODO: ?? or ||?
+						const journalEntry: AcountsAndBalancesJournalEntry = {
+							id: grpcJournalEntryOutput.id ?? null, 
+							ownerId: grpcJournalEntryOutput.ownerId ?? null, 
 							currencyCode: grpcJournalEntryOutput.currencyCode,
 							amount: grpcJournalEntryOutput.amount,
+							pending: grpcJournalEntryOutput.pending!,
 							debitedAccountId: grpcJournalEntryOutput.debitedAccountId,
 							creditedAccountId: grpcJournalEntryOutput.creditedAccountId,
-							timestamp: grpcJournalEntryOutput.timestamp ?? null // TODO: ?? or ||?
+							timestamp: grpcJournalEntryOutput.timestamp ?? null 
 						};
 						return journalEntry;
 					});
@@ -276,18 +284,13 @@ export class GrpcClient {
 			return {grpcId: accountId};
 		});
 
-		return new Promise((resolve, reject) => {
-			this.client.deleteAccountsByIds(
-				{grpcIdArray: grpcAccountIds},
-				(error) => {
-					if (error) {
-						reject(new UnableToDeleteAccountsError(error.details));
-						return;
-					}
+		await this._updateCallMetadata();
 
-					resolve();
-				}
-			);
+		return new Promise((resolve, reject) => {
+			this._client.deleteAccountsByIds({grpcIdArray: grpcAccountIds}, this._callMetadata, (error) => {
+				if (error) return reject(error);
+				resolve();
+			});
 		});
 	}
 
@@ -296,18 +299,13 @@ export class GrpcClient {
 			return {grpcId: accountId};
 		});
 
-		return new Promise((resolve, reject) => {
-			this.client.deactivateAccountsByIds(
-				{grpcIdArray: grpcAccountIds},
-				(error) => {
-					if (error) {
-						reject(new UnableToDeactivateAccountsError(error.details));
-						return;
-					}
+		await this._updateCallMetadata();
 
+		return new Promise((resolve, reject) => {
+			this._client.deactivateAccountsByIds({grpcIdArray: grpcAccountIds},this._callMetadata, (error) => {
+					if (error) return reject(error);
 					resolve();
-				}
-			);
+			});
 		});
 	}
 
@@ -316,42 +314,39 @@ export class GrpcClient {
 			return {grpcId: accountId};
 		});
 
-		return new Promise((resolve, reject) => {
-			this.client.activateAccountsByIds(
-				{grpcIdArray: grpcAccountIds},
-				(error) => {
-					if (error) {
-						reject(new UnableToActivateAccountsError(error.details));
-						return;
-					}
+		await this._updateCallMetadata();
 
+		return new Promise((resolve, reject) => {
+			this._client.activateAccountsByIds({grpcIdArray: grpcAccountIds}, this._callMetadata,(error) => {
+					if (error) return reject(error);
 					resolve();
-				}
-			);
+			});
 		});
 	}
 
-	private grpcAccountsOutputToAccounts(grpcAccountsOutput: GrpcAccount__Output[]): Account[] {
-		const accounts: Account[] = grpcAccountsOutput.map((grpcAccountOutput) => {
+	private _grpcAccountsOutputToAccounts(grpcAccountsOutput: GrpcAccount__Output[]): AccountsAndBalancesAccount[] {
+		const accounts: AccountsAndBalancesAccount[] = grpcAccountsOutput.map((grpcAccountOutput) => {
 			if (
 				!grpcAccountOutput.ownerId
 				|| !grpcAccountOutput.state
 				|| !grpcAccountOutput.type
 				|| !grpcAccountOutput.currencyCode
 			) {
-				throw new Error(); // TODO: create custom error.
+				throw new Error();
 			}
 
-			const account: Account = {
-				id: grpcAccountOutput.id ?? null, // TODO: ?? or ||?
+			const account: AccountsAndBalancesAccount = {
+				id: grpcAccountOutput.id ?? null, 
 				ownerId: grpcAccountOutput.ownerId,
-				state: grpcAccountOutput.state as AccountState, // TODO: cast?
-				type: grpcAccountOutput.type as AccountType, // TODO: cast?
+				state: grpcAccountOutput.state as AccountsAndBalancesAccountState, 
+				type: grpcAccountOutput.type as AccountsAndBalancesAccountType, 
 				currencyCode: grpcAccountOutput.currencyCode,
-				debitBalance: grpcAccountOutput.debitBalance ?? null, // TODO: ?? or ||?
-				creditBalance: grpcAccountOutput.creditBalance ?? null, // TODO: ?? or ||?
-				balance: grpcAccountOutput.balance ?? null, // TODO: ?? or ||?
-				timestampLastJournalEntry: grpcAccountOutput.timestampLastJournalEntry ?? null // TODO: ?? or ||?
+				postedDebitBalance: grpcAccountOutput.postedDebitBalance ?? null,
+				pendingDebitBalance: grpcAccountOutput.pendingDebitBalance ?? null,
+				postedCreditBalance: grpcAccountOutput.postedCreditBalance ?? null,
+				pendingCreditBalance: grpcAccountOutput.pendingCreditBalance ?? null,
+				balance: grpcAccountOutput.balance ?? null,
+				timestampLastJournalEntry: grpcAccountOutput.timestampLastJournalEntry ?? null 
 			};
 			return account;
 		});

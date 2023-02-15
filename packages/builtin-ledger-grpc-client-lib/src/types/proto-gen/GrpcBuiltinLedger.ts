@@ -3,6 +3,9 @@
 import type * as grpc from '@grpc/grpc-js'
 import type { MethodDefinition } from '@grpc/proto-loader'
 import type { BuiltinLedgerGrpcAccountArray as _BuiltinLedgerGrpcAccountArray, BuiltinLedgerGrpcAccountArray__Output as _BuiltinLedgerGrpcAccountArray__Output } from './BuiltinLedgerGrpcAccountArray';
+import type { BuiltinLedgerGrpcCreateAccountArray as _BuiltinLedgerGrpcCreateAccountArray, BuiltinLedgerGrpcCreateAccountArray__Output as _BuiltinLedgerGrpcCreateAccountArray__Output } from './BuiltinLedgerGrpcCreateAccountArray';
+import type { BuiltinLedgerGrpcCreateIdsResponse as _BuiltinLedgerGrpcCreateIdsResponse, BuiltinLedgerGrpcCreateIdsResponse__Output as _BuiltinLedgerGrpcCreateIdsResponse__Output } from './BuiltinLedgerGrpcCreateIdsResponse';
+import type { BuiltinLedgerGrpcCreateJournalEntryArray as _BuiltinLedgerGrpcCreateJournalEntryArray, BuiltinLedgerGrpcCreateJournalEntryArray__Output as _BuiltinLedgerGrpcCreateJournalEntryArray__Output } from './BuiltinLedgerGrpcCreateJournalEntryArray';
 import type { BuiltinLedgerGrpcId as _BuiltinLedgerGrpcId, BuiltinLedgerGrpcId__Output as _BuiltinLedgerGrpcId__Output } from './BuiltinLedgerGrpcId';
 import type { BuiltinLedgerGrpcIdArray as _BuiltinLedgerGrpcIdArray, BuiltinLedgerGrpcIdArray__Output as _BuiltinLedgerGrpcIdArray__Output } from './BuiltinLedgerGrpcIdArray';
 import type { BuiltinLedgerGrpcJournalEntryArray as _BuiltinLedgerGrpcJournalEntryArray, BuiltinLedgerGrpcJournalEntryArray__Output as _BuiltinLedgerGrpcJournalEntryArray__Output } from './BuiltinLedgerGrpcJournalEntryArray';
@@ -18,23 +21,23 @@ export interface GrpcBuiltinLedgerClient extends grpc.Client {
   activateAccountsByIds(argument: _BuiltinLedgerGrpcIdArray, options: grpc.CallOptions, callback: grpc.requestCallback<_google_protobuf_Empty__Output>): grpc.ClientUnaryCall;
   activateAccountsByIds(argument: _BuiltinLedgerGrpcIdArray, callback: grpc.requestCallback<_google_protobuf_Empty__Output>): grpc.ClientUnaryCall;
   
-  CreateAccounts(argument: _BuiltinLedgerGrpcAccountArray, metadata: grpc.Metadata, options: grpc.CallOptions, callback: grpc.requestCallback<_BuiltinLedgerGrpcIdArray__Output>): grpc.ClientUnaryCall;
-  CreateAccounts(argument: _BuiltinLedgerGrpcAccountArray, metadata: grpc.Metadata, callback: grpc.requestCallback<_BuiltinLedgerGrpcIdArray__Output>): grpc.ClientUnaryCall;
-  CreateAccounts(argument: _BuiltinLedgerGrpcAccountArray, options: grpc.CallOptions, callback: grpc.requestCallback<_BuiltinLedgerGrpcIdArray__Output>): grpc.ClientUnaryCall;
-  CreateAccounts(argument: _BuiltinLedgerGrpcAccountArray, callback: grpc.requestCallback<_BuiltinLedgerGrpcIdArray__Output>): grpc.ClientUnaryCall;
-  createAccounts(argument: _BuiltinLedgerGrpcAccountArray, metadata: grpc.Metadata, options: grpc.CallOptions, callback: grpc.requestCallback<_BuiltinLedgerGrpcIdArray__Output>): grpc.ClientUnaryCall;
-  createAccounts(argument: _BuiltinLedgerGrpcAccountArray, metadata: grpc.Metadata, callback: grpc.requestCallback<_BuiltinLedgerGrpcIdArray__Output>): grpc.ClientUnaryCall;
-  createAccounts(argument: _BuiltinLedgerGrpcAccountArray, options: grpc.CallOptions, callback: grpc.requestCallback<_BuiltinLedgerGrpcIdArray__Output>): grpc.ClientUnaryCall;
-  createAccounts(argument: _BuiltinLedgerGrpcAccountArray, callback: grpc.requestCallback<_BuiltinLedgerGrpcIdArray__Output>): grpc.ClientUnaryCall;
+  CreateAccounts(argument: _BuiltinLedgerGrpcCreateAccountArray, metadata: grpc.Metadata, options: grpc.CallOptions, callback: grpc.requestCallback<_BuiltinLedgerGrpcCreateIdsResponse__Output>): grpc.ClientUnaryCall;
+  CreateAccounts(argument: _BuiltinLedgerGrpcCreateAccountArray, metadata: grpc.Metadata, callback: grpc.requestCallback<_BuiltinLedgerGrpcCreateIdsResponse__Output>): grpc.ClientUnaryCall;
+  CreateAccounts(argument: _BuiltinLedgerGrpcCreateAccountArray, options: grpc.CallOptions, callback: grpc.requestCallback<_BuiltinLedgerGrpcCreateIdsResponse__Output>): grpc.ClientUnaryCall;
+  CreateAccounts(argument: _BuiltinLedgerGrpcCreateAccountArray, callback: grpc.requestCallback<_BuiltinLedgerGrpcCreateIdsResponse__Output>): grpc.ClientUnaryCall;
+  createAccounts(argument: _BuiltinLedgerGrpcCreateAccountArray, metadata: grpc.Metadata, options: grpc.CallOptions, callback: grpc.requestCallback<_BuiltinLedgerGrpcCreateIdsResponse__Output>): grpc.ClientUnaryCall;
+  createAccounts(argument: _BuiltinLedgerGrpcCreateAccountArray, metadata: grpc.Metadata, callback: grpc.requestCallback<_BuiltinLedgerGrpcCreateIdsResponse__Output>): grpc.ClientUnaryCall;
+  createAccounts(argument: _BuiltinLedgerGrpcCreateAccountArray, options: grpc.CallOptions, callback: grpc.requestCallback<_BuiltinLedgerGrpcCreateIdsResponse__Output>): grpc.ClientUnaryCall;
+  createAccounts(argument: _BuiltinLedgerGrpcCreateAccountArray, callback: grpc.requestCallback<_BuiltinLedgerGrpcCreateIdsResponse__Output>): grpc.ClientUnaryCall;
   
-  CreateJournalEntries(argument: _BuiltinLedgerGrpcJournalEntryArray, metadata: grpc.Metadata, options: grpc.CallOptions, callback: grpc.requestCallback<_BuiltinLedgerGrpcIdArray__Output>): grpc.ClientUnaryCall;
-  CreateJournalEntries(argument: _BuiltinLedgerGrpcJournalEntryArray, metadata: grpc.Metadata, callback: grpc.requestCallback<_BuiltinLedgerGrpcIdArray__Output>): grpc.ClientUnaryCall;
-  CreateJournalEntries(argument: _BuiltinLedgerGrpcJournalEntryArray, options: grpc.CallOptions, callback: grpc.requestCallback<_BuiltinLedgerGrpcIdArray__Output>): grpc.ClientUnaryCall;
-  CreateJournalEntries(argument: _BuiltinLedgerGrpcJournalEntryArray, callback: grpc.requestCallback<_BuiltinLedgerGrpcIdArray__Output>): grpc.ClientUnaryCall;
-  createJournalEntries(argument: _BuiltinLedgerGrpcJournalEntryArray, metadata: grpc.Metadata, options: grpc.CallOptions, callback: grpc.requestCallback<_BuiltinLedgerGrpcIdArray__Output>): grpc.ClientUnaryCall;
-  createJournalEntries(argument: _BuiltinLedgerGrpcJournalEntryArray, metadata: grpc.Metadata, callback: grpc.requestCallback<_BuiltinLedgerGrpcIdArray__Output>): grpc.ClientUnaryCall;
-  createJournalEntries(argument: _BuiltinLedgerGrpcJournalEntryArray, options: grpc.CallOptions, callback: grpc.requestCallback<_BuiltinLedgerGrpcIdArray__Output>): grpc.ClientUnaryCall;
-  createJournalEntries(argument: _BuiltinLedgerGrpcJournalEntryArray, callback: grpc.requestCallback<_BuiltinLedgerGrpcIdArray__Output>): grpc.ClientUnaryCall;
+  CreateJournalEntries(argument: _BuiltinLedgerGrpcCreateJournalEntryArray, metadata: grpc.Metadata, options: grpc.CallOptions, callback: grpc.requestCallback<_BuiltinLedgerGrpcCreateIdsResponse__Output>): grpc.ClientUnaryCall;
+  CreateJournalEntries(argument: _BuiltinLedgerGrpcCreateJournalEntryArray, metadata: grpc.Metadata, callback: grpc.requestCallback<_BuiltinLedgerGrpcCreateIdsResponse__Output>): grpc.ClientUnaryCall;
+  CreateJournalEntries(argument: _BuiltinLedgerGrpcCreateJournalEntryArray, options: grpc.CallOptions, callback: grpc.requestCallback<_BuiltinLedgerGrpcCreateIdsResponse__Output>): grpc.ClientUnaryCall;
+  CreateJournalEntries(argument: _BuiltinLedgerGrpcCreateJournalEntryArray, callback: grpc.requestCallback<_BuiltinLedgerGrpcCreateIdsResponse__Output>): grpc.ClientUnaryCall;
+  createJournalEntries(argument: _BuiltinLedgerGrpcCreateJournalEntryArray, metadata: grpc.Metadata, options: grpc.CallOptions, callback: grpc.requestCallback<_BuiltinLedgerGrpcCreateIdsResponse__Output>): grpc.ClientUnaryCall;
+  createJournalEntries(argument: _BuiltinLedgerGrpcCreateJournalEntryArray, metadata: grpc.Metadata, callback: grpc.requestCallback<_BuiltinLedgerGrpcCreateIdsResponse__Output>): grpc.ClientUnaryCall;
+  createJournalEntries(argument: _BuiltinLedgerGrpcCreateJournalEntryArray, options: grpc.CallOptions, callback: grpc.requestCallback<_BuiltinLedgerGrpcCreateIdsResponse__Output>): grpc.ClientUnaryCall;
+  createJournalEntries(argument: _BuiltinLedgerGrpcCreateJournalEntryArray, callback: grpc.requestCallback<_BuiltinLedgerGrpcCreateIdsResponse__Output>): grpc.ClientUnaryCall;
   
   DeactivateAccountsByIds(argument: _BuiltinLedgerGrpcIdArray, metadata: grpc.Metadata, options: grpc.CallOptions, callback: grpc.requestCallback<_google_protobuf_Empty__Output>): grpc.ClientUnaryCall;
   DeactivateAccountsByIds(argument: _BuiltinLedgerGrpcIdArray, metadata: grpc.Metadata, callback: grpc.requestCallback<_google_protobuf_Empty__Output>): grpc.ClientUnaryCall;
@@ -77,9 +80,9 @@ export interface GrpcBuiltinLedgerClient extends grpc.Client {
 export interface GrpcBuiltinLedgerHandlers extends grpc.UntypedServiceImplementation {
   ActivateAccountsByIds: grpc.handleUnaryCall<_BuiltinLedgerGrpcIdArray__Output, _google_protobuf_Empty>;
   
-  CreateAccounts: grpc.handleUnaryCall<_BuiltinLedgerGrpcAccountArray__Output, _BuiltinLedgerGrpcIdArray>;
+  CreateAccounts: grpc.handleUnaryCall<_BuiltinLedgerGrpcCreateAccountArray__Output, _BuiltinLedgerGrpcCreateIdsResponse>;
   
-  CreateJournalEntries: grpc.handleUnaryCall<_BuiltinLedgerGrpcJournalEntryArray__Output, _BuiltinLedgerGrpcIdArray>;
+  CreateJournalEntries: grpc.handleUnaryCall<_BuiltinLedgerGrpcCreateJournalEntryArray__Output, _BuiltinLedgerGrpcCreateIdsResponse>;
   
   DeactivateAccountsByIds: grpc.handleUnaryCall<_BuiltinLedgerGrpcIdArray__Output, _google_protobuf_Empty>;
   
@@ -93,8 +96,8 @@ export interface GrpcBuiltinLedgerHandlers extends grpc.UntypedServiceImplementa
 
 export interface GrpcBuiltinLedgerDefinition extends grpc.ServiceDefinition {
   ActivateAccountsByIds: MethodDefinition<_BuiltinLedgerGrpcIdArray, _google_protobuf_Empty, _BuiltinLedgerGrpcIdArray__Output, _google_protobuf_Empty__Output>
-  CreateAccounts: MethodDefinition<_BuiltinLedgerGrpcAccountArray, _BuiltinLedgerGrpcIdArray, _BuiltinLedgerGrpcAccountArray__Output, _BuiltinLedgerGrpcIdArray__Output>
-  CreateJournalEntries: MethodDefinition<_BuiltinLedgerGrpcJournalEntryArray, _BuiltinLedgerGrpcIdArray, _BuiltinLedgerGrpcJournalEntryArray__Output, _BuiltinLedgerGrpcIdArray__Output>
+  CreateAccounts: MethodDefinition<_BuiltinLedgerGrpcCreateAccountArray, _BuiltinLedgerGrpcCreateIdsResponse, _BuiltinLedgerGrpcCreateAccountArray__Output, _BuiltinLedgerGrpcCreateIdsResponse__Output>
+  CreateJournalEntries: MethodDefinition<_BuiltinLedgerGrpcCreateJournalEntryArray, _BuiltinLedgerGrpcCreateIdsResponse, _BuiltinLedgerGrpcCreateJournalEntryArray__Output, _BuiltinLedgerGrpcCreateIdsResponse__Output>
   DeactivateAccountsByIds: MethodDefinition<_BuiltinLedgerGrpcIdArray, _google_protobuf_Empty, _BuiltinLedgerGrpcIdArray__Output, _google_protobuf_Empty__Output>
   DeleteAccountsByIds: MethodDefinition<_BuiltinLedgerGrpcIdArray, _google_protobuf_Empty, _BuiltinLedgerGrpcIdArray__Output, _google_protobuf_Empty__Output>
   GetAccountsByIds: MethodDefinition<_BuiltinLedgerGrpcIdArray, _BuiltinLedgerGrpcAccountArray, _BuiltinLedgerGrpcIdArray__Output, _BuiltinLedgerGrpcAccountArray__Output>

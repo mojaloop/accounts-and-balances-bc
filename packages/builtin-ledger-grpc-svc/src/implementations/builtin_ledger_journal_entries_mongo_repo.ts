@@ -29,10 +29,6 @@
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {Collection, Db, MongoClient, MongoServerError} from "mongodb";
-import {
-    BLJournalEntryAlreadyExistsError, BLUnableToGetJournalEntriesError,
-    BLUnableToInitRepoError, BLUnableToStoreJournalEntryError,
-} from "../domain/errors";
 import {IBuiltinLedgerJournalEntriesRepo} from "../domain/infrastructure";
 import {BuiltinLedgerJournalEntry} from "../domain/entities";
 import {bigintToString, stringToBigint} from "../domain/converters";
@@ -41,7 +37,8 @@ export const BUILTIN_LEDGER_JOURNAL_ENTRY_MONGO_SCHEMA: any = {
     bsonType: "object",
     title: "Built-in Ledger Journal Entry Mongo Schema",
     required: [
-        "_id", // id.
+        "_id",
+        "id",
         "currencyCode",
         "currencyDecimals",
         "amount",
@@ -50,119 +47,114 @@ export const BUILTIN_LEDGER_JOURNAL_ENTRY_MONGO_SCHEMA: any = {
         "timestamp"
     ],
     properties: {
-        // TODO:
-        //  bsonType vs type;
-        //  long and binData BSON types;
-        //  check if _id can be replaced.
-        _id: {bsonType: "string"},
+        _id: {"bsonType": "objectId"},
+        id: {bsonType: "string"},
         currencyCode: {bsonType: "string"},
         currencyDecimals: {bsonType: "int"},
         amount: {bsonType: "string"},
         debitedAccountId: {bsonType: "string"},
         creditedAccountId: {bsonType: "string"},
-        timestamp: {bsonType: ["number"]}, // TODO: long instead of number?
+        timestamp: {bsonType: ["number"]},
     },
     additionalProperties: false
 };
 
 export class BuiltinLedgerJournalEntriesMongoRepo implements IBuiltinLedgerJournalEntriesRepo {
     // Properties received through the constructor.
-    private readonly logger: ILogger;
-    private readonly URL: string; // TODO: store the username and password here?
+    private readonly _logger: ILogger;
+    private readonly _url: string; // TODO: store the username and password here?
     // Other properties.
     private static readonly TIMEOUT_MS: number = 5_000;
-    private static readonly DB_NAME: string = "accounts_and_balances_bc";
+    private static readonly DB_NAME: string = "accounts_and_balances_bc_builtin_ledger";
     private static readonly COLLECTION_NAME: string = "journal_entries";
     private static readonly DUPLICATE_KEY_ERROR_CODE: number = 11000;
-    private client: MongoClient;
-    private collection: Collection;
+    private _client: MongoClient;
+    private _collection: Collection;
 
     constructor(
         logger: ILogger,
         url: string
     ) {
-        this.logger = logger.createChild(this.constructor.name);
-        this.URL = url;
+        this._logger = logger.createChild(this.constructor.name);
+        this._url = url;
     }
 
     async init(): Promise<void> {
         try {
             // TODO: investigate other types of timeouts; configure TLS.
-            this.client = new MongoClient(this.URL, {
+            this._client = new MongoClient(this._url, {
                 serverSelectionTimeoutMS: BuiltinLedgerJournalEntriesMongoRepo.TIMEOUT_MS
             });
-            await this.client.connect();
+            await this._client.connect();
 
-            const db: Db = this.client.db(BuiltinLedgerJournalEntriesMongoRepo.DB_NAME);
+            const db: Db = this._client.db(BuiltinLedgerJournalEntriesMongoRepo.DB_NAME);
 
             // Check if the collection already exists.
-            const collections: any[] = await db.listCollections().toArray(); // TODO: verify type.
-            const collectionExists: boolean = collections.some((collection) => {
-                return collection.name === BuiltinLedgerJournalEntriesMongoRepo.COLLECTION_NAME;
-            });
+            const collections: any[] = await db.listCollections().toArray();
+            const exists: boolean = collections.find((collection) => collection.name===BuiltinLedgerJournalEntriesMongoRepo.COLLECTION_NAME);
 
             // collection() creates the collection if it doesn't already exist, however, it doesn't allow for a schema
             // to be passed as an argument.
-            if (collectionExists) {
-                this.collection = db.collection(BuiltinLedgerJournalEntriesMongoRepo.COLLECTION_NAME);
+            if (exists) {
+                this._collection = db.collection(BuiltinLedgerJournalEntriesMongoRepo.COLLECTION_NAME);
                 return;
             }
-            this.collection = await db.createCollection(BuiltinLedgerJournalEntriesMongoRepo.COLLECTION_NAME, {
+            this._collection = await db.createCollection(BuiltinLedgerJournalEntriesMongoRepo.COLLECTION_NAME, {
                 validator: {$jsonSchema: BUILTIN_LEDGER_JOURNAL_ENTRY_MONGO_SCHEMA}
             });
         } catch (error: unknown) {
-            throw new BLUnableToInitRepoError((error as any)?.message);
+            this._logger.error(error);
+            throw error;
         }
     }
 
     async destroy(): Promise<void> {
-        await this.client.close();
+        await this._client.close();
     }
 
     async storeNewJournalEntry(builtinLedgerJournalEntry: BuiltinLedgerJournalEntry): Promise<void> {
-        // Convert BuiltinLedgerJournalEntry's id to Mongo's _id.
-        // TODO: is this the best way to do it?
-        const mongoJournalEntry: any = { // TODO: verify type.
-            _id: builtinLedgerJournalEntry.id,
+        const mongoJournalEntry: any = {
+            id: builtinLedgerJournalEntry.id,
             currencyCode: builtinLedgerJournalEntry.currencyCode,
             currencyDecimals: builtinLedgerJournalEntry.currencyDecimals,
-            amount: bigintToString(builtinLedgerJournalEntry.amount, builtinLedgerJournalEntry.currencyDecimals), // TODO: create an auxiliary variable?
+            amount: bigintToString(builtinLedgerJournalEntry.amount, builtinLedgerJournalEntry.currencyDecimals),
             debitedAccountId: builtinLedgerJournalEntry.debitedAccountId,
             creditedAccountId: builtinLedgerJournalEntry.creditedAccountId,
             timestamp: builtinLedgerJournalEntry.timestamp
         };
 
         try {
-            await this.collection.insertOne(mongoJournalEntry);
+            await this._collection.insertOne(mongoJournalEntry);
         } catch (error: unknown) {
-            if (
-                error instanceof MongoServerError
-                && error.code === BuiltinLedgerJournalEntriesMongoRepo.DUPLICATE_KEY_ERROR_CODE
-            ) { // TODO: should this be done?
-                throw new BLJournalEntryAlreadyExistsError();
-            }
-            throw new BLUnableToStoreJournalEntryError((error as any)?.message);
+            this._logger.error(error);
+            throw error;
         }
     }
 
     async getJournalEntriesByAccountId(accountId: string): Promise<BuiltinLedgerJournalEntry[]> {
-        let journalEntries: any[]; // TODO: verify type.
+        let journalEntries: any[];
         try {
-            journalEntries = await this.collection.find(
+            journalEntries = await this._collection.find(
                 {$or: [{debitedAccountId: accountId}, {creditedAccountId: accountId}]}
-            ).toArray();
+            ).project({_id: 0}).toArray();
         } catch (error: unknown) {
-            throw new BLUnableToGetJournalEntriesError((error as any)?.message);
+            this._logger.error(error);
+            throw error;
         }
 
-        // Convert Mongo's _id to BuiltinLedgerJournalEntry's id.
-        // TODO: is this the best way to do it? will id be placed at the end of journalEntry?
         journalEntries.forEach((journalEntry) => {
-            journalEntry.id = journalEntry._id;
-            delete journalEntry._id;
-
-            journalEntry.amount = stringToBigint(journalEntry.amount, journalEntry.currencyDecimals); // TODO: create an auxiliary variable?
+            journalEntry.amount = stringToBigint(journalEntry.amount, journalEntry.currencyDecimals);
         });
         return journalEntries;
+    }
+
+    async reverseJournalEntry(journalEntryId: string): Promise<void>{
+        try {
+            const result = await this._collection.deleteOne({id: journalEntryId});
+            if(result.deletedCount != 1) throw new Error("Could not reverseJournalEntry with Id: "+ journalEntryId);
+        } catch (error: unknown) {
+            this._logger.error(error);
+            throw error;
+        }
     }
 }

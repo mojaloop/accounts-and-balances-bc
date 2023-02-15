@@ -26,7 +26,11 @@
 
  --------------
  ******/
+"use strict";
 
-import {GrpcService} from "./grpc_svc";
+import {ChartOfAccountsGrpcService} from "./service";
 
-GrpcService.start();
+ChartOfAccountsGrpcService.start().then(() => {
+	console.log("ChartOfAccountsGrpcService start complete");
+});
+

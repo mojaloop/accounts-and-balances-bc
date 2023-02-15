@@ -27,16 +27,18 @@
  --------------
  ******/
 
-import {AccountState, AccountType} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import {AccountsAndBalancesAccountState, AccountsAndBalancesAccountType} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 export type LedgerAdapterAccount = {
     id: string | null;
-    state: AccountState;
-    type: AccountType;
+    state: AccountsAndBalancesAccountState;
+    type: AccountsAndBalancesAccountType;
     currencyCode: string;
-    currencyDecimals: number | null; // Only for when creating. TODO: | null?
-    debitBalance: string | null;
-    creditBalance: string | null;
+    currencyDecimals: number | null; // Only for when creating.
+    postedDebitBalance: string | null;
+    pendingDebitBalance: string | null;
+    postedCreditBalance: string | null;
+    pendingCreditBalance: string | null;
     timestampLastJournalEntry: number | null;
 }
 
@@ -44,14 +46,15 @@ export type LedgerAdapterJournalEntry = {
     id: string | null;
     ownerId: string | null;
     currencyCode: string;
-    currencyDecimals: number | null; // // Only for when creating. TODO: | null?
+    currencyDecimals: number | null; // // Only for when creating.
     amount: string;
+    pending: boolean;
     debitedAccountId: string;
     creditedAccountId: string;
     timestamp: number | null;
 }
 
-export type LedgerAdapterRequestId = { // TODO: should this be an object or an array? find a better name.
+export type LedgerAdapterRequestId = {
     id: string,
     currencyDecimals: number
 }
@@ -59,6 +62,10 @@ export type LedgerAdapterRequestId = { // TODO: should this be an object or an a
 export interface ILedgerAdapter {
     init(): Promise<void>;
     destroy(): Promise<void>;
+
+    setToken(accessToken: string): void;
+    setUserCredentials(client_id: string, username: string, password: string): void;
+    setAppCredentials(client_id: string, client_secret: string): void;
 
     createAccounts(ledgerAdapterAccounts: LedgerAdapterAccount[]): Promise<string[]>;
     createJournalEntries(ledgerAdapterJournalEntries: LedgerAdapterJournalEntry[]): Promise<string[]>;
@@ -71,5 +78,5 @@ export interface ILedgerAdapter {
 
     deleteAccountsByIds(accountIds: string[]): Promise<void>;
     deactivateAccountsByIds(accountIds: string[]): Promise<void>;
-    activateAccountsByIds(accountIds: string[]): Promise<void>;
+    reactivateAccountsByIds(accountIds: string[]): Promise<void>;
 }

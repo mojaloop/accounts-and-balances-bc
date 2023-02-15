@@ -27,6 +27,7 @@
  --------------
  ******/
 
+
 import {ILogger, LogLevel} from "@mojaloop/logging-bc-public-types-lib";
 import {KafkaLogger} from "@mojaloop/logging-bc-client-lib";
 import {
@@ -38,24 +39,25 @@ import {existsSync} from "fs";
 import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {AuthorizationClient, TokenHelper} from "@mojaloop/security-bc-client-lib";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
+import {BuiltinLedgerPrivilegesDefinition} from "./privileges";
 import {IBuiltinLedgerAccountsRepo, IBuiltinLedgerJournalEntriesRepo} from "../domain/infrastructure";
-import {GrpcServer} from "./grpc_server/grpc_server";
+import {BuiltinLedgerGrpcServer} from "./grpc_server/grpc_server";
 import {BuiltinLedgerAccountsMongoRepo} from "../implementations/builtin_ledger_accounts_mongo_repo";
 import {BuiltinLedgerJournalEntriesMongoRepo} from "../implementations/builtin_ledger_journal_entries_mongo_repo";
 import {BuiltinLedgerAggregate} from "../domain/aggregate";
-import {Privileges} from "../domain/privileges";
-import {resolve} from "path";
 
 /* ********** Constants Begin ********** */
 
 const BC_NAME: string = "accounts-and-balances-bc";
-const SVC_NAME: string = "builtin-ledger-grpc-svc";
-const SVC_VERSION: string = process.env.npm_package_version || "0.0.1"; // TODO: is this correct?
+const APP_NAME: string = "builtin-ledger-grpc-svc";
+const APP_VERSION: string = process.env.npm_package_version || "0.0.1";
+const PRODUCTION_MODE = process.env["PRODUCTION_MODE"] || false;
 
 const KAFKA_URL: string = process.env.KAFKA_URL || "localhost:9092";
 
 const LOG_LEVEL: LogLevel = process.env.LOG_LEVEL as LogLevel || LogLevel.DEBUG;
-const KAFKA_LOGS_TOPIC: string = process.env.KAFKA_LOGS_TOPIC || "logs";
+const KAFKA_LOGS_TOPIC = process.env.KAFKA_LOGS_TOPIC || "logs";
+const KAFKA_AUDITS_TOPIC = process.env.KAFKA_AUDITS_TOPIC || "audits";
 
 const AUTH_N_TOKEN_ISSUER_NAME = process.env.AUTH_N_TOKEN_ISSUER_NAME || "http://localhost:3201/";
 const AUTH_N_SVC_BASEURL = process.env.AUTH_N_SVC_BASEURL || "http://localhost:3201";
@@ -64,22 +66,32 @@ const AUTH_N_TOKEN_AUDIENCE = process.env.AUTH_N_TOKEN_AUDIENCE || "mojaloop.vne
 
 const AUTH_Z_SVC_BASEURL = process.env.AUTH_Z_SVC_BASEURL || "http://localhost:3202";
 
-const AUDIT_KEY_FILE_RELATIVE_PATH: string = "../../../../certs/audit_private_key.pem";
-const AUDIT_KEY_FILE_PATH = process.env.AUDIT_KEY_FILE_PATH || resolve(__dirname, AUDIT_KEY_FILE_RELATIVE_PATH);
-const KAFKA_AUDITS_TOPIC = process.env.KAFKA_AUDITS_TOPIC || "audits";
+const AUDIT_KEY_FILE_PATH = process.env["AUDIT_KEY_FILE_PATH"] || "/app/data/audit_private_key.pem";
 
-const MONGO_URL: string = process.env.MONGO_URL || "mongodb://root:mongoDbPas42@localhost:27017";
 
-const BUILTIN_LEDGER_URL: string = process.env.BUILTIN_LEDGER_URL || "localhost:5678";
+const MONGO_URL = process.env.MONGO_URL || "mongodb://root:mongoDbPas42@localhost:27017";
+
+const BUILTIN_LEDGER_URL = process.env.BUILTIN_LEDGER_URL || "localhost:3350";
+
+const SVC_CLIENT_ID = process.env["SVC_CLIENT_ID"] || "accounts-and-balances-bc-builtinledger-grpc-svc";
+const SVC_CLIENT_SECRET = process.env["SVC_CLIENT_ID"] || "superServiceSecret";
+
 
 /* ********** Constants End ********** */
+
+const kafkaProducerOptions = {
+	kafkaBrokerList: KAFKA_URL
+};
+
+let globalLogger: ILogger;
 
 export class BuiltinLedgerGrpcService {
 	private static logger: ILogger;
 	private static auditingClient: IAuditClient;
+	private static authorizationClient: IAuthorizationClient;
 	private static builtinLedgerAccountsRepo: IBuiltinLedgerAccountsRepo;
 	private static builtinLedgerJournalEntriesRepo: IBuiltinLedgerJournalEntriesRepo;
-	private static grpcServer: GrpcServer;
+	private static grpcServer: BuiltinLedgerGrpcServer;
 
 	private static loggerIsChild: boolean; // TODO: avoid this.
 
@@ -91,34 +103,25 @@ export class BuiltinLedgerGrpcService {
 		builtinLedgerJournalEntriesRepo?: IBuiltinLedgerJournalEntriesRepo
 	): Promise<void> {
 		// Logger.
-		if (logger !== undefined) {
-			this.logger = logger.createChild(this.name);
-			this.loggerIsChild = true;
-		} else {
-			this.logger = new KafkaLogger(
+		if (!logger) {
+			logger = new KafkaLogger(
 				BC_NAME,
-				SVC_NAME,
-				SVC_VERSION,
-				{kafkaBrokerList: KAFKA_URL},
+				APP_NAME,
+				APP_VERSION,
+				kafkaProducerOptions,
 				KAFKA_LOGS_TOPIC,
 				LOG_LEVEL
 			);
-			this.loggerIsChild = false;
-			try {
-				await (this.logger as KafkaLogger).init();
-			} catch (error: unknown) {
-				console.error(error); // TODO: use console?
-				await this.stop();
-				process.exit(-1); // TODO: verify code.
-			}
+			await (logger as KafkaLogger).init();
 		}
+		globalLogger = this.logger = logger;
 
 		// Token helper.
 		const tokenHelper: TokenHelper = new TokenHelper(
-			AUTH_N_TOKEN_ISSUER_NAME,
 			AUTH_N_SVC_JWKS_URL,
+			this.logger,
+			AUTH_N_TOKEN_ISSUER_NAME,
 			AUTH_N_TOKEN_AUDIENCE,
-			this.logger
 		);
 		try {
 			await tokenHelper.init();
@@ -128,49 +131,32 @@ export class BuiltinLedgerGrpcService {
 			process.exit(-1); // TODO: verify code.
 		}
 
-		// Authorization.
-		if (authorizationClient === undefined) {
-			authorizationClient = new AuthorizationClient(
-				BC_NAME,
-				SVC_NAME,
-				SVC_VERSION,
-				AUTH_Z_SVC_BASEURL,
-				this.logger
-			);
-			this.addPrivileges(authorizationClient as AuthorizationClient);
+		// start auditClient
+		if (!auditingClient) {
+			if (!existsSync(AUDIT_KEY_FILE_PATH)) {
+				if (PRODUCTION_MODE) process.exit(9);
+				// create e tmp file
+				LocalAuditClientCryptoProvider.createRsaPrivateKeyFileSync(AUDIT_KEY_FILE_PATH, 2048);
+			}
+			const cryptoProvider = new LocalAuditClientCryptoProvider(AUDIT_KEY_FILE_PATH);
+			const auditDispatcher = new KafkaAuditClientDispatcher(kafkaProducerOptions, KAFKA_AUDITS_TOPIC, logger);
+			// NOTE: to pass the same kafka logger to the audit client, make sure the logger is started/initialised already
+			auditingClient = new AuditClient(BC_NAME, APP_NAME, APP_VERSION, cryptoProvider, auditDispatcher);
+			await auditingClient.init();
+		}
+		this.auditingClient = auditingClient;
+
+		// authorization client
+		if (!authorizationClient) {
+			// setup privileges - bootstrap app privs and get priv/role associations
+			authorizationClient = new AuthorizationClient(BC_NAME, APP_NAME, APP_VERSION, AUTH_Z_SVC_BASEURL, logger.createChild("AuthorizationClient"));
+			authorizationClient.addPrivilegesArray(BuiltinLedgerPrivilegesDefinition);
 			await (authorizationClient as AuthorizationClient).bootstrap(true);
 			await (authorizationClient as AuthorizationClient).fetch();
-		}
 
-		// Auditing.
-		if (auditingClient !== undefined) {
-			this.auditingClient = auditingClient;
-		} else {
-			if (!existsSync(AUDIT_KEY_FILE_PATH)) {
-				LocalAuditClientCryptoProvider.createRsaPrivateKeyFileSync(AUDIT_KEY_FILE_PATH);
-			}
-			const cryptoProvider: LocalAuditClientCryptoProvider =
-				new LocalAuditClientCryptoProvider(AUDIT_KEY_FILE_PATH);
-			const auditDispatcher: KafkaAuditClientDispatcher = new KafkaAuditClientDispatcher(
-				{kafkaBrokerList: KAFKA_URL},
-				KAFKA_AUDITS_TOPIC,
-				this.logger
-			);
-			this.auditingClient = new AuditClient(
-				BC_NAME,
-				SVC_NAME,
-				SVC_VERSION,
-				cryptoProvider,
-				auditDispatcher
-			);
-			try {
-				await this.auditingClient.init();
-			} catch (error: unknown) {
-				this.logger.fatal(error);
-				await this.stop();
-				process.exit(-1); // TODO: verify code.
-			}
 		}
+		this.authorizationClient = authorizationClient;
+
 
 		// Repos.
 		if (builtinLedgerAccountsRepo !== undefined) {
@@ -214,7 +200,7 @@ export class BuiltinLedgerGrpcService {
 		);
 
 		// gRPC server.
-		this.grpcServer = new GrpcServer(
+		this.grpcServer = new BuiltinLedgerGrpcServer(
 			this.logger,
 			tokenHelper,
 			builtinLedgerAggregate,
@@ -247,38 +233,37 @@ export class BuiltinLedgerGrpcService {
 		}
 	}
 
-	private static addPrivileges(authorizationClient: AuthorizationClient): void {
-		authorizationClient.addPrivilege(
-			Privileges.CREATE_ACCOUNT,
-			"CREATE_ACCOUNT",
-			"Allows for the creation of accounts." // TODO: verify.
-		);
-		authorizationClient.addPrivilege(
-			Privileges.CREATE_JOURNAL_ENTRY,
-			"CREATE_JOURNAL_ENTRY",
-			"Allows for the creation of journal entries." // TODO: verify.
-		);
-		authorizationClient.addPrivilege(
-			Privileges.VIEW_ACCOUNT,
-			"VIEW_ACCOUNT",
-			"Allows for the retrieval of accounts." // TODO: verify.
-		);
-		authorizationClient.addPrivilege(
-			Privileges.VIEW_JOURNAL_ENTRY,
-			"VIEW_JOURNAL_ENTRY",
-			"Allows for the retrieval of journal entries." // TODO: verify.
-		);
-	}
 }
 
-async function handleSignals(signal: NodeJS.Signals): Promise<void> {
-	console.info(`${signal} received`); // TODO: use console?
+/**
+ * process termination and cleanup
+ */
+
+async function _handle_int_and_term_signals(signal: NodeJS.Signals): Promise<void> {
+	console.info(`Service - ${signal} received - cleaning up...`);
+	let clean_exit = false;
+	setTimeout(args => {
+		clean_exit || process.exit(99);
+	}, 5000);
+
+	// call graceful stop routine
 	await BuiltinLedgerGrpcService.stop();
+
+	clean_exit = true;
 	process.exit();
 }
 
-process.on("SIGINT", handleSignals); // SIGINT = 2 (Ctrl + c).
-process.on("SIGTERM", handleSignals); // SIGTERM = 15.
-process.on("exit", () => {
-	console.info(`exiting ${SVC_NAME}`);
+//catches ctrl+c event
+process.on("SIGINT", _handle_int_and_term_signals);
+//catches program termination event
+process.on("SIGTERM", _handle_int_and_term_signals);
+
+//do something when app is closing
+process.on("exit", async () => {
+	globalLogger.info("Microservice - exiting...");
+});
+process.on("uncaughtException", (err: Error) => {
+	globalLogger.error(err);
+	console.log("UncaughtException - EXITING...");
+	process.exit(999);
 });

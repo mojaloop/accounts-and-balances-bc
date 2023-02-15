@@ -7,6 +7,7 @@ export interface BuiltinLedgerGrpcJournalEntry {
   'ownerId'?: (string);
   'currencyCode'?: (string);
   'amount'?: (string);
+  'pending'?: (boolean);
   'debitedAccountId'?: (string);
   'creditedAccountId'?: (string);
   'timestamp'?: (number | string | Long);
@@ -17,6 +18,7 @@ export interface BuiltinLedgerGrpcJournalEntry__Output {
   'ownerId'?: (string);
   'currencyCode'?: (string);
   'amount'?: (string);
+  'pending'?: (boolean);
   'debitedAccountId'?: (string);
   'creditedAccountId'?: (string);
   'timestamp'?: (number);

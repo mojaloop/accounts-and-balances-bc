@@ -26,50 +26,46 @@
 
  --------------
  ******/
+"use struct";
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {Collection, Db, MongoClient, MongoServerError, UpdateResult} from "mongodb";
+import {Collection, Db, MongoClient, UpdateResult} from "mongodb";
 import {
-    BLAccountAlreadyExistsError,
-    BLAccountNotFoundError,
     BuiltinLedgerAccount,
     IBuiltinLedgerAccountsRepo,
-    BLUnableToGetAccountsError,
-    BLUnableToInitRepoError,
-    BLUnableToStoreAccountError,
-    BLUnableToUpdateAccountError,
-    BLUnableToUpdateAccountsError
 } from "../domain";
-import {AccountState} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import {AccountsAndBalancesAccountState} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 export const BUILTIN_LEDGER_ACCOUNT_MONGO_SCHEMA: any = {
     bsonType: "object",
     title: "Built-in Ledger Account Mongo Schema",
     required: [
-        "_id", // id.
+        "_id",
+        "id",
         "state",
         "type",
         "limitCheckMode",
         "currencyCode",
         "currencyDecimals",
-        "debitBalance",
-        "creditBalance",
+        "postedDebitBalance",
+        "pendingDebitBalance",
+        "postedCreditBalance",
+        "pendingCreditBalance",
         "timestampLastJournalEntry"
     ],
     properties: {
-        // TODO:
-        //  bsonType vs type;
-        //  long and binData BSON types;
-        //  check if _id can be replaced.
-        _id: {bsonType: "string"},
+        _id: {"bsonType": "objectId"},
+        id: {bsonType: "string"},
         state: {bsonType: "string"},
         type: {bsonType: "string"},
         limitCheckMode: {bsonType: "string"},
         currencyCode: {bsonType: "string"},
         currencyDecimals: {bsonType: "int"},
-        debitBalance: {bsonType: "string"},
-        creditBalance: {bsonType: "string"},
-        timestampLastJournalEntry: {bsonType: ["number", "null"]}, // TODO: long instead of number?
+        postedDebitBalance: {bsonType: "string"},
+        pendingDebitBalance: {bsonType: "string"},
+        postedCreditBalance: {bsonType: "string"},
+        pendingCreditBalance: {bsonType: "string"},
+        timestampLastJournalEntry: {bsonType: ["number", "null"]},
     },
     additionalProperties: false
 };
@@ -77,10 +73,10 @@ export const BUILTIN_LEDGER_ACCOUNT_MONGO_SCHEMA: any = {
 export class BuiltinLedgerAccountsMongoRepo implements IBuiltinLedgerAccountsRepo {
     // Properties received through the constructor.
     private readonly logger: ILogger;
-    private readonly URL: string; // TODO: store the username and password here?
+    private readonly URL: string;
     // Other properties.
     private static readonly TIMEOUT_MS: number = 5_000;
-    private static readonly DB_NAME: string = "accounts_and_balances_bc";
+    private static readonly DB_NAME: string = "accounts_and_balances_bc_builtin_ledger";
     private static readonly COLLECTION_NAME: string = "accounts";
     private static readonly DUPLICATE_KEY_ERROR_CODE: number = 11000;
     private client: MongoClient;
@@ -105,7 +101,7 @@ export class BuiltinLedgerAccountsMongoRepo implements IBuiltinLedgerAccountsRep
             const db: Db = this.client.db(BuiltinLedgerAccountsMongoRepo.DB_NAME);
 
             // Check if the collection already exists.
-            const collections: any[] = await db.listCollections().toArray(); // TODO: verify type.
+            const collections: any[] = await db.listCollections().toArray()
             const collectionExists: boolean = collections.some((collection) => {
                 return collection.name === BuiltinLedgerAccountsMongoRepo.COLLECTION_NAME;
             });
@@ -120,7 +116,8 @@ export class BuiltinLedgerAccountsMongoRepo implements IBuiltinLedgerAccountsRep
                 validator: {$jsonSchema: BUILTIN_LEDGER_ACCOUNT_MONGO_SCHEMA}
             });
         } catch (error: unknown) {
-            throw new BLUnableToInitRepoError((error as any)?.message);
+            this.logger.error(error);
+            throw error;
         }
     }
 
@@ -129,106 +126,122 @@ export class BuiltinLedgerAccountsMongoRepo implements IBuiltinLedgerAccountsRep
     }
 
     async storeNewAccount(builtinLedgerAccount: BuiltinLedgerAccount): Promise<void> {
-        // Convert BuiltinLedgerAccount's id to Mongo's _id.
-        // TODO: is this the best way to do it?
-        const mongoAccount: any = { // TODO: verify type.
-            _id: builtinLedgerAccount.id,
+        const mongoAccount: any = {
+            id: builtinLedgerAccount.id,
             state: builtinLedgerAccount.state,
             type: builtinLedgerAccount.type,
             limitCheckMode: builtinLedgerAccount.limitCheckMode,
             currencyCode: builtinLedgerAccount.currencyCode,
             currencyDecimals: builtinLedgerAccount.currencyDecimals,
-            debitBalance: builtinLedgerAccount.debitBalance.toString(), // TODO: create an auxiliary variable?
-            creditBalance: builtinLedgerAccount.creditBalance.toString(), // TODO: create an auxiliary variable?
+            debitBalance: builtinLedgerAccount.postedDebitBalance.toString(),
+            creditBalance: builtinLedgerAccount.postedCreditBalance.toString(),
             timestampLastJournalEntry: builtinLedgerAccount.timestampLastJournalEntry
         };
 
         try {
             await this.collection.insertOne(mongoAccount);
         } catch (error: unknown) {
-            if (
-                error instanceof MongoServerError
-                && error.code === BuiltinLedgerAccountsMongoRepo.DUPLICATE_KEY_ERROR_CODE
-            ) { // TODO: should this be done?
-                throw new BLAccountAlreadyExistsError();
-            }
-            throw new BLUnableToStoreAccountError((error as any)?.message);
+            this.logger.error(error);
+            throw error;
         }
     }
 
     async getAccountsByIds(ids: string[]): Promise<BuiltinLedgerAccount[]> {
-        let accounts: any[]; // TODO: verify type.
+        let accounts: any[];
         try {
-            accounts = await this.collection.find({_id: {$in: ids}}).toArray(); // TODO: verify filter; is there a simpler way to find by _id?
+            accounts = await this.collection.find({id: {$in: ids}}).project({_id: 0}).toArray();
         } catch (error: unknown) {
-            throw new BLUnableToGetAccountsError((error as any)?.message);
+            this.logger.error(error);
+            throw error;
         }
 
-        // Convert Mongo's _id to BuiltinLedgerAccount's id.
-        // TODO: is this the best way to do it? will id be placed at the end of account?
         accounts.forEach((account) => {
-            account.id = account._id;
-            delete account._id;
-
-            account.debitBalance = BigInt(account.debitBalance); // TODO: create an auxiliary variable?
-            account.creditBalance = BigInt(account.creditBalance); // TODO: create an auxiliary variable?
+            account.debitBalance = BigInt(account.debitBalance);
+            account.creditBalance = BigInt(account.creditBalance);
         });
         return accounts;
     }
 
-    async updateAccountDebitBalanceAndTimestampById(
+    async updateAccountDebitBalanceAndTimestamp(
         accountId: string,
-        debitBalance: bigint,
+        newBalance: bigint,
+        pending: boolean,
         timestampLastJournalEntry: number
     ): Promise<void> {
         let updateResult: UpdateResult;
         try {
-            updateResult = await this.collection.updateOne(
-                {_id: accountId},
-                {$set: {debitBalance: debitBalance.toString(), timestampLastJournalEntry: timestampLastJournalEntry}}
-            );
+            const updateObject = {
+                $set: {
+                    timestampLastJournalEntry: timestampLastJournalEntry
+                }
+            };
+            if(pending){
+                (updateObject.$set as any).pendingDebitBalance = newBalance.toString();
+            }else{
+                (updateObject.$set as any).postedDebitBalance = newBalance.toString();
+            }
+
+            updateResult = await this.collection.updateOne({id: accountId}, updateObject);
         } catch (error: unknown) {
-            throw new BLUnableToUpdateAccountError((error as any)?.message);
+            this.logger.error(error);
+            throw error;
         }
 
-        if (updateResult.modifiedCount === 0) { // TODO: use "!updateResult.modifiedCount" instead?
-            throw new BLAccountNotFoundError();
+        if (updateResult.modifiedCount !== 1) {
+            const err = new Error("Could not updateAccountDebitBalanceAndTimestampById");
+            this.logger.error(err);
+            throw err;
         }
     }
 
-    async updateAccountCreditBalanceAndTimestampById(
+    async updateAccountCreditBalanceAndTimestamp(
         accountId: string,
-        creditBalance: bigint,
+        newBalance: bigint,
+        pending: boolean,
         timestampLastJournalEntry: number
     ): Promise<void> {
         let updateResult: UpdateResult;
         try {
-            updateResult = await this.collection.updateOne(
-                {_id: accountId},
-                {$set: {creditBalance: creditBalance.toString(), timestampLastJournalEntry: timestampLastJournalEntry}}
-            );
+            const updateObject = {
+                $set: {
+                    timestampLastJournalEntry: timestampLastJournalEntry
+                }
+            };
+            if (pending) {
+                (updateObject.$set as any).pendingCreditBalance = newBalance.toString();
+            } else {
+                (updateObject.$set as any).postedCreditBalance = newBalance.toString();
+            }
+
+            updateResult = await this.collection.updateOne({id: accountId}, updateObject);
         } catch (error: unknown) {
-            throw new BLUnableToUpdateAccountError((error as any)?.message);
+            this.logger.error(error);
+            throw error;
         }
 
-        if (updateResult.modifiedCount === 0) { // TODO: use "!updateResult.modifiedCount" instead?
-            throw new BLAccountNotFoundError();
+        if (updateResult.modifiedCount !== 1) {
+            const err = new Error("Could not updateAccountCreditBalanceAndTimestampById");
+            this.logger.error(err);
+            throw err;
         }
     }
 
-    async updateAccountStatesByIds(accountIds: string[], accountState: AccountState): Promise<void> {
-        let updateResult: any; // TODO: verify type.
+    async updateAccountStatesByIds(accountIds: string[], accountState: AccountsAndBalancesAccountState): Promise<void> {
+        let updateResult: any;
         try {
             updateResult = await this.collection.updateMany(
-                {_id: {$in: accountIds}},
+                {id: {$in: accountIds}},
                 {$set: {accountState: accountState}}
             );
         } catch (error: unknown) {
-            throw new BLUnableToUpdateAccountsError((error as any)?.message);
+            this.logger.error(error);
+            throw error;
         }
 
-        if (updateResult.modifiedCount === 0) { // TODO: use "!updateResult.modifiedCount" instead?
-            throw new BLAccountNotFoundError();
+        if (updateResult.modifiedCount !== accountIds.length) {
+            const err = new Error("Could not updateAccountStatesByIds");
+            this.logger.error(err);
+            throw err;
         }
     }
 }

@@ -32,7 +32,7 @@ const REGEX: RegExp = /^([0]|([1-9][0-9]{0,17}))([.][0-9]{0,3}[1-9])?$/;
 // Can be optimized.
 export function stringToBigint(stringValue: string, decimals: number): bigint {
 	if (!REGEX.test(stringValue)) {
-		throw new Error("stringToBigint() - regex test failed");
+		throw new Error("stringToBigint() - regex test failed, invalid input stringValue");
 	}
 
 	// Count the decimals on the received string.

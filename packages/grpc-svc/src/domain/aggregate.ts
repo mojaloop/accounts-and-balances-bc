@@ -26,127 +26,139 @@
 
  --------------
  ******/
+"use strict";
 
+
+import {AuditSecurityContext, IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
+import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
+import {IAuthorizationClient, UnauthorizedError} from "@mojaloop/security-bc-public-types-lib";
+import {ForbiddenError} from "@mojaloop/security-bc-public-types-lib/dist/index";
+import {ChartOfAccountsPrivilegeNames} from "../domain/privilege_names";
 import {
-	IChartOfAccountsRepo,
 	ILedgerAdapter,
 	LedgerAdapterAccount,
 	LedgerAdapterJournalEntry,
 	LedgerAdapterRequestId
-} from "./infrastructure-types";
+} from "./infrastructure-types/ledger_adapter";
 import {CoaAccount} from "./coa_account";
+
 import {
 	AccountAlreadyExistsError,
-	AccountNotFoundError,
-	InvalidAccountStateError,
-	InvalidBalanceError,
-	InvalidCreditBalanceError,
-	InvalidCurrencyCodeError,
-	InvalidDebitBalanceError,
-	InvalidIdError,
-	InvalidOwnerIdError,
-	InvalidTimestampError, LedgerError
-} from "./errors";
-import {Account, JournalEntry} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+	AccountNotFoundError, AccountsAndBalancesError,
+	AccountsAndBalancesAccount,
+	AcountsAndBalancesJournalEntry,
+	CurrencyCodeNotFoundError, InvalidAccountParametersError
+} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {randomUUID} from "crypto";
 import {join} from "path";
 import {readFileSync} from "fs";
 import {bigintToString, stringToBigint} from "./converters";
+import { IChartOfAccountsRepo } from "./infrastructure-types/chart_of_accounts_repo";
+
+const CURRENCIES_FILE_NAME = "currencies.json";
 
 export class AccountsAndBalancesAggregate {
 	// Properties received through the constructor.
-	private readonly logger: ILogger;
-	private readonly chartOfAccounts: IChartOfAccountsRepo;
-	private readonly ledgerAdapter: ILedgerAdapter;
-	private readonly currencies: {code: string, decimals: number}[];
-	// Other properties.
-	private static readonly CURRENCIES_FILE_NAME: string = "currencies.json";
+	private readonly _logger: ILogger;
+	private readonly _chartOfAccountsRepo: IChartOfAccountsRepo;
+	private readonly _ledgerAdapter: ILedgerAdapter;
+	private readonly _authorizationClient: IAuthorizationClient;
+	private readonly _auditingClient: IAuditClient;
+	private readonly _currencies: {code: string, decimals: number}[];
 
 	constructor(
 		logger: ILogger,
+		authorizationClient: IAuthorizationClient,
+		auditingClient: IAuditClient,
 		accountsRepo: IChartOfAccountsRepo,
 		ledgerAdapter: ILedgerAdapter
 	) {
-		this.logger = logger.createChild(this.constructor.name);
-		this.chartOfAccounts = accountsRepo;
-		this.ledgerAdapter = ledgerAdapter;
+		this._logger = logger.createChild(this.constructor.name);
+		this._authorizationClient = authorizationClient;
+		this._auditingClient = auditingClient;
+		this._chartOfAccountsRepo = accountsRepo;
+		this._ledgerAdapter = ledgerAdapter;
 
-		// TODO: here?
-		const currenciesFileAbsolutePath: string = join(__dirname, AccountsAndBalancesAggregate.CURRENCIES_FILE_NAME);
+		const currenciesFileAbsolutePath: string = join(__dirname, CURRENCIES_FILE_NAME);
 		try {
-			this.currencies = JSON.parse(readFileSync(currenciesFileAbsolutePath, "utf-8"));
+			this._currencies = JSON.parse(readFileSync(currenciesFileAbsolutePath, "utf-8"));
 		} catch (error: unknown) {
-			this.logger.error(error);
+			this._logger.error(error);
 			throw error;
 		}
 	}
 
-	async createAccounts(accounts: Account[]): Promise<string[]> {
-		// TODO: check if any of the accounts is deleted/inactive.
+	private enforcePrivilege(secCtx: CallSecurityContext, privilegeId: string): void {
+		for (const roleId of secCtx.rolesIds) {
+			if (this._authorizationClient.roleHasPrivilege(roleId, privilegeId)) {
+				return;
+			}
+		}
+		const error = new ForbiddenError("Caller is missing role with privilegeId: " + privilegeId);
+		this._logger.isWarnEnabled() && this._logger.warn(error.message);
+		throw error;
+	}
 
-		// Extract the ids. TODO: is there a simpler way to do this?
+	private _logAction(secCtx: CallSecurityContext, actionName: string) {
+		this._logger.isDebugEnabled() && this._logger.debug(`User/App '${secCtx.username ?? secCtx.clientId}' called ${actionName}`);
+	}
+
+	async createAccounts(secCtx: CallSecurityContext, createAccountsArr: AccountsAndBalancesAccount[]): Promise<string[]> {
+		this.enforcePrivilege(secCtx, ChartOfAccountsPrivilegeNames.COA_CREATE_ACCOUNT);
+		this._logAction(secCtx, "createAccounts");
+
+		// Extract the ids which were provided.
 		const internalAccountIds: string[] = [];
-		accounts.forEach((account) => {
+		createAccountsArr.forEach((account) => {
 			if (account.id) {
 				internalAccountIds.push(account.id);
 			}
 		});
 
-		if (internalAccountIds.length) { // TODO: use "!==0" instead?
-			const accountsExist: boolean = await this.chartOfAccounts.accountsExistByInternalIds(internalAccountIds);
+		if (internalAccountIds.length >= 0) {
+			const accountsExist: boolean = await this._chartOfAccountsRepo.accountsExistByInternalIds(internalAccountIds);
 			if (accountsExist) {
-				throw new AccountAlreadyExistsError();
+				throw new AccountAlreadyExistsError(`Account with Id: ${internalAccountIds} already exists`);
 			}
 		}
 
 		const coaAccounts: CoaAccount[] = [];
 		const ledgerAdapterAccounts: LedgerAdapterAccount[] = [];
-		for (const account of accounts) {
-			// When creating an account, state is supposed to "ACTIVE" and debitBalance, creditBalance, balance and
-			// timestampLastJournalEntry are supposed to be null. For consistency purposes, and to make sure whoever
-			// calls this function knows that, if those values aren't respected, errors are thrown.
-			if (account.state !== "ACTIVE") {
-				throw new InvalidAccountStateError();
-			}
-			if (account.debitBalance) { // TODO: use "!== null" instead?
-				throw new InvalidDebitBalanceError();
-			}
-			if (account.creditBalance) { // TODO: use "!== null" instead?
-				throw new InvalidCreditBalanceError();
-			}
-			if (account.balance) { // TODO: use "!== null" instead?
-				throw new InvalidBalanceError();
-			}
-			if (account.timestampLastJournalEntry) { // TODO: use "!== null" instead?
-				throw new InvalidTimestampError();
+		for (const account of createAccountsArr) {
+
+			if (account.ownerId === "") { // provided but empty
+				throw new InvalidAccountParametersError("Invalid account.ownerId");
 			}
 
-			if (account.id === "") {
-				throw new InvalidIdError();
+			if (account.type!=="FEE" &&
+				account.type!=="POSITION" &&
+				account.type!=="SETTLEMENT" &&
+				account.type!=="HUB_MULTILATERAL_SETTLEMENT" &&
+				account.type!=="HUB_RECONCILIATION") {
+				throw new InvalidAccountParametersError("Invalid account.type");
 			}
-
-			if (account.ownerId === "") {
-				throw new InvalidOwnerIdError();
-			}
-
-			// TODO: validate the account's state and type.
-
-			// Generate a random UUId, if needed. TODO: randomUUID() can generate an id that already exists.
-			const accountId: string = account.id ?? randomUUID(); // TODO: should this be done? ?? or ||?
 
 			// Validate the currency code and get the currency.
 			const currency: {code: string, decimals: number} | undefined
-				= this.currencies.find((currency) => {
-				return currency.code === account.currencyCode;
-			});
+				= this._currencies.find((value) => value.code===account.currencyCode);
 			if (!currency) {
-				throw new InvalidCurrencyCodeError();
+				throw new CurrencyCodeNotFoundError(`Currency code: ${account.currencyCode} not found`);
 			}
 
+			// Generate a random UUId, if needed.
+			account.id = account.id ?? randomUUID();
+
+			// reset starting values
+			account.state = "ACTIVE";
+			account.postedDebitBalance = account.pendingDebitBalance =
+				account.postedCreditBalance = account.pendingCreditBalance = "0";
+			account.timestampLastJournalEntry = null;
+
+
 			const coaAccount: CoaAccount = {
-				internalId: accountId,
-				externalId: accountId,
+				id: account.id,
+				ledgerAccountId: account.id, // try this, reset after we get the final id from the ledgerImplementation
 				ownerId: account.ownerId,
 				state: account.state,
 				type: account.type,
@@ -156,13 +168,15 @@ export class AccountsAndBalancesAggregate {
 			coaAccounts.push(coaAccount);
 
 			const ledgerAdapterAccount: LedgerAdapterAccount = {
-				id: accountId,
+				id: account.id,
 				state: account.state,
 				type: account.type,
 				currencyCode: account.currencyCode,
 				currencyDecimals: currency.decimals,
-				debitBalance: null,
-				creditBalance: null,
+				postedDebitBalance: null,
+				pendingDebitBalance: null,
+				postedCreditBalance: null,
+				pendingCreditBalance: null,
 				timestampLastJournalEntry: null
 			};
 			ledgerAdapterAccounts.push(ledgerAdapterAccount);
@@ -170,56 +184,48 @@ export class AccountsAndBalancesAggregate {
 
 		let accountIds: string[];
 		try {
-			accountIds = await this.ledgerAdapter.createAccounts(ledgerAdapterAccounts);
-		} catch (error: unknown) {
-			if (!(error instanceof LedgerError)) {
-				this.logger.error(error);
-			}
+			accountIds = await this._ledgerAdapter.createAccounts(ledgerAdapterAccounts);
+		} catch (error: any) {
+			this._logger.error(error);
 			throw error;
 		}
 
-		await this.chartOfAccounts.storeAccounts(coaAccounts);
+		await this._chartOfAccountsRepo.storeAccounts(coaAccounts);
 
 		return accountIds;
 	}
 
-	async createJournalEntries(journalEntries: JournalEntry[]): Promise<string[]> {
-		// TODO: check if any of the accounts is deleted/inactive.
+	async createJournalEntries(secCtx: CallSecurityContext, journalEntries: AcountsAndBalancesJournalEntry[]): Promise<string[]> {
+		this.enforcePrivilege(secCtx, ChartOfAccountsPrivilegeNames.COA_CREATE_JOURNAL_ENTRY);
+		this._logAction(secCtx, "createJournalEntries");
+
+		const now = Date.now();
 
 		const ledgerAdapterJournalEntries: LedgerAdapterJournalEntry[]
 			= journalEntries.map((journalEntry) => {
-			// When creating a journal entry, timestamp is supposed to be null. For consistency purposes, and to make
-			// sure whoever calls this function knows that, if this value isn't respected, an error is thrown.
-			if (journalEntry.timestamp) { // TODO: use "!== null" instead?
-				throw new InvalidTimestampError();
-			}
 
-			if (journalEntry.id === "") {
-				throw new InvalidIdError();
-			}
+			// Generate a random UUId, if none provided
+			journalEntry.id = journalEntry.id ?? randomUUID();
 
-			if (journalEntry.ownerId === "") {
-				throw new InvalidOwnerIdError();
-			}
-
-			// Generate a random UUId, if needed. TODO: randomUUID() can generate an id that already exists.
-			const journalEntryId: string = journalEntry.id ?? randomUUID(); // TODO: should this be done? ?? or ||?
+			// set the timestamp
+			journalEntry.timestamp = now;
 
 			// Validate the currency code and get the currency.
 			const currency: {code: string, decimals: number} | undefined
-				= this.currencies.find((currency) => {
+				= this._currencies.find((currency) => {
 				return currency.code === journalEntry.currencyCode;
 			});
 			if (!currency) {
-				throw new InvalidCurrencyCodeError();
+				throw new CurrencyCodeNotFoundError();
 			}
 
 			const ledgerAdapterJournalEntry: LedgerAdapterJournalEntry = {
-				id: journalEntryId,
-				ownerId: journalEntry.ownerId,
+				id: journalEntry.id,
+				ownerId: journalEntry.ownerId || null,
 				currencyCode: journalEntry.currencyCode,
 				currencyDecimals: currency.decimals,
 				amount: journalEntry.amount,
+				pending: journalEntry.pending,
 				debitedAccountId: journalEntry.debitedAccountId,
 				creditedAccountId: journalEntry.creditedAccountId,
 				timestamp: journalEntry.timestamp
@@ -229,45 +235,50 @@ export class AccountsAndBalancesAggregate {
 
 		let journalEntryIds: string[];
 		try {
-			journalEntryIds = await this.ledgerAdapter.createJournalEntries(ledgerAdapterJournalEntries);
-		} catch (error: unknown) {
-			if (!(error instanceof LedgerError)) {
-				this.logger.error(error);
+			journalEntryIds = await this._ledgerAdapter.createJournalEntries(ledgerAdapterJournalEntries);
+		} catch (error: any) {
+			this._logger.error(error);
+			if (error instanceof AccountsAndBalancesError) {
+				throw error;
 			}
-			throw error;
+			throw new AccountsAndBalancesError(error.message ?? "unknown error");
 		}
+
 		return journalEntryIds;
 	}
 
-	async getAccountsByIds(accountIds: string[]): Promise<Account[]> {
-		// TODO: check if any of the accounts is deleted/inactive.
+	async getAccountsByIds(secCtx: CallSecurityContext, accountIds: string[]): Promise<AccountsAndBalancesAccount[]> {
+		this.enforcePrivilege(secCtx, ChartOfAccountsPrivilegeNames.COA_VIEW_ACCOUNT);
+		this._logAction(secCtx, "getAccountsByIds");
 
-		const coaAccounts: CoaAccount[] = await this.chartOfAccounts.getAccountsByInternalIds(accountIds);
+		const coaAccounts: CoaAccount[] = await this._chartOfAccountsRepo.getAccountsByInternalIds(accountIds);
 		if (!coaAccounts.length) {
 			return [];
 		}
 
-		const accounts: Account[] = await this.getAccountsByExternalIdsOfCoaAccounts(coaAccounts);
+		const accounts: AccountsAndBalancesAccount[] = await this._getAccountsByExternalIdsOfCoaAccounts(coaAccounts);
 		return accounts;
 	}
 
-	async getAccountsByOwnerId(ownerId: string): Promise<Account[]> {
-		// TODO: check if any of the accounts is deleted/inactive.
+	async getAccountsByOwnerId(secCtx: CallSecurityContext, ownerId: string): Promise<AccountsAndBalancesAccount[]> {
+		this.enforcePrivilege(secCtx, ChartOfAccountsPrivilegeNames.COA_VIEW_ACCOUNT);
+		this._logAction(secCtx, "getAccountsByOwnerId");
 
-		const coaAccounts: CoaAccount[] = await this.chartOfAccounts.getAccountsByOwnerId(ownerId);
+		const coaAccounts: CoaAccount[] = await this._chartOfAccountsRepo.getAccountsByOwnerId(ownerId);
 		if (!coaAccounts.length) {
 			return [];
 		}
 
-		const accounts: Account[] = await this.getAccountsByExternalIdsOfCoaAccounts(coaAccounts);
+		const accounts: AccountsAndBalancesAccount[] = await this._getAccountsByExternalIdsOfCoaAccounts(coaAccounts);
 		return accounts;
 	}
 
-	async getJournalEntriesByAccountId(accountId: string): Promise<JournalEntry[]> {
-		// TODO: check if any of the accounts is deleted/inactive.
+	async getJournalEntriesByAccountId(secCtx: CallSecurityContext, accountId: string): Promise<AcountsAndBalancesJournalEntry[]> {
+		this.enforcePrivilege(secCtx, ChartOfAccountsPrivilegeNames.COA_VIEW_JOURNAL_ENTRY);
+		this._logAction(secCtx, "getJournalEntriesByAccountId");
 
 		const coaAccount: CoaAccount | undefined =
-			(await this.chartOfAccounts.getAccountsByInternalIds([accountId]))[0];
+			(await this._chartOfAccountsRepo.getAccountsByInternalIds([accountId]))[0];
 		if (!coaAccount) {
 			return [];
 		}
@@ -275,20 +286,22 @@ export class AccountsAndBalancesAggregate {
 		let ledgerAdapterJournalEntries: LedgerAdapterJournalEntry[];
 		try {
 			ledgerAdapterJournalEntries =
-				await this.ledgerAdapter.getJournalEntriesByAccountId(accountId, coaAccount.currencyDecimals);
-		} catch (error: unknown) {
-			if (!(error instanceof LedgerError)) {
-				this.logger.error(error);
+				await this._ledgerAdapter.getJournalEntriesByAccountId(accountId, coaAccount.currencyDecimals);
+		} catch (error: any) {
+			this._logger.error(error);
+			if (error instanceof AccountsAndBalancesError) {
+				throw error;
 			}
-			throw error;
+			throw new AccountsAndBalancesError(error.message ?? "unknown error");
 		}
 
-		const journalEntries: JournalEntry[] = ledgerAdapterJournalEntries.map((ledgerAdapterJournalEntry) => {
-			const journalEntry: JournalEntry = {
+		const journalEntries: AcountsAndBalancesJournalEntry[] = ledgerAdapterJournalEntries.map((ledgerAdapterJournalEntry) => {
+			const journalEntry: AcountsAndBalancesJournalEntry = {
 				id: ledgerAdapterJournalEntry.id,
 				ownerId: ledgerAdapterJournalEntry.ownerId,
 				currencyCode: ledgerAdapterJournalEntry.currencyCode,
 				amount: ledgerAdapterJournalEntry.amount,
+				pending: ledgerAdapterJournalEntry.pending,
 				debitedAccountId: ledgerAdapterJournalEntry.debitedAccountId,
 				creditedAccountId: ledgerAdapterJournalEntry.creditedAccountId,
 				timestamp: ledgerAdapterJournalEntry.timestamp
@@ -298,107 +311,123 @@ export class AccountsAndBalancesAggregate {
 		return journalEntries;
 	}
 
-	async deleteAccountsByIds(accountIds: string[]): Promise<void> {
-		const accountsExist: boolean = await this.chartOfAccounts.accountsExistByInternalIds(accountIds);
-		if (!accountsExist) {
+	async deleteAccountsByIds(secCtx: CallSecurityContext, accountIds: string[]): Promise<void> {
+		this.enforcePrivilege(secCtx, ChartOfAccountsPrivilegeNames.COA_DELETE_ACCOUNT);
+		this._logAction(secCtx, "deleteAccountsByIds");
+
+		const accounts = await this._chartOfAccountsRepo.getAccountsByInternalIds(accountIds);
+		if (!accounts || accounts.length <= 0) {
 			throw new AccountNotFoundError();
 		}
 
+		if (accounts[0].state !== "ACTIVE") {
+			throw new AccountsAndBalancesError("Cannot deactivate an account that is not active");
+		}
 		try {
-			await this.ledgerAdapter.deleteAccountsByIds(accountIds);
-		} catch (error: unknown) {
-			if (!(error instanceof LedgerError)) {
-				this.logger.error(error);
+			await this._ledgerAdapter.deleteAccountsByIds(accountIds);
+		} catch (error: any) {
+			this._logger.error(error);
+			if (error instanceof AccountsAndBalancesError) {
+				throw error;
 			}
-			throw error;
+			throw new AccountsAndBalancesError(error.message ?? "unknown error");
 		}
 
-		await this.chartOfAccounts.updateAccountStatesByInternalIds(accountIds, "DELETED");
+		await this._chartOfAccountsRepo.updateAccountStatesByInternalIds(accountIds, "DELETED");
 	}
 
-	async deactivateAccountsByIds(accountIds: string[]): Promise<void> {
-		// TODO: check if any of the accounts is deleted.
+	async deactivateAccountsByIds(secCtx: CallSecurityContext, accountIds: string[]): Promise<void> {
+		this.enforcePrivilege(secCtx, ChartOfAccountsPrivilegeNames.COA_DEACTIVATE_ACCOUNT);
+		this._logAction(secCtx, "deactivateAccountsByIds");
 
-		const accountsExist: boolean = await this.chartOfAccounts.accountsExistByInternalIds(accountIds);
-		if (!accountsExist) {
+		const accounts = await this._chartOfAccountsRepo.getAccountsByInternalIds(accountIds);
+		if (!accounts || accounts.length <= 0) {
 			throw new AccountNotFoundError();
 		}
 
-		try {
-			await this.ledgerAdapter.deactivateAccountsByIds(accountIds);
-		} catch (error: unknown) {
-			if (!(error instanceof LedgerError)) {
-				this.logger.error(error);
-			}
-			throw error;
+		if (accounts[0].state!=="ACTIVE") {
+			throw new AccountsAndBalancesError("Cannot deactivate an account that is not active");
 		}
 
-		await this.chartOfAccounts.updateAccountStatesByInternalIds(accountIds, "INACTIVE");
+		try {
+			await this._ledgerAdapter.deactivateAccountsByIds(accountIds);
+		} catch (error: any) {
+			this._logger.error(error);
+			if (error instanceof AccountsAndBalancesError) {
+				throw error;
+			}
+			throw new AccountsAndBalancesError(error.message ?? "unknown error");
+		}
+
+		await this._chartOfAccountsRepo.updateAccountStatesByInternalIds(accountIds, "INACTIVE");
 	}
 
-	async activateAccountsByIds(accountIds: string[]): Promise<void> {
-		// TODO: check if any of the accounts is deleted.
+	async reactivateAccountsByIds(secCtx: CallSecurityContext, accountIds: string[]): Promise<void> {
+		this.enforcePrivilege(secCtx, ChartOfAccountsPrivilegeNames.COA_REACTIVATE_ACCOUNT);
+		this._logAction(secCtx, "reactivateAccountsByIds");
 
-		const accountsExist: boolean = await this.chartOfAccounts.accountsExistByInternalIds(accountIds);
-		if (!accountsExist) {
+		const accounts = await this._chartOfAccountsRepo.getAccountsByInternalIds(accountIds);
+		if (!accounts || accounts.length<=0) {
 			throw new AccountNotFoundError();
 		}
 
-		try {
-			await this.ledgerAdapter.activateAccountsByIds(accountIds);
-		} catch (error: unknown) {
-			if (!(error instanceof LedgerError)) {
-				this.logger.error(error);
-			}
-			throw error;
+		if(accounts[0].state !== "INACTIVE"){
+			throw new AccountsAndBalancesError("Cannot reactivate an account that is not inactive");
 		}
 
-		await this.chartOfAccounts.updateAccountStatesByInternalIds(accountIds, "ACTIVE");
+		try {
+			await this._ledgerAdapter.reactivateAccountsByIds(accountIds);
+		} catch (error: any) {
+			this._logger.error(error);
+			if (error instanceof AccountsAndBalancesError) {
+				throw error;
+			}
+			throw new AccountsAndBalancesError(error.message ?? "unknown error");
+		}
+
+		await this._chartOfAccountsRepo.updateAccountStatesByInternalIds(accountIds, "ACTIVE");
 	}
 
-	private async getAccountsByExternalIdsOfCoaAccounts(coaAccounts: CoaAccount[]): Promise<Account[]> {
-		const externalAccountIds: LedgerAdapterRequestId[] = coaAccounts.map((coaAccount) => { // TODO: change array name.
-			return {id: coaAccount.externalId, currencyDecimals: coaAccount.currencyDecimals};
+	private async _getAccountsByExternalIdsOfCoaAccounts(coaAccounts: CoaAccount[]): Promise<AccountsAndBalancesAccount[]> {
+		const externalAccountIds: LedgerAdapterRequestId[] = coaAccounts.map((coaAccount) => {
+			return {id: coaAccount.ledgerAccountId, currencyDecimals: coaAccount.currencyDecimals};
 		});
 
 		let ledgerAdapterAccounts: LedgerAdapterAccount[];
 		try {
-			ledgerAdapterAccounts = await this.ledgerAdapter.getAccountsByIds(externalAccountIds);
-		} catch (error: unknown) {
-			if (!(error instanceof LedgerError)) {
-				this.logger.error(error);
+			ledgerAdapterAccounts = await this._ledgerAdapter.getAccountsByIds(externalAccountIds);
+		} catch (error: any) {
+			this._logger.error(error);
+			if (error instanceof AccountsAndBalancesError) {
+				throw error;
 			}
-			throw error;
+			throw new AccountsAndBalancesError(error.message ?? "unknown error");
 		}
 
-		const accounts: Account[] = ledgerAdapterAccounts.map((ledgerAdapterAccount) => {
+		const accounts: AccountsAndBalancesAccount[] = ledgerAdapterAccounts.map((ledgerAdapterAccount) => {
 			const coaAccount: CoaAccount | undefined = coaAccounts.find((coaAccount) => {
-				return coaAccount.externalId === ledgerAdapterAccount.id;
+				return coaAccount.ledgerAccountId === ledgerAdapterAccount.id;
 			});
 			if (!coaAccount) {
-				throw new Error(); // TODO: create custom error.
+				throw new Error();
 			}
 
-			if (
-				!ledgerAdapterAccount.debitBalance
-				|| !ledgerAdapterAccount.creditBalance
-			) {
-				throw new Error(); // TODO: create custom error.
-			}
 			const balance: string = this.calculateBalanceString(
-				ledgerAdapterAccount.debitBalance,
-				ledgerAdapterAccount.creditBalance,
+				ledgerAdapterAccount.postedDebitBalance || "0",
+				ledgerAdapterAccount.postedCreditBalance || "0",
 				coaAccount.currencyDecimals
 			);
 
-			const account: Account = {
-				id: coaAccount.internalId,
+			const account: AccountsAndBalancesAccount = {
+				id: coaAccount.id,
 				ownerId: coaAccount.ownerId,
 				state: coaAccount.state,
 				type: coaAccount.type,
 				currencyCode: coaAccount.currencyCode,
-				debitBalance: ledgerAdapterAccount.debitBalance,
-				creditBalance: ledgerAdapterAccount.creditBalance,
+				postedDebitBalance: ledgerAdapterAccount.postedDebitBalance,
+				pendingDebitBalance: ledgerAdapterAccount.pendingDebitBalance,
+				postedCreditBalance: ledgerAdapterAccount.postedCreditBalance,
+				pendingCreditBalance: ledgerAdapterAccount.pendingCreditBalance,
 				balance: balance,
 				timestampLastJournalEntry: ledgerAdapterAccount.timestampLastJournalEntry
 			};

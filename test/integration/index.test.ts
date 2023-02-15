@@ -29,10 +29,10 @@
 
 import {LogLevel} from "@mojaloop/logging-bc-public-types-lib";
 import {KafkaLogger} from "@mojaloop/logging-bc-client-lib";
-import {GrpcClient} from "@mojaloop/accounts-and-balances-bc-grpc-client-lib";
-import {Account, JournalEntry} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import {AccountsAndBalancesGrpcClient} from "@mojaloop/accounts-and-balances-bc-grpc-client-lib";
+import {AccountsAndBalancesAccount, AcountsAndBalancesJournalEntry} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {randomUUID} from "crypto";
-import {GrpcService} from "@mojaloop/accounts-and-balances-bc-grpc-svc/dist/application/grpc_svc";
+import {ChartOfAccountsGrpcService} from "../../packages/grpc-svc/src/application/service";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
 import {
 	BuiltinLedgerAccount,
@@ -44,7 +44,7 @@ import {
 import {AuthorizationClientMock} from "@mojaloop/accounts-and-balances-bc-shared-mocks-lib";
 import {
 	BuiltinLedgerGrpcService
-} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc/dist/application/builtin_ledger_grpc_svc";
+} from "../../packages/builtin-ledger-grpc-svc/src/application/service";
 import {IChartOfAccountsRepo} from "@mojaloop/accounts-and-balances-bc-grpc-svc/dist/domain";
 import {CoaAccount} from "@mojaloop/accounts-and-balances-bc-grpc-svc/dist/domain/coa_account";
 import {
@@ -65,7 +65,7 @@ const KAFKA_LOGS_TOPIC: string = "logs";
 
 const MONGO_URL: string = "mongodb://root:mongoDbPas42@localhost:27017";
 
-const ACCOUNTS_AND_BALANCES_URL: string = "localhost:1234";
+const ACCOUNTS_AND_BALANCES_URL: string = "localhost:3300";
 
 // Hub account.
 const HUB_ACCOUNT_ID: string = randomUUID();
@@ -77,7 +77,7 @@ const HUB_ACCOUNT_INITIAL_CREDIT_BALANCE: string = "1000000"; // Currency decima
 let kafkaLogger: KafkaLogger;
 let builtinLedgerAccountsRepo: IBuiltinLedgerAccountsRepo;
 let chartOfAccountRepo: IChartOfAccountsRepo;
-let grpcClient: GrpcClient;
+let grpcClient: AccountsAndBalancesGrpcClient;
 
 describe("accounts and balances - integration tests with the built-in ledger", () => {
 	beforeAll(async () => {
@@ -115,16 +115,16 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 			limitCheckMode: "NONE",
 			currencyCode: "EUR",
 			currencyDecimals: HUB_ACCOUNT_CURRENCY_DECIMALS,
-			debitBalance: 0n,
-			creditBalance: initialCreditBalanceHubAccount,
+			postedDebitBalance: 0n,
+			postedCreditBalance: initialCreditBalanceHubAccount,
 			timestampLastJournalEntry: null
 		};
 		await builtinLedgerAccountsRepo.storeNewAccount(builtinLedgerHubAccount);
 
 		// Create the hub account, used to credit other accounts, on the main service.
 		const coaHubAccount: CoaAccount = {
-			internalId: HUB_ACCOUNT_ID,
-			externalId: HUB_ACCOUNT_ID,
+			id: HUB_ACCOUNT_ID,
+			ledgerAccountId: HUB_ACCOUNT_ID,
 			ownerId: "test",
 			state: "ACTIVE",
 			type: "FEE",
@@ -140,12 +140,12 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 			builtinLedgerAccountsRepo
 		);
 
-		await GrpcService.start(
+		await ChartOfAccountsGrpcService.start(
 			kafkaLogger,
 			chartOfAccountRepo
 		);
 
-		grpcClient = new GrpcClient(
+		grpcClient = new AccountsAndBalancesGrpcClient(
 			kafkaLogger,
 			ACCOUNTS_AND_BALANCES_URL
 		);
@@ -154,7 +154,7 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 
 	afterAll(async () => {
 		await grpcClient.destroy();
-		await GrpcService.stop();
+		await ChartOfAccountsGrpcService.stop();
 		await BuiltinLedgerGrpcService.stop();
 		await kafkaLogger.destroy();
 	});
@@ -162,7 +162,7 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 	/* createAccounts() */
 
 	test("createAccounts()", async () => {
-		const accountA: Account = {
+		const accountA: AccountsAndBalancesAccount = {
 			id: null,
 			ownerId: "test",
 			state: "ACTIVE",
@@ -174,7 +174,7 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 			timestampLastJournalEntry: null
 		};
 
-		const accountB: Account = {
+		const accountB: AccountsAndBalancesAccount = {
 			id: null,
 			ownerId: "test",
 			state: "ACTIVE",
@@ -203,11 +203,11 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 
 	test("createJournalEntries()", async () => {
 		// Before creating a journal entry, the respective accounts need to be created.
-		const accounts: Account[] = await createAndCredit2Accounts();
+		const accounts: AccountsAndBalancesAccount[] = await createAndCredit2Accounts();
 		const idAccountA: string = accounts[0].id!;
 		const idAccountB: string = accounts[1].id!;
 
-		const journalEntryA: JournalEntry = {
+		const journalEntryA: AcountsAndBalancesJournalEntry = {
 			id: null,
 			ownerId: null,
 			currencyCode: "EUR",
@@ -217,7 +217,7 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 			timestamp: null
 		};
 
-		const journalEntryB: JournalEntry = {
+		const journalEntryB: AcountsAndBalancesJournalEntry = {
 			id: null,
 			ownerId: null,
 			currencyCode: "EUR",
@@ -244,7 +244,7 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 	/* getAccountsByIds() */
 
 	test("getAccountsByIds()", async () => {
-		const accountA: Account = {
+		const accountA: AccountsAndBalancesAccount = {
 			id: null,
 			ownerId: "test",
 			state: "ACTIVE",
@@ -256,7 +256,7 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 			timestampLastJournalEntry: null
 		};
 
-		const accountB: Account = {
+		const accountB: AccountsAndBalancesAccount = {
 			id: null,
 			ownerId: "test",
 			state: "ACTIVE",
@@ -268,7 +268,7 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 			timestampLastJournalEntry: null
 		};
 
-		const accountC: Account = {
+		const accountC: AccountsAndBalancesAccount = {
 			id: null,
 			ownerId: "test",
 			state: "ACTIVE",
@@ -284,12 +284,12 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 		const idAccountA: string | undefined = accountIds[0];
 		const idAccountC: string | undefined = accountIds[2];
 
-		const accounts: Account[] = await grpcClient.getAccountsByIds([idAccountA, idAccountC]);
+		const accounts: AccountsAndBalancesAccount[] = await grpcClient.getAccountsByIds([idAccountA, idAccountC]);
 
 		expect(accounts.length).toEqual(2); // Accounts A and C.
 
-		const receivedAccountA: Account = accounts[0].id === idAccountA ? accounts[0] : accounts[1];
-		const receivedAccountC: Account = accounts[1].id === idAccountC ? accounts[1] : accounts[0];
+		const receivedAccountA: AccountsAndBalancesAccount = accounts[0].id === idAccountA ? accounts[0] : accounts[1];
+		const receivedAccountC: AccountsAndBalancesAccount = accounts[1].id === idAccountC ? accounts[1] : accounts[0];
 
 		expect(receivedAccountA.id).toEqual(idAccountA);
 		expect(receivedAccountA.ownerId).toEqual(accountA.ownerId);
@@ -318,7 +318,7 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 		const ownerIdA: string = randomUUID();
 		const ownerIdB: string = randomUUID();
 
-		const accountA: Account = {
+		const accountA: AccountsAndBalancesAccount = {
 			id: null,
 			ownerId: ownerIdA,
 			state: "ACTIVE",
@@ -330,7 +330,7 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 			timestampLastJournalEntry: null
 		};
 
-		const accountB: Account = {
+		const accountB: AccountsAndBalancesAccount = {
 			id: null,
 			ownerId: ownerIdB,
 			state: "ACTIVE",
@@ -342,7 +342,7 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 			timestampLastJournalEntry: null
 		};
 
-		const accountC: Account = {
+		const accountC: AccountsAndBalancesAccount = {
 			id: null,
 			ownerId: ownerIdA,
 			state: "ACTIVE",
@@ -358,12 +358,12 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 		const idAccountA: string | undefined = accountIds[0];
 		const idAccountC: string | undefined = accountIds[2];
 
-		const accounts: Account[] = await grpcClient.getAccountsByOwnerId(ownerIdA);
+		const accounts: AccountsAndBalancesAccount[] = await grpcClient.getAccountsByOwnerId(ownerIdA);
 
 		expect(accounts.length).toEqual(2); // Accounts A and C.
 
-		const receivedAccountA: Account = accounts[0].id === idAccountA ? accounts[0] : accounts[1];
-		const receivedAccountC: Account = accounts[1].id === idAccountC ? accounts[1] : accounts[0];
+		const receivedAccountA: AccountsAndBalancesAccount = accounts[0].id === idAccountA ? accounts[0] : accounts[1];
+		const receivedAccountC: AccountsAndBalancesAccount = accounts[1].id === idAccountC ? accounts[1] : accounts[0];
 
 		expect(receivedAccountA.id).toEqual(idAccountA);
 		expect(receivedAccountA.ownerId).toEqual(accountA.ownerId);
@@ -389,7 +389,7 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 	/* getJournalEntriesByAccountId() */
 
 	test("getJournalEntriesByAccountId()", async () => {
-		const accountA: Account = {
+		const accountA: AccountsAndBalancesAccount = {
 			id: null,
 			ownerId: "test",
 			state: "ACTIVE",
@@ -401,7 +401,7 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 			timestampLastJournalEntry: null
 		};
 
-		const accountB: Account = {
+		const accountB: AccountsAndBalancesAccount = {
 			id: null,
 			ownerId: "test",
 			state: "ACTIVE",
@@ -413,7 +413,7 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 			timestampLastJournalEntry: null
 		};
 
-		const accountC: Account = {
+		const accountC: AccountsAndBalancesAccount = {
 			id: null,
 			ownerId: "test",
 			state: "ACTIVE",
@@ -430,7 +430,7 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 		const idAccountB: string | undefined = accountIds[1];
 		const idAccountC: string | undefined = accountIds[2];
 
-		const journalEntryA: JournalEntry = {
+		const journalEntryA: AcountsAndBalancesJournalEntry = {
 			id: null,
 			ownerId: null,
 			currencyCode: "EUR",
@@ -440,7 +440,7 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 			timestamp: null
 		};
 
-		const journalEntryB: JournalEntry = {
+		const journalEntryB: AcountsAndBalancesJournalEntry = {
 			id: null,
 			ownerId: null,
 			currencyCode: "EUR",
@@ -450,7 +450,7 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 			timestamp: null
 		};
 
-		const journalEntryC: JournalEntry = {
+		const journalEntryC: AcountsAndBalancesJournalEntry = {
 			id: null,
 			ownerId: null,
 			currencyCode: "EUR",
@@ -464,7 +464,7 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 		const idJournalEntryA: string | undefined = journalEntryIds[0];
 		const idJournalEntryC: string | undefined = journalEntryIds[2];
 
-		const journalEntries: JournalEntry[] = await grpcClient.getJournalEntriesByAccountId(idAccountB);
+		const journalEntries: AcountsAndBalancesJournalEntry[] = await grpcClient.getJournalEntriesByAccountId(idAccountB);
 
 		expect(journalEntries.length).toEqual(2); // Journal entries A and C.
 
@@ -492,9 +492,9 @@ async function createAndCredit2Accounts(
 	ownerIdAccountA: string = "test",
 	ownerIdAccountB: string = "test",
 	creditBalance: string = "100",
-): Promise<Account[]> {
+): Promise<AccountsAndBalancesAccount[]> {
 	// Account A.
-	const accountABeforeCrediting: Account = {
+	const accountABeforeCrediting: AccountsAndBalancesAccount = {
 		id: null,
 		ownerId: ownerIdAccountA,
 		state: "ACTIVE",
@@ -507,7 +507,7 @@ async function createAndCredit2Accounts(
 	};
 
 	// Account B.
-	const accountBBeforeCrediting: Account = {
+	const accountBBeforeCrediting: AccountsAndBalancesAccount = {
 		id: null,
 		ownerId: ownerIdAccountB,
 		state: "ACTIVE",
@@ -525,7 +525,7 @@ async function createAndCredit2Accounts(
 	const idAccountB: string | undefined = accountIds[1];
 
 	// Journal entry A, regarding the crediting of account A.
-	const journalEntryA: JournalEntry = {
+	const journalEntryA: AcountsAndBalancesJournalEntry = {
 		id: null,
 		ownerId: null,
 		currencyCode: "EUR",
@@ -536,7 +536,7 @@ async function createAndCredit2Accounts(
 	};
 
 	// Journal entry B, regarding the crediting of account B.
-	const journalEntryB: JournalEntry = {
+	const journalEntryB: AcountsAndBalancesJournalEntry = {
 		id: null,
 		ownerId: null,
 		currencyCode: "EUR",
@@ -548,6 +548,6 @@ async function createAndCredit2Accounts(
 
 	await grpcClient.createJournalEntries([journalEntryA, journalEntryB]);
 
-	const accountsAfterCrediting: Account[] = await grpcClient.getAccountsByIds([idAccountA, idAccountB]);
+	const accountsAfterCrediting: AccountsAndBalancesAccount[] = await grpcClient.getAccountsByIds([idAccountA, idAccountB]);
 	return accountsAfterCrediting;
 }

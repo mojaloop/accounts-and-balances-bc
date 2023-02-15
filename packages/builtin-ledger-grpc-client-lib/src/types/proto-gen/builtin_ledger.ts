@@ -10,6 +10,12 @@ type SubtypeConstructor<Constructor extends new (...args: any) => any, Subtype> 
 export interface ProtoGrpcType {
   BuiltinLedgerGrpcAccount: MessageTypeDefinition
   BuiltinLedgerGrpcAccountArray: MessageTypeDefinition
+  BuiltinLedgerGrpcCreateAccount: MessageTypeDefinition
+  BuiltinLedgerGrpcCreateAccountArray: MessageTypeDefinition
+  BuiltinLedgerGrpcCreateIdsResponse: MessageTypeDefinition
+  BuiltinLedgerGrpcCreateJournalEntry: MessageTypeDefinition
+  BuiltinLedgerGrpcCreateJournalEntryArray: MessageTypeDefinition
+  BuiltinLedgerGrpcCreatedId: MessageTypeDefinition
   BuiltinLedgerGrpcId: MessageTypeDefinition
   BuiltinLedgerGrpcIdArray: MessageTypeDefinition
   BuiltinLedgerGrpcJournalEntry: MessageTypeDefinition

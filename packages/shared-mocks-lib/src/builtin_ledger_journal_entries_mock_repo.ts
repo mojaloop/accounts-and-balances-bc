@@ -28,7 +28,7 @@
  ******/
 
 import {
-	BLJournalEntryAlreadyExistsError,
+
 	BuiltinLedgerJournalEntry,
 	IBuiltinLedgerJournalEntriesRepo
 } from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc/dist/domain";
@@ -56,7 +56,7 @@ export class BuiltinLedgerJournalEntriesMockRepo implements IBuiltinLedgerJourna
 
 	async storeNewJournalEntry(builtinLedgerJournalEntry: BuiltinLedgerJournalEntry): Promise<void> {
 		if (this.builtinLedgerJournalEntries.has(builtinLedgerJournalEntry.id)) {
-			throw new BLJournalEntryAlreadyExistsError();
+			throw new Error();
 		}
 		this.builtinLedgerJournalEntries.set(builtinLedgerJournalEntry.id, builtinLedgerJournalEntry);
 	}

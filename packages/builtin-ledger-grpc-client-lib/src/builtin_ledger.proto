@@ -4,23 +4,59 @@ import "google/protobuf/empty.proto";
 
 service GrpcBuiltinLedger {
   // All unary RPCs.
-  rpc CreateAccounts(BuiltinLedgerGrpcAccountArray) returns (BuiltinLedgerGrpcIdArray);
-  rpc CreateJournalEntries(BuiltinLedgerGrpcJournalEntryArray) returns (BuiltinLedgerGrpcIdArray);
+  rpc CreateAccounts(BuiltinLedgerGrpcCreateAccountArray) returns (BuiltinLedgerGrpcCreateIdsResponse);
+  rpc CreateJournalEntries(BuiltinLedgerGrpcCreateJournalEntryArray) returns (BuiltinLedgerGrpcCreateIdsResponse);
+
   rpc GetAccountsByIds(BuiltinLedgerGrpcIdArray) returns (BuiltinLedgerGrpcAccountArray);
   rpc GetJournalEntriesByAccountId(BuiltinLedgerGrpcId) returns (BuiltinLedgerGrpcJournalEntryArray);
+
   rpc DeleteAccountsByIds(BuiltinLedgerGrpcIdArray) returns (google.protobuf.Empty);
   rpc DeactivateAccountsByIds(BuiltinLedgerGrpcIdArray) returns (google.protobuf.Empty);
   rpc ActivateAccountsByIds(BuiltinLedgerGrpcIdArray) returns (google.protobuf.Empty);
 }
 
-/* Id. */
-
+/* Ids */
+// Used to send queries
 message BuiltinLedgerGrpcId {
   string builtinLedgerGrpcId = 1;
 }
-
 message BuiltinLedgerGrpcIdArray {
   repeated BuiltinLedgerGrpcId builtinLedgerGrpcIdArray = 1;
+}
+
+// Used as responses by create methods that create arrays
+// This allows the caller to pass a requestedId and later map the response
+// in case this service could not honor the requested id
+message BuiltinLedgerGrpcCreatedId {
+  string requestedId = 1;
+  string attributedId = 2;
+}
+message BuiltinLedgerGrpcCreateIdsResponse {
+  repeated BuiltinLedgerGrpcCreatedId ids = 1;
+}
+
+/* Create requests. */
+
+message BuiltinLedgerGrpcCreateAccount {
+  string requestedId = 1;
+  string type = 3;
+  string currencyCode = 4;
+}
+message BuiltinLedgerGrpcCreateAccountArray {
+  repeated BuiltinLedgerGrpcCreateAccount accountsToCreate = 1;
+}
+
+message BuiltinLedgerGrpcCreateJournalEntry {
+  string requestedId = 1;
+  string ownerId = 2;
+  string currencyCode = 3;
+  string amount = 4;
+  bool pending = 5;
+  string debitedAccountId = 6;
+  string creditedAccountId = 7;
+}
+message BuiltinLedgerGrpcCreateJournalEntryArray {
+  repeated BuiltinLedgerGrpcCreateJournalEntry entriesToCreate = 1;
 }
 
 /* Account. */
@@ -29,10 +65,12 @@ message BuiltinLedgerGrpcAccount {
   string id = 1;
   string state = 2;
   string type = 3;
-	string currencyCode = 4;
-  string debitBalance = 5;
-  string creditBalance = 6;
-  uint64 timestampLastJournalEntry = 7;
+  string currencyCode = 4;
+  string postedDebitBalance = 5;
+  string pendingDebitBalance = 6;
+  string postedCreditBalance = 7;
+  string pendingCreditBalance = 8;
+  uint64 timestampLastJournalEntry = 9;
 }
 
 message BuiltinLedgerGrpcAccountArray {
@@ -44,11 +82,12 @@ message BuiltinLedgerGrpcAccountArray {
 message BuiltinLedgerGrpcJournalEntry {
   string id = 1;
   string ownerId = 2;
-	string currencyCode = 3;
-	string amount = 4;
-	string debitedAccountId = 5;
-  string creditedAccountId = 6;
-  uint64 timestamp = 7;
+  string currencyCode = 3;
+  string amount = 4;
+  bool pending = 5;
+  string debitedAccountId = 6;
+  string creditedAccountId = 7;
+  uint64 timestamp = 8;
 }
 
 message BuiltinLedgerGrpcJournalEntryArray {

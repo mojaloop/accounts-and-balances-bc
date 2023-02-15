@@ -28,13 +28,11 @@
  ******/
 
 import {
-	BLAccountAlreadyExistsError,
-	BLAccountNotFoundError,
 	BuiltinLedgerAccount,
 	IBuiltinLedgerAccountsRepo
 } from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc/dist/domain";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {AccountState} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import {AccountsAndBalancesAccountState} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 export class BuiltinLedgerAccountsMockRepo implements IBuiltinLedgerAccountsRepo {
 	// Properties received through the constructor.
@@ -58,7 +56,7 @@ export class BuiltinLedgerAccountsMockRepo implements IBuiltinLedgerAccountsRepo
 
 	async storeNewAccount(builtinLedgerAccount: BuiltinLedgerAccount): Promise<void> {
 		if (this.builtinLedgerAccounts.has(builtinLedgerAccount.id)) {
-			throw new BLAccountAlreadyExistsError();
+			throw new Error();
 		}
 		this.builtinLedgerAccounts.set(builtinLedgerAccount.id, builtinLedgerAccount);
 	}
@@ -82,7 +80,7 @@ export class BuiltinLedgerAccountsMockRepo implements IBuiltinLedgerAccountsRepo
 	): Promise<void> {
 		const builtinLedgerAccount: BuiltinLedgerAccount | undefined = this.builtinLedgerAccounts.get(accountId);
 		if (!builtinLedgerAccount) {
-			throw new BLAccountNotFoundError();
+			throw new Error();
 		}
 		builtinLedgerAccount.debitBalance = debitBalance;
 		builtinLedgerAccount.timestampLastJournalEntry = timestampLastJournalEntry;
@@ -95,13 +93,13 @@ export class BuiltinLedgerAccountsMockRepo implements IBuiltinLedgerAccountsRepo
 	): Promise<void> {
 		const builtinLedgerAccount: BuiltinLedgerAccount | undefined = this.builtinLedgerAccounts.get(accountId);
 		if (!builtinLedgerAccount) {
-			throw new BLAccountNotFoundError();
+			throw new Error();
 		}
 		builtinLedgerAccount.creditBalance = creditBalance;
 		builtinLedgerAccount.timestampLastJournalEntry = timestampLastJournalEntry;
 	}
 
-	async updateAccountStatesByIds(accountIds: string[], accountState: AccountState): Promise<void> {
+	async updateAccountStatesByIds(accountIds: string[], accountState: AccountsAndBalancesAccountState): Promise<void> {
 		for (const builtinLedgerAccount of this.builtinLedgerAccounts.values()) {
 			for (const accountId of accountIds) {
 				if (builtinLedgerAccount.id === accountId) {

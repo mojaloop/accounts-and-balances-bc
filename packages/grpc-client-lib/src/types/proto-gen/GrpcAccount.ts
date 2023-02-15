@@ -8,8 +8,10 @@ export interface GrpcAccount {
   'state'?: (string);
   'type'?: (string);
   'currencyCode'?: (string);
-  'debitBalance'?: (string);
-  'creditBalance'?: (string);
+  'postedDebitBalance'?: (string);
+  'pendingDebitBalance'?: (string);
+  'postedCreditBalance'?: (string);
+  'pendingCreditBalance'?: (string);
   'balance'?: (string);
   'timestampLastJournalEntry'?: (number | string | Long);
 }
@@ -20,8 +22,10 @@ export interface GrpcAccount__Output {
   'state'?: (string);
   'type'?: (string);
   'currencyCode'?: (string);
-  'debitBalance'?: (string);
-  'creditBalance'?: (string);
+  'postedDebitBalance'?: (string);
+  'pendingDebitBalance'?: (string);
+  'postedCreditBalance'?: (string);
+  'pendingCreditBalance'?: (string);
   'balance'?: (string);
   'timestampLastJournalEntry'?: (number);
 }

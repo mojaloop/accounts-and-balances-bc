@@ -33,7 +33,7 @@ import {
 	IChartOfAccountsRepo
 } from "@mojaloop/accounts-and-balances-bc-grpc-svc/dist/domain";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {AccountState} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import {AccountsAndBalancesAccountState} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 export class ChartOfAccountsMockRepo implements IChartOfAccountsRepo {
 	// Properties received through the constructor.
@@ -55,10 +55,10 @@ export class ChartOfAccountsMockRepo implements IChartOfAccountsRepo {
 		return;
 	}
 
-	async accountsExistByInternalIds(internalIds: string[]): Promise<boolean> {
+	async accountsExistByInternalIds(ledgerAccountIds: string[]): Promise<boolean> {
 		for (const coaAccount of this.chartOfAccounts.values()) {
-			for (const internalId of internalIds) {
-				if (coaAccount.internalId === internalId) {
+			for (const ledgerAccountId of ledgerAccountIds) {
+				if (coaAccount.ledgerAccountId === ledgerAccountId) {
 					return true;
 				}
 			}
@@ -68,12 +68,12 @@ export class ChartOfAccountsMockRepo implements IChartOfAccountsRepo {
 
 	async storeAccounts(coaAccounts: CoaAccount[]): Promise<void> {
 		for (const coaAccount of coaAccounts) {
-			if (this.chartOfAccounts.has(coaAccount.internalId)) {
+			if (this.chartOfAccounts.has(coaAccount.ledgerAccountId)) {
 				throw new AccountAlreadyExistsError();
 			}
 		}
 		for (const coaAccount of coaAccounts) {
-			this.chartOfAccounts.set(coaAccount.internalId, coaAccount);
+			this.chartOfAccounts.set(coaAccount.ledgerAccountId, coaAccount);
 		}
 	}
 
@@ -81,7 +81,7 @@ export class ChartOfAccountsMockRepo implements IChartOfAccountsRepo {
 		const coaAccounts: CoaAccount[] = [];
 		for (const coaAccount of this.chartOfAccounts.values()) {
 			for (const internalId of internalIds) {
-				if (coaAccount.internalId === internalId) {
+				if (coaAccount.ledgerAccountId === internalId) {
 					coaAccounts.push(coaAccount);
 				}
 			}
@@ -99,10 +99,10 @@ export class ChartOfAccountsMockRepo implements IChartOfAccountsRepo {
 		return coaAccounts;
 	}
 
-	async updateAccountStatesByInternalIds(internalIds: string[], accountState: AccountState): Promise<void> {
+	async updateAccountStatesByInternalIds(internalIds: string[], accountState: AccountsAndBalancesAccountState): Promise<void> {
 		for (const coaAccount of this.chartOfAccounts.values()) {
 			for (const internalId of internalIds) {
-				if (coaAccount.internalId === internalId) {
+				if (coaAccount.ledgerAccountId === internalId) {
 					coaAccount.state = accountState;
 				}
 			}

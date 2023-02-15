@@ -21,34 +21,12 @@
 
  * Crosslake
  - Pedro Sousa Barreto <pedrob@crosslaketech.com>
-
- * Gonçalo Garcia <goncalogarcia99@gmail.com>
+ - Gonçalo Garcia <goncalogarcia99@gmail.com>
 
  --------------
  ******/
+"use strict";
 
-export type AccountState = "ACTIVE" | "DELETED" | "INACTIVE";
+export * from "./types";
+export * from "./errors";
 
-export type AccountType = "FEE" | "MULTILATERAL" | "POSITION" | "RECON" | "SETTLEMENT";
-
-export type Account = {
-	id: string | null;
-	ownerId: string;
-	state: AccountState;
-	type: AccountType;
-	currencyCode: string;
-	debitBalance: string | null;
-	creditBalance: string | null;
-	balance: string | null;
-	timestampLastJournalEntry: number | null;
-}
-
-export type JournalEntry = {
-	id: string | null;
-	ownerId: string | null;
-	currencyCode: string;
-	amount: string;
-	debitedAccountId: string;
-	creditedAccountId: string;
-	timestamp: number | null;
-}

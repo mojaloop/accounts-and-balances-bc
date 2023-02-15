@@ -19,24 +19,63 @@
  their names indented and be marked with a '-'. Email address can be added
  optionally within square brackets <email>.
 
+ * Gates Foundation
+ - Name Surname <name.surname@gatesfoundation.com>
+
  * Crosslake
  - Pedro Sousa Barreto <pedrob@crosslaketech.com>
-
- * Gonçalo Garcia <goncalogarcia99@gmail.com>
+ - Gonçalo Garcia <goncalogarcia99@gmail.com>
 
  --------------
  ******/
+"use strict";
 
-import {AccountsAndBalancesAccountState, AccountsAndBalancesAccountType} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+export type AccountsAndBalancesAccountState = "ACTIVE" | "DELETED" | "INACTIVE";
 
-// Chart of Accounts' Account.
-export type CoaAccount = {
-	id: string;
-	ledgerAccountId: string;
+export type AccountsAndBalancesAccountType =
+	"FEE" | "POSITION" | "SETTLEMENT" | "HUB_MULTILATERAL_SETTLEMENT" | "HUB_RECONCILIATION";
+
+export type AccountsAndBalancesAccount = {
+	id: string | null;
 	ownerId: string;
 	state: AccountsAndBalancesAccountState;
 	type: AccountsAndBalancesAccountType;
 	currencyCode: string;
-	currencyDecimals: number;
-	// TODO: no timestamp?
+	postedDebitBalance: string | null;
+	pendingDebitBalance: string | null
+	postedCreditBalance: string | null;
+	pendingCreditBalance: string | null;
+	balance: string | null;
+	timestampLastJournalEntry: number | null;
+}
+
+export type AcountsAndBalancesJournalEntry = {
+	id: string | null;
+	ownerId: string | null;
+	currencyCode: string;
+	amount: string;
+	pending: boolean;
+	debitedAccountId: string;
+	creditedAccountId: string;
+	timestamp: number | null;
+}
+
+/**
+ * Type used to request the creation of an account by the CoA Service
+ */
+export type AccountsAndBalancesCreateAccountDto = {
+	requestedId: string | null;
+	ownerId: string;
+	type: AccountsAndBalancesAccountType;
+	currencyCode: string;
+}
+
+export type AcountsAndBalancesJournalEntryDto = {
+	requestedId: string | null;
+	ownerId: string | null;
+	currencyCode: string;
+	amount: string;
+	pending: boolean;
+	debitedAccountId: string;
+	creditedAccountId: string;
 }

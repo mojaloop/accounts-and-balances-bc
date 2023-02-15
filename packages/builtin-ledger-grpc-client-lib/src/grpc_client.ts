@@ -26,242 +26,167 @@
 
  --------------
  ******/
+"use strict";
+
+
+import {join} from "path";
+import * as grpc from "@grpc/grpc-js";
+import * as protoLoader from "@grpc/proto-loader";
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {loadSync, Options, PackageDefinition} from "@grpc/proto-loader";
-import {credentials, GrpcObject, loadPackageDefinition, Deadline} from "@grpc/grpc-js";
+import {LoginHelper} from "@mojaloop/security-bc-client-lib";
 import {
-	UnableToActivateAccountsError,
-	UnableToCreateAccountsError,
-	UnableToCreateJournalEntriesError,
-	UnableToDeactivateAccountsError,
-	UnableToDeleteAccountsError,
-	UnableToGetAccountsError,
-	UnableToGetJournalEntriesError
-} from "./errors";
-import {join} from "path";
+	BuiltinLedgerGrpcCreateIdsResponse__Output
+} from "./types/proto-gen/BuiltinLedgerGrpcCreateIdsResponse";
 import {
-	BuiltinLedgerGrpcAccountArray,
+	BuiltinLedgerGrpcCreateJournalEntryArray
+} from "./types/proto-gen/BuiltinLedgerGrpcCreateJournalEntryArray";
+import {
 	BuiltinLedgerGrpcAccountArray__Output,
 	BuiltinLedgerGrpcId,
 	BuiltinLedgerGrpcIdArray,
-	BuiltinLedgerGrpcIdArray__Output,
-	BuiltinLedgerGrpcJournalEntryArray,
 	BuiltinLedgerGrpcJournalEntryArray__Output,
 	GrpcBuiltinLedgerClient,
 	ProtoGrpcType
 } from "./types";
+import { BuiltinLedgerGrpcCreateAccountArray } from "./types/proto-gen/BuiltinLedgerGrpcCreateAccountArray";
+
+
+const PROTO_FILE_NAME = "builtin_ledger.proto";
+const LOAD_PROTO_OPTIONS: protoLoader.Options = {
+	longs: Number
+};
+const TIMEOUT_MS: number = 5_000;
 
 export class BuiltinLedgerGrpcClient {
-	// Properties received through the constructor.
-	private readonly logger: ILogger;
-	// Other properties.
-	private static readonly PROTO_FILE_NAME: string = "builtin_ledger.proto";
-	private static readonly LOAD_PROTO_OPTIONS: Options = {
-		longs: Number
-	};
-	private static readonly TIMEOUT_MS: number = 5_000;
-	private readonly client: GrpcBuiltinLedgerClient;
+	private readonly _logger: ILogger;
+	private readonly _callMetadata: grpc.Metadata;
+	private readonly _loginHelper: LoginHelper;
+	private readonly _client: GrpcBuiltinLedgerClient;
 
-	constructor(
-		logger: ILogger,
-		url: string
-	) {
-		this.logger = logger.createChild(this.constructor.name);
+	constructor(url: string, loginHelper: LoginHelper, logger: ILogger) {
+		this._logger = logger.createChild(this.constructor.name);
+		this._loginHelper = loginHelper;
 
-		const protoFileAbsolutePath: string = join(__dirname, BuiltinLedgerGrpcClient.PROTO_FILE_NAME);
-		const packageDefinition: PackageDefinition = loadSync(
+		const protoFileAbsolutePath: string = join(__dirname, PROTO_FILE_NAME);
+		const packageDefinition: protoLoader.PackageDefinition = protoLoader.loadSync(
 			protoFileAbsolutePath,
-			BuiltinLedgerGrpcClient.LOAD_PROTO_OPTIONS
+			LOAD_PROTO_OPTIONS
 		);
-		const grpcObject: GrpcObject = loadPackageDefinition(packageDefinition);
-		this.client = new (grpcObject as unknown as ProtoGrpcType).GrpcBuiltinLedger(
+		const grpcObject: grpc.GrpcObject = grpc.loadPackageDefinition(packageDefinition);
+
+		this._callMetadata = new grpc.Metadata();
+		this._client = new (grpcObject as unknown as ProtoGrpcType).GrpcBuiltinLedger(
 			url,
-			credentials.createInsecure()
+			grpc.credentials.createInsecure()
 		);
 	}
 
+	private async _updateCallMetadata(): Promise<void> {
+		// this can throw and UnauthorizedError, let it
+		const token = await this._loginHelper.getToken();
+		//this._callMetadata.remove("TOKEN");
+		this._callMetadata.set("TOKEN", token.accessToken);
+		return Promise.resolve();
+	}
+
 	async init(): Promise<void> {
+		// we don't use credentials here, but want to try fetching a token to fail early
+		await this._updateCallMetadata();
+
 		return new Promise((resolve, reject) => {
-			const deadline: Deadline = Date.now() + BuiltinLedgerGrpcClient.TIMEOUT_MS;
+			const deadline: grpc.Deadline = Date.now() + TIMEOUT_MS;
+			this._client.waitForReady(deadline, (error) => {
+				if (error) return reject(error);
 
-			this.client.waitForReady(
-				deadline,
-				(error) => {
-					if (error !== undefined) {
-						reject(error);
-						return;
-					}
-
-					this.logger.info("gRPC client initialized 🚀");
-					resolve();
-				}
-			);
+				this._logger.info("BuiltinLedgerGrpcClient client initialized");
+				resolve();
+			});
 		});
 	}
 
 	async destroy(): Promise<void> {
-		this.client.close();
-		this.logger.info("gRPC client destroyed 🏁");
+		this._client.close();
+		this._logger.info("gRPC client destroyed 🏁");
 	}
 
-	async createAccounts(
-		builtinLedgerGrpcAccountArray: BuiltinLedgerGrpcAccountArray
-	): Promise<BuiltinLedgerGrpcIdArray__Output> {
+	async createAccounts(accountCreates: BuiltinLedgerGrpcCreateAccountArray): Promise<BuiltinLedgerGrpcCreateIdsResponse__Output> {
+		await this._updateCallMetadata();
+
 		return new Promise((resolve, reject) => {
-			this.client.createAccounts(
-				builtinLedgerGrpcAccountArray,
-				(error, builtinLedgerGrpcIdArrayOutput) => {
-					if (error || !builtinLedgerGrpcIdArrayOutput) {
-						reject(new UnableToCreateAccountsError(error?.details));
-						return;
-					}
-
-					/*const builtinLedgerGrpcIdsOutput: BuiltinLedgerGrpcId__Output[]
-						= builtinLedgerGrpcIdArrayOutput.builtinLedgerGrpcIdArray || [];
-
-					const accountIds: string[] = [];
-					for (const builtinLedgerGrpcIdOutput of builtinLedgerGrpcIdsOutput) {
-						if (!builtinLedgerGrpcIdOutput.builtinLedgerGrpcId) {
-							reject(new UnableToCreateAccountsError());
-							return;
-						}
-						accountIds.push(builtinLedgerGrpcIdOutput.builtinLedgerGrpcId);
-					}
-					resolve(accountIds);*/
-
-					resolve(builtinLedgerGrpcIdArrayOutput);
+			this._client.createAccounts(accountCreates, this._callMetadata, (error, idsResponse) => {
+				if (error || !idsResponse) return reject(error);
+				resolve(idsResponse);
 				}
 			);
 		});
 	}
 
-	async createJournalEntries(
-		builtinLedgerGrpcJournalEntryArray: BuiltinLedgerGrpcJournalEntryArray
-	): Promise<BuiltinLedgerGrpcIdArray__Output> {
+	async createJournalEntries(entryCreates: BuiltinLedgerGrpcCreateJournalEntryArray): Promise<BuiltinLedgerGrpcCreateIdsResponse__Output> {
+		await this._updateCallMetadata();
+
 		return new Promise((resolve, reject) => {
-			this.client.createJournalEntries(
-				builtinLedgerGrpcJournalEntryArray,
-				(error, builtinLedgerGrpcIdArrayOutput) => {
-					if (error || !builtinLedgerGrpcIdArrayOutput) {
-						reject(new UnableToCreateJournalEntriesError(error?.details));
-						return;
-					}
-
-					/*const builtinLedgerGrpcIdsOutput: BuiltinLedgerGrpcId__Output[]
-						= builtinLedgerGrpcIdArrayOutput.builtinLedgerGrpcIdArray || [];
-
-					const journalEntryIds: string[] = [];
-					for (const builtinLedgerGrpcIdOutput of builtinLedgerGrpcIdsOutput) {
-						if (!builtinLedgerGrpcIdOutput.builtinLedgerGrpcId) {
-							reject(new UnableToCreateJournalEntriesError());
-							return;
-						}
-						journalEntryIds.push(builtinLedgerGrpcIdOutput.builtinLedgerGrpcId);
-					}
-					resolve(journalEntryIds);*/
-
-					resolve(builtinLedgerGrpcIdArrayOutput);
+			this._client.createJournalEntries(entryCreates, this._callMetadata, (error, idsResponse) => {
+					if (error || !idsResponse) return reject(error);
+					resolve(idsResponse);
 				}
 			);
 		});
 	}
 
-	async getAccountsByIds(
-		builtinLedgerGrpcAccountIdArray: BuiltinLedgerGrpcIdArray
-	): Promise<BuiltinLedgerGrpcAccountArray__Output> {
-		return new Promise((resolve, reject) => {
-			this.client.getAccountsByIds(
-				builtinLedgerGrpcAccountIdArray,
-				(error, builtinLedgerGrpcAccountArrayOutput) => {
-					if (error || !builtinLedgerGrpcAccountArrayOutput) {
-						reject(new UnableToGetAccountsError(error?.details));
-						return;
-					}
+	async getAccountsByIds(accountIds: BuiltinLedgerGrpcIdArray): Promise<BuiltinLedgerGrpcAccountArray__Output> {
+		await this._updateCallMetadata();
 
-					/*const builtinLedgerGrpcAccountsOutput: BuiltinLedgerGrpcAccount__Output[]
-						= builtinLedgerGrpcAccountArrayOutput.builtinLedgerGrpcAccountArray || [];
-					resolve(builtinLedgerGrpcAccountsOutput);*/
-
-					resolve(builtinLedgerGrpcAccountArrayOutput);
+		return new Promise( (resolve, reject) => {
+			this._client.getAccountsByIds(accountIds, this._callMetadata, (error, resp) => {
+					if (error || !resp) return reject(error);
+					resolve(resp);
 				}
 			);
 		});
 	}
 
-	async getJournalEntriesByAccountId(
-		builtinLedgerGrpcAccountId: BuiltinLedgerGrpcId
-	): Promise<BuiltinLedgerGrpcJournalEntryArray__Output> {
-		return new Promise((resolve, reject) => {
-			this.client.getJournalEntriesByAccountId(
-				builtinLedgerGrpcAccountId,
-				(error, builtinLedgerGrpcJournalEntryArrayOutput) => {
-					if (error || !builtinLedgerGrpcJournalEntryArrayOutput) {
-						reject(new UnableToGetJournalEntriesError(error?.details));
-						return;
-					}
+	async getJournalEntriesByAccountId(accountId: BuiltinLedgerGrpcId): Promise<BuiltinLedgerGrpcJournalEntryArray__Output> {
+		await this._updateCallMetadata();
 
-					/*const builtinLedgerGrpcJournalEntriesOutput: BuiltinLedgerGrpcJournalEntry__Output[] =
-						builtinLedgerGrpcJournalEntryArrayOutput.builtinLedgerGrpcJournalEntryArray || [];
-					resolve(builtinLedgerGrpcJournalEntriesOutput);*/
-
-					resolve(builtinLedgerGrpcJournalEntryArrayOutput);
-				}
-			);
+		return new Promise( (resolve, reject) => {
+			this._client.getJournalEntriesByAccountId(accountId, this._callMetadata, (error, resp) => {
+				if (error || !resp) return reject(error);
+				resolve(resp);
+			});
 		});
 	}
 
-	async deleteAccountsByIds(
-		builtinLedgerGrpcAccountIdArray: BuiltinLedgerGrpcIdArray
-	): Promise<void> {
-		return new Promise((resolve, reject) => {
-			this.client.deleteAccountsByIds(
-				builtinLedgerGrpcAccountIdArray,
-				(error) => {
-					if (error) {
-						reject(new UnableToDeleteAccountsError(error.details));
-						return;
-					}
+	async deleteAccountsByIds(accountsArray: BuiltinLedgerGrpcIdArray): Promise<void> {
+		await this._updateCallMetadata();
 
-					resolve();
-				}
-			);
+		return new Promise((resolve, reject) => {
+			this._client.deleteAccountsByIds(accountsArray, this._callMetadata, (error) => {
+				if (error) return reject(error);
+				resolve();
+			});
 		});
 	}
 
-	async deactivateAccountsByIds(
-		builtinLedgerGrpcAccountIdArray: BuiltinLedgerGrpcIdArray
-	): Promise<void> {
-		return new Promise((resolve, reject) => {
-			this.client.deactivateAccountsByIds(
-				builtinLedgerGrpcAccountIdArray,
-				(error) => {
-					if (error) {
-						reject(new UnableToDeactivateAccountsError(error.details));
-						return;
-					}
+	async deactivateAccountsByIds(accountsArray: BuiltinLedgerGrpcIdArray): Promise<void> {
+		await this._updateCallMetadata();
 
-					resolve();
-				}
-			);
+		return new Promise((resolve, reject) => {
+			this._client.deactivateAccountsByIds(accountsArray, this._callMetadata,(error) => {
+				if (error) return reject(error);
+				resolve();
+			});
 		});
 	}
 
-	async activateAccountsByIds(
-		builtinLedgerGrpcAccountIdArray: BuiltinLedgerGrpcIdArray
-	): Promise<void> {
-		return new Promise((resolve, reject) => {
-			this.client.activateAccountsByIds(
-				builtinLedgerGrpcAccountIdArray,
-				(error) => {
-					if (error) {
-						reject(new UnableToActivateAccountsError(error.details));
-						return;
-					}
+	async activateAccountsByIds(accountsArray: BuiltinLedgerGrpcIdArray	): Promise<void> {
+		await this._updateCallMetadata();
 
-					resolve();
-				}
-			);
+		return new Promise((resolve, reject) => {
+			this._client.activateAccountsByIds(accountsArray, this._callMetadata,(error) => {
+				if (error) return reject(error);
+				resolve();
+			});
 		});
 	}
 }
