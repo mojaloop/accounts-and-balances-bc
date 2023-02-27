@@ -1,34 +1,22 @@
-"use strict";
+"use strict"
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const {name: fullPackageName} = require("./package.json");
+const {name} = require("./package.json");
+let packageName = name.replace("@mojaloop", "");
 
-const abbreviatedPackageName = fullPackageName.replace("@mojaloop/accounts-and-balances-bc-", "");
-
-const config = {
+module.exports = {
 	preset: "ts-jest",
-	testMatch: ["**/test/unit/**/*.test.ts"],
-	clearMocks: true,
+	testEnvironment: "node",
 	collectCoverage: true,
-	collectCoverageFrom: ["src/**/*.ts"],
-	coveragePathIgnorePatterns: [
-		"src/index.ts",
-		"src/application/index.ts",
-		"src/application/grpc_svc.ts",
-		"src/application/grpc_server/grpc_handlers.ts",
-		"src/domain/errors.ts",
-		"src/implementations"
-	],
-	coverageDirectory: `../../coverage/unit/${abbreviatedPackageName}`,
-	coverageReporters: ["text", "lcov"],
+	collectCoverageFrom: ["./src/**/*.ts"],
+	coverageReporters: ["json", "lcov"],
+	coverageDirectory: `./coverage/${packageName}/`,
+	clearMocks: true,
 	coverageThreshold: {
-		global: {
-			branches: 90,
-			functions: 90,
-			lines: 90,
-			statements: -10
+		"global": {
+			"branches": 90,
+			"functions": 90,
+			"lines": 90,
+			"statements": -10
 		}
 	}
-};
-
-module.exports = config;
+}

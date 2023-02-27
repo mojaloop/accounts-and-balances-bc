@@ -4,8 +4,12 @@ import "google/protobuf/empty.proto";
 
 service GrpcAccountsAndBalances {
   // All unary RPCs.
-  rpc CreateAccounts(GrpcAccountArray) returns (GrpcIdArray);
-  rpc CreateJournalEntries(GrpcJournalEntryArray) returns (GrpcIdArray);
+
+  rpc CreateAccounts(GrpcCreateAccountArray) returns (GrpcIdArray);
+  rpc CreateJournalEntries(GrpcCreateJournalEntryArray) returns (GrpcIdArray);
+
+//  rpc CreateAccounts(GrpcAccountArray) returns (GrpcIdArray);
+//  rpc CreateJournalEntries(GrpcJournalEntryArray) returns (GrpcIdArray);
 
   rpc GetAccountsByIds(GrpcIdArray) returns (GrpcAccountArray);
   rpc GetAccountsByOwnerId(GrpcId) returns (GrpcAccountArray);
@@ -14,6 +18,13 @@ service GrpcAccountsAndBalances {
   rpc DeleteAccountsByIds(GrpcIdArray) returns (google.protobuf.Empty);
   rpc DeactivateAccountsByIds(GrpcIdArray) returns (google.protobuf.Empty);
   rpc ActivateAccountsByIds(GrpcIdArray) returns (google.protobuf.Empty);
+
+  // High level requests
+  rpc CheckLiquidAndReserve(GrpcCheckLiquidAndReserveRequest) returns (google.protobuf.Empty);
+  rpc CancelReservationAndCommit(GrpcCancelReservationAndCommitRequest) returns (google.protobuf.Empty);
+
+  // this will only cancel the reservation, to revert the payer position account to the good state
+  rpc CancelReservation(GrpcCancelReservationRequest) returns (google.protobuf.Empty);
 }
 
 /* Ids */
@@ -61,4 +72,63 @@ message GrpcJournalEntry {
 
 message GrpcJournalEntryArray {
   repeated GrpcJournalEntry grpcJournalEntryArray = 1;
+}
+
+/* Create requests. */
+
+message GrpcCreateAccount {
+  string requestedId = 1;
+  string type = 3;
+  string ownerId = 4;
+  string currencyCode = 5;
+}
+message GrpcCreateAccountArray {
+  repeated GrpcCreateAccount accountsToCreate = 1;
+}
+
+message GrpcCreateJournalEntry {
+  string requestedId = 1;
+  string ownerId = 2;
+  string currencyCode = 3;
+  string amount = 4;
+  bool pending = 5;
+  string debitedAccountId = 6;
+  string creditedAccountId = 7;
+}
+message GrpcCreateJournalEntryArray {
+  repeated GrpcCreateJournalEntry entriesToCreate = 1;
+}
+
+/*
+High level requests
+*/
+//message GrpcSuccessResponse {
+//  bool success = 1;
+//}
+
+message GrpcCheckLiquidAndReserveRequest {
+  string payerPositionAccountId = 1;
+  string payerLiquidityAccountId = 2;
+  string hubJokeAccountId = 3;
+  string transferAmount = 4;
+  string currencyCode = 5;
+  string payerNetDebitCap = 6; // same currency unit as transfer
+  string transferId = 7;
+}
+
+message GrpcCancelReservationAndCommitRequest {
+  string payerPositionAccountId = 1;
+  string payeePositionAccountId = 2;
+  string hubJokeAccountId = 3;
+  string transferAmount = 4;
+  string currencyCode = 5;
+  string transferId = 6;
+}
+
+message GrpcCancelReservationRequest {
+  string payerPositionAccountId = 1;
+  string hubJokeAccountId = 3;
+  string transferAmount = 4;
+  string currencyCode = 5;
+  string transferId = 6;
 }

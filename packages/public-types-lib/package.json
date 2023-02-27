@@ -1,6 +1,6 @@
 {
   "name": "@mojaloop/accounts-and-balances-bc-public-types-lib",
-  "version": "0.0.13",
+  "version": "0.1.2",
   "description": "Accounts and Balances BC - Public Types Library",
   "repository": {
     "type": "git",
@@ -29,11 +29,7 @@
     "lint": "eslint ./src",
     "lint:fix": "eslint ./src --fix",
     "build": "tsc",
-    "test:unit": "echo \"public-types-lib doesn't have unit tests\"",
-    "clean:debug": "find dist -name \"*.js.map\" | xargs rm -f",
-    "clean:tsbuildinfo": "rm -f dist/tsconfig.tsbuildinfo",
-    "prepublishOnly": "npm run clean:debug && npm run clean:tsbuildinfo && npm version patch",
-    "pub": "npm publish --access public"
+    "test:unit": "echo \"public-types-lib doesn't have unit tests\""
   },
   "engines": {
     "node": ">=18.13.0"

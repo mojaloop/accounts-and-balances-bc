@@ -30,7 +30,7 @@
 import {LogLevel} from "@mojaloop/logging-bc-public-types-lib";
 import {KafkaLogger} from "@mojaloop/logging-bc-client-lib";
 import {AccountsAndBalancesGrpcClient} from "@mojaloop/accounts-and-balances-bc-grpc-client-lib";
-import {AccountsAndBalancesAccount, AcountsAndBalancesJournalEntry} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import {AccountsAndBalancesAccount, AccountsAndBalancesJournalEntry} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {randomUUID} from "crypto";
 import {ChartOfAccountsGrpcService} from "../../packages/grpc-svc/src/application/service";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
@@ -207,7 +207,7 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 		const idAccountA: string = accounts[0].id!;
 		const idAccountB: string = accounts[1].id!;
 
-		const journalEntryA: AcountsAndBalancesJournalEntry = {
+		const journalEntryA: AccountsAndBalancesJournalEntry = {
 			id: null,
 			ownerId: null,
 			currencyCode: "EUR",
@@ -217,7 +217,7 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 			timestamp: null
 		};
 
-		const journalEntryB: AcountsAndBalancesJournalEntry = {
+		const journalEntryB: AccountsAndBalancesJournalEntry = {
 			id: null,
 			ownerId: null,
 			currencyCode: "EUR",
@@ -430,7 +430,7 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 		const idAccountB: string | undefined = accountIds[1];
 		const idAccountC: string | undefined = accountIds[2];
 
-		const journalEntryA: AcountsAndBalancesJournalEntry = {
+		const journalEntryA: AccountsAndBalancesJournalEntry = {
 			id: null,
 			ownerId: null,
 			currencyCode: "EUR",
@@ -440,7 +440,7 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 			timestamp: null
 		};
 
-		const journalEntryB: AcountsAndBalancesJournalEntry = {
+		const journalEntryB: AccountsAndBalancesJournalEntry = {
 			id: null,
 			ownerId: null,
 			currencyCode: "EUR",
@@ -450,7 +450,7 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 			timestamp: null
 		};
 
-		const journalEntryC: AcountsAndBalancesJournalEntry = {
+		const journalEntryC: AccountsAndBalancesJournalEntry = {
 			id: null,
 			ownerId: null,
 			currencyCode: "EUR",
@@ -464,7 +464,7 @@ describe("accounts and balances - integration tests with the built-in ledger", (
 		const idJournalEntryA: string | undefined = journalEntryIds[0];
 		const idJournalEntryC: string | undefined = journalEntryIds[2];
 
-		const journalEntries: AcountsAndBalancesJournalEntry[] = await grpcClient.getJournalEntriesByAccountId(idAccountB);
+		const journalEntries: AccountsAndBalancesJournalEntry[] = await grpcClient.getJournalEntriesByAccountId(idAccountB);
 
 		expect(journalEntries.length).toEqual(2); // Journal entries A and C.
 
@@ -525,7 +525,7 @@ async function createAndCredit2Accounts(
 	const idAccountB: string | undefined = accountIds[1];
 
 	// Journal entry A, regarding the crediting of account A.
-	const journalEntryA: AcountsAndBalancesJournalEntry = {
+	const journalEntryA: AccountsAndBalancesJournalEntry = {
 		id: null,
 		ownerId: null,
 		currencyCode: "EUR",
@@ -536,7 +536,7 @@ async function createAndCredit2Accounts(
 	};
 
 	// Journal entry B, regarding the crediting of account B.
-	const journalEntryB: AcountsAndBalancesJournalEntry = {
+	const journalEntryB: AccountsAndBalancesJournalEntry = {
 		id: null,
 		ownerId: null,
 		currencyCode: "EUR",

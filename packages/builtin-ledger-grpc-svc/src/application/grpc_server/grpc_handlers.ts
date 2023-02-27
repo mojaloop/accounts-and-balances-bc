@@ -103,29 +103,33 @@ export class BuiltinLedgerGrpcHandlers {
 	 * @private
 	 */
 	private async _getSecCtxFromCall(call: ServerUnaryCall<any, any>, callback: sendUnaryData<any>): Promise<CallSecurityContext | null> {
-		const returnUnauthorized = ()=>{
-			callback(this._handleAggregateError(new UnauthorizedError()));
+		const returnUnauthorized = (msg:string)=>{
+			callback(this._handleAggregateError(new UnauthorizedError(msg)));
 			return null;
 		};
 		
 		const callTokenMeta = call.metadata.get("TOKEN");
-		if (!callTokenMeta) return returnUnauthorized();
+		if (!callTokenMeta) return returnUnauthorized("Could not get token from call metadata");
 			
 		const bearerToken = callTokenMeta[0] as string;
-		if (!bearerToken) return returnUnauthorized();
+		if (!bearerToken) return returnUnauthorized("Could not get token from call metadata array (metadata key exists)");
 
 		let verified;
 		try {
 			verified = await this._tokenHelper.verifyToken(bearerToken);
 		} catch (err) {
-			this._logger.error(err, "unable to verify token");
-			return returnUnauthorized();
+			this._logger.error(err, "Unable to verify token - verifyToken() failed");
+			return returnUnauthorized("Unable to verify token - verifyToken() failed");
 		}
-		if (!verified) return returnUnauthorized();
+		if (!verified) {
+			this._logger.warn("Unable to verify token - verifyToken() return false");
+			return returnUnauthorized("Unable to verify token - verifyToken() return false");
+		}
 
 		const decoded = this._tokenHelper.decodeToken(bearerToken);
 		if (!decoded.sub || decoded.sub.indexOf("::")== -1) {
-			return returnUnauthorized();
+			this._logger.warn("Unable to decodeToken token");
+			return returnUnauthorized("Unable to decodeToken token");
 		}
 
 		const subSplit = decoded.sub.split("::");
@@ -223,7 +227,6 @@ export class BuiltinLedgerGrpcHandlers {
 
 		const accountIds: string[] = [];
 		for (const builtinLedgerGrpcAccountIdOutput of requestIds) {
-			// const accountId: string | undefined = builtinLedgerGrpcAccountIdOutput.builtinLedgerGrpcId; TODO: use this auxiliary variable?
 			if (!builtinLedgerGrpcAccountIdOutput.builtinLedgerGrpcId) {
 				callback(
 					{code: status.UNKNOWN, details: UNKNOWN_ERROR_MESSAGE},
@@ -363,16 +366,21 @@ export class BuiltinLedgerGrpcHandlers {
 	private _handleAggregateError(error:any): ServerErrorResponse{
 		const srvError: ServerErrorResponse = {
 			name: error.constructor.name,
-			message: error.message || ""
+			message: error.message || error.constructor.name,
+			details: error.message || error.constructor.name,
 		};
 
 		if (error instanceof UnauthorizedError) {
+			this._logger.warn(`Got UnauthorizedError - message: ${error.message}`);
 			srvError.code = status.UNAUTHENTICATED;
 		} else if (error instanceof ForbiddenError) {
+			this._logger.warn(`Got ForbiddenError - message: ${error.message}`);
 			srvError.code = status.PERMISSION_DENIED;
 		} else if (error instanceof AccountNotFoundError) {
+			this._logger.warn(`Got AccountNotFoundError - message: ${error.message}`);
 			srvError.code = status.NOT_FOUND;
 		} else {
+			this._logger.warn(`Got handled error message - message: ${error.message}`);
 			srvError.code = status.UNKNOWN;
 		}
 		return srvError;

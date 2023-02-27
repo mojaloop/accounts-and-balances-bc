@@ -29,7 +29,8 @@
 "use strict";
 
 
-import {AuditSecurityContext, IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
+
+import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
 import {IAuthorizationClient, UnauthorizedError} from "@mojaloop/security-bc-public-types-lib";
@@ -37,7 +38,7 @@ import {ForbiddenError} from "@mojaloop/security-bc-public-types-lib/dist/index"
 import {ChartOfAccountsPrivilegeNames} from "../domain/privilege_names";
 import {
 	ILedgerAdapter,
-	LedgerAdapterAccount,
+	LedgerAdapterAccount, LedgerAdapterCreateResponseItem,
 	LedgerAdapterJournalEntry,
 	LedgerAdapterRequestId
 } from "./infrastructure-types/ledger_adapter";
@@ -45,10 +46,15 @@ import {CoaAccount} from "./coa_account";
 
 import {
 	AccountAlreadyExistsError,
-	AccountNotFoundError, AccountsAndBalancesError,
+	AccountNotFoundError,
+	AccountsAndBalancesError,
 	AccountsAndBalancesAccount,
-	AcountsAndBalancesJournalEntry,
-	CurrencyCodeNotFoundError, InvalidAccountParametersError
+	AccountsAndBalancesJournalEntry,
+	CurrencyCodeNotFoundError,
+	InvalidAccountParametersError,
+	PayerFailedLiquidityCheckError,
+	AccountsAndBalancesAccountType,
+    InvalidJournalEntryParametersError
 } from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {randomUUID} from "crypto";
 import {join} from "path";
@@ -104,15 +110,226 @@ export class AccountsAndBalancesAggregate {
 		this._logger.isDebugEnabled() && this._logger.debug(`User/App '${secCtx.username ?? secCtx.clientId}' called ${actionName}`);
 	}
 
-	async createAccounts(secCtx: CallSecurityContext, createAccountsArr: AccountsAndBalancesAccount[]): Promise<string[]> {
+	private _getCurrencyOrThrow(currencyCode:string): {code: string, decimals: number}{
+		// Validate the currency code and get the currency.
+		const currency: { code: string, decimals: number } | undefined
+			= this._currencies.find((value) => value.code === currencyCode);
+		if (!currency) {
+			throw new CurrencyCodeNotFoundError(`Currency code: ${currencyCode} not found`);
+		}
+		return currency;
+	}
+
+	async checkLiquidAndReserve(
+		secCtx: CallSecurityContext,
+		payerPositionAccountId: string, payerLiquidityAccountId: string, hubJokeAccountId:string,
+		transferAmount: string, currencyCode:string, payerNetDebitCap:string, transferId:string
+	):Promise<void>{
+
+		// find CoA accounts
+		const coaAccounts = await this._chartOfAccountsRepo.getAccounts([payerPositionAccountId, payerLiquidityAccountId, hubJokeAccountId]);
+		const payerPosCoaAcc = coaAccounts.find(value => value.id === payerPositionAccountId);
+		const payerLiqCoaAcc = coaAccounts.find(value => value.id === payerLiquidityAccountId);
+		const hubJokeCoaAcc = coaAccounts.find(value => value.id === hubJokeAccountId);
+
+		if(!payerPosCoaAcc || !payerLiqCoaAcc || !hubJokeCoaAcc ){
+			const err = new AccountNotFoundError("Invalid or not found CoA accounts on CheckLiquidAndReserve request");
+			this._logger.warn(err.message);
+			throw err;
+		}
+
+		// Validate the currency code and get the currency.
+		const currency = this._getCurrencyOrThrow(currencyCode);
+
+		// get accounts and their balances from the ledger
+		const ledgerAccounts = await this._ledgerAdapter.getAccountsByIds([
+			{id: payerPosCoaAcc.ledgerAccountId, currencyDecimals: currency.decimals},
+			{id: payerLiqCoaAcc.ledgerAccountId, currencyDecimals: currency.decimals}
+		]);
+		const payerPosLedgerAcc = ledgerAccounts.find(value => value.id === payerPosCoaAcc.ledgerAccountId);
+		const payerLiqLedgerAcc = ledgerAccounts.find(value => value.id === payerLiqCoaAcc.ledgerAccountId);
+
+		if (!payerPosLedgerAcc || !payerLiqLedgerAcc) {
+			const err = new AccountNotFoundError("Could not find payer accounts on the ledger service");
+			this._logger.warn(err.message);
+			throw err;
+		}
+
+		// check liquidity -> pos.post.dr + pos.pend.dr - pos.post.cr + trx.amount <= liq.bal - NDC
+		const payerHasLiq = this._checkParticipantLiquidity(
+			payerPosLedgerAcc, payerLiqLedgerAcc, transferAmount,
+			payerNetDebitCap, currency.decimals);
+
+		if(!payerHasLiq){
+			// TODO audit PayerFailedLiquidityCheckError
+			const err = new PayerFailedLiquidityCheckError();
+			this._logger.warn(err.message);
+			throw err;
+		}
+
+		const ledgerEntry: {
+			requestedId: string, amountStr: string, currencyCode: string,
+			creditedAccountId: string, debitedAccountId: string, timestamp: number, ownerId: string, pending: boolean
+		} = {
+			requestedId: randomUUID(),
+			pending: true,
+			amountStr: transferAmount,
+			ownerId: transferId,
+			debitedAccountId: payerPosCoaAcc.ledgerAccountId,
+			creditedAccountId: hubJokeCoaAcc.ledgerAccountId,
+			currencyCode: currencyCode,
+			timestamp: Date.now()
+		};
+
+		try {
+			await this._ledgerAdapter.createJournalEntries([ledgerEntry]);
+		} catch (error: any) {
+			this._logger.error(error);
+			throw error;
+		}
+	}
+
+	private _checkParticipantLiquidity(
+		payerPos:LedgerAdapterAccount, payerLiq:LedgerAdapterAccount,
+		trxAmountStr:string, payerNdcStr:string, currencyDecimals:number
+	):boolean{
+		const positionPostDr = stringToBigint(payerPos.postedDebitBalance || "0", currencyDecimals);
+		const positionPendDr = stringToBigint(payerPos.pendingDebitBalance || "0", currencyDecimals);
+		const positionPostCr = stringToBigint(payerPos.postedCreditBalance || "0", currencyDecimals);
+
+		const liquidityPostDr = stringToBigint(payerLiq.postedDebitBalance || "0", currencyDecimals);
+		const liquidityPostCr = stringToBigint(payerLiq.postedCreditBalance || "0", currencyDecimals);
+
+		const trxAmount = stringToBigint(trxAmountStr, currencyDecimals);
+		const payerNdc = stringToBigint(payerNdcStr, currencyDecimals);
+
+		const liquidityBal = liquidityPostCr - liquidityPostDr;
+
+		if(positionPostDr + positionPendDr - positionPostCr + trxAmount <= liquidityBal - payerNdc){
+			return true;
+		}else{
+			return false;
+		}
+	}
+
+	async cancelReservationAndCommit(
+		secCtx: CallSecurityContext,
+		payerPositionAccountId: string, payeePositionAccountId: string, hubJokeAccountId: string,
+		transferAmount: string, currencyCode: string, transferId: string
+	): Promise<void> {
+
+		// find CoA accounts
+		const coaAccounts = await this._chartOfAccountsRepo.getAccounts([payerPositionAccountId, payeePositionAccountId, hubJokeAccountId]);
+		const payerPosCoaAcc = coaAccounts.find(value => value.id === payerPositionAccountId);
+		const payeePosCoaAcc = coaAccounts.find(value => value.id === payeePositionAccountId);
+		const hubJokeCoaAcc = coaAccounts.find(value => value.id===hubJokeAccountId);
+
+		if (!payerPosCoaAcc || !payeePosCoaAcc || !hubJokeCoaAcc) {
+			const err = new AccountNotFoundError("Invalid or not found CoA accounts on cancelReservationAndCommit request");
+			this._logger.warn(err.message);
+			throw err;
+		}
+
+		// Validate the currency code and get the currency.
+		const currency = this._getCurrencyOrThrow(currencyCode);
+		const now = Date.now();
+		const amount = stringToBigint(transferAmount, currency.decimals);
+		const revertAmount = amount * -1n;
+
+		// Cancel/void the reservation (negative amount pending entry)
+		const cancelReservationEntry: {requestedId: string, amountStr: string, currencyCode: string,
+			creditedAccountId: string, debitedAccountId: string, timestamp: number, ownerId: string, pending: boolean
+		} = {
+			requestedId: randomUUID(),
+			pending: true,
+			amountStr: bigintToString(revertAmount, currency.decimals),
+			ownerId: transferId,
+			debitedAccountId: payerPosCoaAcc.ledgerAccountId,
+			creditedAccountId: hubJokeCoaAcc.ledgerAccountId,
+			currencyCode: currencyCode,
+			timestamp: now
+		};
+
+		// Move funds from payer position to payee position (normal entry)
+		const commitEntry: {
+			requestedId: string, amountStr: string, currencyCode: string,
+			creditedAccountId: string, debitedAccountId: string, timestamp: number, ownerId: string, pending: boolean
+		} = {
+			requestedId: randomUUID(),
+			pending: false,
+			amountStr: bigintToString(amount, currency.decimals),
+			ownerId: transferId,
+			debitedAccountId: payerPosCoaAcc.ledgerAccountId,
+			creditedAccountId: payeePosCoaAcc.ledgerAccountId,
+			currencyCode: currencyCode,
+			timestamp: now
+		};
+
+		try {
+			await this._ledgerAdapter.createJournalEntries([cancelReservationEntry, commitEntry]);
+		} catch (error: any) {
+			this._logger.error(error);
+			throw error;
+		}
+	}
+
+	async cancelReservation(
+		secCtx: CallSecurityContext,
+		payerPositionAccountId: string, hubJokeAccountId: string,
+		transferAmount: string, currencyCode: string, transferId: string
+	): Promise<void> {
+		// find CoA accounts
+		const coaAccounts = await this._chartOfAccountsRepo.getAccounts([payerPositionAccountId, hubJokeAccountId]);
+		const payerPosCoaAcc = coaAccounts.find(value => value.id===payerPositionAccountId);
+		const hubJokeCoaAcc = coaAccounts.find(value => value.id===hubJokeAccountId);
+
+		if (!payerPosCoaAcc || !hubJokeCoaAcc) {
+			const err = new AccountNotFoundError("Invalid or not found CoA accounts on cancelReservation request");
+			this._logger.warn(err.message);
+			throw err;
+		}
+
+		// Validate the currency code and get the currency.
+		const currency = this._getCurrencyOrThrow(currencyCode);
+
+		const amount = stringToBigint(transferAmount, currency.decimals);
+		const revertAmount = amount * -1n;
+
+		// Cancel/void the reservation (negative amount pending entry)
+		const cancelReservationEntry: {
+			requestedId: string, amountStr: string, currencyCode: string,
+			creditedAccountId: string, debitedAccountId: string, timestamp: number, ownerId: string, pending: boolean
+		} = {
+			requestedId: randomUUID(),
+			pending: true,
+			amountStr: bigintToString(revertAmount, currency.decimals),
+			ownerId: transferId,
+			debitedAccountId: payerPosCoaAcc.ledgerAccountId,
+			creditedAccountId: hubJokeCoaAcc.ledgerAccountId,
+			currencyCode: currencyCode,
+			timestamp: Date.now()
+		};
+
+		try {
+			await this._ledgerAdapter.createJournalEntries([cancelReservationEntry]);
+		} catch (error: any) {
+			this._logger.error(error);
+			throw error;
+		}
+	}
+
+	async createAccounts(
+		secCtx: CallSecurityContext,
+		createReqs: { requestedId: string, ownerId: string, accountType: AccountsAndBalancesAccountType, currencyCode: string }[]
+	): Promise<string[]> {
 		this.enforcePrivilege(secCtx, ChartOfAccountsPrivilegeNames.COA_CREATE_ACCOUNT);
 		this._logAction(secCtx, "createAccounts");
 
 		// Extract the ids which were provided.
 		const internalAccountIds: string[] = [];
-		createAccountsArr.forEach((account) => {
-			if (account.id) {
-				internalAccountIds.push(account.id);
+		createReqs.forEach((account) => {
+			if (account.requestedId) {
+				internalAccountIds.push(account.requestedId);
 			}
 		});
 
@@ -124,118 +341,105 @@ export class AccountsAndBalancesAggregate {
 		}
 
 		const coaAccounts: CoaAccount[] = [];
-		const ledgerAdapterAccounts: LedgerAdapterAccount[] = [];
-		for (const account of createAccountsArr) {
+		const ledgerCreateReqs: { requestedId: string, type: string, currencyCode: string }[] = [];
+		const accountIds: string[] = [];
 
-			if (account.ownerId === "") { // provided but empty
+		for (const request of createReqs) {
+			if (!request.ownerId) {
 				throw new InvalidAccountParametersError("Invalid account.ownerId");
 			}
 
-			if (account.type!=="FEE" &&
-				account.type!=="POSITION" &&
-				account.type!=="SETTLEMENT" &&
-				account.type!=="HUB_MULTILATERAL_SETTLEMENT" &&
-				account.type!=="HUB_RECONCILIATION") {
+			if (request.accountType!=="FEE" &&
+				request.accountType!=="POSITION" &&
+				request.accountType!=="SETTLEMENT" &&
+				request.accountType!=="HUB_MULTILATERAL_SETTLEMENT" &&
+				request.accountType!=="HUB_RECONCILIATION") {
 				throw new InvalidAccountParametersError("Invalid account.type");
 			}
 
 			// Validate the currency code and get the currency.
-			const currency: {code: string, decimals: number} | undefined
-				= this._currencies.find((value) => value.code===account.currencyCode);
-			if (!currency) {
-				throw new CurrencyCodeNotFoundError(`Currency code: ${account.currencyCode} not found`);
-			}
+			const currency = this._getCurrencyOrThrow(request.currencyCode);
 
-			// Generate a random UUId, if needed.
-			account.id = account.id ?? randomUUID();
+			// Note: the caller createAccounts() has already checked for possible duplicate ids
+			// try to use requestedId, if used, create a new one
+			request.requestedId = request.requestedId || randomUUID();
+			accountIds.push(request.requestedId);
 
-			// reset starting values
-			account.state = "ACTIVE";
-			account.postedDebitBalance = account.pendingDebitBalance =
-				account.postedCreditBalance = account.pendingCreditBalance = "0";
-			account.timestampLastJournalEntry = null;
-
-
-			const coaAccount: CoaAccount = {
-				id: account.id,
-				ledgerAccountId: account.id, // try this, reset after we get the final id from the ledgerImplementation
-				ownerId: account.ownerId,
-				state: account.state,
-				type: account.type,
-				currencyCode: account.currencyCode,
+			coaAccounts.push({
+				id: request.requestedId,
+				ledgerAccountId: request.requestedId, // try this, reset after we get the final id from the ledgerImplementation
+				ownerId: request.ownerId,
+				state: "ACTIVE",
+				type: request.accountType,
+				currencyCode: request.currencyCode,
 				currencyDecimals: currency.decimals
-			};
-			coaAccounts.push(coaAccount);
+			});
 
-			const ledgerAdapterAccount: LedgerAdapterAccount = {
-				id: account.id,
-				state: account.state,
-				type: account.type,
-				currencyCode: account.currencyCode,
-				currencyDecimals: currency.decimals,
-				postedDebitBalance: null,
-				pendingDebitBalance: null,
-				postedCreditBalance: null,
-				pendingCreditBalance: null,
-				timestampLastJournalEntry: null
-			};
-			ledgerAdapterAccounts.push(ledgerAdapterAccount);
+			ledgerCreateReqs.push({
+				requestedId: request.requestedId,
+				type: request.accountType,
+				currencyCode: request.currencyCode,
+			});
 		}
 
-		let accountIds: string[];
+
 		try {
-			accountIds = await this._ledgerAdapter.createAccounts(ledgerAdapterAccounts);
+			await this._chartOfAccountsRepo.storeAccounts(coaAccounts);
+			const idsResponse = await this._ledgerAdapter.createAccounts(ledgerCreateReqs);
+			if(idsResponse.length !==ledgerCreateReqs.length){
+				const err = new AccountsAndBalancesError("Could create all the request accounts in the ledger system");
+				this._logger.error(err);
+				throw err;
+			}
+
+			for(const resp of idsResponse){
+				if(resp.attributedId !== resp.requestedId){
+					const coaAcc = coaAccounts.find(value => value.id === resp.requestedId);
+					if(!coaAcc){
+						const err = new AccountsAndBalancesError("Could not found CoA account to update ledger account id");
+						this._logger.error(err);
+						throw err;
+					}
+					coaAcc.ledgerAccountId = resp.attributedId;
+					await this._chartOfAccountsRepo.storeAccounts([coaAcc]);
+				}
+			}
 		} catch (error: any) {
 			this._logger.error(error);
 			throw error;
 		}
-
-		await this._chartOfAccountsRepo.storeAccounts(coaAccounts);
-
 		return accountIds;
 	}
 
-	async createJournalEntries(secCtx: CallSecurityContext, journalEntries: AcountsAndBalancesJournalEntry[]): Promise<string[]> {
+	async createJournalEntries(
+		secCtx: CallSecurityContext,
+		createReqs: {
+			requestedId: string, amountStr: string, currencyCode: string,
+			creditedAccountId: string, debitedAccountId: string, timestamp: number, ownerId: string, pending: boolean
+		}[]
+	): Promise<string[]> {
 		this.enforcePrivilege(secCtx, ChartOfAccountsPrivilegeNames.COA_CREATE_JOURNAL_ENTRY);
 		this._logAction(secCtx, "createJournalEntries");
 
 		const now = Date.now();
 
-		const ledgerAdapterJournalEntries: LedgerAdapterJournalEntry[]
-			= journalEntries.map((journalEntry) => {
-
-			// Generate a random UUId, if none provided
-			journalEntry.id = journalEntry.id ?? randomUUID();
-
-			// set the timestamp
-			journalEntry.timestamp = now;
-
+		for(const req of createReqs){
 			// Validate the currency code and get the currency.
-			const currency: {code: string, decimals: number} | undefined
-				= this._currencies.find((currency) => {
-				return currency.code === journalEntry.currencyCode;
-			});
-			if (!currency) {
-				throw new CurrencyCodeNotFoundError();
+			// we don't actually need it, this just to assert it exists
+			this._getCurrencyOrThrow(req.currencyCode);
+
+			if (!req.amountStr || !req.currencyCode || !req.debitedAccountId || !req.creditedAccountId) {
+				throw new InvalidJournalEntryParametersError("Invalid entry amount, currencyCode or accounts");
 			}
 
-			const ledgerAdapterJournalEntry: LedgerAdapterJournalEntry = {
-				id: journalEntry.id,
-				ownerId: journalEntry.ownerId || null,
-				currencyCode: journalEntry.currencyCode,
-				currencyDecimals: currency.decimals,
-				amount: journalEntry.amount,
-				pending: journalEntry.pending,
-				debitedAccountId: journalEntry.debitedAccountId,
-				creditedAccountId: journalEntry.creditedAccountId,
-				timestamp: journalEntry.timestamp
-			};
-			return ledgerAdapterJournalEntry;
-		});
+			req.requestedId = req.requestedId || randomUUID();
+			req.timestamp = now;
+		}
 
-		let journalEntryIds: string[];
+		let journalEntryIds: LedgerAdapterCreateResponseItem[];
 		try {
-			journalEntryIds = await this._ledgerAdapter.createJournalEntries(ledgerAdapterJournalEntries);
+			journalEntryIds = await this._ledgerAdapter.createJournalEntries(createReqs);
+			// journal entries are not persisted at the CoA service, nothing else to do
 		} catch (error: any) {
 			this._logger.error(error);
 			if (error instanceof AccountsAndBalancesError) {
@@ -244,14 +448,15 @@ export class AccountsAndBalancesAggregate {
 			throw new AccountsAndBalancesError(error.message ?? "unknown error");
 		}
 
-		return journalEntryIds;
+		// return the ids attributed by the ledger
+		return journalEntryIds.map(item => item.attributedId);
 	}
 
 	async getAccountsByIds(secCtx: CallSecurityContext, accountIds: string[]): Promise<AccountsAndBalancesAccount[]> {
 		this.enforcePrivilege(secCtx, ChartOfAccountsPrivilegeNames.COA_VIEW_ACCOUNT);
 		this._logAction(secCtx, "getAccountsByIds");
 
-		const coaAccounts: CoaAccount[] = await this._chartOfAccountsRepo.getAccountsByInternalIds(accountIds);
+		const coaAccounts: CoaAccount[] = await this._chartOfAccountsRepo.getAccounts(accountIds);
 		if (!coaAccounts.length) {
 			return [];
 		}
@@ -273,12 +478,12 @@ export class AccountsAndBalancesAggregate {
 		return accounts;
 	}
 
-	async getJournalEntriesByAccountId(secCtx: CallSecurityContext, accountId: string): Promise<AcountsAndBalancesJournalEntry[]> {
+	async getJournalEntriesByAccountId(secCtx: CallSecurityContext, accountId: string): Promise<AccountsAndBalancesJournalEntry[]> {
 		this.enforcePrivilege(secCtx, ChartOfAccountsPrivilegeNames.COA_VIEW_JOURNAL_ENTRY);
 		this._logAction(secCtx, "getJournalEntriesByAccountId");
 
 		const coaAccount: CoaAccount | undefined =
-			(await this._chartOfAccountsRepo.getAccountsByInternalIds([accountId]))[0];
+			(await this._chartOfAccountsRepo.getAccounts([accountId]))[0];
 		if (!coaAccount) {
 			return [];
 		}
@@ -295,8 +500,8 @@ export class AccountsAndBalancesAggregate {
 			throw new AccountsAndBalancesError(error.message ?? "unknown error");
 		}
 
-		const journalEntries: AcountsAndBalancesJournalEntry[] = ledgerAdapterJournalEntries.map((ledgerAdapterJournalEntry) => {
-			const journalEntry: AcountsAndBalancesJournalEntry = {
+		const journalEntries: AccountsAndBalancesJournalEntry[] = ledgerAdapterJournalEntries.map((ledgerAdapterJournalEntry) => {
+			const journalEntry: AccountsAndBalancesJournalEntry = {
 				id: ledgerAdapterJournalEntry.id,
 				ownerId: ledgerAdapterJournalEntry.ownerId,
 				currencyCode: ledgerAdapterJournalEntry.currencyCode,
@@ -315,7 +520,7 @@ export class AccountsAndBalancesAggregate {
 		this.enforcePrivilege(secCtx, ChartOfAccountsPrivilegeNames.COA_DELETE_ACCOUNT);
 		this._logAction(secCtx, "deleteAccountsByIds");
 
-		const accounts = await this._chartOfAccountsRepo.getAccountsByInternalIds(accountIds);
+		const accounts = await this._chartOfAccountsRepo.getAccounts(accountIds);
 		if (!accounts || accounts.length <= 0) {
 			throw new AccountNotFoundError();
 		}
@@ -340,7 +545,7 @@ export class AccountsAndBalancesAggregate {
 		this.enforcePrivilege(secCtx, ChartOfAccountsPrivilegeNames.COA_DEACTIVATE_ACCOUNT);
 		this._logAction(secCtx, "deactivateAccountsByIds");
 
-		const accounts = await this._chartOfAccountsRepo.getAccountsByInternalIds(accountIds);
+		const accounts = await this._chartOfAccountsRepo.getAccounts(accountIds);
 		if (!accounts || accounts.length <= 0) {
 			throw new AccountNotFoundError();
 		}
@@ -366,7 +571,7 @@ export class AccountsAndBalancesAggregate {
 		this.enforcePrivilege(secCtx, ChartOfAccountsPrivilegeNames.COA_REACTIVATE_ACCOUNT);
 		this._logAction(secCtx, "reactivateAccountsByIds");
 
-		const accounts = await this._chartOfAccountsRepo.getAccountsByInternalIds(accountIds);
+		const accounts = await this._chartOfAccountsRepo.getAccounts(accountIds);
 		if (!accounts || accounts.length<=0) {
 			throw new AccountNotFoundError();
 		}
@@ -412,7 +617,7 @@ export class AccountsAndBalancesAggregate {
 				throw new Error();
 			}
 
-			const balance: string = this.calculateBalanceString(
+			const balance: string = this._calculateBalanceString(
 				ledgerAdapterAccount.postedDebitBalance || "0",
 				ledgerAdapterAccount.postedCreditBalance || "0",
 				coaAccount.currencyDecimals
@@ -436,7 +641,7 @@ export class AccountsAndBalancesAggregate {
 		return accounts;
 	}
 
-	private calculateBalanceString(debitBalanceString: string, creditBalanceString: string, currencyDecimals: number): string {
+	private _calculateBalanceString(debitBalanceString: string, creditBalanceString: string, currencyDecimals: number): string {
 		const debitBalanceBigint: bigint = stringToBigint(debitBalanceString, currencyDecimals);
 		const creditBalanceBigint: bigint = stringToBigint(creditBalanceString, currencyDecimals);
 		const balanceBigint: bigint = creditBalanceBigint - debitBalanceBigint;

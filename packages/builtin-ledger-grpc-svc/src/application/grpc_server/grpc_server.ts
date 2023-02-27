@@ -92,6 +92,7 @@ export class BuiltinLedgerGrpcServer {
 
 	async start(): Promise<void> {
 		return new Promise((resolve, reject) => {
+			this.logger.info(`Starting GRPC service in url: ${this.URL}`);
 			this.server.bindAsync(
 				this.URL,
 				ServerCredentials.createInsecure(),

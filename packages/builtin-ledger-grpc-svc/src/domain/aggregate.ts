@@ -160,7 +160,7 @@ export class BuiltinLedgerAggregate {
 		}
 
 		// try to use requestedId, if used, create a new one
-		let myId = requestedId;
+		let myId = requestedId || randomUUID();
 		const found = await this._builtinLedgerAccountsRepo.getAccountsByIds([myId]);
 		if(found && found.length>0)
 			myId = randomUUID();
@@ -246,14 +246,20 @@ export class BuiltinLedgerAggregate {
 	): Promise<CreatedIdMapResponse> {
 		this._enforcePrivilege(secCtx, BuiltinLedgerPrivileges.BUILTIN_LEDGER_CREATE_JOURNAL_ENTRY);
 
+		if(!amountStr || !currencyCode || !debitedAccountId || !creditedAccountId){
+			throw new InvalidJournalEntryParametersError("Invalid entry amount, currencyCode or accounts");
+		}
+
 		// Validate the currency code and get the currency obj.
 		const currency = this._currencies.find((value) => value.code===currencyCode);
 		if (!currency) {
 			throw new CurrencyCodeNotFoundError();
 		}
 
+		// TODO must get and use the currencyDecimals defined in the account
+
 		// try to use requestedId, if used, create a new one
-		let myId = requestedId;
+		let myId = requestedId || randomUUID();
 		const found = await this._builtinLedgerAccountsRepo.getAccountsByIds([myId]);
 		if (found && found.length > 0)
 			myId = randomUUID();

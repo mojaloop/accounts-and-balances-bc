@@ -1,6 +1,6 @@
 {
   "name": "@mojaloop/accounts-and-balances-bc-grpc-client-lib",
-  "version": "0.0.13",
+  "version": "0.1.3",
   "description": "Accounts and Balances BC - gRPC Client Library",
   "repository": {
     "type": "git",
@@ -35,9 +35,7 @@
     "postbuild": "cp src/accounts_and_balances.proto dist",
     "test:unit": "echo \"for now, grpc-client-lib doesn't have unit tests\"",
     "clean:debug": "find dist -name \"*.js.map\" | xargs rm -f",
-    "clean:tsbuildinfo": "rm -f dist/tsconfig.tsbuildinfo",
-    "prepublishOnly": "npm run clean:debug && npm run clean:tsbuildinfo && npm version patch",
-    "pub": "npm publish --access public"
+    "clean:tsbuildinfo": "rm -f dist/tsconfig.tsbuildinfo"
   },
   "engines": {
     "node": ">=18.13.0"
@@ -46,8 +44,8 @@
   "dependencies": {
     "@grpc/grpc-js": "~1.8.8",
     "@grpc/proto-loader": "~0.7.4",
-    "@mojaloop/security-bc-client-lib": "~0.1.10",
-    "@mojaloop/security-bc-public-types-lib": "~0.1.10",
+    "@mojaloop/security-bc-client-lib": "~0.1.12",
+    "@mojaloop/security-bc-public-types-lib": "~0.1.12",
     "@mojaloop/accounts-and-balances-bc-public-types-lib": "~0.0.13",
     "@mojaloop/logging-bc-public-types-lib": "~0.1.14",
     "tslib": "~2.5.0"

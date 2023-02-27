@@ -63,10 +63,12 @@ export class BuiltinLedgerGrpcClient {
 	private readonly _callMetadata: grpc.Metadata;
 	private readonly _loginHelper: LoginHelper;
 	private readonly _client: GrpcBuiltinLedgerClient;
+	private readonly _url: string;
 
 	constructor(url: string, loginHelper: LoginHelper, logger: ILogger) {
 		this._logger = logger.createChild(this.constructor.name);
 		this._loginHelper = loginHelper;
+		this._url = url;
 
 		const protoFileAbsolutePath: string = join(__dirname, PROTO_FILE_NAME);
 		const packageDefinition: protoLoader.PackageDefinition = protoLoader.loadSync(
@@ -77,7 +79,7 @@ export class BuiltinLedgerGrpcClient {
 
 		this._callMetadata = new grpc.Metadata();
 		this._client = new (grpcObject as unknown as ProtoGrpcType).GrpcBuiltinLedger(
-			url,
+			this._url,
 			grpc.credentials.createInsecure()
 		);
 	}
@@ -95,6 +97,8 @@ export class BuiltinLedgerGrpcClient {
 		await this._updateCallMetadata();
 
 		return new Promise((resolve, reject) => {
+			this._logger.info(`Connecting BuiltinLedgerGrpcClient to url: ${this._url}`);
+
 			const deadline: grpc.Deadline = Date.now() + TIMEOUT_MS;
 			this._client.waitForReady(deadline, (error) => {
 				if (error) return reject(error);

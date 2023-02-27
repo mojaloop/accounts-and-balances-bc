@@ -55,7 +55,7 @@ import { ILedgerAdapter } from "../domain/infrastructure-types/ledger_adapter";
 
 const BC_NAME = "accounts-and-balances-bc";
 const APP_NAME = "coa-grpc-svc";
-const APP_VERSION = process.env.npm_package_version || "0.0.1";
+const APP_VERSION = process.env.npm_package_version || "0.0.0";
 
 const LOG_LEVEL: LogLevel = process.env.LOG_LEVEL as LogLevel || LogLevel.DEBUG;
 const PRODUCTION_MODE = process.env["PRODUCTION_MODE"] || false;
@@ -65,16 +65,18 @@ const KAFKA_LOGS_TOPIC = process.env.KAFKA_LOGS_TOPIC || "logs";
 const KAFKA_AUDITS_TOPIC = process.env["KAFKA_AUDITS_TOPIC"] || "audits";
 const MONGO_URL = process.env.MONGO_URL || "mongodb://root:mongoDbPas42@localhost:27017";
 const BUILTIN_LEDGER_SVC_URL = process.env.BUILTIN_LEDGER_SVC_URL || "localhost:3350";
-const ACCOUNTS_AND_BALANCES_URL = process.env.ACCOUNTS_AND_BALANCES_URL || "localhost:3300";
 
 const AUDIT_KEY_FILE_PATH = process.env["AUDIT_KEY_FILE_PATH"] || "/app/data/audit_private_key.pem";
 
 const AUTH_N_SVC_BASEURL = process.env["AUTH_N_SVC_BASEURL"] || "http://localhost:3201";
 const AUTH_N_SVC_TOKEN_URL = AUTH_N_SVC_BASEURL + "/token"; // TODO this should not be known here, libs that use the base should add the suffix
 const AUTH_N_SVC_JWKS_URL = process.env["AUTH_N_SVC_JWKS_URL"] || `${AUTH_N_SVC_BASEURL}/.well-known/jwks.json`;
+const AUTH_N_TOKEN_ISSUER_NAME = process.env["AUTH_N_TOKEN_ISSUER_NAME"] || "mojaloop.vnext.dev.default_issuer";
+const AUTH_N_TOKEN_AUDIENCE = process.env["AUTH_N_TOKEN_AUDIENCE"] || "mojaloop.vnext.dev.default_audience";
+
 const AUTH_Z_SVC_BASEURL = process.env.AUTH_Z_SVC_BASEURL || "http://localhost:3202";
-const AUTH_N_TOKEN_ISSUER_NAME = process.env["AUTH_N_TOKEN_ISSUER_NAME"] || "http://localhost:3201/";
-const AUTH_N_TOKEN_AUDIENCE = process.env["AUTH_N_TOKEN_AUDIENCE"] || "mojaloop.vnext.default_audience";
+
+const ACCOUNTS_AND_BALANCES_URL = process.env.ACCOUNTS_AND_BALANCES_URL || "0.0.0.0:3300";
 
 const SVC_CLIENT_ID = process.env["SVC_CLIENT_ID"] || "accounts-and-balances-bc-coa-grpc-svc";
 const SVC_CLIENT_SECRET = process.env["SVC_CLIENT_ID"] || "superServiceSecret";
@@ -160,8 +162,10 @@ export class ChartOfAccountsGrpcService {
                 // create e tmp file
                 LocalAuditClientCryptoProvider.createRsaPrivateKeyFileSync(AUDIT_KEY_FILE_PATH, 2048);
             }
+            const auditLogger = logger.createChild("AuditLogger");
+            auditLogger.setLogLevel(LogLevel.INFO);
             const cryptoProvider = new LocalAuditClientCryptoProvider(AUDIT_KEY_FILE_PATH);
-            const auditDispatcher = new KafkaAuditClientDispatcher(kafkaProducerOptions, KAFKA_AUDITS_TOPIC, logger);
+            const auditDispatcher = new KafkaAuditClientDispatcher(kafkaProducerOptions, KAFKA_AUDITS_TOPIC, auditLogger);
             // NOTE: to pass the same kafka logger to the audit client, make sure the logger is started/initialised already
             auditingClient = new AuditClient(BC_NAME, APP_NAME, APP_VERSION, cryptoProvider, auditDispatcher);
             await auditingClient.init();
@@ -190,6 +194,7 @@ export class ChartOfAccountsGrpcService {
         );
 
         // token helper
+        this.logger.info(`Starting TokenHelper with jwksUrl: ${AUTH_N_SVC_JWKS_URL} issuerName: ${AUTH_N_TOKEN_ISSUER_NAME} audience: ${AUTH_N_TOKEN_AUDIENCE}`);
         this.tokenHelper = new TokenHelper(AUTH_N_SVC_JWKS_URL, logger, AUTH_N_TOKEN_ISSUER_NAME, AUTH_N_TOKEN_AUDIENCE);
         await this.tokenHelper.init();
 
@@ -203,6 +208,7 @@ export class ChartOfAccountsGrpcService {
         );
         try {
             await this.grpcServer.start();
+            this.logger.info(`ChartOfAccountsGrpcService v: ${APP_VERSION} started`);
         } catch (error: unknown) {
             this.logger.fatal(error);
             await this.stop();

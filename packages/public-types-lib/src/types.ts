@@ -49,7 +49,7 @@ export type AccountsAndBalancesAccount = {
 	timestampLastJournalEntry: number | null;
 }
 
-export type AcountsAndBalancesJournalEntry = {
+export type AccountsAndBalancesJournalEntry = {
 	id: string | null;
 	ownerId: string | null;
 	currencyCode: string;
@@ -63,14 +63,14 @@ export type AcountsAndBalancesJournalEntry = {
 /**
  * Type used to request the creation of an account by the CoA Service
  */
-export type AccountsAndBalancesCreateAccountDto = {
+export type AccountsAndBalancesCreateAccountRequest = {
 	requestedId: string | null;
 	ownerId: string;
 	type: AccountsAndBalancesAccountType;
 	currencyCode: string;
 }
 
-export type AcountsAndBalancesJournalEntryDto = {
+export type AccountsAndBalancesJournalEntryRequest = {
 	requestedId: string | null;
 	ownerId: string | null;
 	currencyCode: string;

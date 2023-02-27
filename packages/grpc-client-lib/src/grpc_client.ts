@@ -35,24 +35,27 @@ import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {AccountsAndBalancesAccount,
 	AccountsAndBalancesAccountState,
 	AccountsAndBalancesAccountType,
-	AcountsAndBalancesJournalEntry
+	AccountsAndBalancesJournalEntry
 } from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {
 
 } from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {join} from "path";
 import {
-	GrpcAccount,
 	GrpcAccount__Output,
 	GrpcAccountsAndBalancesClient,
 	GrpcId,
-	GrpcId__Output,
-	GrpcJournalEntry,
+	GrpcCreateAccountArray,
+	GrpcCreateJournalEntryArray,
 	GrpcJournalEntry__Output,
-	ProtoGrpcType
+	ProtoGrpcType,
+	GrpcCancelReservationAndCommitRequest,
+	GrpcCheckLiquidAndReserveRequest,
+	GrpcCancelReservationRequest, GrpcIdArray
+
 } from "./types";
 import {LoginHelper} from "@mojaloop/security-bc-client-lib";
-import {UnauthorizedError} from "@mojaloop/security-bc-public-types-lib";
+//import {UnauthorizedError} from "@mojaloop/security-bc-public-types-lib";
 
 const PROTO_FILE_NAME = "accounts_and_balances.proto";
 const LOAD_PROTO_OPTIONS: protoLoader.Options = {
@@ -66,6 +69,7 @@ export class AccountsAndBalancesGrpcClient {
 	private readonly _callMetadata: grpc.Metadata;
 	private readonly _client: GrpcAccountsAndBalancesClient;
 	private readonly _loginHelper:LoginHelper;
+	private readonly _url:string;
 
 	constructor(
 		url: string,
@@ -74,6 +78,7 @@ export class AccountsAndBalancesGrpcClient {
 	) {
 		this._logger = logger.createChild(this.constructor.name);
 		this._loginHelper = loginHelper;
+		this._url = url;
 
 		const protoFileAbsolutePath: string = join(__dirname, PROTO_FILE_NAME);
 		const packageDefinition: protoLoader.PackageDefinition = protoLoader.loadSync(
@@ -85,7 +90,7 @@ export class AccountsAndBalancesGrpcClient {
 		this._callMetadata = new grpc.Metadata();
 
 		this._client = new (grpcObject as unknown as ProtoGrpcType).GrpcAccountsAndBalances(
-			url,
+			this._url,
 			grpc.credentials.createInsecure()
 		);
 	}
@@ -103,6 +108,8 @@ export class AccountsAndBalancesGrpcClient {
 		await this._updateCallMetadata();
 
 		return new Promise((resolve, reject) => {
+			this._logger.info(`Connecting AccountsAndBalancesGrpcClient to url: ${this._url}`);
+
 			const deadline: grpc.Deadline = Date.now() + TIMEOUT_MS;
 
 			this._client.waitForReady(
@@ -125,56 +132,83 @@ export class AccountsAndBalancesGrpcClient {
 		this._logger.info("gRPC client destroyed 🏁");
 	}
 
-	async createAccounts(accounts: AccountsAndBalancesAccount[]): Promise<string[]> {
-		const grpcAccounts: GrpcAccount[] = accounts.map((account) => {
-			const grpcAccount: GrpcAccount = {
-				id: account.id ?? undefined, 
-				ownerId: account.ownerId,
-				state: account.state,
-				type: account.type,
-				currencyCode: account.currencyCode,
-				postedDebitBalance: account.postedDebitBalance ?? undefined,
-				pendingDebitBalance: account.pendingDebitBalance ?? undefined,
-				postedCreditBalance: account.postedCreditBalance ?? undefined,
-				pendingCreditBalance: account.pendingCreditBalance ?? undefined,
-				balance: account.balance ?? undefined, 
-				timestampLastJournalEntry: account.timestampLastJournalEntry ?? undefined 
-			};
-			return grpcAccount;
-		});
-
+	async createAccounts(accountCreates: GrpcCreateAccountArray): Promise<GrpcIdArray> {
 		await this._updateCallMetadata();
 
 		return new Promise((resolve, reject) => {
-			this._client.createAccounts(
-				{grpcAccountArray: grpcAccounts},
-				this._callMetadata,
-				(error, resp) => {
-					if (error || !resp) return reject(error);
-
-					const grpcIdsOutput: GrpcId__Output[] = resp.grpcIdArray || [];
-
-					const accountIds: string[] = [];
-					for (const grpcIdOutput of grpcIdsOutput) {
-						if (!grpcIdOutput.grpcId) {
-							reject(new Error()); // todo cleanup
-							return;
-						}
-						accountIds.push(grpcIdOutput.grpcId);
-					}
-					resolve(accountIds);
+			this._client.createAccounts(accountCreates, this._callMetadata, (error, idsResponse) => {
+					if (error || !idsResponse) return reject(error);
+					resolve(idsResponse);
 				}
 			);
 		});
 	}
 
-	async createJournalEntries(journalEntries: AcountsAndBalancesJournalEntry[]): Promise<string[]> {
+	/*	async createAccounts(accounts: AccountsAndBalancesAccount[]): Promise<string[]> {
+			const grpcAccounts: GrpcAccount[] = accounts.map((account) => {
+				const grpcAccount: GrpcAccount = {
+					id: account.id ?? undefined,
+					ownerId: account.ownerId,
+					state: account.state,
+					type: account.type,
+					currencyCode: account.currencyCode,
+					postedDebitBalance: account.postedDebitBalance ?? undefined,
+					pendingDebitBalance: account.pendingDebitBalance ?? undefined,
+					postedCreditBalance: account.postedCreditBalance ?? undefined,
+					pendingCreditBalance: account.pendingCreditBalance ?? undefined,
+					balance: account.balance ?? undefined,
+					timestampLastJournalEntry: account.timestampLastJournalEntry ?? undefined
+				};
+				return grpcAccount;
+			});
+
+			await this._updateCallMetadata();
+
+			return new Promise((resolve, reject) => {
+				this._client.createAccounts(
+					{grpcAccountArray: grpcAccounts},
+					this._callMetadata,
+					(error, resp) => {
+						if (error || !resp) return reject(error);
+
+						const grpcIdsOutput: GrpcId__Output[] = resp.grpcIdArray || [];
+
+						const accountIds: string[] = [];
+						for (const grpcIdOutput of grpcIdsOutput) {
+							if (!grpcIdOutput.grpcId) {
+								reject(new Error()); // todo cleanup
+								return;
+							}
+							accountIds.push(grpcIdOutput.grpcId);
+						}
+						resolve(accountIds);
+					}
+				);
+			});
+		}*/
+
+	async createJournalEntries(entryCreates: GrpcCreateJournalEntryArray): Promise<GrpcIdArray> {
+		await this._updateCallMetadata();
+
+		return new Promise((resolve, reject) => {
+			this._client.createJournalEntries(entryCreates, this._callMetadata, (error, idsResponse) => {
+					if (error || !idsResponse) return reject(error);
+					resolve(idsResponse);
+				}
+			);
+		});
+	}
+
+
+/*
+	async createJournalEntries(journalEntries: AccountsAndBalancesJournalEntry[]): Promise<string[]> {
 		const grpcJournalEntries: GrpcJournalEntry[] = journalEntries.map((journalEntry) => {
 			const grpcJournalEntry: GrpcJournalEntry = {
 				id: journalEntry.id ?? undefined, 
 				ownerId: journalEntry.ownerId ?? undefined, 
 				currencyCode: journalEntry.currencyCode,
 				amount: journalEntry.amount,
+				pending: journalEntry.pending,
 				debitedAccountId: journalEntry.debitedAccountId,
 				creditedAccountId: journalEntry.creditedAccountId,
 				timestamp: journalEntry.timestamp ?? undefined 
@@ -204,6 +238,7 @@ export class AccountsAndBalancesGrpcClient {
 			);
 		});
 	}
+*/
 
 	async getAccountsByIds(accountIds: string[]): Promise<AccountsAndBalancesAccount[]> {
 		const grpcAccountIds: GrpcId[] = accountIds.map((accountId) => {
@@ -237,7 +272,7 @@ export class AccountsAndBalancesGrpcClient {
 		});
 	}
 
-	async getJournalEntriesByAccountId(accountId: string): Promise<AcountsAndBalancesJournalEntry[]> {
+	async getJournalEntriesByAccountId(accountId: string): Promise<AccountsAndBalancesJournalEntry[]> {
 		await this._updateCallMetadata();
 
 		return new Promise((resolve, reject) => {
@@ -250,7 +285,7 @@ export class AccountsAndBalancesGrpcClient {
 					const grpcJournalEntriesOutput: GrpcJournalEntry__Output[] = resp.grpcJournalEntryArray || [];
 					// resolve(grpcJournalEntriesOutput);
 
-					const journalEntries: AcountsAndBalancesJournalEntry[] =
+					const journalEntries: AccountsAndBalancesJournalEntry[] =
 						grpcJournalEntriesOutput.map((grpcJournalEntryOutput) => {
 						if (
 							!grpcJournalEntryOutput.currencyCode
@@ -261,7 +296,7 @@ export class AccountsAndBalancesGrpcClient {
 							throw new Error(); // TODO: create custom error.
 						}
 
-						const journalEntry: AcountsAndBalancesJournalEntry = {
+						const journalEntry: AccountsAndBalancesJournalEntry = {
 							id: grpcJournalEntryOutput.id ?? null, 
 							ownerId: grpcJournalEntryOutput.ownerId ?? null, 
 							currencyCode: grpcJournalEntryOutput.currencyCode,
@@ -320,6 +355,72 @@ export class AccountsAndBalancesGrpcClient {
 			this._client.activateAccountsByIds({grpcIdArray: grpcAccountIds}, this._callMetadata,(error) => {
 					if (error) return reject(error);
 					resolve();
+			});
+		});
+	}
+
+	// High level
+
+	async checkLiquidAndReserve(
+		payerPositionAccountId: string, payerLiquidityAccountId: string, hubJokeAccountId: string,
+		transferAmount: string, currencyCode: string, payerNetDebitCap: string, transferId: string
+	): Promise<void>{
+
+		const req: GrpcCheckLiquidAndReserveRequest = {
+			payerPositionAccountId: payerPositionAccountId,
+			payerLiquidityAccountId: payerLiquidityAccountId,
+			hubJokeAccountId: hubJokeAccountId,
+			currencyCode: currencyCode,
+			payerNetDebitCap:payerNetDebitCap,
+			transferAmount: transferAmount,
+			transferId: transferId
+		};
+
+		return new Promise((resolve, reject) => {
+			this._client.checkLiquidAndReserve(req, this._callMetadata, (error) => {
+				if (error) return reject(error);
+				resolve();
+			});
+		});
+	}
+
+	async cancelReservationAndCommit(
+		payerPositionAccountId: string, payeePositionAccountId: string, hubJokeAccountId: string,
+		transferAmount: string, currencyCode: string, transferId: string
+	): Promise<void> {
+		const req: GrpcCancelReservationAndCommitRequest = {
+			payerPositionAccountId: payerPositionAccountId,
+			payeePositionAccountId: payeePositionAccountId,
+			hubJokeAccountId: hubJokeAccountId,
+			currencyCode: currencyCode,
+			transferAmount: transferAmount,
+			transferId: transferId
+		};
+
+		return new Promise((resolve, reject) => {
+			this._client.cancelReservationAndCommit(req, this._callMetadata, (error) => {
+				if (error) return reject(error);
+				resolve();
+			});
+		});
+	}
+
+	async cancelReservation(
+		payerPositionAccountId: string, hubJokeAccountId: string,
+		transferAmount: string, currencyCode: string, transferId: string
+	): Promise<void> {
+		const req: GrpcCancelReservationRequest = {
+			payerPositionAccountId: payerPositionAccountId,
+			hubJokeAccountId: hubJokeAccountId,
+			currencyCode: currencyCode,
+			transferAmount: transferAmount,
+			transferId: transferId
+		};
+
+		return new Promise((resolve, reject) => {
+			this._client.cancelReservation(req, this._callMetadata, (error) => {
+				if (error) return reject(error);
+				resolve();
 			});
 		});
 	}

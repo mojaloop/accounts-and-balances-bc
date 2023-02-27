@@ -29,29 +29,41 @@
 "use strict";
 
 import {ServerErrorResponse} from "@grpc/grpc-js/build/src/index";
+import {
+	GrpcCancelReservationAndCommitRequest
+} from "@mojaloop/accounts-and-balances-bc-grpc-client-lib/dist/types/proto-gen/GrpcCancelReservationAndCommitRequest";
+import {
+	GrpcCheckLiquidAndReserveRequest
+} from "@mojaloop/accounts-and-balances-bc-grpc-client-lib/dist/types/proto-gen/GrpcCheckLiquidAndReserveRequest";
+
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {ServerUnaryCall, sendUnaryData, status} from "@grpc/grpc-js";
 import {
 	Empty,
 	GrpcAccount,
-	GrpcAccount__Output,
 	GrpcAccountArray,
-	GrpcAccountArray__Output,
 	GrpcAccountsAndBalancesHandlers,
+	GrpcCancelReservationRequest, GrpcCreateAccount,
+	GrpcCreateAccountArray,
+	GrpcCreateJournalEntry,
+	GrpcCreateJournalEntryArray,
 	GrpcId,
-	GrpcId__Output,
 	GrpcIdArray,
-	GrpcIdArray__Output,
 	GrpcJournalEntry,
-	GrpcJournalEntry__Output,
 	GrpcJournalEntryArray,
-	GrpcJournalEntryArray__Output
 } from "@mojaloop/accounts-and-balances-bc-grpc-client-lib";
 import {UnauthorizedError} from "@mojaloop/security-bc-public-types-lib";
 import {TokenHelper, CallSecurityContext} from "@mojaloop/security-bc-client-lib";
-import {AccountNotFoundError, AccountsAndBalancesAccount, AccountsAndBalancesAccountState, AccountsAndBalancesAccountType,
-	AcountsAndBalancesJournalEntry} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import {
+	AccountNotFoundError,
+	AccountsAndBalancesAccount,
+	AccountsAndBalancesAccountState,
+	AccountsAndBalancesAccountType,
+	AccountsAndBalancesError,
+	AccountsAndBalancesJournalEntry,
+} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {ForbiddenError} from "@mojaloop/security-bc-public-types-lib/dist/index";
+import {randomUUID} from "crypto";
 import {AccountsAndBalancesAggregate} from "../../domain/aggregate";
 
 const UNKNOWN_ERROR_MESSAGE ="unknown error"; 
@@ -81,7 +93,10 @@ export class GrpcHandlers {
 			"GetJournalEntriesByAccountId": this._getJournalEntriesByAccountId.bind(this),
 			"DeleteAccountsByIds": this._deleteAccountsByIds.bind(this),
 			"DeactivateAccountsByIds": this._deactivateAccountsByIds.bind(this),
-			"ActivateAccountsByIds": this._activateAccountsByIds.bind(this)
+			"ActivateAccountsByIds": this._activateAccountsByIds.bind(this),
+			"CheckLiquidAndReserve": this._checkLiquidAndReserve.bind(this),
+			"CancelReservationAndCommit": this._cancelReservationAndCommit.bind(this),
+			"CancelReservation": this._cancelReservation.bind(this)
 		};
 	}
 
@@ -93,29 +108,33 @@ export class GrpcHandlers {
 	 * @private
 	 */
 	private async _getSecCtxFromCall(call: ServerUnaryCall<any, any>, callback: sendUnaryData<any>): Promise<CallSecurityContext | null> {
-		const returnUnauthorized = () => {
-			callback(this._handleAggregateError(new UnauthorizedError()));
+		const returnUnauthorized = (msg: string) => {
+			callback(this._handleAggregateError(new UnauthorizedError(msg)));
 			return null;
 		};
 
 		const callTokenMeta = call.metadata.get("TOKEN");
-		if (!callTokenMeta) return returnUnauthorized();
+		if (!callTokenMeta) return returnUnauthorized("Could not get token from call metadata");
 
 		const bearerToken = callTokenMeta[0] as string;
-		if (!bearerToken) return returnUnauthorized();
+		if (!bearerToken) return returnUnauthorized("Could not get token from call metadata array (metadata key exists)");
 
 		let verified;
 		try {
 			verified = await this._tokenHelper.verifyToken(bearerToken);
 		} catch (err) {
-			this._logger.error(err, "unable to verify token");
-			return returnUnauthorized();
+			this._logger.error(err, "Unable to verify token - verifyToken() failed");
+			return returnUnauthorized("Unable to verify token - verifyToken() failed");
 		}
-		if (!verified) return returnUnauthorized();
+		if (!verified) {
+			this._logger.warn("Unable to verify token - verifyToken() return false");
+			return returnUnauthorized("Unable to verify token - verifyToken() return false");
+		}
 
 		const decoded = this._tokenHelper.decodeToken(bearerToken);
 		if (!decoded.sub || decoded.sub.indexOf("::")== -1) {
-			return returnUnauthorized();
+			this._logger.warn("Unable to decodeToken token");
+			return returnUnauthorized("Unable to decodeToken token");
 		}
 
 		const subSplit = decoded.sub.split("::");
@@ -130,41 +149,134 @@ export class GrpcHandlers {
 		};
 	}
 
+	private async _checkLiquidAndReserve(
+		call: ServerUnaryCall<GrpcCheckLiquidAndReserveRequest, Empty>,
+		callback: sendUnaryData<Empty>
+	): Promise<void>{
+		const secCtx = await this._getSecCtxFromCall(call, callback);
+		if (!secCtx) return; // callback was called by _getSecCtxFromCall()
+
+		const req: GrpcCheckLiquidAndReserveRequest = call.request;
+
+		if(!req.hubJokeAccountId || !req.payerPositionAccountId || !req.payerLiquidityAccountId){
+			throw new AccountsAndBalancesError("Invalid accounts on CheckLiquidAndReserve request");
+		}
+		if(!req.transferAmount){
+			throw new AccountsAndBalancesError("Invalid transferAmount on CheckLiquidAndReserve request");
+		}
+		if (!req.currencyCode) {
+			throw new AccountsAndBalancesError("Invalid currencyCode on CheckLiquidAndReserve request");
+		}
+		if (!req.payerNetDebitCap) {
+			throw new AccountsAndBalancesError("Invalid payerNetDebitCap on CheckLiquidAndReserve request");
+		}
+		if (!req.transferId) {
+			throw new AccountsAndBalancesError("Invalid transferId on CheckLiquidAndReserve request");
+		}
+
+		try {
+			await this._aggregate.checkLiquidAndReserve(
+				secCtx,
+				req.payerPositionAccountId, req.payerLiquidityAccountId, req.hubJokeAccountId,
+				req.transferAmount, req.currencyCode, req.payerNetDebitCap, req.transferId
+				);
+			return callback(null, {});
+		} catch (error: unknown) {
+			return callback(this._handleAggregateError(error));
+		}
+
+	}
+
+	private async _cancelReservationAndCommit(
+		call: ServerUnaryCall<GrpcCancelReservationAndCommitRequest, Empty>,
+		callback: sendUnaryData<Empty>
+	): Promise<void> {
+		const secCtx = await this._getSecCtxFromCall(call, callback);
+		if (!secCtx) return; // callback was called by _getSecCtxFromCall()
+
+		const req: GrpcCancelReservationAndCommitRequest = call.request;
+
+		if (!req.hubJokeAccountId || !req.payerPositionAccountId || !req.payeePositionAccountId) {
+			throw new AccountNotFoundError("Invalid accounts on CancelReservationAndCommit request");
+		}
+		if (!req.transferAmount) {
+			throw new AccountNotFoundError("Invalid transferAmount on CancelReservationAndCommit request");
+		}
+		if (!req.currencyCode) {
+			throw new AccountNotFoundError("Invalid currencyCode on CancelReservationAndCommit request");
+		}
+		if (!req.transferId) {
+			throw new AccountsAndBalancesError("Invalid transferId on CheckLiquidAndReserve request");
+		}
+
+		try {
+			await this._aggregate.cancelReservationAndCommit(
+				secCtx, req.payerPositionAccountId, req.payeePositionAccountId, req.hubJokeAccountId,
+				req.transferAmount, req.currencyCode, req.transferId
+			);
+			return callback(null, {});
+		} catch (error: unknown) {
+			return callback(this._handleAggregateError(error));
+		}
+
+	}
+
+	private async _cancelReservation(
+		call: ServerUnaryCall<GrpcCancelReservationRequest, Empty>,
+		callback: sendUnaryData<Empty>
+	): Promise<void> {
+		const secCtx = await this._getSecCtxFromCall(call, callback);
+		if (!secCtx) return; // callback was called by _getSecCtxFromCall()
+
+		const req: GrpcCancelReservationAndCommitRequest = call.request;
+
+		if (!req.hubJokeAccountId || !req.payerPositionAccountId || !req.payeePositionAccountId) {
+			throw new AccountNotFoundError("Invalid accounts on CancelReservationAndCommit request");
+		}
+		if (!req.transferAmount) {
+			throw new AccountNotFoundError("Invalid transferAmount on CancelReservationAndCommit request");
+		}
+		if (!req.currencyCode) {
+			throw new AccountNotFoundError("Invalid currencyCode on CancelReservationAndCommit request");
+		}
+		if (!req.transferId) {
+			throw new AccountsAndBalancesError("Invalid transferId on CheckLiquidAndReserve request");
+		}
+
+		try {
+			await this._aggregate.cancelReservation(
+				secCtx, req.payerPositionAccountId, req.hubJokeAccountId,
+				req.transferAmount, req.currencyCode, req.transferId
+			);
+			return callback(null, {});
+		} catch (error: unknown) {
+			return callback(this._handleAggregateError(error));
+		}
+
+	}
 
 	private async _createAccounts(
-		call: ServerUnaryCall<GrpcAccountArray__Output, GrpcIdArray>,
+		call: ServerUnaryCall<GrpcCreateAccountArray, GrpcIdArray>,
 		callback: sendUnaryData<GrpcIdArray>
 	): Promise<void> {
 		const secCtx = await this._getSecCtxFromCall(call, callback);
 		if (!secCtx) return; // callback was called by _getSecCtxFromCall()
 
-		const grpcAccountsOutput: GrpcAccount__Output[] = call.request.grpcAccountArray || [];
+		const createRequests: GrpcCreateAccount[] = call.request.accountsToCreate || [];
 
-		const accounts: AccountsAndBalancesAccount[] = grpcAccountsOutput.map((grpcAccountOutput) => {
-			if (
-				grpcAccountOutput.ownerId === undefined // TODO: "" might be passed - what should I do here?
-				|| !grpcAccountOutput.state
-				|| !grpcAccountOutput.type
-				|| !grpcAccountOutput.currencyCode
-			) {
-				throw new Error(); // TODO: create custom error.
-			}
-
-			const account: AccountsAndBalancesAccount = {
-				id: grpcAccountOutput.id ?? null, 
-				ownerId: grpcAccountOutput.ownerId,
-				state: grpcAccountOutput.state as AccountsAndBalancesAccountState, // TODO: cast?
-				type: grpcAccountOutput.type as AccountsAndBalancesAccountType, // TODO: cast?
-				currencyCode: grpcAccountOutput.currencyCode,
-				postedDebitBalance: grpcAccountOutput.postedDebitBalance ?? null,
-				pendingDebitBalance: grpcAccountOutput.pendingDebitBalance ?? null,
-				postedCreditBalance: grpcAccountOutput.postedCreditBalance ?? null,
-				pendingCreditBalance: grpcAccountOutput.pendingCreditBalance ?? null,
-				balance: grpcAccountOutput.balance ?? null, 
-				timestampLastJournalEntry: grpcAccountOutput.timestampLastJournalEntry ?? null 
-			};
-			return account;
-		});
+		const accounts: {
+			requestedId: string, ownerId: string, accountType: AccountsAndBalancesAccountType, currencyCode: string 
+		}[] = [];
+		
+		for(const item of createRequests) {
+			// note: we can force values here because the aggregate will control and throw the correct error
+			accounts.push({
+				requestedId: item.requestedId!,
+				ownerId: item.ownerId!,
+				accountType: item.type as AccountsAndBalancesAccountType,
+				currencyCode: item.currencyCode!
+			});
+		}
 
 		let accountIds: string[];
 		try {
@@ -180,35 +292,31 @@ export class GrpcHandlers {
 	}
 
 	private async _createJournalEntries(
-		call: ServerUnaryCall<GrpcJournalEntryArray__Output, GrpcIdArray>,
+		call: ServerUnaryCall<GrpcCreateJournalEntryArray, GrpcIdArray>,
 		callback: sendUnaryData<GrpcIdArray>
 	): Promise<void> {
 		const secCtx = await this._getSecCtxFromCall(call, callback);
 		if (!secCtx) return; // callback was called by _getSecCtxFromCall()
 
-		const grpcJournalEntriesOutput: GrpcJournalEntry__Output[] = call.request.grpcJournalEntryArray || [];
+		const reqEntries: GrpcCreateJournalEntry[] = call.request.entriesToCreate || [];
 
-		const journalEntries: AcountsAndBalancesJournalEntry[] = grpcJournalEntriesOutput.map((grpcJournalEntryOutput) => {
-			if (
-				!grpcJournalEntryOutput.currencyCode
-				|| !grpcJournalEntryOutput.amount
-				|| !grpcJournalEntryOutput.debitedAccountId
-				|| !grpcJournalEntryOutput.creditedAccountId
-			) {
-				throw new Error();
-			}
-
-			const journalEntry: AcountsAndBalancesJournalEntry = {
-				id: grpcJournalEntryOutput.id ?? null, 
-				ownerId: grpcJournalEntryOutput.ownerId ?? null, 
-				currencyCode: grpcJournalEntryOutput.currencyCode,
-				amount: grpcJournalEntryOutput.amount,
-				pending: grpcJournalEntryOutput.pending!,
-				debitedAccountId: grpcJournalEntryOutput.debitedAccountId,
-				creditedAccountId: grpcJournalEntryOutput.creditedAccountId,
-				timestamp: grpcJournalEntryOutput.timestamp ?? null 
+		const now = Date.now();
+		
+		const journalEntries: {
+			requestedId: string, amountStr: string, currencyCode: string,
+			creditedAccountId: string, debitedAccountId: string, timestamp: number, ownerId: string, pending: boolean
+		}[] = reqEntries.map((item) => {
+			// note: we can force values here because the aggregate will control and throw the correct error	
+			return {
+				requestedId: item.requestedId || randomUUID(),
+				amountStr: item.amount!,
+				currencyCode: item.currencyCode!,
+				creditedAccountId: item.creditedAccountId!,
+				debitedAccountId: item.debitedAccountId!,
+				ownerId: item.ownerId!,
+				pending: item.pending!,
+				timestamp: now
 			};
-			return journalEntry;
 		});
 
 		let journalEntryIds: string[];
@@ -225,13 +333,13 @@ export class GrpcHandlers {
 	}
 
 	private async _getAccountsByIds(
-		call: ServerUnaryCall<GrpcIdArray__Output, GrpcAccountArray>,
+		call: ServerUnaryCall<GrpcIdArray, GrpcAccountArray>,
 		callback: sendUnaryData<GrpcAccountArray>
 	): Promise<void> {
 		const secCtx = await this._getSecCtxFromCall(call, callback);
 		if (!secCtx) return; // callback was called by _getSecCtxFromCall()
 
-		const grpcAccountIdsOutput: GrpcId__Output[] = call.request.grpcIdArray || [];
+		const grpcAccountIdsOutput: GrpcId[] = call.request.grpcIdArray || [];
 
 		const accountIds: string[] = [];
 		for (const grpcAccountIdOutput of grpcAccountIdsOutput) {
@@ -259,7 +367,7 @@ export class GrpcHandlers {
 	}
 
 	private async _getAccountsByOwnerId(
-		call: ServerUnaryCall<GrpcId__Output, GrpcAccountArray>,
+		call: ServerUnaryCall<GrpcId, GrpcAccountArray>,
 		callback: sendUnaryData<GrpcAccountArray>
 	): Promise<void> {
 		const secCtx = await this._getSecCtxFromCall(call, callback);
@@ -288,7 +396,7 @@ export class GrpcHandlers {
 	}
 
 	private async _getJournalEntriesByAccountId(
-		call: ServerUnaryCall<GrpcId__Output, GrpcJournalEntryArray>,
+		call: ServerUnaryCall<GrpcId, GrpcJournalEntryArray>,
 		callback: sendUnaryData<GrpcJournalEntryArray>
 	): Promise<void> {
 		const secCtx = await this._getSecCtxFromCall(call, callback);
@@ -303,7 +411,7 @@ export class GrpcHandlers {
 			return;
 		}
 
-		let journalEntries: AcountsAndBalancesJournalEntry[];
+		let journalEntries: AccountsAndBalancesJournalEntry[];
 		try {
 			journalEntries = await this._aggregate.getJournalEntriesByAccountId(secCtx, accountId);
 		} catch (error: unknown) {
@@ -326,13 +434,13 @@ export class GrpcHandlers {
 	}
 
 	private async _deleteAccountsByIds(
-		call: ServerUnaryCall<GrpcIdArray__Output, Empty>,
+		call: ServerUnaryCall<GrpcIdArray, Empty>,
 		callback: sendUnaryData<Empty>
 	): Promise<void> {
 		const secCtx = await this._getSecCtxFromCall(call, callback);
 		if(!secCtx) return; // callback was called by _getSecCtxFromCall()
 
-		const grpcAccountIdsOutput: GrpcId__Output[] = call.request.grpcIdArray || [];
+		const grpcAccountIdsOutput: GrpcId[] = call.request.grpcIdArray || [];
 
 		const accountIds: string[] = [];
 		for (const grpcAccountIdOutput of grpcAccountIdsOutput) {
@@ -357,13 +465,13 @@ export class GrpcHandlers {
 	}
 
 	private async _deactivateAccountsByIds(
-		call: ServerUnaryCall<GrpcIdArray__Output, Empty>,
+		call: ServerUnaryCall<GrpcIdArray, Empty>,
 		callback: sendUnaryData<Empty>
 	): Promise<void> {
 		const secCtx = await this._getSecCtxFromCall(call, callback);
 		if(!secCtx) return; // callback was called by _getSecCtxFromCall()
 
-		const grpcAccountIdsOutput: GrpcId__Output[] = call.request.grpcIdArray || [];
+		const grpcAccountIdsOutput: GrpcId[] = call.request.grpcIdArray || [];
 
 		const accountIds: string[] = [];
 		for (const grpcAccountIdOutput of grpcAccountIdsOutput) {
@@ -387,13 +495,13 @@ export class GrpcHandlers {
 	}
 
 	private async _activateAccountsByIds(
-		call: ServerUnaryCall<GrpcIdArray__Output, Empty>,
+		call: ServerUnaryCall<GrpcIdArray, Empty>,
 		callback: sendUnaryData<Empty>
 	): Promise<void> {
 		const secCtx = await this._getSecCtxFromCall(call, callback);
 		if(!secCtx) return; // callback was called by _getSecCtxFromCall()
 
-		const grpcAccountIdsOutput: GrpcId__Output[] = call.request.grpcIdArray || [];
+		const grpcAccountIdsOutput: GrpcId[] = call.request.grpcIdArray || [];
 
 		const accountIds: string[] = [];
 		for (const grpcAccountIdOutput of grpcAccountIdsOutput) {
@@ -437,16 +545,21 @@ export class GrpcHandlers {
 	private _handleAggregateError(error: any): ServerErrorResponse {
 		const srvError: ServerErrorResponse = {
 			name: error.constructor.name,
-			message: error.message || ""
+			message: error.message || error.constructor.name,
+			details: error.message || error.constructor.name,
 		};
 
 		if (error instanceof UnauthorizedError) {
+			this._logger.warn(`Got UnauthorizedError - message: ${error.message}`);
 			srvError.code = status.UNAUTHENTICATED;
 		} else if (error instanceof ForbiddenError) {
+			this._logger.warn(`Got ForbiddenError - message: ${error.message}`);
 			srvError.code = status.PERMISSION_DENIED;
 		} else if (error instanceof AccountNotFoundError) {
+			this._logger.warn(`Got AccountNotFoundError - message: ${error.message}`);
 			srvError.code = status.NOT_FOUND;
 		} else {
+			this._logger.warn(`Got handled error message - message: ${error.message}`);
 			srvError.code = status.UNKNOWN;
 		}
 		return srvError;

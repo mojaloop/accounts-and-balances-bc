@@ -59,6 +59,11 @@ export type LedgerAdapterRequestId = {
     currencyDecimals: number
 }
 
+export type LedgerAdapterCreateResponseItem = {
+    requestedId: string;
+    attributedId: string;
+}
+
 export interface ILedgerAdapter {
     init(): Promise<void>;
     destroy(): Promise<void>;
@@ -67,8 +72,14 @@ export interface ILedgerAdapter {
     setUserCredentials(client_id: string, username: string, password: string): void;
     setAppCredentials(client_id: string, client_secret: string): void;
 
-    createAccounts(ledgerAdapterAccounts: LedgerAdapterAccount[]): Promise<string[]>;
-    createJournalEntries(ledgerAdapterJournalEntries: LedgerAdapterJournalEntry[]): Promise<string[]>;
+    createAccounts(createReq: { requestedId: string, type: string, currencyCode: string}[]): Promise<LedgerAdapterCreateResponseItem[]>;
+
+    createJournalEntries(
+        createReq: {
+            requestedId: string, amountStr: string, currencyCode: string,
+            creditedAccountId: string, debitedAccountId: string, timestamp: number, ownerId: string, pending: boolean
+        }[]
+    ): Promise<LedgerAdapterCreateResponseItem[]>;
 
     getAccountsByIds(ledgerAccountIds: LedgerAdapterRequestId[]): Promise<LedgerAdapterAccount[]>;
     getJournalEntriesByAccountId(

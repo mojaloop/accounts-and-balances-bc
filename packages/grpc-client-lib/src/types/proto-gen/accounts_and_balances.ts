@@ -11,6 +11,13 @@ export interface ProtoGrpcType {
   GrpcAccount: MessageTypeDefinition
   GrpcAccountArray: MessageTypeDefinition
   GrpcAccountsAndBalances: SubtypeConstructor<typeof grpc.Client, _GrpcAccountsAndBalancesClient> & { service: _GrpcAccountsAndBalancesDefinition }
+  GrpcCancelReservationAndCommitRequest: MessageTypeDefinition
+  GrpcCancelReservationRequest: MessageTypeDefinition
+  GrpcCheckLiquidAndReserveRequest: MessageTypeDefinition
+  GrpcCreateAccount: MessageTypeDefinition
+  GrpcCreateAccountArray: MessageTypeDefinition
+  GrpcCreateJournalEntry: MessageTypeDefinition
+  GrpcCreateJournalEntryArray: MessageTypeDefinition
   GrpcId: MessageTypeDefinition
   GrpcIdArray: MessageTypeDefinition
   GrpcJournalEntry: MessageTypeDefinition

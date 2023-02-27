@@ -31,7 +31,7 @@ import {log} from "@grpc/grpc-js/build/src/logging";
 import {LoginHelper} from "@mojaloop/security-bc-client-lib";
 import {
 	ILedgerAdapter,
-	LedgerAdapterAccount,
+	LedgerAdapterAccount, LedgerAdapterCreateResponseItem,
 	LedgerAdapterJournalEntry,
 	LedgerAdapterRequestId,
 } from "../domain/infrastructure-types/ledger_adapter";
@@ -40,7 +40,9 @@ import {
 	BuiltinLedgerGrpcAccountArray__Output,
 	BuiltinLedgerGrpcClient,
 	BuiltinLedgerGrpcCreateAccountArray,
-	BuiltinLedgerGrpcCreateIdsResponse__Output, BuiltinLedgerGrpcCreateJournalEntryArray,
+	BuiltinLedgerGrpcCreateIdsResponse__Output,
+	BuiltinLedgerGrpcCreateJournalEntry,
+	BuiltinLedgerGrpcCreateJournalEntryArray,
 	BuiltinLedgerGrpcId,
 	BuiltinLedgerGrpcJournalEntryArray__Output
 } from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-client-lib";
@@ -83,22 +85,21 @@ export class BuiltinLedgerAdapter implements ILedgerAdapter {
 		this._loginHelper.setAppCredentials(client_id, client_secret);
 	}
 
-	async createAccounts(ledgerAdapterAccounts: LedgerAdapterAccount[]): Promise<string[]> {
-		const createRequest: BuiltinLedgerGrpcCreateAccountArray = {
-			accountsToCreate: []
-		};
-		createRequest.accountsToCreate = ledgerAdapterAccounts.map(value => {
-			return {
-				requestedId: value.id!,
-				type: value.type,
-				currencyCode: value.currencyCode,
-			};
-		});
-
-
+	async createAccounts(createRequests: { requestedId: string, type: string, currencyCode: string }[]): Promise<LedgerAdapterCreateResponseItem[]> {
 		let createIdsResp: BuiltinLedgerGrpcCreateIdsResponse__Output;
+
+		const request: BuiltinLedgerGrpcCreateAccountArray = {
+			accountsToCreate: createRequests.map(item => {
+				return {
+					requestedId: item.requestedId,
+					currencyCode: item.currencyCode,
+					type: item.type
+				};
+			})
+		};
+
 		try {
-			createIdsResp = await this._builtinLedgerClient.createAccounts(createRequest);
+			createIdsResp = await this._builtinLedgerClient.createAccounts(request);
 		} catch (error: unknown) {
 			this._logger.error(error);
 			throw error;
@@ -108,31 +109,34 @@ export class BuiltinLedgerAdapter implements ILedgerAdapter {
 			throw new Error();
 		}
 
-		const accountIds: string[] =createIdsResp.ids.map(value => value.requestedId!);
-		return accountIds;
+		return createIdsResp.ids as LedgerAdapterCreateResponseItem[];
 	}
 
 
-	async createJournalEntries(ledgerAdapterJournalEntries: LedgerAdapterJournalEntry[]): Promise<string[]> {
-		const createRequest: BuiltinLedgerGrpcCreateJournalEntryArray = {
-			entriesToCreate: []
-		};
-		createRequest.entriesToCreate = ledgerAdapterJournalEntries.map(value => {
-			return {
-				requestedId: value.id!,
-				ownerId: value.ownerId!,
-				amount: value.amount,
-				pending: value.pending,
-				creditedAccountId: value.creditedAccountId,
-				debitedAccountId: value.debitedAccountId,
-				currencyCode: value.currencyCode,
-			};
-		});
-
-
+	async createJournalEntries(
+		createRequests: {
+			requestedId: string, amountStr: string, currencyCode: string,
+			creditedAccountId: string, debitedAccountId: string, timestamp: number, ownerId: string, pending: boolean
+		}[]
+	): Promise<LedgerAdapterCreateResponseItem[]> {
 		let createIdsResp: BuiltinLedgerGrpcCreateIdsResponse__Output;
+
+		const grpcRequest: BuiltinLedgerGrpcCreateJournalEntryArray = {
+			entriesToCreate: createRequests.map(item=>{
+				return {
+					requestedId: item.requestedId,
+					ownerId: item.ownerId,
+					pending: item.pending,
+					currencyCode: item.currencyCode,
+					amount: item.amountStr,
+					debitedAccountId: item.debitedAccountId,
+					creditedAccountId: item.creditedAccountId
+				};
+			})
+		};
+
 		try {
-			createIdsResp = await this._builtinLedgerClient.createJournalEntries(createRequest);
+			createIdsResp = await this._builtinLedgerClient.createJournalEntries(grpcRequest);
 		} catch (error: unknown) {
 			this._logger.error(error);
 			throw error;
@@ -142,8 +146,7 @@ export class BuiltinLedgerAdapter implements ILedgerAdapter {
 			throw new Error();
 		}
 
-		const accountIds: string[] = createIdsResp.ids.map(value => value.requestedId!);
-		return accountIds;
+		return createIdsResp.ids as LedgerAdapterCreateResponseItem[];
 	}
 
 

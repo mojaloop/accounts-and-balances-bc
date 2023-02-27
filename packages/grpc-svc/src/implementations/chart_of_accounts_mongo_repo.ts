@@ -105,6 +105,7 @@ export class ChartOfAccountsMongoRepo implements IChartOfAccountsRepo {
             this.collection = await db.createCollection(ChartOfAccountsMongoRepo.COLLECTION_NAME, {
                 validator: {$jsonSchema: COA_ACCOUNT_MONGO_SCHEMA}
             });
+            await this.collection.createIndex({"id": 1}, {unique: true});
         } catch (error: unknown) {
             this.logger.error(error);
             throw error;
@@ -136,10 +137,10 @@ export class ChartOfAccountsMongoRepo implements IChartOfAccountsRepo {
         }
     }
 
-    async getAccountsByInternalIds(internalIds: string[]): Promise<CoaAccount[]> {
+    async getAccounts(ids: string[]): Promise<CoaAccount[]> {
         let accounts: any[];
         try {
-            accounts = await this.collection.find({id: {$in: internalIds}}).project({_id: 0}).toArray();
+            accounts = await this.collection.find({id: {$in: ids}}).project({_id: 0}).toArray();
         } catch (error: unknown) {
             this.logger.error(error);
             throw error;

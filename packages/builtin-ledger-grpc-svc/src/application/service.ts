@@ -28,29 +28,29 @@
  ******/
 
 
-import {ILogger, LogLevel} from "@mojaloop/logging-bc-public-types-lib";
-import {KafkaLogger} from "@mojaloop/logging-bc-client-lib";
 import {
 	AuditClient,
 	KafkaAuditClientDispatcher,
 	LocalAuditClientCryptoProvider
 } from "@mojaloop/auditing-bc-client-lib";
-import {existsSync} from "fs";
 import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
+import {KafkaLogger} from "@mojaloop/logging-bc-client-lib";
+import {ILogger, LogLevel} from "@mojaloop/logging-bc-public-types-lib";
 import {AuthorizationClient, TokenHelper} from "@mojaloop/security-bc-client-lib";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
-import {BuiltinLedgerPrivilegesDefinition} from "./privileges";
+import {existsSync} from "fs";
+import {BuiltinLedgerAggregate} from "../domain/aggregate";
 import {IBuiltinLedgerAccountsRepo, IBuiltinLedgerJournalEntriesRepo} from "../domain/infrastructure";
-import {BuiltinLedgerGrpcServer} from "./grpc_server/grpc_server";
 import {BuiltinLedgerAccountsMongoRepo} from "../implementations/builtin_ledger_accounts_mongo_repo";
 import {BuiltinLedgerJournalEntriesMongoRepo} from "../implementations/builtin_ledger_journal_entries_mongo_repo";
-import {BuiltinLedgerAggregate} from "../domain/aggregate";
+import {BuiltinLedgerGrpcServer} from "./grpc_server/grpc_server";
+import {BuiltinLedgerPrivilegesDefinition} from "./privileges";
 
 /* ********** Constants Begin ********** */
 
 const BC_NAME: string = "accounts-and-balances-bc";
 const APP_NAME: string = "builtin-ledger-grpc-svc";
-const APP_VERSION: string = process.env.npm_package_version || "0.0.1";
+const APP_VERSION: string = process.env.npm_package_version || "0.0.0";
 const PRODUCTION_MODE = process.env["PRODUCTION_MODE"] || false;
 
 const KAFKA_URL: string = process.env.KAFKA_URL || "localhost:9092";
@@ -59,10 +59,10 @@ const LOG_LEVEL: LogLevel = process.env.LOG_LEVEL as LogLevel || LogLevel.DEBUG;
 const KAFKA_LOGS_TOPIC = process.env.KAFKA_LOGS_TOPIC || "logs";
 const KAFKA_AUDITS_TOPIC = process.env.KAFKA_AUDITS_TOPIC || "audits";
 
-const AUTH_N_TOKEN_ISSUER_NAME = process.env.AUTH_N_TOKEN_ISSUER_NAME || "http://localhost:3201/";
 const AUTH_N_SVC_BASEURL = process.env.AUTH_N_SVC_BASEURL || "http://localhost:3201";
 const AUTH_N_SVC_JWKS_URL = process.env.AUTH_N_SVC_JWKS_URL || `${AUTH_N_SVC_BASEURL}/.well-known/jwks.json`;
-const AUTH_N_TOKEN_AUDIENCE = process.env.AUTH_N_TOKEN_AUDIENCE || "mojaloop.vnext.default_audience";
+const AUTH_N_TOKEN_ISSUER_NAME = process.env["AUTH_N_TOKEN_ISSUER_NAME"] || "mojaloop.vnext.dev.default_issuer";
+const AUTH_N_TOKEN_AUDIENCE = process.env.AUTH_N_TOKEN_AUDIENCE || "mojaloop.vnext.dev.default_audience";
 
 const AUTH_Z_SVC_BASEURL = process.env.AUTH_Z_SVC_BASEURL || "http://localhost:3202";
 
@@ -71,7 +71,7 @@ const AUDIT_KEY_FILE_PATH = process.env["AUDIT_KEY_FILE_PATH"] || "/app/data/aud
 
 const MONGO_URL = process.env.MONGO_URL || "mongodb://root:mongoDbPas42@localhost:27017";
 
-const BUILTIN_LEDGER_URL = process.env.BUILTIN_LEDGER_URL || "localhost:3350";
+const BUILTIN_LEDGER_URL = process.env.BUILTIN_LEDGER_URL || "0.0.0.0:3350";
 
 const SVC_CLIENT_ID = process.env["SVC_CLIENT_ID"] || "accounts-and-balances-bc-builtinledger-grpc-svc";
 const SVC_CLIENT_SECRET = process.env["SVC_CLIENT_ID"] || "superServiceSecret";
@@ -117,6 +117,7 @@ export class BuiltinLedgerGrpcService {
 		globalLogger = this.logger = logger;
 
 		// Token helper.
+		this.logger.info(`Starting TokenHelper with jwksUrl: ${AUTH_N_SVC_JWKS_URL} issuerName: ${AUTH_N_TOKEN_ISSUER_NAME} audience: ${AUTH_N_TOKEN_AUDIENCE}`);
 		const tokenHelper: TokenHelper = new TokenHelper(
 			AUTH_N_SVC_JWKS_URL,
 			this.logger,
@@ -138,8 +139,10 @@ export class BuiltinLedgerGrpcService {
 				// create e tmp file
 				LocalAuditClientCryptoProvider.createRsaPrivateKeyFileSync(AUDIT_KEY_FILE_PATH, 2048);
 			}
+			const auditLogger = logger.createChild("AuditLogger");
+			auditLogger.setLogLevel(LogLevel.INFO);
 			const cryptoProvider = new LocalAuditClientCryptoProvider(AUDIT_KEY_FILE_PATH);
-			const auditDispatcher = new KafkaAuditClientDispatcher(kafkaProducerOptions, KAFKA_AUDITS_TOPIC, logger);
+			const auditDispatcher = new KafkaAuditClientDispatcher(kafkaProducerOptions, KAFKA_AUDITS_TOPIC, auditLogger);
 			// NOTE: to pass the same kafka logger to the audit client, make sure the logger is started/initialised already
 			auditingClient = new AuditClient(BC_NAME, APP_NAME, APP_VERSION, cryptoProvider, auditDispatcher);
 			await auditingClient.init();
@@ -208,6 +211,7 @@ export class BuiltinLedgerGrpcService {
 		);
 		try {
 			await this.grpcServer.start();
+			this.logger.info(`BuiltinLedgerGrpcService v: ${APP_VERSION} started`);
 		} catch (error: unknown) {
 			this.logger.fatal(error);
 			await this.stop();

@@ -27,12 +27,13 @@
  --------------
  ******/
 
-const REGEX: RegExp = /^([0]|([1-9][0-9]{0,17}))([.][0-9]{0,3}[1-9])?$/;
+// include negative numbers
+const REGEX: RegExp = /^(-{0,1})([0]|([1-9][0-9]{0,17}))([.][0-9]{0,3}[1-9])?$/;
 
 // Can be optimized.
 export function stringToBigint(stringValue: string, decimals: number): bigint {
 	if (!REGEX.test(stringValue)) {
-		throw new Error("stringToBigint() - regex test failed, invalid input stringValue");
+		throw new Error("stringToBigint() - regex test failed");
 	}
 
 	// Count the decimals on the received string.
@@ -53,12 +54,17 @@ export function stringToBigint(stringValue: string, decimals: number): bigint {
 
 // Can be optimized.
 export function bigintToString(bigintValue: bigint, decimals: number): string {
-	if (bigintValue === 0n) {
+	if (bigintValue===0n) {
 		return "0";
 	}
+	decimals = decimals || 0;
 
 	// Get the string corresponding to the bigint and insert a dot according to the decimals.
-	const bigintValueToString: string = bigintValue.toString();
+	let bigintValueToString: string = bigintValue.toString();
+	if (bigintValueToString.length <= decimals) {
+		bigintValueToString = "0".repeat(decimals - bigintValueToString.length + 1) + bigintValueToString;
+	}
+
 	const dotIdx: number = bigintValueToString.length - decimals;
 	const bigintValueToStringWithDot: string =
 		bigintValueToString.slice(0, dotIdx) + "." + bigintValueToString.slice(dotIdx);

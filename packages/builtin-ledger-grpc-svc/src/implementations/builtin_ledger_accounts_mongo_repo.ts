@@ -72,33 +72,33 @@ export const BUILTIN_LEDGER_ACCOUNT_MONGO_SCHEMA: any = {
 
 export class BuiltinLedgerAccountsMongoRepo implements IBuiltinLedgerAccountsRepo {
     // Properties received through the constructor.
-    private readonly logger: ILogger;
-    private readonly URL: string;
+    private readonly _logger: ILogger;
+    private readonly _url: string;
     // Other properties.
     private static readonly TIMEOUT_MS: number = 5_000;
     private static readonly DB_NAME: string = "accounts_and_balances_bc_builtin_ledger";
     private static readonly COLLECTION_NAME: string = "accounts";
     private static readonly DUPLICATE_KEY_ERROR_CODE: number = 11000;
-    private client: MongoClient;
-    private collection: Collection;
+    private _client: MongoClient;
+    private _collection: Collection;
 
     constructor(
         logger: ILogger,
         url: string
     ) {
-        this.logger = logger.createChild(this.constructor.name);
-        this.URL = url;
+        this._logger = logger.createChild(this.constructor.name);
+        this._url = url;
     }
 
     async init(): Promise<void> {
         try {
             // TODO: investigate other types of timeouts; configure TLS.
-            this.client = new MongoClient(this.URL, {
+            this._client = new MongoClient(this._url, {
                 serverSelectionTimeoutMS: BuiltinLedgerAccountsMongoRepo.TIMEOUT_MS
             });
-            await this.client.connect();
+            await this._client.connect();
 
-            const db: Db = this.client.db(BuiltinLedgerAccountsMongoRepo.DB_NAME);
+            const db: Db = this._client.db(BuiltinLedgerAccountsMongoRepo.DB_NAME);
 
             // Check if the collection already exists.
             const collections: any[] = await db.listCollections().toArray()
@@ -109,20 +109,21 @@ export class BuiltinLedgerAccountsMongoRepo implements IBuiltinLedgerAccountsRep
             // collection() creates the collection if it doesn't already exist, however, it doesn't allow for a schema
             // to be passed as an argument.
             if (collectionExists) {
-                this.collection = db.collection(BuiltinLedgerAccountsMongoRepo.COLLECTION_NAME);
+                this._collection = db.collection(BuiltinLedgerAccountsMongoRepo.COLLECTION_NAME);
                 return;
             }
-            this.collection = await db.createCollection(BuiltinLedgerAccountsMongoRepo.COLLECTION_NAME, {
+            this._collection = await db.createCollection(BuiltinLedgerAccountsMongoRepo.COLLECTION_NAME, {
                 validator: {$jsonSchema: BUILTIN_LEDGER_ACCOUNT_MONGO_SCHEMA}
             });
+            await this._collection.createIndex({"id": 1}, {unique: true});
         } catch (error: unknown) {
-            this.logger.error(error);
+            this._logger.error(error);
             throw error;
         }
     }
 
     async destroy(): Promise<void> {
-        await this.client.close();
+        await this._client.close();
     }
 
     async storeNewAccount(builtinLedgerAccount: BuiltinLedgerAccount): Promise<void> {
@@ -133,15 +134,17 @@ export class BuiltinLedgerAccountsMongoRepo implements IBuiltinLedgerAccountsRep
             limitCheckMode: builtinLedgerAccount.limitCheckMode,
             currencyCode: builtinLedgerAccount.currencyCode,
             currencyDecimals: builtinLedgerAccount.currencyDecimals,
-            debitBalance: builtinLedgerAccount.postedDebitBalance.toString(),
-            creditBalance: builtinLedgerAccount.postedCreditBalance.toString(),
+            postedDebitBalance: builtinLedgerAccount.postedDebitBalance.toString(),
+            pendingDebitBalance: builtinLedgerAccount.pendingDebitBalance.toString(),
+            postedCreditBalance: builtinLedgerAccount.postedCreditBalance.toString(),
+            pendingCreditBalance: builtinLedgerAccount.pendingCreditBalance.toString(),
             timestampLastJournalEntry: builtinLedgerAccount.timestampLastJournalEntry
         };
 
         try {
-            await this.collection.insertOne(mongoAccount);
+            await this._collection.insertOne(mongoAccount);
         } catch (error: unknown) {
-            this.logger.error(error);
+            this._logger.error(error);
             throw error;
         }
     }
@@ -149,15 +152,18 @@ export class BuiltinLedgerAccountsMongoRepo implements IBuiltinLedgerAccountsRep
     async getAccountsByIds(ids: string[]): Promise<BuiltinLedgerAccount[]> {
         let accounts: any[];
         try {
-            accounts = await this.collection.find({id: {$in: ids}}).project({_id: 0}).toArray();
+            accounts = await this._collection.find({id: {$in: ids}}).project({_id: 0}).toArray();
         } catch (error: unknown) {
-            this.logger.error(error);
+            this._logger.error(error);
             throw error;
         }
 
+        // convert strings to bigInts
         accounts.forEach((account) => {
-            account.debitBalance = BigInt(account.debitBalance);
-            account.creditBalance = BigInt(account.creditBalance);
+            account.postedDebitBalance = BigInt(account.postedDebitBalance);
+            account.pendingDebitBalance = BigInt(account.pendingDebitBalance);
+            account.postedCreditBalance = BigInt(account.postedCreditBalance);
+            account.pendingCreditBalance = BigInt(account.pendingCreditBalance);
         });
         return accounts;
     }
@@ -181,15 +187,15 @@ export class BuiltinLedgerAccountsMongoRepo implements IBuiltinLedgerAccountsRep
                 (updateObject.$set as any).postedDebitBalance = newBalance.toString();
             }
 
-            updateResult = await this.collection.updateOne({id: accountId}, updateObject);
+            updateResult = await this._collection.updateOne({id: accountId}, updateObject);
         } catch (error: unknown) {
-            this.logger.error(error);
+            this._logger.error(error);
             throw error;
         }
 
         if (updateResult.modifiedCount !== 1) {
             const err = new Error("Could not updateAccountDebitBalanceAndTimestampById");
-            this.logger.error(err);
+            this._logger.error(err);
             throw err;
         }
     }
@@ -213,15 +219,15 @@ export class BuiltinLedgerAccountsMongoRepo implements IBuiltinLedgerAccountsRep
                 (updateObject.$set as any).postedCreditBalance = newBalance.toString();
             }
 
-            updateResult = await this.collection.updateOne({id: accountId}, updateObject);
+            updateResult = await this._collection.updateOne({id: accountId}, updateObject);
         } catch (error: unknown) {
-            this.logger.error(error);
+            this._logger.error(error);
             throw error;
         }
 
         if (updateResult.modifiedCount !== 1) {
             const err = new Error("Could not updateAccountCreditBalanceAndTimestampById");
-            this.logger.error(err);
+            this._logger.error(err);
             throw err;
         }
     }
@@ -229,18 +235,18 @@ export class BuiltinLedgerAccountsMongoRepo implements IBuiltinLedgerAccountsRep
     async updateAccountStatesByIds(accountIds: string[], accountState: AccountsAndBalancesAccountState): Promise<void> {
         let updateResult: any;
         try {
-            updateResult = await this.collection.updateMany(
+            updateResult = await this._collection.updateMany(
                 {id: {$in: accountIds}},
                 {$set: {accountState: accountState}}
             );
         } catch (error: unknown) {
-            this.logger.error(error);
+            this._logger.error(error);
             throw error;
         }
 
         if (updateResult.modifiedCount !== accountIds.length) {
             const err = new Error("Could not updateAccountStatesByIds");
-            this.logger.error(err);
+            this._logger.error(err);
             throw err;
         }
     }

@@ -40,9 +40,10 @@ export class InvalidAccountParametersError extends AccountsAndBalancesError{}
 export class InvalidJournalEntryParametersError extends AccountsAndBalancesError{}
 export class CurrencyCodeNotFoundError extends AccountsAndBalancesError {}
 export class AccountNotFoundError extends AccountsAndBalancesError {}
-export class AccountAlreadyExistsError extends AccountsAndBalancesError {
-}
+export class AccountAlreadyExistsError extends AccountsAndBalancesError {}
 
+// high level errors
+export class PayerFailedLiquidityCheckError extends AccountsAndBalancesError {}
 
 //
 // /// not used

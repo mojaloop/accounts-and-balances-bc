@@ -42,6 +42,7 @@ export const BUILTIN_LEDGER_JOURNAL_ENTRY_MONGO_SCHEMA: any = {
         "currencyCode",
         "currencyDecimals",
         "amount",
+        "pending",
         "debitedAccountId",
         "creditedAccountId",
         "timestamp"
@@ -52,6 +53,7 @@ export const BUILTIN_LEDGER_JOURNAL_ENTRY_MONGO_SCHEMA: any = {
         currencyCode: {bsonType: "string"},
         currencyDecimals: {bsonType: "int"},
         amount: {bsonType: "string"},
+        pending: {bsonType: "bool"},
         debitedAccountId: {bsonType: "string"},
         creditedAccountId: {bsonType: "string"},
         timestamp: {bsonType: ["number"]},
@@ -62,7 +64,7 @@ export const BUILTIN_LEDGER_JOURNAL_ENTRY_MONGO_SCHEMA: any = {
 export class BuiltinLedgerJournalEntriesMongoRepo implements IBuiltinLedgerJournalEntriesRepo {
     // Properties received through the constructor.
     private readonly _logger: ILogger;
-    private readonly _url: string; // TODO: store the username and password here?
+    private readonly _url: string;
     // Other properties.
     private static readonly TIMEOUT_MS: number = 5_000;
     private static readonly DB_NAME: string = "accounts_and_balances_bc_builtin_ledger";
@@ -99,9 +101,11 @@ export class BuiltinLedgerJournalEntriesMongoRepo implements IBuiltinLedgerJourn
                 this._collection = db.collection(BuiltinLedgerJournalEntriesMongoRepo.COLLECTION_NAME);
                 return;
             }
+
             this._collection = await db.createCollection(BuiltinLedgerJournalEntriesMongoRepo.COLLECTION_NAME, {
                 validator: {$jsonSchema: BUILTIN_LEDGER_JOURNAL_ENTRY_MONGO_SCHEMA}
             });
+            await this._collection.createIndex({"id": 1}, {unique: true});
         } catch (error: unknown) {
             this._logger.error(error);
             throw error;
@@ -117,6 +121,7 @@ export class BuiltinLedgerJournalEntriesMongoRepo implements IBuiltinLedgerJourn
             id: builtinLedgerJournalEntry.id,
             currencyCode: builtinLedgerJournalEntry.currencyCode,
             currencyDecimals: builtinLedgerJournalEntry.currencyDecimals,
+            pending: builtinLedgerJournalEntry.pending,
             amount: bigintToString(builtinLedgerJournalEntry.amount, builtinLedgerJournalEntry.currencyDecimals),
             debitedAccountId: builtinLedgerJournalEntry.debitedAccountId,
             creditedAccountId: builtinLedgerJournalEntry.creditedAccountId,

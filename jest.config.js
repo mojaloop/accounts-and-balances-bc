@@ -1,22 +1,19 @@
-"use strict";
+"use strict"
 
-const config = {
+module.exports = {
 	preset: "ts-jest",
-	testMatch: ["**/test/integration/**/*.test.ts"],
+	testEnvironment: "node",
+	collectCoverage: true,
+	collectCoverageFrom: ["./src/**/*.ts"],
+	coverageReporters: ["json", "lcov"],
+	coverageDirectory: `./coverage/integration/`,
 	clearMocks: true,
-	collectCoverage: false,
-	collectCoverageFrom: ["packages/*/src/**/*.ts"],
-	coveragePathIgnorePatterns: [],
-	coverageDirectory: "coverage/integration",
-	coverageReporters: ["text", "lcov"],
 	coverageThreshold: {
-		global: {
-			branches: 90,
-			functions: 90,
-			lines: 90,
-			statements: -10
+		"global": {
+			"branches": 90,
+			"functions": 90,
+			"lines": 90,
+			"statements": -10
 		}
 	}
-};
-
-module.exports = config;
+}
