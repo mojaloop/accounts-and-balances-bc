@@ -41,11 +41,12 @@ export const BUILTIN_LEDGER_JOURNAL_ENTRY_MONGO_SCHEMA: any = {
         "id",
         "currencyCode",
         "currencyDecimals",
-        "amount",
         "pending",
+        "amount",
         "debitedAccountId",
         "creditedAccountId",
-        "timestamp"
+        "timestamp",
+        "ownerId"
     ],
     properties: {
         _id: {"bsonType": "objectId"},
@@ -57,6 +58,7 @@ export const BUILTIN_LEDGER_JOURNAL_ENTRY_MONGO_SCHEMA: any = {
         debitedAccountId: {bsonType: "string"},
         creditedAccountId: {bsonType: "string"},
         timestamp: {bsonType: ["number"]},
+        ownerId: {bsonType: ["string"]}
     },
     additionalProperties: false
 };
@@ -125,6 +127,7 @@ export class BuiltinLedgerJournalEntriesMongoRepo implements IBuiltinLedgerJourn
             amount: bigintToString(builtinLedgerJournalEntry.amount, builtinLedgerJournalEntry.currencyDecimals),
             debitedAccountId: builtinLedgerJournalEntry.debitedAccountId,
             creditedAccountId: builtinLedgerJournalEntry.creditedAccountId,
+            ownerId: builtinLedgerJournalEntry.ownerId,
             timestamp: builtinLedgerJournalEntry.timestamp
         };
 
