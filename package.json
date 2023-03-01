@@ -23,7 +23,7 @@
     "clean:all": "npm run clean:dist && npm run clean:npm && npm run clean:log",
     "dep:check": "ncu -e 2 && npm -ws run dep:check",
     "dep:update": "ncu -u && npm -ws run dep:update",
-    "lint": "eslint test && npm -ws run lint",
+    "lint": "npm -ws run lint",
     "build": "npm -ws run build",
     "test:unit": "npm -ws run test:unit",
     "test:integration": "jest test/integration",
