@@ -54,8 +54,8 @@ import {
 	GrpcCancelReservationRequest, GrpcIdArray
 
 } from "./types";
-import {LoginHelper} from "@mojaloop/security-bc-client-lib";
-//import {UnauthorizedError} from "@mojaloop/security-bc-public-types-lib";
+
+import {ILoginHelper} from "@mojaloop/security-bc-public-types-lib";
 
 const PROTO_FILE_NAME = "accounts_and_balances.proto";
 const LOAD_PROTO_OPTIONS: protoLoader.Options = {
@@ -68,12 +68,12 @@ export class AccountsAndBalancesGrpcClient {
 	private readonly _logger: ILogger;
 	private readonly _callMetadata: grpc.Metadata;
 	private readonly _client: GrpcAccountsAndBalancesClient;
-	private readonly _loginHelper:LoginHelper;
+	private readonly _loginHelper:ILoginHelper;
 	private readonly _url:string;
 
 	constructor(
 		url: string,
-		loginHelper: LoginHelper,
+		loginHelper: ILoginHelper,
 		logger: ILogger
 	) {
 		this._logger = logger.createChild(this.constructor.name);
