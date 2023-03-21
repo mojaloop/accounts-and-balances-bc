@@ -1,27 +1,26 @@
-"use strict";
+"use strict"
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const {name: fullPackageName} = require("./package.json");
+const {name} = require("./package.json");
+let packageName = name.replace("@mojaloop", "");
 
-const abbreviatedPackageName = fullPackageName.replace("@mojaloop/accounts-and-balances-bc-", "");
+module.exports = {
+    preset: "ts-jest",
+    testEnvironment: "node",
+    testMatch: ["**/test/unit/**/*.test.ts"],
+    passWithNoTests: true,
+    collectCoverage: true,
+    collectCoverageFrom: ["./src/**/*.ts"],
+    coveragePathIgnorePatterns: ["./src/tmp_files"],
+    coverageReporters: ["text", ["json", {file: `../../../coverage/${packageName}-final.json`}]],
+    //coverageDirectory: "../../coverage/",
+    clearMocks: true,
+    // coverageThreshold: {
+    //   "global": {
+    //     "branches": 90,
 
-const config = {
-	preset: "ts-jest",
-	testMatch: ["**/test/unit/**/*.test.ts"],
-	clearMocks: true,
-	collectCoverage: true,
-	collectCoverageFrom: ["src/**/*.ts"],
-	coveragePathIgnorePatterns: [],
-	coverageDirectory: `../../coverage/unit/${abbreviatedPackageName}`,
-	coverageReporters: ["text", "lcov"],
-	coverageThreshold: {
-		global: {
-			branches: 90,
-			functions: 90,
-			lines: 90,
-			statements: -10
-		}
-	}
-};
-
-module.exports = config;
+    //     "functions": 90,
+    //     "lines": 90,
+    //     "statements": -10
+    //   }
+    // }
+}

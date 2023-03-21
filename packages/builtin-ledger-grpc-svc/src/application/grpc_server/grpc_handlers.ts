@@ -33,8 +33,7 @@ import {ServerUnaryCall, sendUnaryData, status, ServerErrorResponse, Metadata, M
 import {TokenHelper} from "@mojaloop/security-bc-client-lib";
 import {BuiltinLedgerJournalEntryDto, CreatedIdMapResponse} from "../../domain/entities";
 import {BuiltinLedgerAggregate} from "../../domain/aggregate";
-import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
-import {ForbiddenError, UnauthorizedError} from "@mojaloop/security-bc-public-types-lib";
+import {ForbiddenError, UnauthorizedError, CallSecurityContext} from "@mojaloop/security-bc-public-types-lib";
 
 import {
 	BuiltinLedgerGrpcAccount,

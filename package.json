@@ -17,10 +17,10 @@
   "private": true,
   "scripts": {
     "prepare": "husky install",
-    "clean:dist": "rm -fr dist && npm -ws run clean:dist",
-    "clean:npm": "rm -fr node_modules package-lock.json && npm -ws run clean:npm",
-    "clean:log": "rm -f *.log && npm -ws run clean:log",
-    "clean:all": "npm run clean:dist && npm run clean:npm && npm run clean:log",
+    "pre_commit_check": "npm run build && npm run lint && npm run test:unit",
+    "clean": "npm run clean:dist; npm run clean:npm",
+    "clean:npm": "rm -Rf node_modules; npm -ws run clean:npm",
+    "clean:dist": "rm -Rf dist; npm -ws run clean:dist",
     "dep:check": "ncu -e 2 && npm -ws run dep:check",
     "dep:update": "ncu -u && npm -ws run dep:update",
     "lint": "npm -ws run lint",
@@ -28,9 +28,7 @@
     "test:unit": "npm -ws run test:unit",
     "test:integration": "jest test/integration",
     "start:builtin-ledger-grpc-svc": "npm -w @mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc start",
-    "start:grpc-svc": "npm -w @mojaloop/accounts-and-balances-bc-grpc-svc start",
-    "pub:public-types-lib": "npm -w @mojaloop/accounts-and-balances-bc-public-types-lib run pub",
-    "pub:grpc-client-lib": "npm -w @mojaloop/accounts-and-balances-bc-grpc-client-lib run pub"
+    "start:grpc-svc": "npm -w @mojaloop/accounts-and-balances-bc-grpc-svc start"
   },
   "engines": {
     "node": ">=18.13.0"

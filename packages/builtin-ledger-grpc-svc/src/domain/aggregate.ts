@@ -39,8 +39,8 @@ import {randomUUID} from "crypto";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 
 import {IAuditClient, AuditSecurityContext} from "@mojaloop/auditing-bc-public-types-lib";
-import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
-import {ForbiddenError, IAuthorizationClient, UnauthorizedError} from "@mojaloop/security-bc-public-types-lib";
+
+import {ForbiddenError, IAuthorizationClient, CallSecurityContext} from "@mojaloop/security-bc-public-types-lib";
 import {BuiltinLedgerPrivileges} from "./privilege_names";
 
 import {bigintToString, stringToBigint} from "./converters";

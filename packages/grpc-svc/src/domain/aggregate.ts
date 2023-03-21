@@ -32,8 +32,7 @@
 
 import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {CallSecurityContext} from "@mojaloop/security-bc-client-lib";
-import {IAuthorizationClient, UnauthorizedError} from "@mojaloop/security-bc-public-types-lib";
+import {IAuthorizationClient, UnauthorizedError, CallSecurityContext} from "@mojaloop/security-bc-public-types-lib";
 import {ForbiddenError} from "@mojaloop/security-bc-public-types-lib/dist/index";
 import {ChartOfAccountsPrivilegeNames} from "../domain/privilege_names";
 import {
