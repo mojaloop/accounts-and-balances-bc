@@ -15,6 +15,9 @@
     "Pedro Sousa Barreto <pedrob@crosslaketech.com>"
   ],
   "private": true,
+  "mojaloop": {
+    "publish_to_dockerhub": true
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
