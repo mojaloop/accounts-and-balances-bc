@@ -35,4 +35,8 @@ describe("built-in ledger gRPC service - domain unit tests", () => {
 	afterAll(async () => {
 		return;
 	});
+
+    test("test name", async () => {
+
+    });
 });

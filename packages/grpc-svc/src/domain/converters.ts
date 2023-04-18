@@ -60,6 +60,10 @@ export function bigintToString(bigintValue: bigint, decimals: number): string {
 
 	// Get the string corresponding to the bigint and insert a dot according to the decimals.
 	let bigintValueToString: string = bigintValue.toString();
+    const negative = bigintValueToString.startsWith("-");
+    if(negative)
+        bigintValueToString = bigintValueToString.slice(1);
+
 	if(bigintValueToString.length <= decimals){
 		bigintValueToString = "0".repeat(decimals - bigintValueToString.length + 1) + bigintValueToString;
 	}
@@ -78,5 +82,8 @@ export function bigintToString(bigintValue: bigint, decimals: number): string {
 		finalString = finalString.slice(0, -1);
 	}
 
-	return finalString;
+    if (negative)
+        finalString = "-"+finalString;
+
+    return finalString;
 }

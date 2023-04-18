@@ -73,29 +73,40 @@ export class BuiltinLedgerAccountsMockRepo implements IBuiltinLedgerAccountsRepo
 		return builtinLedgerAccounts;
 	}
 
-	async updateAccountDebitBalanceAndTimestampById(
+	async updateAccountDebitBalanceAndTimestamp(
 		accountId: string,
-		debitBalance: bigint,
+        newBalance: bigint,
+        pending: boolean,
 		timestampLastJournalEntry: number
 	): Promise<void> {
 		const builtinLedgerAccount: BuiltinLedgerAccount | undefined = this.builtinLedgerAccounts.get(accountId);
 		if (!builtinLedgerAccount) {
 			throw new Error();
 		}
-		builtinLedgerAccount.debitBalance = debitBalance;
+        if(pending)
+            builtinLedgerAccount.pendingDebitBalance = newBalance;
+        else
+            builtinLedgerAccount.postedDebitBalance = newBalance;
+
 		builtinLedgerAccount.timestampLastJournalEntry = timestampLastJournalEntry;
 	}
 
-	async updateAccountCreditBalanceAndTimestampById(
+	async updateAccountCreditBalanceAndTimestamp(
 		accountId: string,
-		creditBalance: bigint,
+        newBalance: bigint,
+        pending: boolean,
 		timestampLastJournalEntry: number
 	): Promise<void> {
 		const builtinLedgerAccount: BuiltinLedgerAccount | undefined = this.builtinLedgerAccounts.get(accountId);
 		if (!builtinLedgerAccount) {
 			throw new Error();
 		}
-		builtinLedgerAccount.creditBalance = creditBalance;
+
+        if(pending)
+            builtinLedgerAccount.pendingCreditBalance = newBalance;
+        else
+            builtinLedgerAccount.postedCreditBalance = newBalance;
+
 		builtinLedgerAccount.timestampLastJournalEntry = timestampLastJournalEntry;
 	}
 

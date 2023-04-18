@@ -156,13 +156,4 @@ export class BuiltinLedgerJournalEntriesMongoRepo implements IBuiltinLedgerJourn
         return journalEntries;
     }
 
-    async reverseJournalEntry(journalEntryId: string): Promise<void>{
-        try {
-            const result = await this._collection.deleteOne({id: journalEntryId});
-            if(result.deletedCount != 1) throw new Error("Could not reverseJournalEntry with Id: "+ journalEntryId);
-        } catch (error: unknown) {
-            this._logger.error(error);
-            throw error;
-        }
-    }
 }

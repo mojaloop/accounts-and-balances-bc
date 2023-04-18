@@ -1,47 +1,47 @@
 {
-  "name": "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-client-lib",
-  "version": "0.1.3",
-  "description": "Accounts and Balances BC - gRPC Client Library",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/mojaloop/accounts-and-balances-bc/tree/main/packages/builtin-ledger-grpc-client-lib"
-  },
-  "bugs": {
-    "url": "https://github.com/mojaloop/accounts-and-balances-bc/issues"
-  },
-  "license": "Apache-2.0",
-  "contributors": [
-    "Gonçalo Garcia <goncalogarcia99@gmail.com>",
-    "Pedro Sousa Barreto <pedrob@crosslaketech.com>"
-  ],
-  "private": false,
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "files": [
-    "dist"
-  ],
-  "scripts": {
-    "clean:npm": "rm -fr node_modules",
-    "clean:dist": "rm -fr dist",
-    "clean:log": "rm -f *.log",
-    "clean:types": "rm -fr src/types/proto-gen",
-    "dep:check": "ncu -e 2",
-    "dep:update": "ncu -u",
-    "lint": "eslint ./src",
-    "lint:fix": "eslint ./src --fix",
-    "gen-types": "sh gen-types.sh",
-    "prebuild": "npm run gen-types",
-    "build": "tsc",
-    "postbuild": "cp src/builtin_ledger.proto dist",
-    "test:unit": "echo \"for now, builtin-ledger-grpc-client-lib doesn't have unit tests\""
-  },
-  "devDependencies": {},
-  "dependencies": {
-    "@grpc/grpc-js": "~1.8.8",
-    "@grpc/proto-loader": "~0.7.4",
-    "@mojaloop/logging-bc-public-types-lib": "~0.1.14",
-    "@mojaloop/security-bc-client-lib": "~0.1.16",
-    "@mojaloop/security-bc-public-types-lib": "~0.1.16",
-    "tslib": "~2.5.0"
-  }
+    "name": "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-client-lib",
+    "version": "0.1.3",
+    "description": "Accounts and Balances BC - gRPC Client Library",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/mojaloop/accounts-and-balances-bc/tree/main/packages/builtin-ledger-grpc-client-lib"
+    },
+    "bugs": {
+        "url": "https://github.com/mojaloop/accounts-and-balances-bc/issues"
+    },
+    "license": "Apache-2.0",
+    "contributors": [
+        "Gonçalo Garcia <goncalogarcia99@gmail.com>",
+        "Pedro Sousa Barreto <pedrob@crosslaketech.com>"
+    ],
+    "private": false,
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "clean": "npm run clean:npm; npm run clean:dist",
+        "clean:dist": "rm -rf dist",
+        "clean:npm": "rm -rf node_modules",
+        "clean:types": "rm -fr src/types/proto-gen",
+        "dep:check": "ncu -e 2",
+        "dep:update": "ncu -u",
+        "lint": "eslint ./src",
+        "lint:fix": "eslint ./src --fix",
+        "gen-types": "sh gen-types.sh",
+        "prebuild": "npm run gen-types",
+        "build": "tsc",
+        "postbuild": "cp src/builtin_ledger.proto dist",
+        "test:unit": "echo \"for now, builtin-ledger-grpc-client-lib doesn't have unit tests\""
+    },
+    "devDependencies": {},
+    "dependencies": {
+        "@grpc/grpc-js": "~1.8.8",
+        "@grpc/proto-loader": "~0.7.4",
+        "@mojaloop/logging-bc-public-types-lib": "~0.1.14",
+        "@mojaloop/security-bc-client-lib": "~0.1.16",
+        "@mojaloop/security-bc-public-types-lib": "~0.1.16",
+        "tslib": "~2.5.0"
+    }
 }

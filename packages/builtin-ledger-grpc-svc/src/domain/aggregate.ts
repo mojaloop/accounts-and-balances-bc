@@ -332,7 +332,8 @@ export class BuiltinLedgerAggregate {
 			);
 		}catch (error){
 			// if this fails, revert "this._builtinLedgerJournalEntriesRepo.storeNewJournalEntry(builtinLedgerJournalEntry)"
-			await this._builtinLedgerJournalEntriesRepo.reverseJournalEntry(builtinLedgerJournalEntry.id);
+			// TODO: insert another entry that is the reverse of  builtinLedgerJournalEntry above - reverses as a delete are forbidden by design (append only)
+            // await this._builtinLedgerJournalEntriesRepo.reverseJournalEntry(builtinLedgerJournalEntry.id);
 
 			this._logger.error(error);
 			throw error;

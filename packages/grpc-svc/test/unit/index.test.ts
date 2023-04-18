@@ -56,13 +56,17 @@ describe("number converter - stringToBigint", ()=>{
 		expect(stringToBigint("20", 2)).toEqual(2000n);
 	});
 
-	test("stringToBigint() - negative '-20', 2 decimals", async () => {
+    test("stringToBigint() - '20000', 2 decimals", async () => {
+        expect(stringToBigint("20000", 2)).toEqual(2000000n);
+    });
+
+    test("stringToBigint() - negative '-20', 2 decimals", async () => {
 		expect(stringToBigint("-20", 2)).toEqual(-2000n);
 	});
 
-	test("stringToBigint() - '20000', 2 decimals", async () => {
-		expect(stringToBigint("20000", 2)).toEqual(2000000n);
-	});
+    test("stringToBigint() - negative '-20', 0 decimals", async () => {
+        expect(stringToBigint("-20", 0)).toEqual(-20n);
+    });
 });
 
 describe("number converter - bigintToString", () => {
@@ -82,11 +86,15 @@ describe("number converter - bigintToString", () => {
 		expect(bigintToString(20n, 2)).toEqual("0.2");
 	});
 
+    test("bigintToString() - 200n, 2 decimals", async () => {
+        expect(bigintToString(200n, 2)).toEqual("2");
+    });
+
 	test("bigintToString() - negative -20n, 2 decimals", async () => {
 		expect(bigintToString(-20n, 2)).toEqual("-0.2");
 	});
 
-	test("bigintToString() - 200n, 2 decimals", async () => {
-		expect(bigintToString(200n, 2)).toEqual("2");
-	});
+    test("bigintToString() - negative -2n, 2 decimals", async () => {
+        expect(bigintToString(-2n, 2)).toEqual("-0.02");
+    });
 });

@@ -55,6 +55,10 @@ export class ChartOfAccountsMockRepo implements IChartOfAccountsRepo {
 		return;
 	}
 
+    async getAccounts(ids: string[]): Promise<CoaAccount[]>{
+        return Array.from(this.chartOfAccounts.values()).filter(value => ids.includes(value.id));
+    }
+
 	async accountsExistByInternalIds(ledgerAccountIds: string[]): Promise<boolean> {
 		for (const coaAccount of this.chartOfAccounts.values()) {
 			for (const ledgerAccountId of ledgerAccountIds) {

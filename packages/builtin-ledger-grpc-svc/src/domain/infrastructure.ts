@@ -58,7 +58,4 @@ export interface IBuiltinLedgerJournalEntriesRepo {
 	storeNewJournalEntry(journalEntry: BuiltinLedgerJournalEntry): Promise<void>;
 
 	getJournalEntriesByAccountId(accountId: string): Promise<BuiltinLedgerJournalEntry[]>;
-
-	// only for error state reversal in agg.createJournalEntry()
-	reverseJournalEntry(journalEntryId: string): Promise<void>;
 }
