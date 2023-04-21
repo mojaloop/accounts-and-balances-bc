@@ -1,6 +1,6 @@
 {
     "name": "@mojaloop/accounts-and-balances-bc-public-types-lib",
-    "version": "0.1.3",
+    "version": "0.1.4",
     "description": "Accounts and Balances BC - Public Types Library",
     "repository": {
         "type": "git",
