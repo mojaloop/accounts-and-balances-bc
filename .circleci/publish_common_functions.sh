@@ -45,6 +45,8 @@ function testEnv(){
         echo -e "\e[93m'jq' is not installed, cannot continue.\e[0m"
         exit 2
     fi
+
+    echo -e "Node.js version is: $(node --version)"
 }
 
 
