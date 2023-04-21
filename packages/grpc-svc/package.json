@@ -1,10 +1,10 @@
 {
-    "name": "@mojaloop/accounts-and-balances-bc-grpc-svc",
+    "name": "@mojaloop/accounts-and-balances-bc-coa-grpc-svc",
     "version": "0.1.8",
     "description": "Accounts and Balances BC - gRPC service",
     "repository": {
         "type": "git",
-        "url": "https://github.com/mojaloop/accounts-and-balances-bc/tree/main/packages/accounts-and-balances-grpc-svc"
+        "url": "https://github.com/mojaloop/accounts-and-balances-bc/tree/main/packages/grpc-svc"
     },
     "bugs": {
         "url": "https://github.com/mojaloop/accounts-and-balances-bc/issues"

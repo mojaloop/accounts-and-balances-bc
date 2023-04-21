@@ -46,7 +46,7 @@ function testEnv(){
         exit 2
     fi
 
-    echo -e "Node.js version is: $(node --version)"
+    echo -e "Node.js version is: \t\t\t$(node --version)"
 }
 
 
