@@ -1,5 +1,5 @@
 #!/bin/bash
-#set -x
+set -x
 
 # The root directory of packages to publish
 ROOT="./packages"
