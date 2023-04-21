@@ -60,7 +60,7 @@ function loadCommits(){
     #SUCCESS=$?
 
     # new method using js and CircleCI v2 API - iterates all pipelines and child workflows in order
-    LAST_CI_BUILD_COMMIT=$(node getLastCommit.js --repo="$CIRCLE_PROJECT_REPONAME" --user="$CIRCLE_TOKEN")
+    LAST_CI_BUILD_COMMIT=$(node .circleci/getLastCommit.js --repo="$CIRCLE_PROJECT_REPONAME" --user="$CIRCLE_TOKEN")
     SUCCESS=$?
 
     if [[ ! SUCCESS -eq 0 ]]; then
