@@ -81,6 +81,11 @@ const ACCOUNTS_AND_BALANCES_URL = process.env.ACCOUNTS_AND_BALANCES_URL || "0.0.
 const SVC_CLIENT_ID = process.env["SVC_CLIENT_ID"] || "accounts-and-balances-bc-coa-grpc-svc";
 const SVC_CLIENT_SECRET = process.env["SVC_CLIENT_ID"] || "superServiceSecret";
 
+const USE_TIGERBEETLE = process.env["USE_TIGERBEETLE"] || false;
+const TIGERBEETLE_CLUSTER_ID = process.env["TIGERBEETLE_CLUSTER_ID"] || "default_CHANGEME";
+const TIGERBEETLE_CLUSTER_REPLICA_ADDRESSES = process.env["TIGERBEETLE_CLUSTER_REPLICA_ADDRESSES"] || "default_CHANGEME";
+
+
 /* ********** Constants End ********** */
 
 const kafkaProducerOptions = {
@@ -142,16 +147,20 @@ export class ChartOfAccountsGrpcService {
         if (ledgerAdapter !== undefined) {
             this.ledgerAdapter = ledgerAdapter;
         } else {
-            const loginHelper = new LoginHelper(AUTH_N_SVC_TOKEN_URL, logger);
-            loginHelper.setAppCredentials(SVC_CLIENT_ID, SVC_CLIENT_SECRET);
+            if(USE_TIGERBEETLE){
+                // TODO instantiate TB adapter
+            }else {
+                const loginHelper = new LoginHelper(AUTH_N_SVC_TOKEN_URL, logger);
+                loginHelper.setAppCredentials(SVC_CLIENT_ID, SVC_CLIENT_SECRET);
 
-            this.ledgerAdapter = new BuiltinLedgerAdapter(BUILTIN_LEDGER_SVC_URL, loginHelper, this.logger);
-            try {
-                await this.ledgerAdapter.init();
-            } catch (error: unknown) {
-                this.logger.fatal(error);
-                await this.stop();
-                process.exit(-1); // TODO: verify code.
+                this.ledgerAdapter = new BuiltinLedgerAdapter(BUILTIN_LEDGER_SVC_URL, loginHelper, this.logger);
+                try {
+                    await this.ledgerAdapter.init();
+                } catch (error: unknown) {
+                    this.logger.fatal(error);
+                    await this.stop();
+                    process.exit(-1); // TODO: verify code.
+                }
             }
         }
 
