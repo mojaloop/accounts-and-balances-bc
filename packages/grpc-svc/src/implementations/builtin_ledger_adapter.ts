@@ -27,7 +27,6 @@
  --------------
  ******/
 
-import {log} from "@grpc/grpc-js/build/src/logging";
 import {LoginHelper} from "@mojaloop/security-bc-client-lib";
 import {
 	ILedgerAdapter,
@@ -41,7 +40,6 @@ import {
 	BuiltinLedgerGrpcClient,
 	BuiltinLedgerGrpcCreateAccountArray,
 	BuiltinLedgerGrpcCreateIdsResponse__Output,
-	BuiltinLedgerGrpcCreateJournalEntry,
 	BuiltinLedgerGrpcCreateJournalEntryArray,
 	BuiltinLedgerGrpcId,
 	BuiltinLedgerGrpcJournalEntryArray__Output
