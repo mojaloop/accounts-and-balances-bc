@@ -32,7 +32,7 @@
     "coverage:gen-report": "nyc report --reporter=lcov --reporter=text --temp-dir=./coverage",
     "test:integration": "jest",
     "start:builtin-ledger-grpc-svc": "npm -w @mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc start",
-    "start:grpc-svc": "npm -w @mojaloop/accounts-and-balances-bc-grpc-svc start"
+    "start:grpc-svc": "npm -w @mojaloop/accounts-and-balances-bc-coa-grpc-svc start"
   },
   "engines": {
     "node": ">=18.13.0"
