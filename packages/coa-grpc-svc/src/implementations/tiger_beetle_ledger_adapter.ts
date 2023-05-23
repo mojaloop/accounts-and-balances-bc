@@ -232,7 +232,7 @@ export class TigerBeetleLedgerAdapter implements ILedgerAdapter {
         });
     }
 
-    async getJournalEntriesByAccountId(ledgerAccountId: string,): Promise<LedgerAdapterJournalEntry[]> {
+    async getJournalEntriesByAccountId(ledgerAccountId: string): Promise<LedgerAdapterJournalEntry[]> {
         // Create request for TigerBeetle:
         const accIdTB = this._uuidToBigint(ledgerAccountId);
 
