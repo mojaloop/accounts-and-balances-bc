@@ -187,11 +187,7 @@ export class BuiltinLedgerAdapter implements ILedgerAdapter {
 	}
 
 	// TODO: currency decimals ignored here, right?
-	async getJournalEntriesByAccountId(
-		ledgerAccountId: string,
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		currencyDecimals: number
-	): Promise<LedgerAdapterJournalEntry[]> {
+	async getJournalEntriesByAccountId(ledgerAccountId: string): Promise<LedgerAdapterJournalEntry[]> {
 		let builtinLedgerGrpcJournalEntryArrayOutput: BuiltinLedgerGrpcJournalEntryArray__Output;
 		try {
 			builtinLedgerGrpcJournalEntryArrayOutput

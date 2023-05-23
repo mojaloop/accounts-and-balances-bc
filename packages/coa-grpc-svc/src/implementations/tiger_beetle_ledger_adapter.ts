@@ -46,7 +46,9 @@ import {AccountsAndBalancesAccountState, AccountsAndBalancesAccountType} from "@
 import * as TB from "tigerbeetle-node";
 import net from "net";
 import dns from "dns";
-import {CreateAccountsError} from "tigerbeetle-node/src/bindings";
+import {Account, CreateAccountsError} from "tigerbeetle-node/src/bindings";
+import {randomUUID} from "crypto";
+import {CreateTransfersError} from "tigerbeetle-node";
 
 export class TigerBeetleLedgerAdapter implements ILedgerAdapter {
     private readonly _logger: ILogger;
@@ -89,37 +91,34 @@ export class TigerBeetleLedgerAdapter implements ILedgerAdapter {
         // do nothing.
     }
 
-    async createAccounts(createRequests: {requestedId: string, type: string, currencyCode: string }[]): Promise<LedgerAdapterCreateResponseItem[]> {
+    async createAccounts(
+        createRequests: {
+            requestedId: string,
+            type: string,
+            currencyCode: string
+        }[]
+    ): Promise<LedgerAdapterCreateResponseItem[]> {
+
+        // Create request for TigerBeetle:
         const request: TB.Account[] = createRequests.map(item => {
-                let coa= 0;
-                switch (item.type) {
-                    case "POSITION":
-                        coa = 1;
-                    break;
-                        //TODO need to add the rest.
-                }
-                let currencyCode = 0;
-                switch (item.currencyCode) {
-                    case "USD":
-                        currencyCode = 720;
-                    break;
-                }
+            const coa = this._coaFrom(item.type);
+            const currencyCode = this._currencyCodeFrom(item.currencyCode);
+            return {
+                id: this._uuidToBigint(item.requestedId), // u128
+                user_data: 0n, // u128, opaque third-party identifier to link this account to an external entity:
+                reserved: Buffer.alloc(48, 0), // [48]u8
+                ledger: currencyCode,   // u32, ledger value
+                code: coa, // u16, a chart of accounts code describing the type of account (e.g. clearing, settlement)
+                flags: 0,  // u16
+                debits_pending: 0n,  // u64
+                debits_posted: 0n,  // u64
+                credits_pending: 0n, // u64
+                credits_posted: 0n, // u64
+                timestamp: 0n, // u64, Reserved: This will be set by the server.
+            };
+        });
 
-                return {
-                    id: this._uuidToBigint(item.requestedId), // u128
-                    user_data: 0n, // u128, opaque third-party identifier to link this account to an external entity:
-                    reserved: Buffer.alloc(48, 0), // [48]u8
-                    ledger: currencyCode,   // u32, ledger value
-                    code: coa, // u16, a chart of accounts code describing the type of account (e.g. clearing, settlement)
-                    flags: 0,  // u16
-                    debits_pending: 0n,  // u64
-                    debits_posted: 0n,  // u64
-                    credits_pending: 0n, // u64
-                    credits_posted: 0n, // u64
-                    timestamp: 0n, // u64, Reserved: This will be set by the server.
-                };
-            });
-
+        // Invoke Client:
         try {
             const errors: CreateAccountsError[] = await this._client.createAccounts(request);
             if (errors.length) {
@@ -130,135 +129,136 @@ export class TigerBeetleLedgerAdapter implements ILedgerAdapter {
             throw error;
         }
 
+        // Re-Map for Adapter:
         return request.map(item => {
             return {
                 requestedId: this._bigIntToUuid(item.id),
                 attributedId: this._bigIntToUuid(item.id)
             };
-        })
+        });
     }
 
     async createJournalEntries(
         createRequests: {
-            requestedId: string, amountStr: string, currencyCode: string,
-            creditedAccountId: string, debitedAccountId: string, timestamp: number, ownerId: string, pending: boolean
+            requestedId: string,
+            amountStr: string,
+            currencyCode: string,
+            creditedAccountId: string,
+            debitedAccountId: string,
+            timestamp: number,
+            ownerId: string,
+            pending: boolean
         }[]
     ): Promise<LedgerAdapterCreateResponseItem[]> {
-        let createIdsResp: BuiltinLedgerGrpcCreateIdsResponse__Output;
 
-        const grpcRequest: BuiltinLedgerGrpcCreateJournalEntryArray = {
-            entriesToCreate: createRequests.map(item=>{
-                return {
-                    requestedId: item.requestedId,
-                    ownerId: item.ownerId,
-                    pending: item.pending,
-                    currencyCode: item.currencyCode,
-                    amount: item.amountStr,
-                    debitedAccountId: item.debitedAccountId,
-                    creditedAccountId: item.creditedAccountId
-                };
-            })
-        };
+        // Create request for TigerBeetle:
+        const request: TB.Transfer[] = createRequests.map(item => {
+            let flags= 0;
+            if (item.pending) flags |= TB.TransferFlags.pending;
 
-        try {
-            createIdsResp = await this._builtinLedgerClient.createJournalEntries(grpcRequest);
-        } catch (error: unknown) {
-            this._logger.error(error);
-            throw error;
-        }
-
-        if (!createIdsResp.ids) {
-            throw new Error();
-        }
-
-        return createIdsResp.ids as LedgerAdapterCreateResponseItem[];
-    }
-
-
-    async getAccountsByIds(ledgerAccountIds: LedgerAdapterRequestId[]): Promise<LedgerAdapterAccount[]> {
-        const ids: BuiltinLedgerGrpcId[] = ledgerAccountIds.map((ledgerAccountId) => {
-            return {builtinLedgerGrpcId: ledgerAccountId.id};
+            const currencyCode = this._currencyCodeFrom(item.currencyCode);
+            const coa = this._coaFrom("POSITION");//TODO we want to expand on this
+            const id = item.requestedId || randomUUID();
+            return {
+                id: this._uuidToBigint(id), // u128
+                pending_id: 0n, // u128
+                // Double-entry accounting:
+                debit_account_id: this._uuidToBigint(item.debitedAccountId),  // u128
+                credit_account_id: this._uuidToBigint(item.creditedAccountId), // u128
+                // Opaque third-party identifier to link this transfer to an external entity:
+                user_data: this._uuidToBigint(item.ownerId), // u128
+                reserved: 0n, // u128
+                // Timeout applicable for a pending/2-phase transfer:
+                timeout: 0n, // u64, in nano-seconds.
+                // Collection of accounts usually grouped by the currency:
+                // You can't transfer money between accounts with different ledgers:
+                ledger: currencyCode,  // u32, ledger for transfer (e.g. currency).
+                // Chart of accounts code describing the reason for the transfer:
+                code: coa,  // u16, (e.g. deposit, settlement)
+                flags: flags, // u16
+                amount: BigInt(item.amountStr), // u64
+                timestamp: 0n, //u64, Reserved: This will be set by the server.
+            };
         });
 
-        let builtinLedgerGrpcAccountArrayOutput: BuiltinLedgerGrpcAccountArray__Output;
+        // Invoke Client:
         try {
-            builtinLedgerGrpcAccountArrayOutput
-                = await this._builtinLedgerClient.getAccountsByIds({builtinLedgerGrpcIdArray: ids});
+            const errors: CreateTransfersError[] = await this._client.createTransfers(request);
+            if (errors.length) {
+                throw new Error("Cannot create transfers - error code: "+errors[0].result);
+            }
         } catch (error: unknown) {
             this._logger.error(error);
             throw error;
         }
 
-        if (!builtinLedgerGrpcAccountArrayOutput.builtinLedgerGrpcAccountArray) {
-            throw new Error();
-        }
-
-        const ledgerAdapterAccounts: LedgerAdapterAccount[]
-            = builtinLedgerGrpcAccountArrayOutput.builtinLedgerGrpcAccountArray
-            .map((builtinLedgerGrpcAccountOutput) => {
-                const ledgerAdapterAccount: LedgerAdapterAccount = {
-                    id: builtinLedgerGrpcAccountOutput.id ?? null, // TODO: ?? or ||?
-                    state: builtinLedgerGrpcAccountOutput.state as AccountsAndBalancesAccountState,
-                    type: builtinLedgerGrpcAccountOutput.type as AccountsAndBalancesAccountType,
-                    currencyCode: builtinLedgerGrpcAccountOutput.currencyCode!,
-                    currencyDecimals: null,
-                    postedDebitBalance: builtinLedgerGrpcAccountOutput.postedDebitBalance!,
-                    pendingDebitBalance: builtinLedgerGrpcAccountOutput.pendingDebitBalance!,
-                    postedCreditBalance: builtinLedgerGrpcAccountOutput.postedCreditBalance!,
-                    pendingCreditBalance: builtinLedgerGrpcAccountOutput.pendingCreditBalance!,
-                    timestampLastJournalEntry: builtinLedgerGrpcAccountOutput.timestampLastJournalEntry ?? null // TODO: ?? or ||?
-                };
-                return ledgerAdapterAccount;
-            });
-        return ledgerAdapterAccounts;
+        // Re-Map for Adapter:
+        return request.map(item => {
+            return {
+                requestedId: this._bigIntToUuid(item.id),
+                attributedId: this._bigIntToUuid(item.user_data)
+            };
+        });
     }
 
-    // TODO: currency decimals ignored here, right?
-    async getJournalEntriesByAccountId(
-        ledgerAccountId: string,
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        currencyDecimals: number
-    ): Promise<LedgerAdapterJournalEntry[]> {
-        let builtinLedgerGrpcJournalEntryArrayOutput: BuiltinLedgerGrpcJournalEntryArray__Output;
+    async getAccountsByIds(ledgerAccountIds: LedgerAdapterRequestId[]): Promise<LedgerAdapterAccount[]> {
+        // Create request for TigerBeetle:
+        const request: TB.AccountID[] = ledgerAccountIds.map(item => {
+            return this._uuidToBigint(item.id);
+        });
+
+        // Invoke Client:
+        let accounts: TB.Account[] = [];
         try {
-            builtinLedgerGrpcJournalEntryArrayOutput
-                = await this._builtinLedgerClient.getJournalEntriesByAccountId({builtinLedgerGrpcId: ledgerAccountId});
+            accounts = await this._client.lookupAccounts(request);
         } catch (error: unknown) {
             this._logger.error(error);
             throw error;
         }
 
-        if (!builtinLedgerGrpcJournalEntryArrayOutput.builtinLedgerGrpcJournalEntryArray) {
-            throw new Error();
+        return accounts.map(item => {
+            return {
+                id: this._bigIntToUuid(item.id),
+                state: "ACTIVE" as AccountsAndBalancesAccountState,
+                type: this._coaTxtFrom(item.code) as AccountsAndBalancesAccountType,
+                currencyCode: this._currencyCodeTxtFrom(item.ledger),
+                currencyDecimals: null, // Only for when creating.
+                postedDebitBalance: `${item.debits_posted}`,
+                pendingDebitBalance: `${item.debits_pending}`,
+                postedCreditBalance: `${item.credits_posted}`,
+                pendingCreditBalance: `${item.credits_pending}`,
+                timestampLastJournalEntry: Number(item.timestamp)
+            }
+        });
+    }
+
+    async getJournalEntriesByAccountId(ledgerAccountId: string,): Promise<LedgerAdapterJournalEntry[]> {
+        // Create request for TigerBeetle:
+        const accIdTB = this._uuidToBigint(ledgerAccountId);
+
+        // Invoke Client:
+        const transfers: TB.Transfer[] = [];
+        try {
+            //TODO requires UserData lookup via (user_data)
+            //TODO transfers = await this._client.lookupTransfers(request);
+        } catch (error: unknown) {
+            this._logger.error(error);
+            throw error;
         }
 
-        const ledgerAdapterJournalEntries: LedgerAdapterJournalEntry[] =
-            builtinLedgerGrpcJournalEntryArrayOutput.builtinLedgerGrpcJournalEntryArray
-                .map((builtinLedgerGrpcJournalEntryOutput) => {
-                    if (
-                        !builtinLedgerGrpcJournalEntryOutput.currencyCode
-                        || !builtinLedgerGrpcJournalEntryOutput.amount
-                        || !builtinLedgerGrpcJournalEntryOutput.debitedAccountId
-                        || !builtinLedgerGrpcJournalEntryOutput.creditedAccountId
-                    ) {
-                        throw new Error(); // TODO: create custom error.
-                    }
-
-                    const ledgerAdapterJournalEntry: LedgerAdapterJournalEntry = {
-                        id: builtinLedgerGrpcJournalEntryOutput.id ?? null, // TODO: ?? or ||?
-                        ownerId: builtinLedgerGrpcJournalEntryOutput.ownerId ?? null,
-                        currencyCode: builtinLedgerGrpcJournalEntryOutput.currencyCode,
-                        currencyDecimals: null, // TODO: null?
-                        amount: builtinLedgerGrpcJournalEntryOutput.amount,
-                        pending: builtinLedgerGrpcJournalEntryOutput.pending!,
-                        debitedAccountId: builtinLedgerGrpcJournalEntryOutput.debitedAccountId,
-                        creditedAccountId: builtinLedgerGrpcJournalEntryOutput.creditedAccountId,
-                        timestamp: builtinLedgerGrpcJournalEntryOutput.timestamp ?? null // TODO: ?? or ||?
-                    };
-                    return ledgerAdapterJournalEntry;
-                });
-
-        return ledgerAdapterJournalEntries;
+        return transfers.map(item => {
+            return {
+                id: this._bigIntToUuid(item.id),
+                ownerId: this._bigIntToUuid(item.user_data),
+                currencyCode: this._currencyCodeTxtFrom(item.ledger),
+                currencyDecimals: null, // TODO: null?
+                amount: `${item.amount}`,
+                pending: false,
+                debitedAccountId: this._bigIntToUuid(item.debit_account_id),
+                creditedAccountId: this._bigIntToUuid(item.credit_account_id),
+                timestamp: Number(item.timestamp)
+            }
+        });
     }
 
     async deleteAccountsByIds(ledgerAccountIds: string[]): Promise<void> {
@@ -315,6 +315,44 @@ export class TigerBeetleLedgerAdapter implements ILedgerAdapter {
         if (hex.length % 2) { hex = "0" + hex; }
         const bi = BigInt("0x" + hex);
         return bi;
+    }
+
+    private _currencyCodeFrom(currencyTxt: string): number {
+        let currencyCode = 0;
+        switch (currencyTxt) {
+            case "USD": currencyCode = 720; break;
+            case "EUR": currencyCode = 978; break;
+            case "ZAR": currencyCode = 710; break;
+        }
+        return currencyCode;
+    }
+
+    private _currencyCodeTxtFrom(currency: number): string {
+        let currencyCode = "";
+        switch (currency) {
+            case 720: currencyCode = "USD"; break;
+            case 978: currencyCode = "EUR"; break;
+            case 710: currencyCode = "ZAR"; break;
+        }
+        return currencyCode;
+    }
+
+    private _coaFrom(type: string): number {
+        let coa = 0;
+        switch (type) {
+            case "POSITION": coa = 1; break;
+            case "SETTLEMENT": coa = 2; break;
+        }
+        return coa;
+    }
+
+    private _coaTxtFrom(type: number): string {
+        let coa = "POSITION";
+        switch (type) {
+            case 1: coa = "POSITION"; break;
+            case 2: coa = "SETTLEMENT"; break;
+        }
+        return coa;
     }
 
     private _bigIntToUuid(bi:bigint): string {

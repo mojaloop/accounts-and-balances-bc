@@ -32,7 +32,7 @@ RUN npm install -g node-gyp
 COPY package.json package-lock.json ./
 COPY packages/public-types-lib/package.json packages/public-types-lib
 COPY packages/builtin-ledger-grpc-svc/package.json packages/builtin-ledger-grpc-svc
-COPY packages/grpc-svc/package.json packages/grpc-svc
+COPY packages/coa-grpc-svc/package.json packages/grpc-svc
 
 # Install the project dependencies before copying the code (to avoid copying stuff in vain, in case of error).
 RUN npm install
@@ -41,7 +41,7 @@ COPY tsconfig.json ./
 # Copy the code.
 COPY packages/public-types-lib ./packages/public-types-lib
 COPY packages/builtin-ledger-grpc-svc ./packages/builtin-ledger-grpc-svc
-COPY packages/grpc-svc ./packages/grpc-svc
+COPY packages/coa-grpc-svc ./packages/grpc-svc
 
 RUN npm run build
 

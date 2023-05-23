@@ -32,7 +32,7 @@ import {KafkaLogger} from "@mojaloop/logging-bc-client-lib";
 import {AccountsAndBalancesGrpcClient} from "@mojaloop/accounts-and-balances-bc-grpc-client-lib";
 import {AccountsAndBalancesAccount, AccountsAndBalancesJournalEntry} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {randomUUID} from "crypto";
-import {ChartOfAccountsGrpcService} from "../../packages/grpc-svc/src/application/service";
+import {ChartOfAccountsGrpcService} from "../../packages/coa-grpc-svc/src/application/service";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
 import {
 	BuiltinLedgerAccount,

@@ -25,6 +25,8 @@
  * Crosslake
  - Pedro Sousa Barreto <pedrob@crosslaketech.com>
 
+ * Coil
+ - Jason Bruwer <jason.bruwer@coil.com>
  --------------
  ******/
 

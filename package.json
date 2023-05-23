@@ -12,7 +12,8 @@
   "license": "Apache-2.0",
   "contributors": [
     "Gonçalo Garcia <goncalogarcia99@gmail.com>",
-    "Pedro Sousa Barreto <pedrob@crosslaketech.com>"
+    "Pedro Sousa Barreto <pedrob@crosslaketech.com>",
+    "Jason Bruwer <jason.bruwer@coil.com>"
   ],
   "private": true,
   "scripts": {
@@ -57,8 +58,8 @@
     "packages/public-types-lib",
     "packages/builtin-ledger-grpc-client-lib",
     "packages/builtin-ledger-grpc-svc",
-    "packages/grpc-client-lib",
-    "packages/grpc-svc",
+    "packages/coa-grpc-client-lib",
+    "packages/coa-grpc-svc",
     "packages/shared-mocks-lib",
     "packages/*"
   ]

@@ -489,8 +489,7 @@ export class AccountsAndBalancesAggregate {
 
 		let ledgerAdapterJournalEntries: LedgerAdapterJournalEntry[];
 		try {
-			ledgerAdapterJournalEntries =
-				await this._ledgerAdapter.getJournalEntriesByAccountId(accountId, coaAccount.currencyDecimals);
+			ledgerAdapterJournalEntries = await this._ledgerAdapter.getJournalEntriesByAccountId(accountId);
 		} catch (error: any) {
 			this._logger.error(error);
 			if (error instanceof AccountsAndBalancesError) {
