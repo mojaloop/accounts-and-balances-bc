@@ -204,14 +204,14 @@ export class AccountsAndBalancesGrpcClient {
 	async createJournalEntries(journalEntries: AccountsAndBalancesJournalEntry[]): Promise<string[]> {
 		const grpcJournalEntries: GrpcJournalEntry[] = journalEntries.map((journalEntry) => {
 			const grpcJournalEntry: GrpcJournalEntry = {
-				id: journalEntry.id ?? undefined, 
-				ownerId: journalEntry.ownerId ?? undefined, 
+				id: journalEntry.id ?? undefined,
+				ownerId: journalEntry.ownerId ?? undefined,
 				currencyCode: journalEntry.currencyCode,
 				amount: journalEntry.amount,
 				pending: journalEntry.pending,
 				debitedAccountId: journalEntry.debitedAccountId,
 				creditedAccountId: journalEntry.creditedAccountId,
-				timestamp: journalEntry.timestamp ?? undefined 
+				timestamp: journalEntry.timestamp ?? undefined
 			};
 			return grpcJournalEntry;
 		});
@@ -297,14 +297,14 @@ export class AccountsAndBalancesGrpcClient {
 						}
 
 						const journalEntry: AccountsAndBalancesJournalEntry = {
-							id: grpcJournalEntryOutput.id ?? null, 
-							ownerId: grpcJournalEntryOutput.ownerId ?? null, 
+							id: grpcJournalEntryOutput.id ?? null,
+							ownerId: grpcJournalEntryOutput.ownerId ?? null,
 							currencyCode: grpcJournalEntryOutput.currencyCode,
 							amount: grpcJournalEntryOutput.amount,
 							pending: grpcJournalEntryOutput.pending!,
 							debitedAccountId: grpcJournalEntryOutput.debitedAccountId,
 							creditedAccountId: grpcJournalEntryOutput.creditedAccountId,
-							timestamp: grpcJournalEntryOutput.timestamp ?? null 
+							timestamp: grpcJournalEntryOutput.timestamp ?? null
 						};
 						return journalEntry;
 					});
@@ -376,6 +376,7 @@ export class AccountsAndBalancesGrpcClient {
 			transferId: transferId
 		};
 
+        await this._updateCallMetadata();
 		return new Promise((resolve, reject) => {
 			this._client.checkLiquidAndReserve(req, this._callMetadata, (error) => {
 				if (error) return reject(error);
@@ -397,6 +398,7 @@ export class AccountsAndBalancesGrpcClient {
 			transferId: transferId
 		};
 
+        await this._updateCallMetadata();
 		return new Promise((resolve, reject) => {
 			this._client.cancelReservationAndCommit(req, this._callMetadata, (error) => {
 				if (error) return reject(error);
@@ -417,6 +419,7 @@ export class AccountsAndBalancesGrpcClient {
 			transferId: transferId
 		};
 
+        await this._updateCallMetadata();
 		return new Promise((resolve, reject) => {
 			this._client.cancelReservation(req, this._callMetadata, (error) => {
 				if (error) return reject(error);
@@ -437,17 +440,17 @@ export class AccountsAndBalancesGrpcClient {
 			}
 
 			const account: AccountsAndBalancesAccount = {
-				id: grpcAccountOutput.id ?? null, 
+				id: grpcAccountOutput.id ?? null,
 				ownerId: grpcAccountOutput.ownerId,
-				state: grpcAccountOutput.state as AccountsAndBalancesAccountState, 
-				type: grpcAccountOutput.type as AccountsAndBalancesAccountType, 
+				state: grpcAccountOutput.state as AccountsAndBalancesAccountState,
+				type: grpcAccountOutput.type as AccountsAndBalancesAccountType,
 				currencyCode: grpcAccountOutput.currencyCode,
 				postedDebitBalance: grpcAccountOutput.postedDebitBalance ?? null,
 				pendingDebitBalance: grpcAccountOutput.pendingDebitBalance ?? null,
 				postedCreditBalance: grpcAccountOutput.postedCreditBalance ?? null,
 				pendingCreditBalance: grpcAccountOutput.pendingCreditBalance ?? null,
 				balance: grpcAccountOutput.balance ?? null,
-				timestampLastJournalEntry: grpcAccountOutput.timestampLastJournalEntry ?? null 
+				timestampLastJournalEntry: grpcAccountOutput.timestampLastJournalEntry ?? null
 			};
 			return account;
 		});
