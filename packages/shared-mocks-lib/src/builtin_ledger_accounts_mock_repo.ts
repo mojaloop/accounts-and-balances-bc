@@ -61,6 +61,12 @@ export class BuiltinLedgerAccountsMockRepo implements IBuiltinLedgerAccountsRepo
 		this.builtinLedgerAccounts.set(builtinLedgerAccount.id, builtinLedgerAccount);
 	}
 
+    async updateAccounts(accounts: BuiltinLedgerAccount[]): Promise<void>{
+        accounts.forEach(value => {
+            this.builtinLedgerAccounts.set(value.id, value);
+        });
+    }
+
 	async getAccountsByIds(accountIds: string[]): Promise<BuiltinLedgerAccount[]> {
 		const builtinLedgerAccounts: BuiltinLedgerAccount[] = [];
 		for (const builtinLedgerAccount of this.builtinLedgerAccounts.values()) {

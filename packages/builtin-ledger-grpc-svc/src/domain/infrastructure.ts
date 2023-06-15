@@ -36,6 +36,9 @@ export interface IBuiltinLedgerAccountsRepo {
 	init(): Promise<void>;
 	destroy(): Promise<void>;
 	storeNewAccount(account: BuiltinLedgerAccount): Promise<void>;
+
+    updateAccounts(accounts: BuiltinLedgerAccount[]): Promise<void>;
+
 	getAccountsByIds(accountIds: string[]): Promise<BuiltinLedgerAccount[]>;
 	updateAccountDebitBalanceAndTimestamp(
 		accountId: string,
@@ -56,6 +59,8 @@ export interface IBuiltinLedgerJournalEntriesRepo {
 	init(): Promise<void>;
 	destroy(): Promise<void>;
 	storeNewJournalEntry(journalEntry: BuiltinLedgerJournalEntry): Promise<void>;
+    storeNewJournalEntries(entries: BuiltinLedgerJournalEntry[]): Promise<void>;
 
+    getJournalEntry(entryId: string): Promise<BuiltinLedgerJournalEntry|null>;
 	getJournalEntriesByAccountId(accountId: string): Promise<BuiltinLedgerJournalEntry[]>;
 }

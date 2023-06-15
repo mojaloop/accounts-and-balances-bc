@@ -42,3 +42,12 @@ export * from "./proto-gen/BuiltinLedgerGrpcCreateJournalEntry";
 export * from "./proto-gen/BuiltinLedgerGrpcCreateJournalEntryArray";
 export * from "./proto-gen/BuiltinLedgerGrpcCreatedId";
 export * from "./proto-gen/BuiltinLedgerGrpcCreateIdsResponse";
+export * from "./proto-gen/BuiltinLedgerGrpcCancelReservationAndCommitRequest";
+export * from "./proto-gen/BuiltinLedgerGrpcCancelReservationRequest";
+export * from "./proto-gen/BuiltinLedgerGrpcCheckLiquidAndReserveRequest";
+
+export * from "./proto-gen/BuiltinLedgerGrpcHighLevelRequest";
+export * from "./proto-gen/BuiltinLedgerGrpcHighLevelRequestArray";
+export * from "./proto-gen/BuiltinLedgerGrpcHighLevelResponse";
+export * from "./proto-gen/BuiltinLedgerGrpcHighLevelResponseArray";
+

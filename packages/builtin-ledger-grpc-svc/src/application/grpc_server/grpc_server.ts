@@ -31,7 +31,7 @@ import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {
 	GrpcObject,
 	loadPackageDefinition,
-	Server,
+    Server,
 	ServerCredentials,
 	ServiceDefinition
 } from "@grpc/grpc-js";
@@ -45,6 +45,7 @@ import {
 } from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-client-lib";
 import {BuiltinLedgerGrpcHandlers} from "./grpc_handlers";
 import {join} from "path";
+import {IMetrics} from "@mojaloop/platform-shared-lib-observability-types-lib";
 
 export class BuiltinLedgerGrpcServer {
 	// Properties received through the constructor.
@@ -57,10 +58,12 @@ export class BuiltinLedgerGrpcServer {
 		longs: Number
 	};
 	private readonly server: Server;
+	private readonly grpcHandlers: BuiltinLedgerGrpcHandlers;
 
 	constructor(
 		logger: ILogger,
 		tokenHelper: TokenHelper,
+        metrics:IMetrics,
 		aggregate: BuiltinLedgerAggregate,
 		url: string
 	) {
@@ -76,24 +79,26 @@ export class BuiltinLedgerGrpcServer {
 		const serviceDefinition: ServiceDefinition =
 			(grpcObject as unknown as ProtoGrpcType).GrpcBuiltinLedger.service;
 
-		const grpcHandlers: BuiltinLedgerGrpcHandlers = new BuiltinLedgerGrpcHandlers(
+		this.grpcHandlers = new BuiltinLedgerGrpcHandlers(
 			this.logger,
 			tokenHelper,
+            metrics,
 			aggregate
 		);
-		const serviceImplementation: GrpcBuiltinLedgerHandlers = grpcHandlers.getHandlers();
+		const serviceImplementation: GrpcBuiltinLedgerHandlers = this.grpcHandlers.getHandlers();
 
+		//this.server = new Server({"grpc.max_concurrent_streams": 100});
 		this.server = new Server();
 		this.server.addService(
 			serviceDefinition,
 			serviceImplementation
 		);
-	}
+    }
 
 	async start(): Promise<void> {
 		return new Promise((resolve, reject) => {
 			this.logger.info(`Starting GRPC service in url: ${this.URL}`);
-			this.server.bindAsync(
+            this.server.bindAsync(
 				this.URL,
 				ServerCredentials.createInsecure(),
 				(error) => {
@@ -102,12 +107,15 @@ export class BuiltinLedgerGrpcServer {
 						return;
 					}
 
-					this.server.start();
-					this.logger.info("* * * * * * * * * * * * * * * * * * * *");
-					this.logger.info("gRPC server started 🚀");
-					this.logger.info(`URL: ${this.URL}`);
-					this.logger.info("* * * * * * * * * * * * * * * * * * * *");
-					resolve();
+                    //this.grpcHandlers.init().then(()=>{
+                        this.server.start();
+                        this.logger.info("* * * * * * * * * * * * * * * * * * * *");
+                        this.logger.info("gRPC server started 🚀");
+                        this.logger.info(`URL: ${this.URL}`);
+                        this.logger.info("* * * * * * * * * * * * * * * * * * * *");
+                        resolve();
+                    //});
+
 				}
 			);
 		});

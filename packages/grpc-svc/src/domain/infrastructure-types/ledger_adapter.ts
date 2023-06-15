@@ -27,7 +27,12 @@
  --------------
  ******/
 
-import {AccountsAndBalancesAccountState, AccountsAndBalancesAccountType} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import {
+    AccountsAndBalancesAccountState,
+    AccountsAndBalancesAccountType,
+    IAccountsBalancesHighLevelRequest, IAccountsBalancesHighLevelResponse
+} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import {CallSecurityContext} from "@mojaloop/security-bc-public-types-lib";
 
 export type LedgerAdapterAccount = {
     id: string | null;
@@ -79,7 +84,7 @@ export interface ILedgerAdapter {
             requestedId: string, amountStr: string, currencyCode: string,
             creditedAccountId: string, debitedAccountId: string, timestamp: number, ownerId: string, pending: boolean
         }[]
-    ): Promise<LedgerAdapterCreateResponseItem[]>;
+    ): Promise<string[]>;
 
     getAccountsByIds(ledgerAccountIds: LedgerAdapterRequestId[]): Promise<LedgerAdapterAccount[]>;
     getJournalEntriesByAccountId(
@@ -90,4 +95,24 @@ export interface ILedgerAdapter {
     deleteAccountsByIds(accountIds: string[]): Promise<void>;
     deactivateAccountsByIds(accountIds: string[]): Promise<void>;
     reactivateAccountsByIds(accountIds: string[]): Promise<void>;
+
+    processHighLevelBatch(requests:IAccountsBalancesHighLevelRequest[]):Promise<IAccountsBalancesHighLevelResponse[]>;
+
+/*
+    // high level
+    checkLiquidAndReserve(
+        payerPositionAccountId: string, payerLiquidityAccountId: string, hubJokeAccountId: string,
+        transferAmount: string, currencyCode: string, payerNetDebitCap: string, transferId: string
+    ): Promise<void>;
+
+    cancelReservationAndCommit(
+        payerPositionAccountId: string, payeePositionAccountId: string, hubJokeAccountId: string,
+        transferAmount: string, currencyCode: string, transferId: string
+    ): Promise<void>;
+
+    cancelReservation(
+        payerPositionAccountId: string, hubJokeAccountId: string,
+        transferAmount: string, currencyCode: string, transferId: string
+    ): Promise<void>;
+*/
 }

@@ -61,6 +61,17 @@ export class BuiltinLedgerJournalEntriesMockRepo implements IBuiltinLedgerJourna
 		this.builtinLedgerJournalEntries.set(builtinLedgerJournalEntry.id, builtinLedgerJournalEntry);
 	}
 
+    async storeNewJournalEntries(entries: BuiltinLedgerJournalEntry[]): Promise<void>{
+        for(const entry of entries){
+            await this.storeNewJournalEntry(entry);
+        }
+    }
+
+
+    async getJournalEntry(entryId: string): Promise<BuiltinLedgerJournalEntry|null>{
+        return this.builtinLedgerJournalEntries.get(entryId) || null;
+    }
+
 	async getJournalEntriesByAccountId(accountId: string): Promise<BuiltinLedgerJournalEntry[]> {
 		const builtinLedgerJournalEntries: BuiltinLedgerJournalEntry[] = [];
 		for (const builtinLedgerJournalEntry of this.builtinLedgerJournalEntries.values()) {

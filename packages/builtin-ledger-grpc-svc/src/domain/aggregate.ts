@@ -28,14 +28,19 @@ GetJournalEntriesByAccountId
  ******/
 "use strict";
 import {
-	AccountNotFoundError,
-	AccountsAndBalancesAccountType, CurrencyCodeNotFoundError,
-	InvalidAccountParametersError, InvalidJournalEntryParametersError
+    AccountNotFoundError,
+    AccountsAndBalancesAccountType, AccountsBalancesHighLevelRequestTypes,
+    CurrencyCodeNotFoundError,
+    IAccountsBalancesHighLevelRequest,
+    IAccountsBalancesHighLevelResponse,
+    InvalidAccountParametersError,
+    InvalidJournalEntryParametersError,
+    PayerFailedLiquidityCheckError
 } from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {join} from "path";
 import {readFileSync} from "fs";
 import {randomUUID} from "crypto";
-
+import {v4 as uuidv4} from "uuid";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 
 import {IAuditClient, AuditSecurityContext} from "@mojaloop/auditing-bc-public-types-lib";
@@ -51,6 +56,10 @@ import {
 	BuiltinLedgerJournalEntryDto, CreatedIdMapResponse
 } from "./entities";
 import {IBuiltinLedgerAccountsRepo, IBuiltinLedgerJournalEntriesRepo} from "./infrastructure";
+import {
+    LedgerAdapterAccount
+} from "@mojaloop/accounts-and-balances-bc-coa-grpc-svc/dist/domain/infrastructure-types/ledger_adapter";
+import {IHistogram, IMetrics} from "@mojaloop/platform-shared-lib-observability-types-lib";
 
 enum AuditingActions {
 	BUILTIN_LEDGER_ACCOUNT_CREATED = "BUILTIN_LEDGER_ACCOUNT_CREATED",
@@ -62,6 +71,46 @@ enum AuditingActions {
 
 const CURRENCIES_FILE_NAME = "currencies.json";
 
+export class CheckLiquidAndReserveRequest {
+    secCtx: CallSecurityContext;
+    payerPositionAccountId: string;
+    payerLiquidityAccountId: string;
+    hubJokeAccountId:string;
+    transferAmount: string;
+    currencyCode:string;
+    payerNetDebitCap:string;
+    transferId:string
+}
+
+export class CancelReservationAndCommitRequest {
+    secCtx: CallSecurityContext;
+    payerPositionAccountId: string;
+    payeePositionAccountId: string;
+    hubJokeAccountId: string;
+    transferAmount: string;
+    currencyCode: string;
+    transferId: string;
+}
+
+export class CancelReservationRequest {
+    secCtx: CallSecurityContext;
+    payerPositionAccountId: string;
+    hubJokeAccountId: string;
+    transferAmount: string;
+    currencyCode: string;
+    transferId: string;
+}
+
+
+export class LedgerBatchRequest {
+    id: string;
+    request: CheckLiquidAndReserveRequest | CancelReservationAndCommitRequest | CancelReservationRequest;
+}
+export class LedgerBatchResponse{
+    id: string;
+    error?: Error;
+}
+
 export class BuiltinLedgerAggregate {
 	// Properties received through the constructor.
 	private readonly _logger: ILogger;
@@ -70,19 +119,26 @@ export class BuiltinLedgerAggregate {
 	private readonly _builtinLedgerAccountsRepo: IBuiltinLedgerAccountsRepo;
 	private readonly _builtinLedgerJournalEntriesRepo: IBuiltinLedgerJournalEntriesRepo;
 	private readonly _currencies: {code: string, decimals: number}[];
+    private readonly _metrics: IMetrics;
+    private readonly _requestsHisto: IHistogram;
+
+    private readonly _accountCache: Map<string, BuiltinLedgerAccount> = new Map<string, BuiltinLedgerAccount>();
+    private readonly _entriesCache: Map<string, BuiltinLedgerJournalEntry> = new Map<string, BuiltinLedgerJournalEntry>();
 
 	constructor(
 		logger: ILogger,
 		authorizationClient: IAuthorizationClient,
 		auditingClient: IAuditClient,
 		accountsRepo: IBuiltinLedgerAccountsRepo,
-		journalEntriesRepo: IBuiltinLedgerJournalEntriesRepo
+		journalEntriesRepo: IBuiltinLedgerJournalEntriesRepo,
+        metrics: IMetrics
 	) {
 		this._logger = logger.createChild(this.constructor.name);
 		this._authorizationClient = authorizationClient;
 		this._auditingClient = auditingClient;
 		this._builtinLedgerAccountsRepo = accountsRepo;
 		this._builtinLedgerJournalEntriesRepo = journalEntriesRepo;
+        this._metrics = metrics;
 
 		const currenciesFileAbsolutePath: string = join(__dirname, CURRENCIES_FILE_NAME);
 		try {
@@ -91,22 +147,40 @@ export class BuiltinLedgerAggregate {
 			this._logger.error(error);
 			throw error;
 		}
+
+        this._requestsHisto = metrics.getHistogram("BuiltinLedgerAggregate", "Accounts and Balances Builtin Ledger GRPC Aggregate metrics", ["callName", "success"]);
 	}
 
 	private _enforcePrivilege(secCtx: CallSecurityContext, privilegeId: string): void {
-		for (const roleId of secCtx.rolesIds) {
+        const timerEndFn = this._requestsHisto.startTimer({callName: "enforcePrivilege"});
+        for (const roleId of secCtx.rolesIds) {
 			if (this._authorizationClient.roleHasPrivilege(roleId, privilegeId)) {
-				return;
+                timerEndFn({success: "true"});
+                return;
 			}
 		}
 		const error = new ForbiddenError("Caller is missing role with privilegeId: " + privilegeId);
 		this._logger.isWarnEnabled() && this._logger.warn(error.message);
-		throw error;
+        timerEndFn({success: "false"});
+        throw error;
 	}
 
 	private _logAction(secCtx: CallSecurityContext, actionName:string){
 		this._logger.isDebugEnabled() && this._logger.debug(`User/App '${secCtx.username ?? secCtx.clientId}' called ${actionName}`);
 	}
+
+    private _getCurrencyOrThrow(currencyCode:string): {code: string, decimals: number}{
+        const timerEndFn = this._requestsHisto.startTimer({callName: "getCurrencyOrThrow"});
+        // Validate the currency code and get the currency.
+        const currency: { code: string, decimals: number } | undefined
+            = this._currencies.find((value) => value.code === currencyCode);
+        if (!currency) {
+            timerEndFn({success: "false"});
+            throw new CurrencyCodeNotFoundError(`Currency code: ${currencyCode} not found`);
+        }
+        timerEndFn({success: "true"});
+        return currency;
+    }
 
 	private _getAuditSecurityContext(securityContext: CallSecurityContext): AuditSecurityContext {
 		return {
@@ -115,6 +189,128 @@ export class BuiltinLedgerAggregate {
 			role: "" // TODO: get role.
 		};
 	}
+
+    private async _getAccountsByIds(accountIds: string[]): Promise<BuiltinLedgerAccount[]>{
+        const timerEndFn = this._requestsHisto.startTimer({callName: "getAccountsByIds"});
+        const notFoundIds:string [] = [];
+        const retAccounts: BuiltinLedgerAccount[] = [];
+
+        for(const id of accountIds){
+            const acc = this._accountCache.get(id);
+            if(acc){
+                retAccounts.push(acc);
+            }else{
+                notFoundIds.push(id);
+            }
+        }
+        const fetched = await this._builtinLedgerAccountsRepo.getAccountsByIds(notFoundIds);
+        for(const fetchedAcc of fetched){
+            this._accountCache.set(fetchedAcc.id, fetchedAcc);
+            retAccounts.push(fetchedAcc);
+        }
+
+        timerEndFn({success: "true"});
+        return Promise.resolve(retAccounts);
+    }
+
+    private async _storeNewJournalEntry(journalEntry: BuiltinLedgerJournalEntry, inBatch:boolean = false): Promise<void>{
+        const timerEndFn = this._requestsHisto.startTimer({callName: "storeNewJournalEntry"});
+        if(!inBatch){
+            return this._builtinLedgerJournalEntriesRepo.storeNewJournalEntry(journalEntry);
+        }
+        this._entriesCache.set(journalEntry.id, journalEntry);
+        timerEndFn({success: "true"});
+    }
+
+    private async _flush():Promise<void>{
+        const timerEndFn = this._requestsHisto.startTimer({callName: "_flush"});
+
+        if(this._entriesCache.size){
+            const entries = Array.from(this._entriesCache.values());
+            await this._builtinLedgerJournalEntriesRepo.storeNewJournalEntries(entries);
+            this._entriesCache.clear();
+        }
+        if(this._accountCache.size){
+            const accounts = Array.from(this._accountCache.values());
+            await this._builtinLedgerAccountsRepo.updateAccounts(accounts);
+            // TODO check which accounts were changed so we don't bother the repo when not necessary
+        }
+
+        // TODO implement LRU to remove not used accounts from cache
+
+        timerEndFn({success: "true"});
+    }
+
+    async processHighLevelBatch(secCtx: CallSecurityContext, requests:IAccountsBalancesHighLevelRequest[]):Promise<IAccountsBalancesHighLevelResponse[]> {
+        const responses: IAccountsBalancesHighLevelResponse[] = [];
+        for (const req of requests) {
+            if (req.requestType === AccountsBalancesHighLevelRequestTypes.checkLiquidAndReserve) {
+                const timerEndFn = this._requestsHisto.startTimer({callName: "checkLiquidAndReserve"});
+                try{
+                    await this.checkLiquidAndReserve(
+                        secCtx,
+                        req.payerPositionAccountId,
+                        req.payerLiquidityAccountId!,
+                        req.hubJokeAccountId,
+                        req.transferAmount,
+                        req.currencyCode,
+                        req.payerNetDebitCap!,
+                        req.transferId,
+                        true
+                    );
+                    responses.push({requestType:req.requestType, requestId: req.requestId, success: true, errorMessage:null});
+                    timerEndFn({success: "true"});
+                }catch(err:any){
+                    responses.push({requestType:req.requestType, requestId: req.requestId, success: false, errorMessage:err.message});
+                    timerEndFn({success: "false"});
+                }
+            } else if (req.requestType === AccountsBalancesHighLevelRequestTypes.cancelReservationAndCommit) {
+                const timerEndFn = this._requestsHisto.startTimer({callName: "cancelReservationAndCommit"});
+                try{
+                    await this.cancelReservationAndCommit(
+                        secCtx,
+                        req.payerPositionAccountId,
+                        req.payeePositionAccountId!,
+                        req.hubJokeAccountId,
+                        req.transferAmount,
+                        req.currencyCode,
+                        req.transferId,
+                        true
+                    );
+                    responses.push({requestType:req.requestType, requestId: req.requestId, success: true, errorMessage:null});
+                    timerEndFn({success: "true"});
+                }catch(err:any){
+                    responses.push({requestType:req.requestType, requestId: req.requestId, success: false, errorMessage:err.message});
+                    timerEndFn({success: "false"});
+                }
+            } else if (req.requestType === AccountsBalancesHighLevelRequestTypes.cancelReservation) {
+                const timerEndFn = this._requestsHisto.startTimer({callName: "cancelReservation"});
+                try{
+                    await this.cancelReservation(
+                        secCtx,
+                        req.payerPositionAccountId,
+                        req.hubJokeAccountId,
+                        req.transferAmount,
+                        req.currencyCode,
+                        req.transferId,
+                        true
+                    );
+                    responses.push({requestType:req.requestType, requestId: req.requestId, success: true, errorMessage:null});
+                    timerEndFn({success: "true"});
+                }catch(err:any){
+                    responses.push({requestType:req.requestType, requestId: req.requestId, success: false, errorMessage:err.message});
+                    timerEndFn({success: "false"});
+                }
+            }
+        }
+
+        if(responses.length){
+            // flush
+            await this._flush();
+        }
+        return Promise.resolve(responses);
+    }
+
 
 	async createAccounts(
 		secCtx: CallSecurityContext,
@@ -161,7 +357,7 @@ export class BuiltinLedgerAggregate {
 
 		// try to use requestedId, if used, create a new one
 		let myId = requestedId || randomUUID();
-		const found = await this._builtinLedgerAccountsRepo.getAccountsByIds([myId]);
+		const found = await this._getAccountsByIds([myId]);
 		if(found && found.length>0)
 			myId = randomUUID();
 
@@ -188,7 +384,8 @@ export class BuiltinLedgerAggregate {
 			throw error;
 		}
 
-		// TODO: wrap in try-catch block.
+        // no need to audit creation of entries, only accounts activity
+        /*const audit_timerEndFn = this._requestsHisto.startTimer({callName: "auditingClient.audit"});
 		await this._auditingClient.audit(
 			AuditingActions.BUILTIN_LEDGER_ACCOUNT_CREATED,
 			true,
@@ -198,8 +395,9 @@ export class BuiltinLedgerAggregate {
 				value: builtinLedgerAccount.id
 			}]
 		);
+        audit_timerEndFn({success: "true"});*/
 
-		return {
+        return {
 			requestedId: requestedId,
 			attributedId: myId
 		};
@@ -207,18 +405,17 @@ export class BuiltinLedgerAggregate {
 
 	async createJournalEntries(
 		secCtx: CallSecurityContext,
-		createReq: {requestedId: string, amountStr: string,	currencyCode: string,
+		createReq: {amountStr: string,	currencyCode: string,
 			creditedAccountId: string, debitedAccountId: string, timestamp: number,	ownerId: string, pending: boolean
 		}[]
-	): Promise<CreatedIdMapResponse[]> {
+	): Promise<string[]> {
 		this._enforcePrivilege(secCtx, BuiltinLedgerPrivileges.BUILTIN_LEDGER_CREATE_JOURNAL_ENTRY);
 		this._logAction(secCtx, "createJournalEntries");
 
-		const journalEntryIds: CreatedIdMapResponse[] = [];
+		const journalEntryIds: string[] = [];
 		for (const req of createReq) {
-			const idMapResponse: CreatedIdMapResponse = await this._createJournalEntry(
+			const idResponse = await this._createJournalEntry(
 				secCtx,
-				req.requestedId,
 				req.amountStr,
 				req.currencyCode,
 				req.creditedAccountId,
@@ -227,7 +424,7 @@ export class BuiltinLedgerAggregate {
 				req.ownerId,
 				req.pending,
 			);
-			journalEntryIds.push(idMapResponse);
+			journalEntryIds.push(idResponse);
 		}
 
 		return journalEntryIds;
@@ -235,50 +432,44 @@ export class BuiltinLedgerAggregate {
 
 	private async _createJournalEntry(
 		secCtx: CallSecurityContext,
-		requestedId:string,
 		amountStr:string,
 		currencyCode:string,
 		creditedAccountId:string,
 		debitedAccountId:string,
 		timestamp:number,
 		ownerId: string,
-		pending: boolean
-	): Promise<CreatedIdMapResponse> {
-		this._enforcePrivilege(secCtx, BuiltinLedgerPrivileges.BUILTIN_LEDGER_CREATE_JOURNAL_ENTRY);
+		pending: boolean,
+        inBatch:boolean = false
+	): Promise<string> {
+        const timerEndFn = this._requestsHisto.startTimer({callName: "createJournalEntry"});
+        this._enforcePrivilege(secCtx, BuiltinLedgerPrivileges.BUILTIN_LEDGER_CREATE_JOURNAL_ENTRY);
 
 		if(!amountStr || !currencyCode || !debitedAccountId || !creditedAccountId){
 			throw new InvalidJournalEntryParametersError("Invalid entry amount, currencyCode or accounts");
 		}
 
 		// Validate the currency code and get the currency obj.
-		const currency = this._currencies.find((value) => value.code===currencyCode);
-		if (!currency) {
-			throw new CurrencyCodeNotFoundError();
-		}
-
+		const currency = this._getCurrencyOrThrow(currencyCode);
 		// TODO must get and use the currencyDecimals defined in the account
-
-		// try to use requestedId, if used, create a new one
-		let myId = requestedId || randomUUID();
-		const found = await this._builtinLedgerAccountsRepo.getAccountsByIds([myId]);
-		if (found && found.length > 0)
-			myId = randomUUID();
 
 		// Convert the amount to bigint and validate it.
 		let amount: bigint;
 		try {
 			amount = stringToBigint(amountStr, currency.decimals);
 		} catch (error: unknown) {
+            timerEndFn({success: "false"});
 			throw new InvalidJournalEntryParametersError("Invalid entry amount");
 		}
 
 		// Check if the debited and credited accounts are the same.
 		if (creditedAccountId === debitedAccountId) {
+            timerEndFn({success: "false"});
 			throw new InvalidJournalEntryParametersError("creditedAccountId and debitedAccountId cannot be the same");
 		}
 
 		const builtinLedgerJournalEntry: BuiltinLedgerJournalEntry = {
-			id: myId,
+			//id: randomUUID({disableEntropyCache:true}),
+			id: uuidv4(),
 			ownerId: ownerId,
 			currencyCode: currency.code,
 			currencyDecimals: currency.decimals,
@@ -290,55 +481,94 @@ export class BuiltinLedgerAggregate {
 		};
 
 		// check if both accounts exist
-		const accs: BuiltinLedgerAccount[] = await this._builtinLedgerAccountsRepo.getAccountsByIds([creditedAccountId, debitedAccountId]) || [];
+		const accs: BuiltinLedgerAccount[] = await this._getAccountsByIds([creditedAccountId, debitedAccountId]) || [];
 		const creditedAccount = accs.find(value => value.id === creditedAccountId);
 		const debitedAccount = accs.find(value => value.id === debitedAccountId);
 
 		if(!creditedAccount || !debitedAccount){
 			const msg = "cannot find creditedAccountId or debitedAccountId in _createJournalEntry()";
 			this._logger.warn(msg);
+            timerEndFn({success: "false"});
 			throw new InvalidJournalEntryParametersError(msg);
 		}
 		if(creditedAccount.currencyCode !== currencyCode || debitedAccount.currencyCode !== currencyCode){
-			const msg = "creditedAccountId or debitedAccountId in _createJournalEntry() don't match the entry currencyCode"
+			const msg = "creditedAccountId or debitedAccountId in _createJournalEntry() don't match the entry currencyCode";
 			this._logger.warn(msg);
+            timerEndFn({success: "false"});
 			throw new InvalidJournalEntryParametersError(msg);
 		}
 
 		// TODO check limit mode in createEntry
 
 		// Store the journal entry.
-		await this._builtinLedgerJournalEntriesRepo.storeNewJournalEntry(builtinLedgerJournalEntry);
+		await this._storeNewJournalEntry(builtinLedgerJournalEntry, inBatch);
 
 		try {
 			// Update the debited account's debit balance and timestamp.
-			const curDebitBalance = pending ? debitedAccount!.pendingDebitBalance:debitedAccount!.postedDebitBalance;
-			const newDebitBalance: bigint = curDebitBalance + amount;
-			await this._builtinLedgerAccountsRepo.updateAccountDebitBalanceAndTimestamp(
-				debitedAccountId,
-				newDebitBalance,
-				pending,
-				timestamp
-			);
+			const curDebitBalance = pending ? debitedAccount.pendingDebitBalance:debitedAccount.postedDebitBalance;
+            const newDebitBalance: bigint = curDebitBalance + amount;
+
+            if(this._logger.isDebugEnabled()) this._logger.debug(`\tdebitedAccountId: ${debitedAccountId} - curDebitBalance: ${curDebitBalance} - newDebitBalance: ${newDebitBalance} `);
+
+            if(newDebitBalance < 0n){
+                const err = new Error("Resulting DebitBalance for account is less than zero in BuiltinLedgerAggregate._createJournalEntry()");
+                this._logger.error(err);
+                timerEndFn({success: "false"});
+                throw err;
+            }
+
+            if(inBatch){
+                if(pending)
+                    debitedAccount.pendingDebitBalance = newDebitBalance;
+                else
+                    debitedAccount.postedDebitBalance = newDebitBalance;
+            }else {
+                await this._builtinLedgerAccountsRepo.updateAccountDebitBalanceAndTimestamp(
+                    debitedAccountId,
+                    newDebitBalance,
+                    pending,
+                    timestamp
+                );
+            }
 
 			// Update the credited account's credit balance and timestamp.
-			const curCreditBalance = pending ? creditedAccount!.pendingCreditBalance:creditedAccount!.postedCreditBalance;
-			const newCreditBalance: bigint = curCreditBalance + amount;
-			await this._builtinLedgerAccountsRepo.updateAccountCreditBalanceAndTimestamp(
-				creditedAccountId,
-				newCreditBalance,
-				pending,
-				timestamp
-			);
+			const curCreditBalance = pending ? creditedAccount.pendingCreditBalance:creditedAccount.postedCreditBalance;
+            const newCreditBalance: bigint = curCreditBalance + amount;
+
+            if(this._logger.isDebugEnabled()) this._logger.debug(`\tcreditedAccountId: ${creditedAccountId} - curCreditBalance: ${curCreditBalance} - newCreditBalance: ${newCreditBalance} `);
+
+            if(newCreditBalance < 0n){
+                const err = new Error("Resulting CreditBalance for account is less than zero in BuiltinLedgerAggregate._createJournalEntry()");
+                this._logger.error(err);
+                timerEndFn({success: "false"});
+                throw err;
+            }
+
+            if(inBatch){
+                if(pending)
+                    creditedAccount.pendingCreditBalance = newCreditBalance;
+                else
+                    creditedAccount.postedCreditBalance = newCreditBalance;
+            }else {
+                await this._builtinLedgerAccountsRepo.updateAccountCreditBalanceAndTimestamp(
+                    creditedAccountId,
+                    newCreditBalance,
+                    pending,
+                    timestamp
+                );
+            }
 		}catch (error){
-			// if this fails, revert "this._builtinLedgerJournalEntriesRepo.storeNewJournalEntry(builtinLedgerJournalEntry)"
+			// if this fails, revert "this._storeNewJournalEntry(builtinLedgerJournalEntry)"
 			// TODO: insert another entry that is the reverse of  builtinLedgerJournalEntry above - reverses as a delete are forbidden by design (append only)
             // await this._builtinLedgerJournalEntriesRepo.reverseJournalEntry(builtinLedgerJournalEntry.id);
 
 			this._logger.error(error);
+            timerEndFn({success: "false"});
 			throw error;
 		}
 
+        // no need to audit creation of entries, only accounts activity
+        /*const audit_timerEndFn = this._requestsHisto.startTimer({callName: "auditingClient.audit"});
 		await this._auditingClient.audit(
 			AuditingActions.BUILTIN_LEDGER_JOURNAL_ENTRY_CREATED,
 			true,
@@ -348,11 +578,10 @@ export class BuiltinLedgerAggregate {
 				value: builtinLedgerJournalEntry.id
 			}]
 		);
+        audit_timerEndFn({success: "true"});*/
 
-		return {
-			requestedId: requestedId,
-			attributedId: myId
-		};
+        timerEndFn({success: "true"});
+		return builtinLedgerJournalEntry.id;
 
 	}
 
@@ -362,7 +591,7 @@ export class BuiltinLedgerAggregate {
 
 		let builtinLedgerAccounts: BuiltinLedgerAccount[];
 		try {
-			builtinLedgerAccounts = await this._builtinLedgerAccountsRepo.getAccountsByIds(accountIds);
+			builtinLedgerAccounts = await this._getAccountsByIds(accountIds);
 		} catch (error: unknown) {
 			this._logger.error(error);
 			throw error;
@@ -386,6 +615,7 @@ export class BuiltinLedgerAggregate {
 		return builtinLedgerAccountDtos;
 	}
 
+    // TODO fix this is not using the batching mechanism - _builtinLedgerJournalEntriesRepo.getJournalEntriesByAccountId is not ready
 	async getJournalEntriesByAccountId(secCtx: CallSecurityContext, accountId: string): Promise<BuiltinLedgerJournalEntryDto[]> {
 		this._enforcePrivilege(secCtx, BuiltinLedgerPrivileges.BUILTIN_LEDGER_VIEW_JOURNAL_ENTRY);
 		this._logAction(secCtx, "getJournalEntriesByAccountId");
@@ -450,4 +680,177 @@ export class BuiltinLedgerAggregate {
 			throw error;
 		}
 	}
+
+    async checkLiquidAndReserve(
+        secCtx: CallSecurityContext,
+        payerPositionAccountId: string, payerLiquidityAccountId: string, hubJokeAccountId:string,
+        transferAmount: string, currencyCode:string, payerNetDebitCap:string, transferId:string,
+        inBatch:boolean = false
+    ):Promise<void>{
+        this._logAction(secCtx, "checkLiquidAndReserve");
+
+        // Validate the currency code and get the currency.
+        const currency = this._getCurrencyOrThrow(currencyCode);
+
+        // get accounts and their balances from the ledger
+        const ledgerAccounts = await this._getAccountsByIds(
+            [payerPositionAccountId, payerLiquidityAccountId]
+        );
+        const payerPosLedgerAcc = ledgerAccounts.find(value => value.id === payerPositionAccountId);
+        const payerLiqLedgerAcc = ledgerAccounts.find(value => value.id === payerLiquidityAccountId);
+
+        if (!payerPosLedgerAcc || !payerLiqLedgerAcc) {
+            const err = new AccountNotFoundError("Could not find payer accounts on the ledger service");
+            this._logger.warn(err.message);
+            throw err;
+        }
+
+        // check liquidity -> pos.post.dr + pos.pend.dr - pos.post.cr + trx.amount <= liq.bal - NDC
+        const payerHasLiq = this._checkParticipantLiquidity(
+            payerPosLedgerAcc, payerLiqLedgerAcc, transferAmount,
+            payerNetDebitCap, currency.decimals);
+
+        if(!payerHasLiq){
+            // TODO audit PayerFailedLiquidityCheckError
+            const err = new PayerFailedLiquidityCheckError("Liquidity check failed");
+            this._logger.warn(err.message);
+            throw err;
+        }
+
+        try {
+            await this._createJournalEntry(
+                secCtx,
+                transferAmount,
+                currencyCode,
+                hubJokeAccountId,
+                payerPositionAccountId,
+                Date.now(),
+                transferId,
+                true,
+                inBatch
+            );
+        } catch (error: any) {
+            this._logger.error(error);
+            throw error;
+        }
+    }
+
+    private _checkParticipantLiquidity(
+        payerPos:BuiltinLedgerAccount, payerLiq:BuiltinLedgerAccount,
+        trxAmountStr:string, payerNdcStr:string, currencyDecimals:number
+    ):boolean{
+        const timerEndFn = this._requestsHisto.startTimer({callName: "checkParticipantLiquidity"});
+        const positionPostDr = payerPos.postedCreditBalance || 0n; //stringToBigint(payerPos.postedDebitBalance || "0", currencyDecimals);
+        const positionPendDr = payerPos.pendingDebitBalance || 0n ; //stringToBigint(payerPos.pendingDebitBalance || "0", currencyDecimals);
+        const positionPostCr = payerPos.postedCreditBalance|| 0n; //stringToBigint(payerPos.postedCreditBalance || "0", currencyDecimals);
+
+        const liquidityPostDr = payerLiq.postedDebitBalance || 0n; //stringToBigint(payerLiq.postedDebitBalance || "0", currencyDecimals);
+        const liquidityPostCr = payerLiq.postedCreditBalance || 0n ; //stringToBigint(payerLiq.postedCreditBalance || "0", currencyDecimals);
+
+        const trxAmount = stringToBigint(trxAmountStr, currencyDecimals);
+        const payerNdc = stringToBigint(payerNdcStr, currencyDecimals);
+
+        const liquidityBal = liquidityPostCr - liquidityPostDr;
+
+        timerEndFn({success: "true"});
+        if(positionPostDr + positionPendDr - positionPostCr + trxAmount <= liquidityBal - payerNdc){
+            return true;
+        }else{
+            return false;
+        }
+    }
+
+    async cancelReservationAndCommit(
+        secCtx: CallSecurityContext,
+        payerPositionAccountId: string, payeePositionAccountId: string, hubJokeAccountId: string,
+        transferAmount: string, currencyCode: string, transferId: string,
+        inBatch:boolean = false
+    ): Promise<void> {
+        this._logAction(secCtx, "cancelReservationAndCommit");
+
+        if (!payerPositionAccountId || !payeePositionAccountId || !hubJokeAccountId) {
+            const err = new AccountNotFoundError("Invalid or not found CoA accounts on cancelReservationAndCommit request");
+            this._logger.warn(err.message);
+            throw err;
+        }
+
+        // Validate the currency code and get the currency.
+        const currency = this._getCurrencyOrThrow(currencyCode);
+        const now = Date.now();
+        const amount = stringToBigint(transferAmount, currency.decimals);
+        const revertAmount = amount * -1n;
+
+        try {
+            // Cancel/void the reservation (negative amount pending entry)
+            await this._createJournalEntry(
+                secCtx,
+                bigintToString(revertAmount, currency.decimals),
+                currencyCode,
+                hubJokeAccountId,
+                payerPositionAccountId,
+                now,
+                transferId,
+                true,
+                inBatch
+            );
+
+            // Move funds from payer position to payee position (normal entry)
+            await this._createJournalEntry(
+                secCtx,
+                bigintToString(amount, currency.decimals),
+                currencyCode,
+                payeePositionAccountId,
+                payerPositionAccountId,
+                now,
+                transferId,
+                false,
+                inBatch
+            );
+        } catch (error: any) {
+            this._logger.error(error);
+            throw error;
+        }
+    }
+
+    async cancelReservation(
+        secCtx: CallSecurityContext,
+        payerPositionAccountId: string, hubJokeAccountId: string,
+        transferAmount: string, currencyCode: string, transferId: string,
+        inBatch:boolean = false
+    ): Promise<void> {
+
+
+        if (!payerPositionAccountId || !hubJokeAccountId) {
+            const err = new AccountNotFoundError("Invalid or not found CoA accounts on cancelReservation request");
+            this._logger.warn(err.message);
+            throw err;
+        }
+
+        // Validate the currency code and get the currency.
+        const currency = this._getCurrencyOrThrow(currencyCode);
+
+        const amount = stringToBigint(transferAmount, currency.decimals);
+        const revertAmount = amount * -1n;
+
+        try {
+            // Cancel/void the reservation (negative amount pending entry)
+            await this._createJournalEntry(
+                secCtx,
+                bigintToString(revertAmount, currency.decimals),
+                currencyCode,
+                hubJokeAccountId,
+                payerPositionAccountId,
+                Date.now(),
+                transferId,
+                true,
+                inBatch
+            );
+        } catch (error: any) {
+            this._logger.error(error);
+            throw error;
+        }
+    }
+
+
+
 }

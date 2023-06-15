@@ -37,16 +37,20 @@ import {
 } from "../domain/infrastructure-types/ledger_adapter";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {
-	BuiltinLedgerGrpcAccountArray__Output,
-	BuiltinLedgerGrpcClient,
-	BuiltinLedgerGrpcCreateAccountArray,
-	BuiltinLedgerGrpcCreateIdsResponse__Output,
-	BuiltinLedgerGrpcCreateJournalEntry,
-	BuiltinLedgerGrpcCreateJournalEntryArray,
-	BuiltinLedgerGrpcId,
-	BuiltinLedgerGrpcJournalEntryArray__Output
+    BuiltinLedgerGrpcAccountArray__Output,
+    BuiltinLedgerGrpcClient,
+    BuiltinLedgerGrpcCreateAccountArray,
+    BuiltinLedgerGrpcCreateIdsResponse__Output,
+    BuiltinLedgerGrpcCreateJournalEntry,
+    BuiltinLedgerGrpcCreateJournalEntryArray,
+    BuiltinLedgerGrpcId, BuiltinLedgerGrpcIdArray, BuiltinLedgerGrpcIdArray__Output,
+    BuiltinLedgerGrpcJournalEntryArray__Output
 } from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-client-lib";
-import {AccountsAndBalancesAccountState, AccountsAndBalancesAccountType} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import {
+    AccountsAndBalancesAccountState,
+    AccountsAndBalancesAccountType,
+    IAccountsBalancesHighLevelRequest, IAccountsBalancesHighLevelResponse
+} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 
 export class BuiltinLedgerAdapter implements ILedgerAdapter {
@@ -115,16 +119,15 @@ export class BuiltinLedgerAdapter implements ILedgerAdapter {
 
 	async createJournalEntries(
 		createRequests: {
-			requestedId: string, amountStr: string, currencyCode: string,
+			amountStr: string, currencyCode: string,
 			creditedAccountId: string, debitedAccountId: string, timestamp: number, ownerId: string, pending: boolean
 		}[]
-	): Promise<LedgerAdapterCreateResponseItem[]> {
-		let createIdsResp: BuiltinLedgerGrpcCreateIdsResponse__Output;
+	): Promise<string[]> {
+		let createIdsResp: BuiltinLedgerGrpcIdArray;
 
 		const grpcRequest: BuiltinLedgerGrpcCreateJournalEntryArray = {
 			entriesToCreate: createRequests.map(item=>{
 				return {
-					requestedId: item.requestedId,
 					ownerId: item.ownerId,
 					pending: item.pending,
 					currencyCode: item.currencyCode,
@@ -142,11 +145,18 @@ export class BuiltinLedgerAdapter implements ILedgerAdapter {
 			throw error;
 		}
 
-		if (!createIdsResp.ids) {
+		if (!createIdsResp.builtinLedgerGrpcIdArray) {
 			throw new Error();
 		}
 
-		return createIdsResp.ids as LedgerAdapterCreateResponseItem[];
+        const ret: string[] = [];
+        createIdsResp.builtinLedgerGrpcIdArray.forEach(value =>{
+            if(value.builtinLedgerGrpcId) ret.push(value.builtinLedgerGrpcId);
+        });
+
+        //TODO: if ret.length is less than request throw error
+
+		return ret;
 	}
 
 
@@ -276,4 +286,72 @@ export class BuiltinLedgerAdapter implements ILedgerAdapter {
 			throw error;
 		}
 	}
+
+    async processHighLevelBatch(requests:IAccountsBalancesHighLevelRequest[]):Promise<IAccountsBalancesHighLevelResponse[]>{
+        try {
+           const resp = await this._builtinLedgerClient.processHighLevelBatch(requests);
+           return resp;
+        } catch (error: unknown) {
+            this._logger.error(error);
+            throw error;
+        }
+    }
+
+/*
+    // high level
+    async checkLiquidAndReserve(
+        payerPositionAccountId: string, payerLiquidityAccountId: string, hubJokeAccountId: string,
+        transferAmount: string, currencyCode: string, payerNetDebitCap: string, transferId: string
+    ): Promise<void>{
+        try {
+            await this._builtinLedgerClient.checkLiquidAndReserve(
+                payerPositionAccountId,
+                payerLiquidityAccountId,
+                hubJokeAccountId,
+                transferAmount,
+                currencyCode,
+                payerNetDebitCap,
+                transferId);
+        } catch (error: unknown) {
+            this._logger.error(error);
+            throw error;
+        }
+    }
+
+    async cancelReservationAndCommit(
+        payerPositionAccountId: string, payeePositionAccountId: string, hubJokeAccountId: string,
+        transferAmount: string, currencyCode: string, transferId: string
+    ): Promise<void>{
+        try {
+            await this._builtinLedgerClient.cancelReservationAndCommit(
+                payerPositionAccountId,
+                payeePositionAccountId,
+                hubJokeAccountId,
+                transferAmount,
+                currencyCode,
+                transferId);
+        } catch (error: unknown) {
+            this._logger.error(error);
+            throw error;
+        }
+    }
+
+    async cancelReservation(
+        payerPositionAccountId: string, hubJokeAccountId: string,
+        transferAmount: string, currencyCode: string, transferId: string
+    ): Promise<void>{
+        try {
+            await this._builtinLedgerClient.cancelReservation(
+                payerPositionAccountId,
+                hubJokeAccountId,
+                transferAmount,
+                currencyCode,
+                transferId);
+        } catch (error: unknown) {
+            this._logger.error(error);
+            throw error;
+        }
+    }
+*/
+
 }

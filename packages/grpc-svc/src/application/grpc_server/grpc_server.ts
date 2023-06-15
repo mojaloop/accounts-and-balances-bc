@@ -42,6 +42,7 @@ import {AccountsAndBalancesAggregate} from "../../domain/aggregate";
 import {GrpcHandlers} from "./grpc_handlers";
 import {GrpcAccountsAndBalancesHandlers, ProtoGrpcType} from "@mojaloop/accounts-and-balances-bc-grpc-client-lib";
 import {join} from "path";
+import {IMetrics} from "@mojaloop/platform-shared-lib-observability-types-lib";
 
 export class GrpcServer {
 	// Properties received through the constructor.
@@ -52,13 +53,14 @@ export class GrpcServer {
 	private static readonly PROTO_FILE_RELATIVE_PATH: string =
 		"../../../../grpc-client-lib/src/accounts_and_balances.proto";
 	private static readonly LOAD_PROTO_OPTIONS: Options = {
-		longs: Number
+		longs: Number,
 	};
 	private readonly server: Server;
 
 	constructor(
 		logger: ILogger,
 		tokenHelper: TokenHelper,
+        metrics:IMetrics,
 		aggregate: AccountsAndBalancesAggregate,
 		url: string
 	) {
@@ -77,11 +79,14 @@ export class GrpcServer {
 		const grpcHandlers: GrpcHandlers = new GrpcHandlers(
 			this.logger,
 			tokenHelper,
+            metrics,
 			aggregate
 		);
 		const serviceImplementation: GrpcAccountsAndBalancesHandlers = grpcHandlers.getHandlers();
 
-		this.server = new Server();
+		this.server = new Server({
+            "grpc.max_concurrent_streams": 1
+        });
 		this.server.addService(
 			serviceDefinition,
 			serviceImplementation
@@ -101,6 +106,7 @@ export class GrpcServer {
 					}
 
 					this.server.start();
+
 					this.logger.info("* * * * * * * * * * * * * * * * * * * *");
 					this.logger.info("gRPC server started 🚀");
 					this.logger.info(`URL: ${this.URL}`);

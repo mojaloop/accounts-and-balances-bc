@@ -32,10 +32,14 @@ import * as grpc from "@grpc/grpc-js";
 import * as protoLoader from "@grpc/proto-loader";
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {AccountsAndBalancesAccount,
-	AccountsAndBalancesAccountState,
-	AccountsAndBalancesAccountType,
-	AccountsAndBalancesJournalEntry
+import {
+    AccountsAndBalancesAccount,
+    AccountsAndBalancesAccountState,
+    AccountsAndBalancesAccountType,
+    AccountsAndBalancesJournalEntry,
+    AccountsBalancesHighLevelRequestTypes,
+    IAccountsBalancesHighLevelRequest,
+    IAccountsBalancesHighLevelResponse
 } from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {
 
@@ -49,13 +53,13 @@ import {
 	GrpcCreateJournalEntryArray,
 	GrpcJournalEntry__Output,
 	ProtoGrpcType,
-	GrpcCancelReservationAndCommitRequest,
-	GrpcCheckLiquidAndReserveRequest,
-	GrpcCancelReservationRequest, GrpcIdArray
+	GrpcIdArray
 
 } from "./types";
 
 import {ILoginHelper} from "@mojaloop/security-bc-public-types-lib";
+import {GrpcHighLevelRequestArray} from "./types/proto-gen/GrpcHighLevelRequestArray";
+import {ConnectivityState} from "@grpc/grpc-js/build/src/connectivity-state";
 
 const PROTO_FILE_NAME = "accounts_and_balances.proto";
 const LOAD_PROTO_OPTIONS: protoLoader.Options = {
@@ -110,20 +114,36 @@ export class AccountsAndBalancesGrpcClient {
 		return new Promise((resolve, reject) => {
 			this._logger.info(`Connecting AccountsAndBalancesGrpcClient to url: ${this._url}`);
 
-			const deadline: grpc.Deadline = Date.now() + TIMEOUT_MS;
+            const deadline: grpc.Deadline = Date.now() + TIMEOUT_MS;
+            this._client.waitForReady(deadline, (error) => {
+                if (error) return reject(error);
 
-			this._client.waitForReady(
-				deadline,
-				(error) => {
-					if (error !== undefined) {
-						reject(error);
-						return;
-					}
+                const channelzRf = this._client.getChannel().getChannelzRef();
+                this._logger.info(`CoA gRPC client initialized 🚀 - channel: ${channelzRf.name}`);
 
-					this._logger.info("gRPC client initialized 🚀");
-					resolve();
-				}
-			);
+                const channel =this._client.getChannel();
+                let currentState: ConnectivityState, lastState: ConnectivityState;
+                currentState = lastState = channel.getConnectivityState(false);
+
+                const updateLoop = ()=>{
+                    if(lastState !== ConnectivityState.READY && lastState !== ConnectivityState.CONNECTING) {
+                        channel.getConnectivityState(true);
+                    }
+                    channel.watchConnectivityState(lastState, Date.now() + TIMEOUT_MS, error1 => {
+                        if(!error1){
+                            currentState = channel.getConnectivityState(false);
+                            this._logger.info(`Accounts and CoA gRPC client channel state changed - last state: ${ConnectivityState[lastState]} -> new state: ${ConnectivityState[currentState]}`);
+                            lastState = currentState;
+                        }
+                        setImmediate(updateLoop);
+                    });
+                };
+
+                // start the update loop
+                updateLoop();
+
+                resolve();
+            });
 		});
 	}
 
@@ -359,6 +379,62 @@ export class AccountsAndBalancesGrpcClient {
 		});
 	}
 
+    async processHighLevelBatch(requests:IAccountsBalancesHighLevelRequest[]): Promise<IAccountsBalancesHighLevelResponse[]>{
+        const grpcRequests:GrpcHighLevelRequestArray = {
+            requestArray: []
+        };
+
+        requests.forEach(req =>{
+           grpcRequests.requestArray!.push({
+               requestType: req.requestType,
+               requestId: req.requestId,
+               transferId: req.transferId,
+               payerPositionAccountId: req.payerPositionAccountId,
+               hubJokeAccountId: req.hubJokeAccountId,
+               transferAmount: req.transferAmount,
+               currencyCode: req.currencyCode,
+               payerLiquidityAccountId: req.payerLiquidityAccountId || undefined,
+               payeePositionAccountId: req.payeePositionAccountId || undefined,
+               payerNetDebitCap: req.payerNetDebitCap || undefined
+           });
+        });
+
+        await this._updateCallMetadata();
+
+        return new Promise((resolve, reject) => {
+            this._client.processHighLevelBatch(grpcRequests, this._callMetadata, (error, grpcResponse)=>{
+                if (error) return reject(error);
+                if(!grpcResponse || !grpcResponse.responseArray)
+                    return reject(new Error("invalid response on processHighLevelBatch"));
+
+                const responses:IAccountsBalancesHighLevelResponse[] = [];
+                grpcResponse.responseArray.forEach((item)=>{
+                    if(!item.requestId ||(
+                        item.requestType !== AccountsBalancesHighLevelRequestTypes.checkLiquidAndReserve &&
+                        item.requestType !== AccountsBalancesHighLevelRequestTypes.cancelReservationAndCommit &&
+                        item.requestType !== AccountsBalancesHighLevelRequestTypes.cancelReservation
+                    )) {
+                        const error = new Error("invalid response on processHighLevelBatch - item does not contain requestId or requestType");
+                        this._logger.error(error);
+                        this._logger.isDebugEnabled() && this._logger.debug(JSON.stringify(item, null, 2));
+                        return reject(error);
+                    }
+
+                    responses.push({
+                        requestType: item.requestType as AccountsBalancesHighLevelRequestTypes,
+                        requestId: item.requestId,
+                        success: item.success || false,
+                        errorMessage: item.errorMessage || null
+                    });
+                });
+
+                return resolve(responses);
+            });
+        });
+    }
+
+
+/*
 	// High level
 
 	async checkLiquidAndReserve(
@@ -428,7 +504,7 @@ export class AccountsAndBalancesGrpcClient {
 		});
 	}
 
-	private _grpcAccountsOutputToAccounts(grpcAccountsOutput: GrpcAccount__Output[]): AccountsAndBalancesAccount[] {
+*/	private _grpcAccountsOutputToAccounts(grpcAccountsOutput: GrpcAccount__Output[]): AccountsAndBalancesAccount[] {
 		const accounts: AccountsAndBalancesAccount[] = grpcAccountsOutput.map((grpcAccountOutput) => {
 			if (
 				!grpcAccountOutput.ownerId

@@ -33,6 +33,7 @@ import {Collection, Db, MongoClient, MongoServerError} from "mongodb";
 import {AccountsAndBalancesAccountState} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import { IChartOfAccountsRepo } from "../domain/infrastructure-types/chart_of_accounts_repo";
 import { CoaAccount } from "../domain/coa_account";
+import {Redis} from "ioredis";
 
 export const COA_ACCOUNT_MONGO_SCHEMA: any = {
     bsonType: "object",
@@ -60,6 +61,10 @@ export const COA_ACCOUNT_MONGO_SCHEMA: any = {
     additionalProperties: false
 };
 
+declare type CacheItem = {
+    account:CoaAccount, timestamp:number
+}
+
 export class ChartOfAccountsMongoRepo implements IChartOfAccountsRepo {
     // Properties received through the constructor.
     private readonly logger: ILogger;
@@ -69,15 +74,25 @@ export class ChartOfAccountsMongoRepo implements IChartOfAccountsRepo {
     private static readonly DB_NAME: string = "accounts_and_balances_bc_coa";
     private static readonly COLLECTION_NAME: string = "chart_of_accounts";
     private static readonly DUPLICATE_KEY_ERROR_CODE: number = 11000;
+    private readonly keyPrefix= "coaAccount_";
     private client: MongoClient;
     private collection: Collection;
+    private redisClient: Redis;
 
     constructor(
         logger: ILogger,
-        url: string
+        mongoUrl: string,
+        redisHost: string,
+        redisPort: number
     ) {
         this.logger = logger.createChild(this.constructor.name);
-        this.URL = url;
+        this.URL = mongoUrl;
+
+        this.redisClient = new Redis({
+            port: redisPort,
+            host: redisHost,
+            lazyConnect: true
+        });
     }
 
     async init(): Promise<void> {
@@ -110,10 +125,39 @@ export class ChartOfAccountsMongoRepo implements IChartOfAccountsRepo {
             this.logger.error(error);
             throw error;
         }
+
+        try{
+            await this.redisClient.connect();
+        }catch(error: unknown){
+            this.logger.error(`Unable to connect to redis cache: ${(error as Error).message}`);
+            throw error;
+        }
     }
 
     async destroy(): Promise<void> {
         await this.client.close();
+        await this.redisClient.quit();
+    }
+
+    private _getKeyWithPrefix (key: string): string {
+        return this.keyPrefix + key;
+    }
+
+    private async _getAccountFromCache(id:string):Promise<CoaAccount | null>{
+        const accStr = await this.redisClient.get(this._getKeyWithPrefix(id));
+        if(!accStr) return null;
+
+        try{
+            const acc = JSON.parse(accStr);
+            return acc;
+        }catch (e) {
+            this.logger.error(e);
+            return null;
+        }
+    }
+
+    private async _setCacheAccount(account:CoaAccount):Promise<void>{
+        this.redisClient.set(this._getKeyWithPrefix(account.id), JSON.stringify(account));
     }
 
     async accountsExistByInternalIds(internalIds: string[]): Promise<boolean> {
@@ -130,6 +174,9 @@ export class ChartOfAccountsMongoRepo implements IChartOfAccountsRepo {
 
     async storeAccounts(coaAccounts: CoaAccount[]): Promise<void> {
         try {
+            for(const acc of coaAccounts){
+                await this._setCacheAccount(acc);
+            }
             await this.collection.insertMany(coaAccounts);
         } catch (error: unknown) {
             this.logger.error(error);
@@ -138,9 +185,29 @@ export class ChartOfAccountsMongoRepo implements IChartOfAccountsRepo {
     }
 
     async getAccounts(ids: string[]): Promise<CoaAccount[]> {
-        let accounts: any[];
+        const accounts: CoaAccount[] = [];
+
+        const notFoundIds:string[] = [];
+        for(const id of ids){
+            const found = await this._getAccountFromCache(id);
+            if(found){
+                accounts.push(found);
+            }else{
+                notFoundIds.push(id);
+            }
+        }
+
+        if(notFoundIds.length==0){
+            return accounts;
+        }
+
         try {
-            accounts = await this.collection.find({id: {$in: ids}}).project({_id: 0}).toArray();
+            const fetchedAccounts = await this.collection.find({id: {$in: notFoundIds}}).project({_id: 0}).toArray() as CoaAccount[];
+            for(const acc of fetchedAccounts){
+                await this._setCacheAccount(acc);
+            }
+
+            accounts.push(...fetchedAccounts);
         } catch (error: unknown) {
             this.logger.error(error);
             throw error;
@@ -153,6 +220,9 @@ export class ChartOfAccountsMongoRepo implements IChartOfAccountsRepo {
         let accounts: any[];
         try {
             accounts = await this.collection.find({ownerId: ownerId}).project({_id: 0}).toArray();
+            for(const acc of accounts){
+                await this._setCacheAccount(acc);
+            }
         } catch (error: unknown) {
             this.logger.error(error);
             throw error;
@@ -161,7 +231,7 @@ export class ChartOfAccountsMongoRepo implements IChartOfAccountsRepo {
         return accounts;
     }
 
-    async updateAccountStatesByInternalIds(accountIds: string[], accountState: AccountsAndBalancesAccountState): Promise<void> {
+    /*async updateAccountStatesByInternalIds(accountIds: string[], accountState: AccountsAndBalancesAccountState): Promise<void> {
         let updateResult: any;
         try {
             updateResult = await this.collection.updateMany(
@@ -178,5 +248,5 @@ export class ChartOfAccountsMongoRepo implements IChartOfAccountsRepo {
             this.logger.error(err);
             throw err;
         }
-    }
+    }*/
 }

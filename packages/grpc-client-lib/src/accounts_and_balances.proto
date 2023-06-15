@@ -19,13 +19,54 @@ service GrpcAccountsAndBalances {
   rpc DeactivateAccountsByIds(GrpcIdArray) returns (google.protobuf.Empty);
   rpc ActivateAccountsByIds(GrpcIdArray) returns (google.protobuf.Empty);
 
-  // High level requests
-  rpc CheckLiquidAndReserve(GrpcCheckLiquidAndReserveRequest) returns (google.protobuf.Empty);
-  rpc CancelReservationAndCommit(GrpcCancelReservationAndCommitRequest) returns (google.protobuf.Empty);
+//  // High level requests
+//  rpc CheckLiquidAndReserve(GrpcCheckLiquidAndReserveRequest) returns (google.protobuf.Empty);
+//  rpc CancelReservationAndCommit(GrpcCancelReservationAndCommitRequest) returns (google.protobuf.Empty);
+//  // this will only cancel the reservation, to revert the payer position account to the good state
+//  rpc CancelReservation(GrpcCancelReservationRequest) returns (google.protobuf.Empty);
 
-  // this will only cancel the reservation, to revert the payer position account to the good state
-  rpc CancelReservation(GrpcCancelReservationRequest) returns (google.protobuf.Empty);
+    // batch requests
+    rpc ProcessHighLevelBatch(GrpcHighLevelRequestArray) returns (GrpcHighLevelResponseArray);
 }
+
+// batch requests
+
+//enum EnumSample {
+//    option allow_alias = true;
+//    UNKNOWN = 0;
+//    STARTED = 1;
+//    RUNNING = 1;
+//}
+
+message GrpcHighLevelRequestArray {
+    repeated GrpcHighLevelRequest requestArray = 1;
+}
+
+message GrpcHighLevelRequest {
+    int32 requestType = 1;
+    string requestId = 2;
+    string payerPositionAccountId = 3;
+    string payerLiquidityAccountId = 4;
+    string payeePositionAccountId = 5;
+    string hubJokeAccountId = 6;
+    string transferAmount = 7;
+    string currencyCode = 8;
+    string payerNetDebitCap = 9; // same currency unit as transfer
+    string transferId = 10;
+}
+
+message GrpcHighLevelResponseArray {
+    repeated GrpcHighLevelResponse responseArray  = 1;
+}
+
+message GrpcHighLevelResponse {
+    int32 requestType = 1;
+    string requestId = 2;
+    bool success = 3;
+    string errorMessage = 4;
+}
+
+
 
 /* Ids */
 // Used to send queries
@@ -99,36 +140,36 @@ message GrpcCreateJournalEntryArray {
   repeated GrpcCreateJournalEntry entriesToCreate = 1;
 }
 
-/*
-High level requests
-*/
-//message GrpcSuccessResponse {
-//  bool success = 1;
+///*
+//High level requests
+//*/
+////message GrpcSuccessResponse {
+////  bool success = 1;
+////}
+//
+//message GrpcCheckLiquidAndReserveRequest {
+//  string payerPositionAccountId = 1;
+//  string payerLiquidityAccountId = 2;
+//  string hubJokeAccountId = 3;
+//  string transferAmount = 4;
+//  string currencyCode = 5;
+//  string payerNetDebitCap = 6; // same currency unit as transfer
+//  string transferId = 7;
 //}
-
-message GrpcCheckLiquidAndReserveRequest {
-  string payerPositionAccountId = 1;
-  string payerLiquidityAccountId = 2;
-  string hubJokeAccountId = 3;
-  string transferAmount = 4;
-  string currencyCode = 5;
-  string payerNetDebitCap = 6; // same currency unit as transfer
-  string transferId = 7;
-}
-
-message GrpcCancelReservationAndCommitRequest {
-  string payerPositionAccountId = 1;
-  string payeePositionAccountId = 2;
-  string hubJokeAccountId = 3;
-  string transferAmount = 4;
-  string currencyCode = 5;
-  string transferId = 6;
-}
-
-message GrpcCancelReservationRequest {
-  string payerPositionAccountId = 1;
-  string hubJokeAccountId = 3;
-  string transferAmount = 4;
-  string currencyCode = 5;
-  string transferId = 6;
-}
+//
+//message GrpcCancelReservationAndCommitRequest {
+//  string payerPositionAccountId = 1;
+//  string payeePositionAccountId = 2;
+//  string hubJokeAccountId = 3;
+//  string transferAmount = 4;
+//  string currencyCode = 5;
+//  string transferId = 6;
+//}
+//
+//message GrpcCancelReservationRequest {
+//  string payerPositionAccountId = 1;
+//  string hubJokeAccountId = 3;
+//  string transferAmount = 4;
+//  string currencyCode = 5;
+//  string transferId = 6;
+//}

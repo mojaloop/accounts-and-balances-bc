@@ -104,7 +104,7 @@ export class ChartOfAccountsMockRepo implements IChartOfAccountsRepo {
 		return coaAccounts;
 	}
 
-	async updateAccountStatesByInternalIds(internalIds: string[], accountState: AccountsAndBalancesAccountState): Promise<void> {
+	/*async updateAccountStatesByInternalIds(internalIds: string[], accountState: AccountsAndBalancesAccountState): Promise<void> {
 		for (const coaAccount of this.chartOfAccounts.values()) {
 			for (const internalId of internalIds) {
 				if (coaAccount.ledgerAccountId === internalId) {
@@ -112,5 +112,5 @@ export class ChartOfAccountsMockRepo implements IChartOfAccountsRepo {
 				}
 			}
 		}
-	}
+	}*/
 }

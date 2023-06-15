@@ -41,5 +41,5 @@ export interface IChartOfAccountsRepo {
     getAccounts(ids: string[]): Promise<CoaAccount[]>;
     getAccountsByOwnerId(ownerId: string): Promise<CoaAccount[]>;
 
-    updateAccountStatesByInternalIds(internalIds: string[], accountState: AccountsAndBalancesAccountState): Promise<void>;
+    //updateAccountStatesByInternalIds(internalIds: string[], accountState: AccountsAndBalancesAccountState): Promise<void>;
 }

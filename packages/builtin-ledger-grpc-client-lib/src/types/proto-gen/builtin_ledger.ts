@@ -16,6 +16,10 @@ export interface ProtoGrpcType {
   BuiltinLedgerGrpcCreateJournalEntry: MessageTypeDefinition
   BuiltinLedgerGrpcCreateJournalEntryArray: MessageTypeDefinition
   BuiltinLedgerGrpcCreatedId: MessageTypeDefinition
+  BuiltinLedgerGrpcHighLevelRequest: MessageTypeDefinition
+  BuiltinLedgerGrpcHighLevelRequestArray: MessageTypeDefinition
+  BuiltinLedgerGrpcHighLevelResponse: MessageTypeDefinition
+  BuiltinLedgerGrpcHighLevelResponseArray: MessageTypeDefinition
   BuiltinLedgerGrpcId: MessageTypeDefinition
   BuiltinLedgerGrpcIdArray: MessageTypeDefinition
   BuiltinLedgerGrpcJournalEntry: MessageTypeDefinition

@@ -43,3 +43,8 @@ export * from "./proto-gen/GrpcCreateAccount";
 export * from "./proto-gen/GrpcCreateAccountArray";
 export * from "./proto-gen/GrpcCreateJournalEntry";
 export * from "./proto-gen/GrpcCreateJournalEntryArray";
+export * from "./proto-gen/GrpcHighLevelRequest";
+export * from "./proto-gen/GrpcHighLevelRequestArray";
+export * from "./proto-gen/GrpcHighLevelResponse";
+export * from "./proto-gen/GrpcHighLevelResponseArray";
+

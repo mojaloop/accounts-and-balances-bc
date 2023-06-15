@@ -30,6 +30,9 @@
  ******/
 "use strict";
 
+
+//TODO change types to interfaces
+
 export type AccountsAndBalancesAccountState = "ACTIVE" | "DELETED" | "INACTIVE";
 
 export type AccountsAndBalancesAccountType =
@@ -60,9 +63,43 @@ export type AccountsAndBalancesJournalEntry = {
 	timestamp: number | null;
 }
 
-/**
+
+/*
+* High level batch requests
+* */
+
+export declare const enum AccountsBalancesHighLevelRequestTypes {
+    checkLiquidAndReserve = 0,
+    cancelReservationAndCommit = 1,
+    cancelReservation = 2
+}
+
+export interface IAccountsBalancesHighLevelRequest {
+    requestType: AccountsBalancesHighLevelRequestTypes;
+    requestId: string;
+    transferId: string;
+    payerPositionAccountId: string;
+    hubJokeAccountId: string;
+    transferAmount: string;
+    currencyCode: string;
+
+    payerLiquidityAccountId: string | null; // only for checkLiquidAndReserve
+    payeePositionAccountId: string | null;  // only for cancelReservationAndCommit
+    payerNetDebitCap: string | null;        // only for checkLiquidAndReserve
+}
+
+export interface IAccountsBalancesHighLevelResponse {
+    requestType: AccountsBalancesHighLevelRequestTypes;
+    requestId: string;
+    success: boolean;
+    errorMessage: string | null;
+}
+
+
+/*
+/!**
  * Type used to request the creation of an account by the CoA Service
- */
+ *!/
 export type AccountsAndBalancesCreateAccountRequest = {
 	requestedId: string | null;
 	ownerId: string;
@@ -78,4 +115,4 @@ export type AccountsAndBalancesJournalEntryRequest = {
 	pending: boolean;
 	debitedAccountId: string;
 	creditedAccountId: string;
-}
+}*/

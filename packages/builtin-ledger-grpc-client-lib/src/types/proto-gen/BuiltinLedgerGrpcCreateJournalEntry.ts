@@ -2,7 +2,6 @@
 
 
 export interface BuiltinLedgerGrpcCreateJournalEntry {
-  'requestedId'?: (string);
   'ownerId'?: (string);
   'currencyCode'?: (string);
   'amount'?: (string);
@@ -12,7 +11,6 @@ export interface BuiltinLedgerGrpcCreateJournalEntry {
 }
 
 export interface BuiltinLedgerGrpcCreateJournalEntry__Output {
-  'requestedId'?: (string);
   'ownerId'?: (string);
   'currencyCode'?: (string);
   'amount'?: (string);

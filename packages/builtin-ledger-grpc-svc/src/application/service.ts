@@ -45,6 +45,12 @@ import {BuiltinLedgerAccountsMongoRepo} from "../implementations/builtin_ledger_
 import {BuiltinLedgerJournalEntriesMongoRepo} from "../implementations/builtin_ledger_journal_entries_mongo_repo";
 import {BuiltinLedgerGrpcServer} from "./grpc_server/grpc_server";
 import {BuiltinLedgerPrivilegesDefinition} from "./privileges";
+import process from "process";
+import {IMetrics} from "@mojaloop/platform-shared-lib-observability-types-lib";
+import {PrometheusMetrics} from "@mojaloop/platform-shared-lib-observability-client-lib";
+import express, {Express} from "express";
+import {Server} from "net";
+import {RedisBuiltinLedgerAccountsRepo} from "../implementations/redis_builtin_ledger_accounts_repo";
 
 /* ********** Constants Begin ********** */
 
@@ -76,6 +82,12 @@ const BUILTIN_LEDGER_URL = process.env.BUILTIN_LEDGER_URL || "0.0.0.0:3350";
 const SVC_CLIENT_ID = process.env["SVC_CLIENT_ID"] || "accounts-and-balances-bc-builtinledger-grpc-svc";
 const SVC_CLIENT_SECRET = process.env["SVC_CLIENT_ID"] || "superServiceSecret";
 
+const REDIS_HOST = process.env["REDIS_HOST"] || "localhost";
+const REDIS_PORT = (process.env["REDIS_PORT"] && parseInt(process.env["REDIS_PORT"])) || 6379;
+
+const SVC_DEFAULT_HTTP_PORT = process.env["SVC_DEFAULT_HTTP_PORT"] || 3351;
+let expressApp: Express;
+let expressServer: Server;
 
 /* ********** Constants End ********** */
 
@@ -92,6 +104,7 @@ export class BuiltinLedgerGrpcService {
 	private static builtinLedgerAccountsRepo: IBuiltinLedgerAccountsRepo;
 	private static builtinLedgerJournalEntriesRepo: IBuiltinLedgerJournalEntriesRepo;
 	private static grpcServer: BuiltinLedgerGrpcServer;
+    private static metrics:IMetrics;
 
 	private static loggerIsChild: boolean; // TODO: avoid this.
 
@@ -100,9 +113,12 @@ export class BuiltinLedgerGrpcService {
 		authorizationClient?: IAuthorizationClient,
 		auditingClient?: IAuditClient,
 		builtinLedgerAccountsRepo?: IBuiltinLedgerAccountsRepo,
-		builtinLedgerJournalEntriesRepo?: IBuiltinLedgerJournalEntriesRepo
+		builtinLedgerJournalEntriesRepo?: IBuiltinLedgerJournalEntriesRepo,
+        metrics?:IMetrics
 	): Promise<void> {
-		// Logger.
+        console.log(`Service starting with PID: ${process.pid}`);
+
+        // Logger.
 		if (!logger) {
 			logger = new KafkaLogger(
 				BC_NAME,
@@ -167,8 +183,15 @@ export class BuiltinLedgerGrpcService {
 		} else {
 			this.builtinLedgerAccountsRepo = new BuiltinLedgerAccountsMongoRepo(
 				this.logger,
-				MONGO_URL
+				MONGO_URL,
+                REDIS_HOST,
+                REDIS_PORT
 			);
+            // this.builtinLedgerAccountsRepo = new RedisBuiltinLedgerAccountsRepo(
+            //     this.logger,
+            //     REDIS_HOST,
+            //     REDIS_PORT
+            // );
 			try {
 				await this.builtinLedgerAccountsRepo.init();
 			} catch (error: unknown) {
@@ -193,30 +216,62 @@ export class BuiltinLedgerGrpcService {
 			}
 		}
 
+        // metrics client
+        if(!metrics){
+            const labels: Map<string, string> = new Map<string, string>();
+            labels.set("bc", BC_NAME);
+            labels.set("app", APP_NAME);
+            labels.set("version", APP_VERSION);
+            PrometheusMetrics.Setup({prefix:"", defaultLabels: labels}, this.logger);
+            metrics = PrometheusMetrics.getInstance();
+        }
+        this.metrics = metrics;
+
 		// Aggregate.
 		const builtinLedgerAggregate: BuiltinLedgerAggregate = new BuiltinLedgerAggregate(
 			this.logger,
 			authorizationClient,
 			this.auditingClient,
 			this.builtinLedgerAccountsRepo,
-			this.builtinLedgerJournalEntriesRepo
+			this.builtinLedgerJournalEntriesRepo,
+            this.metrics
 		);
 
 		// gRPC server.
 		this.grpcServer = new BuiltinLedgerGrpcServer(
 			this.logger,
 			tokenHelper,
+            this.metrics,
 			builtinLedgerAggregate,
 			BUILTIN_LEDGER_URL
 		);
-		try {
-			await this.grpcServer.start();
-			this.logger.info(`BuiltinLedgerGrpcService v: ${APP_VERSION} started`);
-		} catch (error: unknown) {
-			this.logger.fatal(error);
-			await this.stop();
-			process.exit(-1); // TODO: verify code.
-		}
+
+        // start grpc server
+        await this.grpcServer.start();
+
+        // Start express server
+        expressApp = express();
+        expressApp.use(express.json()); // for parsing application/json
+        expressApp.use(express.urlencoded({extended: true})); // for parsing application/x-www-form-urlencoded
+
+        // Add health and metrics http routes
+        expressApp.get("/health", (req: express.Request, res: express.Response) => {return res.send({ status: "OK" }); });
+        expressApp.get("/metrics", async (req: express.Request, res: express.Response) => {
+            const strMetrics = await (metrics as PrometheusMetrics).getMetricsForPrometheusScrapper();
+            return res.send(strMetrics);
+        });
+
+        expressApp.use((req, res) => {
+            // catch all
+            res.send(404);
+        });
+
+        expressServer = expressApp.listen(SVC_DEFAULT_HTTP_PORT, () => {
+            globalLogger.info(
+                `🚀Server ready at: http://localhost:${SVC_DEFAULT_HTTP_PORT}`
+            );
+            globalLogger.info(`BuiltinLedgerGrpcService v: ${APP_VERSION} started`);
+        });
 	}
 
 	static async stop(): Promise<void> {

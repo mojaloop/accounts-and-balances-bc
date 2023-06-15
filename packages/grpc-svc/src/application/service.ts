@@ -49,7 +49,11 @@ import {GrpcServer} from "./grpc_server/grpc_server";
 import {BuiltinLedgerAdapter, ChartOfAccountsMongoRepo} from "../implementations";
 import {AccountsAndBalancesAggregate} from "../domain/aggregate";
 import { ILedgerAdapter } from "../domain/infrastructure-types/ledger_adapter";
-
+import process from "process";
+import {IMetrics} from "@mojaloop/platform-shared-lib-observability-types-lib";
+import {PrometheusMetrics} from "@mojaloop/platform-shared-lib-observability-client-lib";
+import express, {Express} from "express";
+import {Server} from "net";
 
 /* ********** Constants Begin ********** */
 
@@ -85,6 +89,12 @@ const USE_TIGERBEETLE = process.env["USE_TIGERBEETLE"] || false;
 const TIGERBEETLE_CLUSTER_ID = process.env["TIGERBEETLE_CLUSTER_ID"] || "default_CHANGEME";
 const TIGERBEETLE_CLUSTER_REPLICA_ADDRESSES = process.env["TIGERBEETLE_CLUSTER_REPLICA_ADDRESSES"] || "default_CHANGEME";
 
+const REDIS_HOST = process.env["REDIS_HOST"] || "localhost";
+const REDIS_PORT = (process.env["REDIS_PORT"] && parseInt(process.env["REDIS_PORT"])) || 6379;
+
+const SVC_DEFAULT_HTTP_PORT = process.env["SVC_DEFAULT_HTTP_PORT"] || 3301;
+let expressApp: Express;
+let expressServer: Server;
 
 /* ********** Constants End ********** */
 
@@ -102,7 +112,7 @@ export class ChartOfAccountsGrpcService {
     private static chartOfAccountsRepo: IChartOfAccountsRepo;
     private static ledgerAdapter: ILedgerAdapter;
     private static grpcServer: GrpcServer;
-
+    private static metrics:IMetrics;
     private static loggerIsChild: boolean; // TODO: avoid this.
 
     static async start(
@@ -111,7 +121,10 @@ export class ChartOfAccountsGrpcService {
         auditingClient?: IAuditClient,
         chartOfAccountsRepo?: IChartOfAccountsRepo,
         ledgerAdapter?: ILedgerAdapter,
+        metrics?:IMetrics,
     ): Promise<void> {
+        console.log(`Service starting with PID: ${process.pid}`);
+
         // Logger.
         if (!logger) {
             logger = new KafkaLogger(
@@ -132,7 +145,9 @@ export class ChartOfAccountsGrpcService {
         } else {
             this.chartOfAccountsRepo = new ChartOfAccountsMongoRepo(
                 this.logger,
-                MONGO_URL
+                MONGO_URL,
+                REDIS_HOST,
+                REDIS_PORT
             );
             try {
                 await this.chartOfAccountsRepo.init();
@@ -192,6 +207,16 @@ export class ChartOfAccountsGrpcService {
         }
         this.authorizationClient = authorizationClient;
 
+        // metrics client
+        if(!metrics){
+            const labels: Map<string, string> = new Map<string, string>();
+            labels.set("bc", BC_NAME);
+            labels.set("app", APP_NAME);
+            labels.set("version", APP_VERSION);
+            PrometheusMetrics.Setup({prefix:"", defaultLabels: labels}, this.logger);
+            metrics = PrometheusMetrics.getInstance();
+        }
+        this.metrics = metrics;
 
         // Aggregate.
         const accountsAndBalancesAggregate: AccountsAndBalancesAggregate = new AccountsAndBalancesAggregate(
@@ -199,7 +224,8 @@ export class ChartOfAccountsGrpcService {
             this.authorizationClient,
             this.auditingClient,
             this.chartOfAccountsRepo,
-            this.ledgerAdapter
+            this.ledgerAdapter,
+            this.metrics
         );
 
         // token helper
@@ -212,17 +238,37 @@ export class ChartOfAccountsGrpcService {
         this.grpcServer = new GrpcServer(
             this.logger,
             this.tokenHelper,
+            this.metrics,
             accountsAndBalancesAggregate,
             ACCOUNTS_AND_BALANCES_URL
         );
-        try {
-            await this.grpcServer.start();
-            this.logger.info(`ChartOfAccountsGrpcService v: ${APP_VERSION} started`);
-        } catch (error: unknown) {
-            this.logger.fatal(error);
-            await this.stop();
-            process.exit(-1); // TODO: verify code.
-        }
+
+        // start grpc server
+        await this.grpcServer.start();
+
+        // Start express server
+        expressApp = express();
+        expressApp.use(express.json()); // for parsing application/json
+        expressApp.use(express.urlencoded({extended: true})); // for parsing application/x-www-form-urlencoded
+
+        // Add health and metrics http routes
+        expressApp.get("/health", (req: express.Request, res: express.Response) => {return res.send({ status: "OK" }); });
+        expressApp.get("/metrics", async (req: express.Request, res: express.Response) => {
+            const strMetrics = await (metrics as PrometheusMetrics).getMetricsForPrometheusScrapper();
+            return res.send(strMetrics);
+        });
+
+        expressApp.use((req, res) => {
+            // catch all
+            res.send(404);
+        });
+
+        expressServer = expressApp.listen(SVC_DEFAULT_HTTP_PORT, () => {
+            globalLogger.info(
+                `🚀Server ready at: http://localhost:${SVC_DEFAULT_HTTP_PORT}`
+            );
+            globalLogger.info(`ChartOfAccountsGrpcService v: ${APP_VERSION} started`);
+        });
     }
 
     static async stop(): Promise<void> {

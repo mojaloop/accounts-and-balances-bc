@@ -32,9 +32,9 @@
         "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc": "*",
         "@mojaloop/accounts-and-balances-bc-grpc-svc": "*",
         "@mojaloop/accounts-and-balances-bc-public-types-lib": "*",
-        "@mojaloop/auditing-bc-public-types-lib": "~0.0.12",
-        "@mojaloop/logging-bc-public-types-lib": "~0.1.14",
-        "@mojaloop/security-bc-public-types-lib": "~0.1.16",
-        "nock": "~13.3.0"
+        "@mojaloop/auditing-bc-public-types-lib": "~0.0.15",
+        "@mojaloop/logging-bc-public-types-lib": "~0.1.19",
+        "@mojaloop/security-bc-public-types-lib": "~0.1.19",
+        "nock": "~13.3.1"
     }
 }
