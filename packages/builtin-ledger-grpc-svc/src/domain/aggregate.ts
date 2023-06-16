@@ -740,7 +740,7 @@ export class BuiltinLedgerAggregate {
         trxAmountStr:string, payerNdcStr:string, currencyDecimals:number
     ):boolean{
         const timerEndFn = this._requestsHisto.startTimer({callName: "checkParticipantLiquidity"});
-        const positionPostDr = payerPos.postedCreditBalance || 0n; //stringToBigint(payerPos.postedDebitBalance || "0", currencyDecimals);
+        const positionPostDr = payerPos.postedDebitBalance || 0n; //stringToBigint(payerPos.postedDebitBalance || "0", currencyDecimals);
         const positionPendDr = payerPos.pendingDebitBalance || 0n ; //stringToBigint(payerPos.pendingDebitBalance || "0", currencyDecimals);
         const positionPostCr = payerPos.postedCreditBalance|| 0n; //stringToBigint(payerPos.postedCreditBalance || "0", currencyDecimals);
 
