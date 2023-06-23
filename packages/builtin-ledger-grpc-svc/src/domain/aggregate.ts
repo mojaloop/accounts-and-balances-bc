@@ -56,9 +56,6 @@ import {
 	BuiltinLedgerJournalEntryDto, CreatedIdMapResponse
 } from "./entities";
 import {IBuiltinLedgerAccountsRepo, IBuiltinLedgerJournalEntriesRepo} from "./infrastructure";
-import {
-    LedgerAdapterAccount
-} from "@mojaloop/accounts-and-balances-bc-coa-grpc-svc/dist/domain/infrastructure-types/ledger_adapter";
 import {IHistogram, IMetrics} from "@mojaloop/platform-shared-lib-observability-types-lib";
 
 enum AuditingActions {

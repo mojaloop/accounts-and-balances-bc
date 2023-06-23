@@ -35,7 +35,6 @@ import {
     IBuiltinLedgerAccountsRepo,
 } from "../domain";
 import {AccountsAndBalancesAccountState} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
-import {CoaAccount} from "@mojaloop/accounts-and-balances-bc-coa-grpc-svc/dist/domain/coa_account";
 import {Redis} from "ioredis";
 
 export const BUILTIN_LEDGER_ACCOUNT_MONGO_SCHEMA: any = {
