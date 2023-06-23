@@ -113,6 +113,7 @@ export class ChartOfAccountsGrpcService {
     private static ledgerAdapter: ILedgerAdapter;
     private static grpcServer: GrpcServer;
     private static metrics:IMetrics;
+    // private static configClient:IConfigurationClient;
     private static loggerIsChild: boolean; // TODO: avoid this.
 
     static async start(

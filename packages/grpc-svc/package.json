@@ -47,6 +47,8 @@
         "typescript": "^5.0.4"
     },
     "dependencies": {
+        "@mojaloop/auditing-bc-client-lib": "~0.0.14",
+        "@mojaloop/auditing-bc-public-types-lib": "~0.0.15",
         "@grpc/grpc-js": "~1.8.14",
         "@grpc/proto-loader": "~0.7.7",
         "@mojaloop/accounts-and-balances-bc-grpc-client-lib": "*",
