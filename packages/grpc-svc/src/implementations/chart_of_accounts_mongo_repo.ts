@@ -35,6 +35,11 @@ import { IChartOfAccountsRepo } from "../domain/infrastructure-types/chart_of_ac
 import { CoaAccount } from "../domain/coa_account";
 import {Redis} from "ioredis";
 
+const TIMEOUT_MS: number = 5_000;
+const DB_NAME: string = "accounts_and_balances_bc_coa";
+const COLLECTION_NAME: string = "chart_of_accounts";
+const DUPLICATE_KEY_ERROR_CODE: number = 11000;
+
 export const COA_ACCOUNT_MONGO_SCHEMA: any = {
     bsonType: "object",
     title: "Chart of Account's Account Mongo Schema",
@@ -67,17 +72,14 @@ declare type CacheItem = {
 
 export class ChartOfAccountsMongoRepo implements IChartOfAccountsRepo {
     // Properties received through the constructor.
-    private readonly logger: ILogger;
-    private readonly URL: string;
+    private readonly _logger: ILogger;
+    private readonly _mongoUrl: string;
     // Other properties.
-    private static readonly TIMEOUT_MS: number = 5_000;
-    private static readonly DB_NAME: string = "accounts_and_balances_bc_coa";
-    private static readonly COLLECTION_NAME: string = "chart_of_accounts";
-    private static readonly DUPLICATE_KEY_ERROR_CODE: number = 11000;
-    private readonly keyPrefix= "coaAccount_";
-    private client: MongoClient;
-    private collection: Collection;
-    private redisClient: Redis;
+
+    private readonly _keyPrefix= "coaAccount_";
+    private _client: MongoClient;
+    private _collection: Collection;
+    private _redisClient: Redis;
 
     constructor(
         logger: ILogger,
@@ -85,10 +87,10 @@ export class ChartOfAccountsMongoRepo implements IChartOfAccountsRepo {
         redisHost: string,
         redisPort: number
     ) {
-        this.logger = logger.createChild(this.constructor.name);
-        this.URL = mongoUrl;
+        this._logger = logger.createChild(this.constructor.name);
+        this._mongoUrl = mongoUrl;
 
-        this.redisClient = new Redis({
+        this._redisClient = new Redis({
             port: redisPort,
             host: redisHost,
             lazyConnect: true
@@ -98,74 +100,76 @@ export class ChartOfAccountsMongoRepo implements IChartOfAccountsRepo {
     async init(): Promise<void> {
         try {
             // TODO: investigate other types of timeouts; configure TLS.
-            this.client = new MongoClient(this.URL, {
-                serverSelectionTimeoutMS: ChartOfAccountsMongoRepo.TIMEOUT_MS
+            this._client = new MongoClient(this._mongoUrl, {
+                serverSelectionTimeoutMS: TIMEOUT_MS
             });
-            await this.client.connect();
+            await this._client.connect();
 
-            const db: Db = this.client.db(ChartOfAccountsMongoRepo.DB_NAME);
+            const db: Db = this._client.db(DB_NAME);
 
             // Check if the collection already exists.
             const collections: any[] = await db.listCollections().toArray();
             const collectionExists: boolean = collections.some((collection) => {
-                return collection.name === ChartOfAccountsMongoRepo.COLLECTION_NAME;
+                return collection.name === COLLECTION_NAME;
             });
 
             // collection() creates the collection if it doesn't already exist, however, it doesn't allow for a schema
             // to be passed as an argument.
             if (collectionExists) {
-                this.collection = db.collection(ChartOfAccountsMongoRepo.COLLECTION_NAME);
-                return;
+                this._collection = db.collection(COLLECTION_NAME);
+            }else{
+                this._collection = await db.createCollection(COLLECTION_NAME, {
+                    validator: {$jsonSchema: COA_ACCOUNT_MONGO_SCHEMA}
+                });
+                await this._collection.createIndex({"id": 1}, {unique: true});
             }
-            this.collection = await db.createCollection(ChartOfAccountsMongoRepo.COLLECTION_NAME, {
-                validator: {$jsonSchema: COA_ACCOUNT_MONGO_SCHEMA}
-            });
-            await this.collection.createIndex({"id": 1}, {unique: true});
+            this._logger.debug("Connected to Mongo successfully");
         } catch (error: unknown) {
-            this.logger.error(error);
+            this._logger.error(error);
             throw error;
         }
 
         try{
-            await this.redisClient.connect();
+            await this._redisClient.connect();
+            this._logger.debug("Connected to Redis successfully");
         }catch(error: unknown){
-            this.logger.error(`Unable to connect to redis cache: ${(error as Error).message}`);
+            this._logger.error(`Unable to connect to redis cache: ${(error as Error).message}`);
             throw error;
         }
     }
 
     async destroy(): Promise<void> {
-        await this.client.close();
-        await this.redisClient.quit();
+        await this._client.close();
+        await this._redisClient.quit();
     }
 
     private _getKeyWithPrefix (key: string): string {
-        return this.keyPrefix + key;
+        return this._keyPrefix + key;
     }
 
     private async _getAccountFromCache(id:string):Promise<CoaAccount | null>{
-        const accStr = await this.redisClient.get(this._getKeyWithPrefix(id));
+        const accStr = await this._redisClient.get(this._getKeyWithPrefix(id));
         if(!accStr) return null;
 
         try{
             const acc = JSON.parse(accStr);
             return acc;
         }catch (e) {
-            this.logger.error(e);
+            this._logger.error(e);
             return null;
         }
     }
 
     private async _setCacheAccount(account:CoaAccount):Promise<void>{
-        this.redisClient.set(this._getKeyWithPrefix(account.id), JSON.stringify(account));
+        this._redisClient.set(this._getKeyWithPrefix(account.id), JSON.stringify(account));
     }
 
     async accountsExistByInternalIds(internalIds: string[]): Promise<boolean> {
         let accounts: any[];
         try {
-            accounts = await this.collection.find({id: {$in: internalIds}}).toArray();
+            accounts = await this._collection.find({id: {$in: internalIds}}).toArray();
         } catch (error: unknown) {
-            this.logger.error(error);
+            this._logger.error(error);
             throw error;
         }
         const accountsExist = accounts.length === internalIds.length;
@@ -177,9 +181,9 @@ export class ChartOfAccountsMongoRepo implements IChartOfAccountsRepo {
             for(const acc of coaAccounts){
                 await this._setCacheAccount(acc);
             }
-            await this.collection.insertMany(coaAccounts);
+            await this._collection.insertMany(coaAccounts);
         } catch (error: unknown) {
-            this.logger.error(error);
+            this._logger.error(error);
             throw error;
         }
     }
@@ -202,14 +206,14 @@ export class ChartOfAccountsMongoRepo implements IChartOfAccountsRepo {
         }
 
         try {
-            const fetchedAccounts = await this.collection.find({id: {$in: notFoundIds}}).project({_id: 0}).toArray() as CoaAccount[];
+            const fetchedAccounts = await this._collection.find({id: {$in: notFoundIds}}).project({_id: 0}).toArray() as CoaAccount[];
             for(const acc of fetchedAccounts){
                 await this._setCacheAccount(acc);
             }
 
             accounts.push(...fetchedAccounts);
         } catch (error: unknown) {
-            this.logger.error(error);
+            this._logger.error(error);
             throw error;
         }
 
@@ -219,12 +223,12 @@ export class ChartOfAccountsMongoRepo implements IChartOfAccountsRepo {
     async getAccountsByOwnerId(ownerId: string): Promise<CoaAccount[]> {
         let accounts: any[];
         try {
-            accounts = await this.collection.find({ownerId: ownerId}).project({_id: 0}).toArray();
+            accounts = await this._collection.find({ownerId: ownerId}).project({_id: 0}).toArray();
             for(const acc of accounts){
                 await this._setCacheAccount(acc);
             }
         } catch (error: unknown) {
-            this.logger.error(error);
+            this._logger.error(error);
             throw error;
         }
 

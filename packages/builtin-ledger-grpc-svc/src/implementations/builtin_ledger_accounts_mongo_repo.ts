@@ -125,12 +125,13 @@ export class BuiltinLedgerAccountsMongoRepo implements IBuiltinLedgerAccountsRep
             // to be passed as an argument.
             if (collectionExists) {
                 this._collection = db.collection(BuiltinLedgerAccountsMongoRepo.COLLECTION_NAME);
-                return;
+            }else{
+                this._collection = await db.createCollection(BuiltinLedgerAccountsMongoRepo.COLLECTION_NAME, {
+                    validator: {$jsonSchema: BUILTIN_LEDGER_ACCOUNT_MONGO_SCHEMA}
+                });
+                await this._collection.createIndex({"id": 1}, {unique: true});
             }
-            this._collection = await db.createCollection(BuiltinLedgerAccountsMongoRepo.COLLECTION_NAME, {
-                validator: {$jsonSchema: BUILTIN_LEDGER_ACCOUNT_MONGO_SCHEMA}
-            });
-            await this._collection.createIndex({"id": 1}, {unique: true});
+            this._logger.debug("Connected to Mongo successfully");
         } catch (error: unknown) {
             this._logger.error(error);
             throw error;
@@ -138,6 +139,7 @@ export class BuiltinLedgerAccountsMongoRepo implements IBuiltinLedgerAccountsRep
 
         try{
             await this._redisClient.connect();
+            this._logger.debug("Connected to Redis successfully");
         }catch(error: unknown){
             this._logger.error(`Unable to connect to redis cache: ${(error as Error).message}`);
             throw error;
