@@ -30,7 +30,7 @@
 import {
 	BuiltinLedgerAccount,
 	IBuiltinLedgerAccountsRepo
-} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc/dist/domain";
+} from "../../builtin-ledger-grpc-svc/src/domain";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {AccountsAndBalancesAccountState} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 

@@ -31,7 +31,7 @@ import {
 
 	BuiltinLedgerJournalEntry,
 	IBuiltinLedgerJournalEntriesRepo
-} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc/dist/domain";
+} from "../../builtin-ledger-grpc-svc/src/domain";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 
 export class BuiltinLedgerJournalEntriesMockRepo implements IBuiltinLedgerJournalEntriesRepo {

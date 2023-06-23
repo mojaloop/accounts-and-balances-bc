@@ -29,9 +29,6 @@
     },
     "devDependencies": {},
     "dependencies": {
-        "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc": "*",
-        "@mojaloop/accounts-and-balances-bc-grpc-svc": "*",
-        "@mojaloop/accounts-and-balances-bc-public-types-lib": "*",
         "@mojaloop/auditing-bc-public-types-lib": "~0.0.15",
         "@mojaloop/logging-bc-public-types-lib": "~0.1.19",
         "@mojaloop/security-bc-public-types-lib": "~0.1.19",

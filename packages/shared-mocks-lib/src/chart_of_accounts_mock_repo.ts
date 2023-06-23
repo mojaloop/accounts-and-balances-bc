@@ -29,10 +29,10 @@
 
 import {
     CoaAccount,
-} from "@mojaloop/accounts-and-balances-bc-grpc-svc/dist/domain/coa_account";
+} from "../../grpc-svc/src/domain/coa_account";
 import {
 	IChartOfAccountsRepo
-} from "@mojaloop/accounts-and-balances-bc-grpc-svc/dist/domain/infrastructure-types/chart_of_accounts_repo";
+} from "../../grpc-svc/src/domain/infrastructure-types/chart_of_accounts_repo";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {AccountAlreadyExistsError, AccountsAndBalancesAccountState} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
