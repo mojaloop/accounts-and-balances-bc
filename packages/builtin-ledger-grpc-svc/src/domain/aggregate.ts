@@ -37,8 +37,7 @@ import {
     InvalidJournalEntryParametersError,
     PayerFailedLiquidityCheckError
 } from "@mojaloop/accounts-and-balances-bc-public-types-lib";
-import {join} from "path";
-import {readFileSync} from "fs";
+
 import {randomUUID} from "crypto";
 import {v4 as uuidv4} from "uuid";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
@@ -57,6 +56,7 @@ import {
 } from "./entities";
 import {IBuiltinLedgerAccountsRepo, IBuiltinLedgerJournalEntriesRepo} from "./infrastructure";
 import {IHistogram, IMetrics} from "@mojaloop/platform-shared-lib-observability-types-lib";
+import {Currency, IConfigurationClient} from "@mojaloop/platform-configuration-bc-public-types-lib";
 
 enum AuditingActions {
 	BUILTIN_LEDGER_ACCOUNT_CREATED = "BUILTIN_LEDGER_ACCOUNT_CREATED",
@@ -66,48 +66,6 @@ enum AuditingActions {
 	BUILTIN_LEDGER_ACCOUNT_ACTIVATED = "BUILTIN_LEDGER_ACCOUNT_ACTIVATED"
 }
 
-const CURRENCIES_FILE_NAME = "currencies.json";
-
-export class CheckLiquidAndReserveRequest {
-    secCtx: CallSecurityContext;
-    payerPositionAccountId: string;
-    payerLiquidityAccountId: string;
-    hubJokeAccountId:string;
-    transferAmount: string;
-    currencyCode:string;
-    payerNetDebitCap:string;
-    transferId:string
-}
-
-export class CancelReservationAndCommitRequest {
-    secCtx: CallSecurityContext;
-    payerPositionAccountId: string;
-    payeePositionAccountId: string;
-    hubJokeAccountId: string;
-    transferAmount: string;
-    currencyCode: string;
-    transferId: string;
-}
-
-export class CancelReservationRequest {
-    secCtx: CallSecurityContext;
-    payerPositionAccountId: string;
-    hubJokeAccountId: string;
-    transferAmount: string;
-    currencyCode: string;
-    transferId: string;
-}
-
-
-export class LedgerBatchRequest {
-    id: string;
-    request: CheckLiquidAndReserveRequest | CancelReservationAndCommitRequest | CancelReservationRequest;
-}
-export class LedgerBatchResponse{
-    id: string;
-    error?: Error;
-}
-
 export class BuiltinLedgerAggregate {
 	// Properties received through the constructor.
 	private readonly _logger: ILogger;
@@ -115,12 +73,12 @@ export class BuiltinLedgerAggregate {
 	private readonly _auditingClient: IAuditClient;
 	private readonly _builtinLedgerAccountsRepo: IBuiltinLedgerAccountsRepo;
 	private readonly _builtinLedgerJournalEntriesRepo: IBuiltinLedgerJournalEntriesRepo;
-	private readonly _currencies: {code: string, decimals: number}[];
     private readonly _metrics: IMetrics;
     private readonly _requestsHisto: IHistogram;
-
+    private readonly _configClient: IConfigurationClient;
     private readonly _accountCache: Map<string, BuiltinLedgerAccount> = new Map<string, BuiltinLedgerAccount>();
     private readonly _entriesCache: Map<string, BuiltinLedgerJournalEntry> = new Map<string, BuiltinLedgerJournalEntry>();
+    private _currencies: Currency[];
 
 	constructor(
 		logger: ILogger,
@@ -128,6 +86,7 @@ export class BuiltinLedgerAggregate {
 		auditingClient: IAuditClient,
 		accountsRepo: IBuiltinLedgerAccountsRepo,
 		journalEntriesRepo: IBuiltinLedgerJournalEntriesRepo,
+        configClient: IConfigurationClient,
         metrics: IMetrics
 	) {
 		this._logger = logger.createChild(this.constructor.name);
@@ -135,18 +94,24 @@ export class BuiltinLedgerAggregate {
 		this._auditingClient = auditingClient;
 		this._builtinLedgerAccountsRepo = accountsRepo;
 		this._builtinLedgerJournalEntriesRepo = journalEntriesRepo;
+        this._configClient = configClient;
         this._metrics = metrics;
 
-		const currenciesFileAbsolutePath: string = join(__dirname, CURRENCIES_FILE_NAME);
-		try {
-			this._currencies = JSON.parse(readFileSync(currenciesFileAbsolutePath, "utf-8"));
-		} catch (error: unknown) {
-			this._logger.error(error);
-			throw error;
-		}
-
         this._requestsHisto = metrics.getHistogram("BuiltinLedgerAggregate", "Accounts and Balances Builtin Ledger GRPC Aggregate metrics", ["callName", "success"]);
+
+        this._currencies = this._configClient.globalConfigs.getCurrencies();
+        if(!this._currencies){
+            throw new Error("Could not get currencies from global configs - cannot continue");
+        }
+        this._configClient.setChangeHandlerFunction(this._reloadSettings.bind(this));
 	}
+
+    private async _reloadSettings(type: "BC" | "GLOBAL"): Promise<void>{
+        // configurations changed centrally, reload what needs reloading
+        if(type ==="GLOBAL"){
+            this._currencies = this._configClient.globalConfigs.getCurrencies();
+        }
+    }
 
 	private _enforcePrivilege(secCtx: CallSecurityContext, privilegeId: string): void {
         const timerEndFn = this._requestsHisto.startTimer({callName: "enforcePrivilege"});
@@ -166,10 +131,10 @@ export class BuiltinLedgerAggregate {
 		this._logger.isDebugEnabled() && this._logger.debug(`User/App '${secCtx.username ?? secCtx.clientId}' called ${actionName}`);
 	}
 
-    private _getCurrencyOrThrow(currencyCode:string): {code: string, decimals: number}{
+    private _getCurrencyOrThrow(currencyCode:string): Currency{
         const timerEndFn = this._requestsHisto.startTimer({callName: "getCurrencyOrThrow"});
         // Validate the currency code and get the currency.
-        const currency: { code: string, decimals: number } | undefined
+        const currency: Currency | undefined
             = this._currencies.find((value) => value.code === currencyCode);
         if (!currency) {
             timerEndFn({success: "false"});

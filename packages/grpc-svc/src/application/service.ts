@@ -43,7 +43,7 @@ import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {AuthorizationClient, LoginHelper} from "@mojaloop/security-bc-client-lib";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
 import {IChartOfAccountsRepo} from "../domain/infrastructure-types/chart_of_accounts_repo";
-
+import {MLKafkaJsonConsumer, MLKafkaJsonConsumerOptions} from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib";
 import {ChartOfAccountsPrivilegesDefinition} from "./privileges";
 import {GrpcServer} from "./grpc_server/grpc_server";
 import {BuiltinLedgerAdapter, ChartOfAccountsMongoRepo} from "../implementations";
@@ -52,8 +52,16 @@ import { ILedgerAdapter } from "../domain/infrastructure-types/ledger_adapter";
 import process from "process";
 import {IMetrics} from "@mojaloop/platform-shared-lib-observability-types-lib";
 import {PrometheusMetrics} from "@mojaloop/platform-shared-lib-observability-client-lib";
+import {IConfigurationClient} from "@mojaloop/platform-configuration-bc-public-types-lib";
+import {AuthenticatedHttpRequester} from "@mojaloop/security-bc-client-lib";
+import {
+    DefaultConfigProvider,
+    IConfigProvider
+} from "@mojaloop/platform-configuration-bc-client-lib";
+
 import express, {Express} from "express";
 import {Server} from "net";
+import {GetCoAConfigClient} from "./configset";
 
 /* ********** Constants Begin ********** */
 
@@ -113,7 +121,7 @@ export class ChartOfAccountsGrpcService {
     private static ledgerAdapter: ILedgerAdapter;
     private static grpcServer: GrpcServer;
     private static metrics:IMetrics;
-    // private static configClient:IConfigurationClient;
+    private static configClient:IConfigurationClient;
     private static loggerIsChild: boolean; // TODO: avoid this.
 
     static async start(
@@ -123,6 +131,7 @@ export class ChartOfAccountsGrpcService {
         chartOfAccountsRepo?: IChartOfAccountsRepo,
         ledgerAdapter?: ILedgerAdapter,
         metrics?:IMetrics,
+        configProvider?: IConfigProvider
     ): Promise<void> {
         console.log(`Service starting with PID: ${process.pid}`);
 
@@ -139,6 +148,24 @@ export class ChartOfAccountsGrpcService {
             await (logger as KafkaLogger).init();
         }
         globalLogger = this.logger = logger;
+
+        /// start config client - this is not mockable (can use STANDALONE MODE if desired)
+        if(!configProvider) {
+            // create the instance of IAuthenticatedHttpRequester
+            const authRequester = new AuthenticatedHttpRequester(logger, AUTH_N_SVC_TOKEN_URL);
+            authRequester.setAppCredentials(SVC_CLIENT_ID, SVC_CLIENT_SECRET);
+
+            const messageConsumer = new MLKafkaJsonConsumer({
+                kafkaBrokerList: KAFKA_URL,
+                kafkaGroupId: `${APP_NAME}_${Date.now()}` // unique consumer group - use instance id when possible
+            }, this.logger.createChild("configClient.consumer"));
+            configProvider = new DefaultConfigProvider(logger, authRequester, messageConsumer);
+        }
+
+        this.configClient = GetCoAConfigClient(configProvider, BC_NAME, APP_NAME, APP_VERSION);
+        await this.configClient.init();
+        await this.configClient.bootstrap(true);
+        await this.configClient.fetch();
 
         // Repo.
         if (chartOfAccountsRepo !== undefined) {
@@ -226,6 +253,7 @@ export class ChartOfAccountsGrpcService {
             this.auditingClient,
             this.chartOfAccountsRepo,
             this.ledgerAdapter,
+            this.configClient,
             this.metrics
         );
 

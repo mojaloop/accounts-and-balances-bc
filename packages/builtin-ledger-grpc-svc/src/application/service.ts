@@ -36,7 +36,7 @@ import {
 import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {KafkaLogger} from "@mojaloop/logging-bc-client-lib";
 import {ILogger, LogLevel} from "@mojaloop/logging-bc-public-types-lib";
-import {AuthorizationClient, TokenHelper} from "@mojaloop/security-bc-client-lib";
+import {AuthenticatedHttpRequester, AuthorizationClient, TokenHelper} from "@mojaloop/security-bc-client-lib";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
 import {existsSync} from "fs";
 import {BuiltinLedgerAggregate} from "../domain/aggregate";
@@ -51,6 +51,10 @@ import {PrometheusMetrics} from "@mojaloop/platform-shared-lib-observability-cli
 import express, {Express} from "express";
 import {Server} from "net";
 import {RedisBuiltinLedgerAccountsRepo} from "../implementations/redis_builtin_ledger_accounts_repo";
+import {IConfigurationClient} from "@mojaloop/platform-configuration-bc-public-types-lib";
+import {MLKafkaJsonConsumer, MLKafkaJsonConsumerOptions} from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib";
+import {DefaultConfigProvider, IConfigProvider} from "@mojaloop/platform-configuration-bc-client-lib";
+import {GetBuiltinLedgerConfigClient} from "./configset";
 
 /* ********** Constants Begin ********** */
 
@@ -65,10 +69,11 @@ const LOG_LEVEL: LogLevel = process.env.LOG_LEVEL as LogLevel || LogLevel.DEBUG;
 const KAFKA_LOGS_TOPIC = process.env.KAFKA_LOGS_TOPIC || "logs";
 const KAFKA_AUDITS_TOPIC = process.env.KAFKA_AUDITS_TOPIC || "audits";
 
-const AUTH_N_SVC_BASEURL = process.env.AUTH_N_SVC_BASEURL || "http://localhost:3201";
-const AUTH_N_SVC_JWKS_URL = process.env.AUTH_N_SVC_JWKS_URL || `${AUTH_N_SVC_BASEURL}/.well-known/jwks.json`;
+const AUTH_N_SVC_BASEURL = process.env["AUTH_N_SVC_BASEURL"] || "http://localhost:3201";
+const AUTH_N_SVC_TOKEN_URL = AUTH_N_SVC_BASEURL + "/token"; // TODO this should not be known here, libs that use the base should add the suffix
+const AUTH_N_SVC_JWKS_URL = process.env["AUTH_N_SVC_JWKS_URL"] || `${AUTH_N_SVC_BASEURL}/.well-known/jwks.json`;
 const AUTH_N_TOKEN_ISSUER_NAME = process.env["AUTH_N_TOKEN_ISSUER_NAME"] || "mojaloop.vnext.dev.default_issuer";
-const AUTH_N_TOKEN_AUDIENCE = process.env.AUTH_N_TOKEN_AUDIENCE || "mojaloop.vnext.dev.default_audience";
+const AUTH_N_TOKEN_AUDIENCE = process.env["AUTH_N_TOKEN_AUDIENCE"] || "mojaloop.vnext.dev.default_audience";
 
 const AUTH_Z_SVC_BASEURL = process.env.AUTH_Z_SVC_BASEURL || "http://localhost:3202";
 
@@ -105,7 +110,7 @@ export class BuiltinLedgerGrpcService {
 	private static builtinLedgerJournalEntriesRepo: IBuiltinLedgerJournalEntriesRepo;
 	private static grpcServer: BuiltinLedgerGrpcServer;
     private static metrics:IMetrics;
-
+    private static configClient:IConfigurationClient;
 	private static loggerIsChild: boolean; // TODO: avoid this.
 
 	static async start(
@@ -114,7 +119,8 @@ export class BuiltinLedgerGrpcService {
 		auditingClient?: IAuditClient,
 		builtinLedgerAccountsRepo?: IBuiltinLedgerAccountsRepo,
 		builtinLedgerJournalEntriesRepo?: IBuiltinLedgerJournalEntriesRepo,
-        metrics?:IMetrics
+        metrics?:IMetrics,
+        configProvider?: IConfigProvider
 	): Promise<void> {
         console.log(`Service starting with PID: ${process.pid}`);
 
@@ -131,6 +137,24 @@ export class BuiltinLedgerGrpcService {
 			await (logger as KafkaLogger).init();
 		}
 		globalLogger = this.logger = logger;
+
+        /// start config client - this is not mockable (can use STANDALONE MODE if desired)
+        if(!configProvider) {
+            // create the instance of IAuthenticatedHttpRequester
+            const authRequester = new AuthenticatedHttpRequester(logger, AUTH_N_SVC_TOKEN_URL);
+            authRequester.setAppCredentials(SVC_CLIENT_ID, SVC_CLIENT_SECRET);
+
+            const messageConsumer = new MLKafkaJsonConsumer({
+                kafkaBrokerList: KAFKA_URL,
+                kafkaGroupId: `${APP_NAME}_${Date.now()}` // unique consumer group - use instance id when possible
+            }, this.logger.createChild("configClient.consumer"));
+            configProvider = new DefaultConfigProvider(logger, authRequester, messageConsumer);
+        }
+
+        this.configClient = GetBuiltinLedgerConfigClient(configProvider, BC_NAME, APP_NAME, APP_VERSION);
+        await this.configClient.init();
+        await this.configClient.bootstrap(true);
+        await this.configClient.fetch();
 
 		// Token helper.
 		this.logger.info(`Starting TokenHelper with jwksUrl: ${AUTH_N_SVC_JWKS_URL} issuerName: ${AUTH_N_TOKEN_ISSUER_NAME} audience: ${AUTH_N_TOKEN_AUDIENCE}`);
@@ -234,6 +258,7 @@ export class BuiltinLedgerGrpcService {
 			this.auditingClient,
 			this.builtinLedgerAccountsRepo,
 			this.builtinLedgerJournalEntriesRepo,
+            this.configClient,
             this.metrics
 		);
 

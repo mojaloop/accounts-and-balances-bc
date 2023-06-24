@@ -41,7 +41,6 @@ import {
     LedgerAdapterRequestId
 } from "./infrastructure-types/ledger_adapter";
 import {CoaAccount} from "./coa_account";
-
 import {
     AccountAlreadyExistsError,
     AccountNotFoundError,
@@ -62,8 +61,8 @@ import {readFileSync} from "fs";
 import {bigintToString, stringToBigint} from "./converters";
 import {IChartOfAccountsRepo} from "./infrastructure-types/chart_of_accounts_repo";
 import {IHistogram, IMetrics} from "@mojaloop/platform-shared-lib-observability-types-lib";
+import {Currency, IConfigurationClient} from "@mojaloop/platform-configuration-bc-public-types-lib";
 
-const CURRENCIES_FILE_NAME = "currencies.json";
 
 export class AccountsAndBalancesAggregate {
 	// Properties received through the constructor.
@@ -72,9 +71,10 @@ export class AccountsAndBalancesAggregate {
 	private readonly _ledgerAdapter: ILedgerAdapter;
 	private readonly _authorizationClient: IAuthorizationClient;
 	private readonly _auditingClient: IAuditClient;
-	private readonly _currencies: {code: string, decimals: number}[];
     private readonly _metrics: IMetrics;
+    private readonly _configClient: IConfigurationClient;
     private readonly _requestsHisto: IHistogram;
+    private _currencies: Currency[];
 
 	constructor(
 		logger: ILogger,
@@ -82,6 +82,7 @@ export class AccountsAndBalancesAggregate {
 		auditingClient: IAuditClient,
 		accountsRepo: IChartOfAccountsRepo,
 		ledgerAdapter: ILedgerAdapter,
+        configClient: IConfigurationClient,
         metrics: IMetrics
 	) {
 		this._logger = logger.createChild(this.constructor.name);
@@ -89,17 +90,23 @@ export class AccountsAndBalancesAggregate {
 		this._auditingClient = auditingClient;
 		this._chartOfAccountsRepo = accountsRepo;
 		this._ledgerAdapter = ledgerAdapter;
+        this._configClient = configClient;
         this._metrics = metrics;
 
-		const currenciesFileAbsolutePath: string = join(__dirname, CURRENCIES_FILE_NAME);
-		try {
-			this._currencies = JSON.parse(readFileSync(currenciesFileAbsolutePath, "utf-8"));
-		} catch (error: unknown) {
-			this._logger.error(error);
-			throw error;
-		}
-
         this._requestsHisto = metrics.getHistogram("AccountsAndBalancesAggregate", "Accounts and Balances GRPC Aggregate metrics", ["callName", "success"]);
+
+        this._currencies = this._configClient.globalConfigs.getCurrencies();
+        if(!this._currencies){
+            throw new Error("Could not get currencies from global configs - cannot continue");
+        }
+        this._configClient.setChangeHandlerFunction(this._reloadSettings.bind(this));
+    }
+
+    private async _reloadSettings(type: "BC" | "GLOBAL"): Promise<void>{
+        // configurations changed centrally, reload what needs reloading
+        if(type ==="GLOBAL"){
+            this._currencies = this._configClient.globalConfigs.getCurrencies();
+        }
     }
 
 	private enforcePrivilege(secCtx: CallSecurityContext, privilegeId: string): void {
@@ -117,9 +124,9 @@ export class AccountsAndBalancesAggregate {
 		this._logger.isDebugEnabled() && this._logger.debug(`User/App '${secCtx.username ?? secCtx.clientId}' called ${actionName}`);
 	}
 
-	private _getCurrencyOrThrow(currencyCode:string): {code: string, decimals: number}{
+	private _getCurrencyOrThrow(currencyCode:string): Currency{
 		// Validate the currency code and get the currency.
-		const currency: { code: string, decimals: number } | undefined
+		const currency: Currency | undefined
 			= this._currencies.find((value) => value.code === currencyCode);
 		if (!currency) {
 			throw new CurrencyCodeNotFoundError(`Currency code: ${currencyCode} not found`);

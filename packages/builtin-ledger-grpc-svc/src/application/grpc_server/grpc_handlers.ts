@@ -37,12 +37,7 @@ import {
 } from "@grpc/grpc-js";
 import {TokenHelper} from "@mojaloop/security-bc-client-lib";
 import {BuiltinLedgerJournalEntryDto, CreatedIdMapResponse} from "../../domain/entities";
-import {
-    BuiltinLedgerAggregate,
-    CancelReservationAndCommitRequest, CancelReservationRequest,
-    CheckLiquidAndReserveRequest,
-    LedgerBatchRequest
-} from "../../domain/aggregate";
+import { BuiltinLedgerAggregate } from "../../domain/aggregate";
 import {ForbiddenError, UnauthorizedError, CallSecurityContext} from "@mojaloop/security-bc-public-types-lib";
 
 import {
@@ -86,24 +81,6 @@ const MAX_QUEUE_DEPTH = 100;
 const QUEUE_PROCESS_MIN_DELAY_MS = 250;
 const INTERVAL_MS = 35;
 
-declare class BaseQueueItem{
-    id:string;
-    timerEndFn:any;
-}
-
-declare class CheckLiquidAndReserveQueueItem extends BaseQueueItem {
-    request: CheckLiquidAndReserveRequest;
-    callback: sendUnaryData<Empty>;
-}
-
-declare class CancelReservationAndCommitQueueItem extends BaseQueueItem{
-    request: CancelReservationAndCommitRequest;
-    callback: sendUnaryData<Empty>;
-}
-declare class CancelReservationQueueItem extends BaseQueueItem{
-    request: CancelReservationRequest;
-    callback: sendUnaryData<Empty>;
-}
 
 export class BuiltinLedgerGrpcHandlers {
 	// Properties received through the constructor.
@@ -111,13 +88,6 @@ export class BuiltinLedgerGrpcHandlers {
 	private readonly _aggregate: BuiltinLedgerAggregate;
 	private readonly _tokenHelper: TokenHelper;
     private readonly _histo:IHistogram;
-    // private _checkLiquidAndReserveQueue:CheckLiquidAndReserveQueueItem[] = [];
-    // private _cancelReservationAndCommitQueue:CancelReservationAndCommitQueueItem[] = [];
-    // private _cancelReservationQueue:CancelReservationQueueItem[] = [];
-
-    //private _stream: ServerDuplexStream<HighLevelStreamRequest, HighLevelStreamResponse>;
-
-    //private _queue:(CheckLiquidAndReserveQueueItem|CancelReservationAndCommitQueueItem|CancelReservationQueueItem)[] = [];
 
     constructor(
 		logger: ILogger,
@@ -130,16 +100,6 @@ export class BuiltinLedgerGrpcHandlers {
 		this._aggregate = aggregate;
 
         this._histo = metrics.getHistogram("BuiltinLedgerGrpcHandler", "GRPC requests handled by the Accounts and Balances Builtin Ledger GRPC Handler", ["callName", "success"]);
-
-        /*
-        // start the queue process
-        setInterval(()=>{
-            if(this._processing) return;
-            setImmediate(()=>{
-                this._processQueue();
-            });
-        }, INTERVAL_MS);
-        */
 	}
 
 
@@ -153,13 +113,7 @@ export class BuiltinLedgerGrpcHandlers {
 			"DeleteAccountsByIds": this._deleteAccountsByIds.bind(this),
 			"DeactivateAccountsByIds": this._deactivateAccountsByIds.bind(this),
 			"ActivateAccountsByIds": this._activateAccountsByIds.bind(this),
-            // "CheckLiquidAndReserve": this._checkLiquidAndReserve.bind(this),
-            // "CancelReservationAndCommit": this._cancelReservationAndCommit.bind(this),
-            // "CancelReservation": this._cancelReservation.bind(this),
             "ProcessHighLevelBatch": this._processHighLevelBatch.bind(this)
-            /*// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-            // @ts-ignore
-            "StreamRequest": this._streamRequest.bind(this)*/
 		};
 	}
 
@@ -320,62 +274,6 @@ export class BuiltinLedgerGrpcHandlers {
             throw new Error("Invalid BuiltinLedgerGrpcHighLevelRequest.requestType");
         }
     }
-
-
-    /*private _streamRequest(
-        stream: ServerDuplexStream<HighLevelStreamRequest, HighLevelStreamResponse>
-    ){
-        stream.on("data", (req: HighLevelStreamRequest) => {
-            console.log(req);
-        }).on("end", () => {
-            stream.end();
-        }).on("error", (err: Error) => {
-            this._logger.error("_streamRequest", err);
-        });
-    }
-
-    private _triggerQueue():void{
-        if(this._processing) return;
-        setImmediate(()=>{
-            this._processQueue();
-        });
-    }
-
-    private _processing = false;
-    private _lastProcessedTimesamp = 0;
-    private _processQueue(){
-        if(this._processing || this._queue.length == 0) return;
-
-        const msSinceLast = Date.now() - this._lastProcessedTimesamp;
-        if(this._queue.length > IDEAL_BATCH_SIZE || msSinceLast > QUEUE_PROCESS_MIN_DELAY_MS) {
-            this._processing = true;
-
-            console.debug(`Processing queue - length is: ${this._queue.length} - msSinceLast: ${msSinceLast}`);
-
-            this._aggregate.processBatch(this._queue).then((responses)=>{
-                for(const resp of responses){
-                    const reqIndex = this._queue.findIndex(value => value.id = resp.id);
-                    if(reqIndex == -1){
-                        throw new Error("Could not find request for Aggregate.processBatch response");
-                    }
-                    this._queue[reqIndex].timerEndFn({success: "true"});
-                    this._queue[reqIndex].callback(null, {});
-
-                    this._queue.splice(reqIndex,1);
-                }
-            }).catch(reason => {
-                this._logger.error(reason);
-
-            }).finally(()=>{
-                this._lastProcessedTimesamp = Date.now();
-                this._processing = false;
-                // setImmediate(()=>{this._processQueue();});
-                // setInterval(()=>{
-                //    this._processQueue();
-                // }, INTERVAL_MS);
-            });
-        }
-    }*/
 
 	private async _createAccounts(
 		call: ServerUnaryCall<BuiltinLedgerGrpcCreateAccountArray, BuiltinLedgerGrpcCreateIdsResponse__Output>,
@@ -600,157 +498,6 @@ export class BuiltinLedgerGrpcHandlers {
 
 		callback(null, {});
 	}
-
-/*
-
-    private async _checkLiquidAndReserve(
-        call: ServerUnaryCall<GrpcCheckLiquidAndReserveRequest, Empty>,
-        callback: sendUnaryData<Empty>
-    ): Promise<void>{
-        console.debug(`checkLiquidAndReserve start - queue length: ${this._queue.length}`);
-
-        const timerEndFn = this._histo.startTimer({callName: "_checkLiquidAndReserve"});
-        const secCtx = await this._getSecCtxFromCall(call, callback);
-        if (!secCtx) return; // callback was called by _getSecCtxFromCall()
-
-        const req: GrpcCheckLiquidAndReserveRequest = call.request;
-
-        if(!req.hubJokeAccountId || !req.payerPositionAccountId || !req.payerLiquidityAccountId){
-            timerEndFn({success: "false"});
-            throw new AccountsAndBalancesError("Invalid accounts on CheckLiquidAndReserve request");
-        }
-        if(!req.transferAmount){
-            timerEndFn({success: "false"});
-            throw new AccountsAndBalancesError("Invalid transferAmount on CheckLiquidAndReserve request");
-        }
-        if (!req.currencyCode) {
-            timerEndFn({success: "false"});
-            throw new AccountsAndBalancesError("Invalid currencyCode on CheckLiquidAndReserve request");
-        }
-        if (!req.payerNetDebitCap) {
-            timerEndFn({success: "false"});
-            throw new AccountsAndBalancesError("Invalid payerNetDebitCap on CheckLiquidAndReserve request");
-        }
-        if (!req.transferId) {
-            timerEndFn({success: "false"});
-            throw new AccountsAndBalancesError("Invalid transferId on CheckLiquidAndReserve request");
-        }
-
-        const batchedReq = new CheckLiquidAndReserveRequest();
-        batchedReq.secCtx = secCtx;
-        batchedReq.payerPositionAccountId = req.payerPositionAccountId;
-        batchedReq.payerLiquidityAccountId = req.payerLiquidityAccountId;
-        batchedReq.hubJokeAccountId = req.hubJokeAccountId;
-        batchedReq.transferAmount = req.transferAmount;
-        batchedReq.currencyCode = req.currencyCode;
-        batchedReq.payerNetDebitCap = req.payerNetDebitCap;
-        batchedReq.transferId = req.transferId;
-
-        this._queue.push({
-            id: randomUUID(),
-            timerEndFn: timerEndFn,
-            request: batchedReq,
-            callback: callback
-        });
-
-       // this._triggerQueue();
-    }
-
-    private async _cancelReservationAndCommit(
-        call: ServerUnaryCall<GrpcCancelReservationAndCommitRequest, Empty>,
-        callback: sendUnaryData<Empty>
-    ): Promise<void> {
-        console.debug(`cancelReservationAndCommit start - queue length: ${this._queue.length}`);
-
-        const timerEndFn = this._histo.startTimer({callName: "_cancelReservationAndCommit"});
-        const secCtx = await this._getSecCtxFromCall(call, callback);
-        if (!secCtx) return; // callback was called by _getSecCtxFromCall()
-
-        const req: GrpcCancelReservationAndCommitRequest = call.request;
-
-        if (!req.hubJokeAccountId || !req.payerPositionAccountId || !req.payeePositionAccountId) {
-            timerEndFn({success: "false"});
-            throw new AccountNotFoundError("Invalid accounts on CancelReservationAndCommit request");
-        }
-        if (!req.transferAmount) {
-            timerEndFn({success: "false"});
-            throw new AccountNotFoundError("Invalid transferAmount on CancelReservationAndCommit request");
-        }
-        if (!req.currencyCode) {
-            timerEndFn({success: "false"});
-            throw new AccountNotFoundError("Invalid currencyCode on CancelReservationAndCommit request");
-        }
-        if (!req.transferId) {
-            timerEndFn({success: "false"});
-            throw new AccountsAndBalancesError("Invalid transferId on CheckLiquidAndReserve request");
-        }
-
-        const batchedReq = new CancelReservationAndCommitRequest();
-        batchedReq.secCtx = secCtx;
-        batchedReq.payerPositionAccountId = req.payerPositionAccountId;
-        batchedReq.payeePositionAccountId = req.payeePositionAccountId;
-        batchedReq.hubJokeAccountId = req.hubJokeAccountId;
-        batchedReq.transferAmount = req.transferAmount;
-        batchedReq.currencyCode = req.currencyCode;
-        batchedReq.transferId = req.transferId;
-
-        this._queue.push({
-            id: randomUUID(),
-            timerEndFn: timerEndFn,
-            request: batchedReq,
-            callback: callback
-        });
-
-       // this._triggerQueue();
-    }
-
-    private async _cancelReservation(
-        call: ServerUnaryCall<GrpcCancelReservationRequest, Empty>,
-        callback: sendUnaryData<Empty>
-    ): Promise<void> {
-        console.debug(`_cancelReservation start - queue length: ${this._queue.length}`);
-        while(this._queue.length >= MAX_QUEUE_DEPTH){
-            console.debug("queue busy");
-        }
-
-        const timerEndFn = this._histo.startTimer({callName: "_cancelReservationAndCommit"});
-        const secCtx = await this._getSecCtxFromCall(call, callback);
-        if (!secCtx) return; // callback was called by _getSecCtxFromCall()
-
-        const req: GrpcCancelReservationAndCommitRequest = call.request;
-
-        if (!req.hubJokeAccountId || !req.payerPositionAccountId || !req.payeePositionAccountId) {
-            throw new AccountNotFoundError("Invalid accounts on CancelReservationAndCommit request");
-        }
-        if (!req.transferAmount) {
-            throw new AccountNotFoundError("Invalid transferAmount on CancelReservationAndCommit request");
-        }
-        if (!req.currencyCode) {
-            throw new AccountNotFoundError("Invalid currencyCode on CancelReservationAndCommit request");
-        }
-        if (!req.transferId) {
-            throw new AccountsAndBalancesError("Invalid transferId on CheckLiquidAndReserve request");
-        }
-
-        const batchedReq = new CancelReservationRequest();
-        batchedReq.secCtx = secCtx;
-        batchedReq.payerPositionAccountId = req.payerPositionAccountId;
-        batchedReq.hubJokeAccountId = req.hubJokeAccountId;
-        batchedReq.transferAmount = req.transferAmount;
-        batchedReq.currencyCode = req.currencyCode;
-        batchedReq.transferId = req.transferId;
-
-        this._queue.push({
-            id: randomUUID(),
-            timerEndFn: timerEndFn,
-            request: batchedReq,
-            callback: callback
-        });
-
-       // this._triggerQueue();
-    }
-
-*/
 
     private _handleAggregateError(error:any): ServerErrorResponse{
 		const srvError: ServerErrorResponse = {
