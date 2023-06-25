@@ -467,7 +467,7 @@ export class BuiltinLedgerAggregate {
 
 		try {
 			// Update the debited account's debit balance and timestamp.
-			const curDebitBalance = pending ? debitedAccount.pendingDebitBalance:debitedAccount.postedDebitBalance;
+			const curDebitBalance: bigint = pending ? debitedAccount.pendingDebitBalance:debitedAccount.postedDebitBalance;
             const newDebitBalance: bigint = curDebitBalance + amount;
 
             if(this._logger.isDebugEnabled()) this._logger.debug(`\tdebitedAccountId: ${debitedAccountId} - curDebitBalance: ${curDebitBalance} - newDebitBalance: ${newDebitBalance} `);
@@ -479,12 +479,16 @@ export class BuiltinLedgerAggregate {
                 throw err;
             }
 
-            if(inBatch){
-                if(pending)
-                    debitedAccount.pendingDebitBalance = newDebitBalance;
-                else
-                    debitedAccount.postedDebitBalance = newDebitBalance;
-            }else {
+            debitedAccount.timestampLastJournalEntry = timestamp;
+
+            // update the correct balance in the account (store in mem by ref)
+            if(pending)
+                debitedAccount.pendingDebitBalance = newDebitBalance;
+            else
+                debitedAccount.postedDebitBalance = newDebitBalance;
+
+            // if not in a batch, have to call the repo directly
+            if(!inBatch)  {
                 await this._builtinLedgerAccountsRepo.updateAccountDebitBalanceAndTimestamp(
                     debitedAccountId,
                     newDebitBalance,
@@ -494,7 +498,7 @@ export class BuiltinLedgerAggregate {
             }
 
 			// Update the credited account's credit balance and timestamp.
-			const curCreditBalance = pending ? creditedAccount.pendingCreditBalance:creditedAccount.postedCreditBalance;
+			const curCreditBalance: bigint = pending ? creditedAccount.pendingCreditBalance:creditedAccount.postedCreditBalance;
             const newCreditBalance: bigint = curCreditBalance + amount;
 
             if(this._logger.isDebugEnabled()) this._logger.debug(`\tcreditedAccountId: ${creditedAccountId} - curCreditBalance: ${curCreditBalance} - newCreditBalance: ${newCreditBalance} `);
@@ -506,12 +510,16 @@ export class BuiltinLedgerAggregate {
                 throw err;
             }
 
-            if(inBatch){
-                if(pending)
-                    creditedAccount.pendingCreditBalance = newCreditBalance;
-                else
-                    creditedAccount.postedCreditBalance = newCreditBalance;
-            }else {
+            creditedAccount.timestampLastJournalEntry = timestamp;
+
+            // update the correct balance in the account (store in mem by ref)
+            if(pending)
+                creditedAccount.pendingCreditBalance = newCreditBalance;
+            else
+                creditedAccount.postedCreditBalance = newCreditBalance;
+
+            // if not in a batch, have to call the repo directly
+            if(!inBatch) {
                 await this._builtinLedgerAccountsRepo.updateAccountCreditBalanceAndTimestamp(
                     creditedAccountId,
                     newCreditBalance,
