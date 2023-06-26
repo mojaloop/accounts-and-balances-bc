@@ -27,6 +27,10 @@
  --------------
  ******/
 
+"use strict";
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const packageJSON = require("../../package.json");
 
 import {
 	AuditClient,
@@ -60,7 +64,7 @@ import {GetBuiltinLedgerConfigClient} from "./configset";
 
 const BC_NAME: string = "accounts-and-balances-bc";
 const APP_NAME: string = "builtin-ledger-grpc-svc";
-const APP_VERSION: string = process.env.npm_package_version || "0.0.0";
+const APP_VERSION = packageJSON.version;
 const PRODUCTION_MODE = process.env["PRODUCTION_MODE"] || false;
 
 const KAFKA_URL: string = process.env.KAFKA_URL || "localhost:9092";
@@ -91,8 +95,7 @@ const REDIS_HOST = process.env["REDIS_HOST"] || "localhost";
 const REDIS_PORT = (process.env["REDIS_PORT"] && parseInt(process.env["REDIS_PORT"])) || 6379;
 
 const SVC_DEFAULT_HTTP_PORT = process.env["SVC_DEFAULT_HTTP_PORT"] || 3351;
-let expressApp: Express;
-let expressServer: Server;
+const SERVICE_START_TIMEOUT_MS = 30_000;
 
 /* ********** Constants End ********** */
 
@@ -104,6 +107,8 @@ let globalLogger: ILogger;
 
 export class BuiltinLedgerGrpcService {
 	private static logger: ILogger;
+    static app: Express;
+    static expressServer: Server;
 	private static auditingClient: IAuditClient;
 	private static authorizationClient: IAuthorizationClient;
 	private static builtinLedgerAccountsRepo: IBuiltinLedgerAccountsRepo;
@@ -112,6 +117,7 @@ export class BuiltinLedgerGrpcService {
     private static metrics:IMetrics;
     private static configClient:IConfigurationClient;
 	private static loggerIsChild: boolean; // TODO: avoid this.
+    static startupTimer: NodeJS.Timeout;
 
 	static async start(
 		logger?: ILogger,
@@ -123,6 +129,10 @@ export class BuiltinLedgerGrpcService {
         configProvider?: IConfigProvider
 	): Promise<void> {
         console.log(`Service starting with PID: ${process.pid}`);
+
+        this.startupTimer = setTimeout(()=>{
+            throw new Error("Service start timed-out");
+        }, SERVICE_START_TIMEOUT_MS);
 
         // Logger.
 		if (!logger) {
@@ -274,30 +284,40 @@ export class BuiltinLedgerGrpcService {
         // start grpc server
         await this.grpcServer.start();
 
-        // Start express server
-        expressApp = express();
-        expressApp.use(express.json()); // for parsing application/json
-        expressApp.use(express.urlencoded({extended: true})); // for parsing application/x-www-form-urlencoded
 
-        // Add health and metrics http routes
-        expressApp.get("/health", (req: express.Request, res: express.Response) => {return res.send({ status: "OK" }); });
-        expressApp.get("/metrics", async (req: express.Request, res: express.Response) => {
-            const strMetrics = await (metrics as PrometheusMetrics).getMetricsForPrometheusScrapper();
-            return res.send(strMetrics);
-        });
 
-        expressApp.use((req, res) => {
-            // catch all
-            res.send(404);
-        });
+        await this.setupExpress();
 
-        expressServer = expressApp.listen(SVC_DEFAULT_HTTP_PORT, () => {
-            globalLogger.info(
-                `🚀Server ready at: http://localhost:${SVC_DEFAULT_HTTP_PORT}`
-            );
-            globalLogger.info(`BuiltinLedgerGrpcService v: ${APP_VERSION} started`);
-        });
+        // remove startup timeout
+        clearTimeout(this.startupTimer);
+
 	}
+
+    static setupExpress(): Promise<void> {
+        return new Promise<void>(resolve => {
+            this.app = express();
+            this.app.use(express.json()); // for parsing application/json
+            this.app.use(express.urlencoded({extended: true})); // for parsing application/x-www-form-urlencoded
+
+            // Add health and metrics http routes
+            this.app.get("/health", (req: express.Request, res: express.Response) => {return res.send({ status: "OK" }); });
+            this.app.get("/metrics", async (req: express.Request, res: express.Response) => {
+                const strMetrics = await (this.metrics as PrometheusMetrics).getMetricsForPrometheusScrapper();
+                return res.send(strMetrics);
+            });
+
+            this.app.use((req, res) => {
+                // catch all
+                res.send(404);
+            });
+
+            this.expressServer = this.app.listen(SVC_DEFAULT_HTTP_PORT, () => {
+                this.logger.info(`🚀Server ready at: http://localhost:${SVC_DEFAULT_HTTP_PORT}`);
+                this.logger.info(`BuiltinLedgerGrpcService v: ${APP_VERSION} started`);
+                resolve();
+            });
+        });
+    }
 
 	static async stop(): Promise<void> {
 		if (this.grpcServer !== undefined) {

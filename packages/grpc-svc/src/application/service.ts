@@ -28,9 +28,10 @@
  ******/
 "use strict";
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const packageJSON = require("../../package.json");
+
 import {existsSync} from "fs";
-
-
 import {
     AuditClient,
     KafkaAuditClientDispatcher,
@@ -67,8 +68,7 @@ import {GetCoAConfigClient} from "./configset";
 
 const BC_NAME = "accounts-and-balances-bc";
 const APP_NAME = "coa-grpc-svc";
-const APP_VERSION = process.env.npm_package_version || "0.0.0";
-
+const APP_VERSION = packageJSON.version;
 const LOG_LEVEL: LogLevel = process.env.LOG_LEVEL as LogLevel || LogLevel.DEBUG;
 const PRODUCTION_MODE = process.env["PRODUCTION_MODE"] || false;
 
@@ -101,8 +101,7 @@ const REDIS_HOST = process.env["REDIS_HOST"] || "localhost";
 const REDIS_PORT = (process.env["REDIS_PORT"] && parseInt(process.env["REDIS_PORT"])) || 6379;
 
 const SVC_DEFAULT_HTTP_PORT = process.env["SVC_DEFAULT_HTTP_PORT"] || 3301;
-let expressApp: Express;
-let expressServer: Server;
+const SERVICE_START_TIMEOUT_MS = 30_000;
 
 /* ********** Constants End ********** */
 
@@ -114,6 +113,8 @@ let globalLogger: ILogger;
 
 export class ChartOfAccountsGrpcService {
     private static logger: ILogger;
+    static app: Express;
+    static expressServer: Server;
     private static auditingClient: IAuditClient;
     private static tokenHelper: TokenHelper;
     private static authorizationClient: IAuthorizationClient;
@@ -123,6 +124,7 @@ export class ChartOfAccountsGrpcService {
     private static metrics:IMetrics;
     private static configClient:IConfigurationClient;
     private static loggerIsChild: boolean; // TODO: avoid this.
+    static startupTimer: NodeJS.Timeout;
 
     static async start(
         logger?: ILogger,
@@ -134,6 +136,10 @@ export class ChartOfAccountsGrpcService {
         configProvider?: IConfigProvider
     ): Promise<void> {
         console.log(`Service starting with PID: ${process.pid}`);
+
+        this.startupTimer = setTimeout(()=>{
+            throw new Error("Service start timed-out");
+        }, SERVICE_START_TIMEOUT_MS);
 
         // Logger.
         if (!logger) {
@@ -275,28 +281,35 @@ export class ChartOfAccountsGrpcService {
         // start grpc server
         await this.grpcServer.start();
 
-        // Start express server
-        expressApp = express();
-        expressApp.use(express.json()); // for parsing application/json
-        expressApp.use(express.urlencoded({extended: true})); // for parsing application/x-www-form-urlencoded
+        await this.setupExpress();
 
-        // Add health and metrics http routes
-        expressApp.get("/health", (req: express.Request, res: express.Response) => {return res.send({ status: "OK" }); });
-        expressApp.get("/metrics", async (req: express.Request, res: express.Response) => {
-            const strMetrics = await (metrics as PrometheusMetrics).getMetricsForPrometheusScrapper();
-            return res.send(strMetrics);
-        });
+        // remove startup timeout
+        clearTimeout(this.startupTimer);
+    }
 
-        expressApp.use((req, res) => {
-            // catch all
-            res.send(404);
-        });
+    static setupExpress(): Promise<void> {
+        return new Promise<void>(resolve => {
+            this.app = express();
+            this.app.use(express.json()); // for parsing application/json
+            this.app.use(express.urlencoded({extended: true})); // for parsing application/x-www-form-urlencoded
 
-        expressServer = expressApp.listen(SVC_DEFAULT_HTTP_PORT, () => {
-            globalLogger.info(
-                `🚀Server ready at: http://localhost:${SVC_DEFAULT_HTTP_PORT}`
-            );
-            globalLogger.info(`ChartOfAccountsGrpcService v: ${APP_VERSION} started`);
+            // Add health and metrics http routes
+            this.app.get("/health", (req: express.Request, res: express.Response) => {return res.send({ status: "OK" }); });
+            this.app.get("/metrics", async (req: express.Request, res: express.Response) => {
+                const strMetrics = await (this.metrics as PrometheusMetrics).getMetricsForPrometheusScrapper();
+                return res.send(strMetrics);
+            });
+
+            this.app.use((req, res) => {
+                // catch all
+                res.send(404);
+            });
+
+            this.expressServer = this.app.listen(SVC_DEFAULT_HTTP_PORT, () => {
+                this.logger.info(`🚀Server ready at: http://localhost:${SVC_DEFAULT_HTTP_PORT}`);
+                this.logger.info(`ChartOfAccountsGrpcService v: ${APP_VERSION} started`);
+                resolve();
+            });
         });
     }
 
