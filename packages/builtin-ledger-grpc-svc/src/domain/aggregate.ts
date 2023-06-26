@@ -209,7 +209,7 @@ export class BuiltinLedgerAggregate {
             if (req.requestType === AccountsBalancesHighLevelRequestTypes.checkLiquidAndReserve) {
                 const timerEndFn = this._requestsHisto.startTimer({callName: "checkLiquidAndReserve"});
                 try{
-                    await this.checkLiquidAndReserve(
+                    const success = await this.checkLiquidAndReserve(
                         secCtx,
                         req.payerPositionAccountId,
                         req.payerLiquidityAccountId!,
@@ -220,7 +220,7 @@ export class BuiltinLedgerAggregate {
                         req.transferId,
                         true
                     );
-                    responses.push({requestType:req.requestType, requestId: req.requestId, success: true, errorMessage:null});
+                    responses.push({requestType:req.requestType, requestId: req.requestId, success: success, errorMessage:null});
                     timerEndFn({success: "true"});
                 }catch(err:any){
                     responses.push({requestType:req.requestType, requestId: req.requestId, success: false, errorMessage:err.message});
@@ -656,7 +656,7 @@ export class BuiltinLedgerAggregate {
         payerPositionAccountId: string, payerLiquidityAccountId: string, hubJokeAccountId:string,
         transferAmount: string, currencyCode:string, payerNetDebitCap:string, transferId:string,
         inBatch:boolean = false
-    ):Promise<void>{
+    ):Promise<boolean>{
         this._logAction(secCtx, "checkLiquidAndReserve");
 
         // Validate the currency code and get the currency.
@@ -681,10 +681,11 @@ export class BuiltinLedgerAggregate {
             payerNetDebitCap, currency.decimals);
 
         if(!payerHasLiq){
-            // TODO audit PayerFailedLiquidityCheckError
-            const err = new PayerFailedLiquidityCheckError("Liquidity check failed");
-            this._logger.warn(err.message);
-            throw err;
+            return false;
+            // // TODO audit PayerFailedLiquidityCheckError
+            // const err = new PayerFailedLiquidityCheckError("Liquidity check failed");
+            // this._logger.warn(err.message);
+            // throw err;
         }
 
         try {
@@ -699,6 +700,7 @@ export class BuiltinLedgerAggregate {
                 true,
                 inBatch
             );
+            return true;
         } catch (error: any) {
             this._logger.error(error);
             throw error;
