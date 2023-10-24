@@ -115,7 +115,8 @@ export class BuiltinLedgerAggregate {
 
 	private _enforcePrivilege(secCtx: CallSecurityContext, privilegeId: string): void {
         const timerEndFn = this._requestsHisto.startTimer({callName: "enforcePrivilege"});
-        for (const roleId of secCtx.rolesIds) {
+
+        for (const roleId of secCtx.platformRoleIds) {
 			if (this._authorizationClient.roleHasPrivilege(roleId, privilegeId)) {
                 timerEndFn({success: "true"});
                 return;
@@ -187,6 +188,7 @@ export class BuiltinLedgerAggregate {
     private async _flush():Promise<void>{
         const timerEndFn = this._requestsHisto.startTimer({callName: "_flush"});
 
+        // TODO wrap this in a try catch with a reversal of entries and have a test for it
         if(this._entriesCache.size){
             const entries = Array.from(this._entriesCache.values());
             await this._builtinLedgerJournalEntriesRepo.storeNewJournalEntries(entries);

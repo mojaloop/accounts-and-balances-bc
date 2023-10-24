@@ -1,6 +1,6 @@
 {
     "name": "@mojaloop/accounts-and-balances-bc-coa-grpc-svc",
-    "version": "0.2.3",
+    "version": "0.3.0",
     "description": "Accounts and Balances BC - gRPC service",
     "repository": {
         "type": "git",
@@ -50,8 +50,8 @@
         "@mojaloop/platform-configuration-bc-client-lib": "~0.3.4",
         "@mojaloop/platform-configuration-bc-public-types-lib": "~0.3.3",
         "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib": "~0.3.65",
-        "@mojaloop/security-bc-client-lib": "~0.2.2",
-        "@mojaloop/security-bc-public-types-lib": "~0.2.1",
+        "@mojaloop/security-bc-client-lib": "~0.3.2",
+        "@mojaloop/security-bc-public-types-lib": "~0.3.2",
         "@mojaloop/auditing-bc-client-lib": "~0.0.14",
         "@mojaloop/auditing-bc-public-types-lib": "~0.0.15",
         "@grpc/grpc-js": "~1.8.14",

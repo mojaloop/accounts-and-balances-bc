@@ -179,7 +179,8 @@ export class GrpcHandlers {
 			accessToken: bearerToken,
 			clientId: subjectType.toUpperCase().startsWith("APP") ? subject:null,
 			username: subjectType.toUpperCase().startsWith("USER") ? subject:null,
-			rolesIds: decoded.roles
+            platformRoleIds: decoded.platformRoles,
+            participantRoleIds: decoded.participantRole
 		};
 	}
 
