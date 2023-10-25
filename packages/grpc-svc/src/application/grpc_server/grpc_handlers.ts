@@ -152,36 +152,14 @@ export class GrpcHandlers {
 		const bearerToken = callTokenMeta[0] as string;
 		if (!bearerToken) return returnUnauthorized("Could not get token from call metadata array (metadata key exists)");
 
-		let verified;
-		try {
-			verified = await this._tokenHelper.verifyToken(bearerToken);
-		} catch (err) {
-			this._logger.error(err, "Unable to verify token - verifyToken() failed");
-			return returnUnauthorized("Unable to verify token - verifyToken() failed");
-		}
-		if (!verified) {
-			this._logger.warn("Unable to verify token - verifyToken() return false");
-			return returnUnauthorized("Unable to verify token - verifyToken() return false");
-		}
+        const callSecCtx:  CallSecurityContext | null = await this._tokenHelper.getCallSecurityContextFromAccessToken(bearerToken);
 
-		const decoded = this._tokenHelper.decodeToken(bearerToken);
-		if (!decoded.sub || decoded.sub.indexOf("::")== -1) {
-			this._logger.warn("Unable to decodeToken token");
-			return returnUnauthorized("Unable to decodeToken token");
-		}
-
-		const subSplit = decoded.sub.split("::");
-		const subjectType = subSplit[0];
-		const subject = subSplit[1];
+        if(!callSecCtx){
+            return returnUnauthorized("Unable to verify or decodeToken token");
+        }
 
         timerEndFn({success: "true"});
-		return {
-			accessToken: bearerToken,
-			clientId: subjectType.toUpperCase().startsWith("APP") ? subject:null,
-			username: subjectType.toUpperCase().startsWith("USER") ? subject:null,
-            platformRoleIds: decoded.platformRoles,
-            participantRoleIds: decoded.participantRole
-		};
+        return callSecCtx;
 	}
 
     private async _processQueue(){
