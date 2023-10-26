@@ -32,8 +32,8 @@
 import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {CallSecurityContext, IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
-import {ForbiddenError} from "@mojaloop/security-bc-public-types-lib/dist/index";
-import {ChartOfAccountsPrivilegeNames} from "../domain/privilege_names";
+import {ForbiddenError} from "@mojaloop/security-bc-public-types-lib";
+import {ChartOfAccountsPrivilegeNames} from "./privilege_names";
 import {
     ILedgerAdapter,
     LedgerAdapterAccount,
@@ -56,8 +56,6 @@ import {
     InvalidJournalEntryParametersError
 } from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {randomUUID} from "crypto";
-import {join} from "path";
-import {readFileSync} from "fs";
 import {bigintToString, stringToBigint} from "./converters";
 import {IChartOfAccountsRepo} from "./infrastructure-types/chart_of_accounts_repo";
 import {IHistogram, IMetrics} from "@mojaloop/platform-shared-lib-observability-types-lib";

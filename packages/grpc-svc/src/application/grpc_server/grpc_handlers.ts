@@ -235,7 +235,7 @@ export class GrpcHandlers {
                 }
             }
 
-            console.debug(`Processing queue - complete\n`);
+            console.debug("Processing queue - complete\n");
 
             this._lastProcessedTimestamp = Date.now();
             this._processing = false;

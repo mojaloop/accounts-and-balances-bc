@@ -89,7 +89,7 @@ const MONGO_URL = process.env.MONGO_URL || "mongodb://root:mongoDbPas42@localhos
 const BUILTIN_LEDGER_URL = process.env.BUILTIN_LEDGER_URL || "0.0.0.0:3350";
 
 const SVC_CLIENT_ID = process.env["SVC_CLIENT_ID"] || "accounts-and-balances-bc-builtinledger-grpc-svc";
-const SVC_CLIENT_SECRET = process.env["SVC_CLIENT_ID"] || "superServiceSecret";
+const SVC_CLIENT_SECRET = process.env["SVC_CLIENT_SECRET"] || "superServiceSecret";
 
 const REDIS_HOST = process.env["REDIS_HOST"] || "localhost";
 const REDIS_PORT = (process.env["REDIS_PORT"] && parseInt(process.env["REDIS_PORT"])) || 6379;
@@ -300,7 +300,9 @@ export class BuiltinLedgerGrpcService {
             this.app.use(express.urlencoded({extended: true})); // for parsing application/x-www-form-urlencoded
 
             // Add health and metrics http routes
-            this.app.get("/health", (req: express.Request, res: express.Response) => {return res.send({ status: "OK" }); });
+            this.app.get("/health", (req: express.Request, res: express.Response) => {
+                return res.send({ status: "OK" });
+            });
             this.app.get("/metrics", async (req: express.Request, res: express.Response) => {
                 const strMetrics = await (this.metrics as PrometheusMetrics).getMetricsForPrometheusScrapper();
                 return res.send(strMetrics);

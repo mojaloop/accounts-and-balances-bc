@@ -391,7 +391,9 @@ export class BuiltinLedgerAccountsMongoRepo implements IBuiltinLedgerAccountsRep
             }
 
             // don't bother the updates, just remove from cache
-            const keys = accounts.map(item => {return this._getKeyWithPrefix(item.id)});
+            const keys = accounts.map(item => {
+                return this._getKeyWithPrefix(item.id);
+            });
             await this._redisClient.del(keys);
         } catch (error: unknown) {
             this._logger.error(error);

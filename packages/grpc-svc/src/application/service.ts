@@ -28,8 +28,8 @@
  ******/
 "use strict";
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const packageJSON = require("../../package.json");
+
+
 
 import {existsSync} from "fs";
 import {
@@ -44,7 +44,7 @@ import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {AuthorizationClient, LoginHelper} from "@mojaloop/security-bc-client-lib";
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
 import {IChartOfAccountsRepo} from "../domain/infrastructure-types/chart_of_accounts_repo";
-import {MLKafkaJsonConsumer, MLKafkaJsonConsumerOptions} from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib";
+import {MLKafkaJsonConsumer} from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib";
 import {ChartOfAccountsPrivilegesDefinition} from "./privileges";
 import {GrpcServer} from "./grpc_server/grpc_server";
 import {BuiltinLedgerAdapter, ChartOfAccountsMongoRepo} from "../implementations";
@@ -63,9 +63,12 @@ import {
 import express, {Express} from "express";
 import {Server} from "net";
 import {GetCoAConfigClient} from "./configset";
+import {TigerBeetleLedgerAdapter} from "../implementations/tiger_beetle_ledger_adapter";
+
 
 /* ********** Constants Begin ********** */
-
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const packageJSON = require("../../package.json");
 const BC_NAME = "accounts-and-balances-bc";
 const APP_NAME = "coa-grpc-svc";
 const APP_VERSION = packageJSON.version;
@@ -91,11 +94,11 @@ const AUTH_Z_SVC_BASEURL = process.env.AUTH_Z_SVC_BASEURL || "http://localhost:3
 const ACCOUNTS_AND_BALANCES_URL = process.env.ACCOUNTS_AND_BALANCES_URL || "0.0.0.0:3300";
 
 const SVC_CLIENT_ID = process.env["SVC_CLIENT_ID"] || "accounts-and-balances-bc-coa-grpc-svc";
-const SVC_CLIENT_SECRET = process.env["SVC_CLIENT_ID"] || "superServiceSecret";
+const SVC_CLIENT_SECRET = process.env["SVC_CLIENT_SECRET"] || "superServiceSecret";
 
-const USE_TIGERBEETLE = process.env["USE_TIGERBEETLE"] || false;
-const TIGERBEETLE_CLUSTER_ID = process.env["TIGERBEETLE_CLUSTER_ID"] || "default_CHANGEME";
-const TIGERBEETLE_CLUSTER_REPLICA_ADDRESSES = process.env["TIGERBEETLE_CLUSTER_REPLICA_ADDRESSES"] || "default_CHANGEME";
+const USE_TIGERBEETLE = process.env["USE_TIGERBEETLE"] && process.env["USE_TIGERBEETLE"].toUpperCase()==="TRUE" || false;
+const TIGERBEETLE_CLUSTER_ID = process.env["TIGERBEETLE_CLUSTER_ID"] || 1;
+const TIGERBEETLE_CLUSTER_REPLICA_ADDRESSES = process.env["TIGERBEETLE_CLUSTER_REPLICA_ADDRESSES"] || "9001";
 
 const REDIS_HOST = process.env["REDIS_HOST"] || "localhost";
 const REDIS_PORT = (process.env["REDIS_PORT"] && parseInt(process.env["REDIS_PORT"])) || 6379;
@@ -197,7 +200,18 @@ export class ChartOfAccountsGrpcService {
             this.ledgerAdapter = ledgerAdapter;
         } else {
             if(USE_TIGERBEETLE){
-                // TODO instantiate TB adapter
+                this.ledgerAdapter = new TigerBeetleLedgerAdapter(
+                    Number(TIGERBEETLE_CLUSTER_ID),
+                    [TIGERBEETLE_CLUSTER_REPLICA_ADDRESSES],
+                    logger
+                );
+                try {
+                    await this.ledgerAdapter.init();
+                } catch (error: unknown) {
+                    this.logger.fatal(error);
+                    await this.stop();
+                    process.exit(-1); // TODO: verify code.
+                }
             }else {
                 const loginHelper = new LoginHelper(AUTH_N_SVC_TOKEN_URL, logger);
                 loginHelper.setAppCredentials(SVC_CLIENT_ID, SVC_CLIENT_SECRET);
@@ -294,7 +308,9 @@ export class ChartOfAccountsGrpcService {
             this.app.use(express.urlencoded({extended: true})); // for parsing application/x-www-form-urlencoded
 
             // Add health and metrics http routes
-            this.app.get("/health", (req: express.Request, res: express.Response) => {return res.send({ status: "OK" }); });
+            this.app.get("/health", (req: express.Request, res: express.Response) => {
+                return res.send({ status: "OK" });
+            });
             this.app.get("/metrics", async (req: express.Request, res: express.Response) => {
                 const strMetrics = await (this.metrics as PrometheusMetrics).getMetricsForPrometheusScrapper();
                 return res.send(strMetrics);
