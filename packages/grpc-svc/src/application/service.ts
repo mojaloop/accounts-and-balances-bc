@@ -47,7 +47,7 @@ import {IChartOfAccountsRepo} from "../domain/infrastructure-types/chart_of_acco
 import {MLKafkaJsonConsumer, MLKafkaJsonConsumerOptions} from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib";
 import {ChartOfAccountsPrivilegesDefinition} from "./privileges";
 import {GrpcServer} from "./grpc_server/grpc_server";
-import {BuiltinLedgerAdapter, ChartOfAccountsMongoRepo} from "../implementations";
+import {BuiltinLedgerAdapter, ChartOfAccountsMongoRepo, TigerBeetleLedgerAdapter} from "../implementations";
 import {AccountsAndBalancesAggregate} from "../domain/aggregate";
 import { ILedgerAdapter } from "../domain/infrastructure-types/ledger_adapter";
 import process from "process";
@@ -94,8 +94,8 @@ const SVC_CLIENT_ID = process.env["SVC_CLIENT_ID"] || "accounts-and-balances-bc-
 const SVC_CLIENT_SECRET = process.env["SVC_CLIENT_ID"] || "superServiceSecret";
 
 const USE_TIGERBEETLE = process.env["USE_TIGERBEETLE"] || false;
-const TIGERBEETLE_CLUSTER_ID = process.env["TIGERBEETLE_CLUSTER_ID"] || "default_CHANGEME";
-const TIGERBEETLE_CLUSTER_REPLICA_ADDRESSES = process.env["TIGERBEETLE_CLUSTER_REPLICA_ADDRESSES"] || "default_CHANGEME";
+const TIGERBEETLE_CLUSTER_ID = process.env["TIGERBEETLE_CLUSTER_ID"] || 1;
+const TIGERBEETLE_CLUSTER_REPLICA_ADDRESSES = process.env["TIGERBEETLE_CLUSTER_REPLICA_ADDRESSES"] || '9001';
 
 const REDIS_HOST = process.env["REDIS_HOST"] || "localhost";
 const REDIS_PORT = (process.env["REDIS_PORT"] && parseInt(process.env["REDIS_PORT"])) || 6379;
@@ -196,9 +196,20 @@ export class ChartOfAccountsGrpcService {
         if (ledgerAdapter !== undefined) {
             this.ledgerAdapter = ledgerAdapter;
         } else {
-            if(USE_TIGERBEETLE){
-                // TODO instantiate TB adapter
-            }else {
+            if (USE_TIGERBEETLE) {
+                this.ledgerAdapter = new TigerBeetleLedgerAdapter(
+                    Number(TIGERBEETLE_CLUSTER_ID),
+                    [TIGERBEETLE_CLUSTER_REPLICA_ADDRESSES],
+                    logger
+                );
+                try {
+                    await this.ledgerAdapter.init();
+                } catch (error: unknown) {
+                    this.logger.fatal(error);
+                    await this.stop();
+                    process.exit(-1); // TODO: verify code.
+                }
+            } else {
                 const loginHelper = new LoginHelper(AUTH_N_SVC_TOKEN_URL, logger);
                 loginHelper.setAppCredentials(SVC_CLIENT_ID, SVC_CLIENT_SECRET);
 

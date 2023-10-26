@@ -163,10 +163,11 @@ export class BuiltinLedgerGrpcHandlers {
 
         timerEndFn({success: "true"});
 		return {
-			accessToken: bearerToken,
+            accessToken: bearerToken,
 			clientId: subjectType.toUpperCase().startsWith("APP") ? subject:null,
 			username: subjectType.toUpperCase().startsWith("USER") ? subject:null,
-			rolesIds: decoded.roles
+            platformRoleIds: [], //TODO
+            participantRoleIds: [] //TODO
 		};
 	}
 

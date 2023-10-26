@@ -29,3 +29,4 @@
 
 export * from "./builtin_ledger_adapter";
 export * from "./chart_of_accounts_mongo_repo";
+export * from "./tiger_beetle_ledger_adapter";

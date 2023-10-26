@@ -115,7 +115,7 @@ export class BuiltinLedgerAggregate {
 
 	private _enforcePrivilege(secCtx: CallSecurityContext, privilegeId: string): void {
         const timerEndFn = this._requestsHisto.startTimer({callName: "enforcePrivilege"});
-        for (const roleId of secCtx.rolesIds) {
+        for (const roleId of secCtx.platformRoleIds) {
 			if (this._authorizationClient.roleHasPrivilege(roleId, privilegeId)) {
                 timerEndFn({success: "true"});
                 return;
