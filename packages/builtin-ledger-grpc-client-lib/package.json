@@ -37,11 +37,11 @@
     },
     "devDependencies": {},
     "dependencies": {
-        "@grpc/grpc-js": "~1.9.7",
+        "@grpc/grpc-js": "~1.9.9",
         "@grpc/proto-loader": "~0.7.10",
-        "@mojaloop/logging-bc-public-types-lib": "~0.1.20",
-        "@mojaloop/security-bc-client-lib": "~0.3.3",
-        "@mojaloop/security-bc-public-types-lib": "~0.3.3",
+        "@mojaloop/logging-bc-public-types-lib": "~0.1.22",
+        "@mojaloop/security-bc-client-lib": "~0.3.7",
+        "@mojaloop/security-bc-public-types-lib": "~0.3.5",
         "tslib": "~2.6.2"
     }
 }

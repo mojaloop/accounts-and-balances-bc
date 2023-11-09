@@ -103,6 +103,11 @@ const kafkaProducerOptions = {
 	kafkaBrokerList: KAFKA_URL
 };
 
+const kafkaConsumerOptions: MLKafkaJsonConsumerOptions = {
+    kafkaBrokerList: KAFKA_URL,
+    kafkaGroupId: `${BC_NAME}_${APP_NAME}_authz_client`
+};
+
 let globalLogger: ILogger;
 
 export class BuiltinLedgerGrpcService {
@@ -201,12 +206,25 @@ export class BuiltinLedgerGrpcService {
 
 		// authorization client
 		if (!authorizationClient) {
-			// setup privileges - bootstrap app privs and get priv/role associations
-			authorizationClient = new AuthorizationClient(BC_NAME, APP_NAME, APP_VERSION, AUTH_Z_SVC_BASEURL, logger.createChild("AuthorizationClient"));
-			authorizationClient.addPrivilegesArray(BuiltinLedgerPrivilegesDefinition);
-			await (authorizationClient as AuthorizationClient).bootstrap(true);
-			await (authorizationClient as AuthorizationClient).fetch();
+            // create the instance of IAuthenticatedHttpRequester
+            const authRequester = new AuthenticatedHttpRequester(logger, AUTH_N_SVC_TOKEN_URL);
+            authRequester.setAppCredentials(SVC_CLIENT_ID, SVC_CLIENT_SECRET);
 
+            const consumerHandlerLogger = logger.createChild("authorizationClientConsumer");
+            const messageConsumer = new MLKafkaJsonConsumer(kafkaConsumerOptions, consumerHandlerLogger);
+
+            // setup privileges - bootstrap app privs and get priv/role associations
+            authorizationClient = new AuthorizationClient(
+                BC_NAME, APP_NAME, APP_VERSION,
+                AUTH_Z_SVC_BASEURL, logger.createChild("AuthorizationClient"),
+                authRequester,
+                messageConsumer
+            );
+            authorizationClient.addPrivilegesArray(BuiltinLedgerPrivilegesDefinition);
+            await (authorizationClient as AuthorizationClient).bootstrap(true);
+            await (authorizationClient as AuthorizationClient).fetch();
+            // init message consumer to automatically update on role changed events
+            await (authorizationClient as AuthorizationClient).init();
 		}
 		this.authorizationClient = authorizationClient;
 
@@ -221,11 +239,6 @@ export class BuiltinLedgerGrpcService {
                 REDIS_HOST,
                 REDIS_PORT
 			);
-            // this.builtinLedgerAccountsRepo = new RedisBuiltinLedgerAccountsRepo(
-            //     this.logger,
-            //     REDIS_HOST,
-            //     REDIS_PORT
-            // );
 			try {
 				await this.builtinLedgerAccountsRepo.init();
 			} catch (error: unknown) {
@@ -264,7 +277,7 @@ export class BuiltinLedgerGrpcService {
 		// Aggregate.
 		const builtinLedgerAggregate: BuiltinLedgerAggregate = new BuiltinLedgerAggregate(
 			this.logger,
-			authorizationClient,
+			this.authorizationClient,
 			this.auditingClient,
 			this.builtinLedgerAccountsRepo,
 			this.builtinLedgerJournalEntriesRepo,
@@ -283,8 +296,6 @@ export class BuiltinLedgerGrpcService {
 
         // start grpc server
         await this.grpcServer.start();
-
-
 
         await this.setupExpress();
 
@@ -366,10 +377,10 @@ process.on("SIGTERM", _handle_int_and_term_signals);
 
 //do something when app is closing
 process.on("exit", async () => {
-	globalLogger.info("Microservice - exiting...");
+    console.info("Microservice - exiting...");
 });
 process.on("uncaughtException", (err: Error) => {
-	globalLogger.error(err);
+	console.error(err);
 	console.log("UncaughtException - EXITING...");
 	process.exit(999);
 });
