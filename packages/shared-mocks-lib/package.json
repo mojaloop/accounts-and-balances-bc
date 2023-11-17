@@ -31,7 +31,7 @@
     "dependencies": {
         "@mojaloop/auditing-bc-public-types-lib": "~0.3.1",
         "@mojaloop/logging-bc-public-types-lib": "~0.1.22",
-        "@mojaloop/security-bc-public-types-lib": "~0.3.5",
+        "@mojaloop/security-bc-public-types-lib": "~0.3.6",
         "nock": "~13.3.8"
     }
 }

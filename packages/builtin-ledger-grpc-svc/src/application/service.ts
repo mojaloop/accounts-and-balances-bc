@@ -29,8 +29,6 @@
 
 "use strict";
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const packageJSON = require("../../package.json");
 
 import {
 	AuditClient,
@@ -61,6 +59,8 @@ import {DefaultConfigProvider, IConfigProvider} from "@mojaloop/platform-configu
 import {GetBuiltinLedgerConfigClient} from "./configset";
 
 /* ********** Constants Begin ********** */
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const packageJSON = require("../../package.json");
 
 const BC_NAME: string = "accounts-and-balances-bc";
 const APP_NAME: string = "builtin-ledger-grpc-svc";
@@ -95,7 +95,7 @@ const REDIS_HOST = process.env["REDIS_HOST"] || "localhost";
 const REDIS_PORT = (process.env["REDIS_PORT"] && parseInt(process.env["REDIS_PORT"])) || 6379;
 
 const SVC_DEFAULT_HTTP_PORT = process.env["SVC_DEFAULT_HTTP_PORT"] || 3351;
-const SERVICE_START_TIMEOUT_MS = 30_000;
+const SERVICE_START_TIMEOUT_MS= (process.env["SERVICE_START_TIMEOUT_MS"] && parseInt(process.env["SERVICE_START_TIMEOUT_MS"])) || 60_000;
 
 /* ********** Constants End ********** */
 
