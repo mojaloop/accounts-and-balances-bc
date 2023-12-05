@@ -659,7 +659,7 @@ export class BuiltinLedgerAggregate {
         transferAmount: string, currencyCode:string, payerNetDebitCap:string, transferId:string,
         inBatch:boolean = false
     ):Promise<boolean>{
-        this._logAction(secCtx, "checkLiquidAndReserve");
+        //this._logAction(secCtx, "checkLiquidAndReserve");
 
         // Validate the currency code and get the currency.
         const currency = this._getCurrencyOrThrow(currencyCode);

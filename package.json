@@ -1,65 +1,63 @@
 {
-  "name": "@mojaloop/accounts-and-balances-bc",
-  "version": "0.0.1",
-  "description": "Accounts and Balances Bounded Context",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/mojaloop/accounts-and-balances-bc"
-  },
-  "bugs": {
-    "url": "https://github.com/mojaloop/accounts-and-balances-bc/issues"
-  },
-  "license": "Apache-2.0",
-  "contributors": [
-    "Gonçalo Garcia <goncalogarcia99@gmail.com>",
-    "Pedro Sousa Barreto <pedrob@crosslaketech.com>"
-  ],
-  "private": true,
-  "scripts": {
-    "prepare": "husky install",
-    "pre_commit_check": "npm run build && npm run lint && npm run test:unit",
-    "clean": "npm run clean:dist; npm run clean:npm",
-    "clean:npm": "rm -Rf node_modules; npm -ws run clean:npm",
-    "clean:dist": "rm -Rf dist; npm -ws run clean:dist",
-    "dep:check": "ncu -e 2; npm -ws run dep:check",
-    "dep:update": "ncu -e 2 -u; npm -ws run dep:update",
-    "lint": "npm -ws run lint",
-    "build": "npm -ws run build",
-    "test": "npm run test:unit",
-    "test:unit": "npm -ws --if-present run test:unit",
-    "posttest": "npm run coverage:merge && npm run coverage:gen-report",
-    "coverage:merge": "nyc merge ./coverage/ ./coverage/coverage.json",
-    "coverage:gen-report": "nyc report --reporter=lcov --reporter=text --temp-dir=./coverage",
-    "test:integration": "jest",
-    "start:builtin-ledger-grpc-svc": "npm -w @mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc start",
-    "start:grpc-svc": "npm -w @mojaloop/accounts-and-balances-bc-coa-grpc-svc start"
-  },
-  "engines": {
-    "node": ">=18.13.0"
-  },
-  "devDependencies": {
-    "@types/jest": "~29.5.8",
-    "@types/node": "~20.2.6",
-    "@typescript-eslint/eslint-plugin": "~5.59.11",
-    "@typescript-eslint/parser": "~5.59.11",
-    "eslint": "~8.41.0",
-    "husky": "~8.0.3",
-    "nyc": "^15.1.0",
-    "jest": "~29.5.0",
-    "npm-check-updates": "~16.10.19",
-    "ts-jest": "~29.1.1",
-    "typescript": "~5.0.4"
-  },
-  "dependencies": {
-    "tslib": "~2.5.3"
-  },
-  "workspaces": [
-    "packages/public-types-lib",
-    "packages/builtin-ledger-grpc-client-lib",
-    "packages/builtin-ledger-grpc-svc",
-    "packages/grpc-client-lib",
-    "packages/grpc-svc",
-    "packages/shared-mocks-lib",
-    "packages/*"
-  ]
+    "name": "@mojaloop/accounts-and-balances-bc",
+    "version": "0.0.1",
+    "description": "Accounts and Balances Bounded Context",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/mojaloop/accounts-and-balances-bc"
+    },
+    "bugs": {
+        "url": "https://github.com/mojaloop/accounts-and-balances-bc/issues"
+    },
+    "license": "Apache-2.0",
+    "contributors": [
+        "Gonçalo Garcia <goncalogarcia99@gmail.com>",
+        "Pedro Sousa Barreto <pedrob@crosslaketech.com>"
+    ],
+    "private": true,
+    "scripts": {
+        "prepare": "husky install",
+        "pre_commit_check": "npm run build && npm run lint && npm run test:unit",
+        "clean": "npm run clean:dist; npm run clean:npm",
+        "clean:npm": "rm -Rf node_modules; npm -ws run clean:npm",
+        "clean:dist": "rm -Rf dist; npm -ws run clean:dist",
+        "dep:check": "ncu -e 2; npm -ws run dep:check",
+        "dep:update": "ncu -e 2 -u; npm -ws run dep:update",
+        "lint": "npm -ws run lint",
+        "build": "npm -ws run build",
+        "test": "npm run test:unit",
+        "test:unit": "npm -ws --if-present run test:unit",
+        "posttest": "npm run coverage:merge && npm run coverage:gen-report",
+        "coverage:merge": "nyc merge ./coverage/ ./coverage/coverage.json",
+        "coverage:gen-report": "nyc report --reporter=lcov --reporter=text --temp-dir=./coverage",
+        "test:integration": "jest",
+        "start:builtin-ledger-grpc-svc": "npm -w @mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc start",
+        "start:grpc-svc": "npm -w @mojaloop/accounts-and-balances-bc-coa-grpc-svc start"
+    },
+    "engines": {
+        "node": ">=20.10.0"
+    },
+    "devDependencies": {
+        "@types/jest": "~29.5.10",
+        "@types/node": "~20.2.6",
+        "@typescript-eslint/eslint-plugin": "~5.59.11",
+        "@typescript-eslint/parser": "~5.59.11",
+        "eslint": "~8.41.0",
+        "husky": "~8.0.3",
+        "nyc": "^15.1.0",
+        "jest": "~29.5.0",
+        "npm-check-updates": "~16.10.19",
+        "ts-jest": "~29.1.1",
+        "typescript": "~5.0.4",
+        "tslib": "~2.5.3"
+    },
+    "workspaces": [
+        "packages/public-types-lib",
+        "packages/builtin-ledger-grpc-client-lib",
+        "packages/builtin-ledger-grpc-svc",
+        "packages/grpc-client-lib",
+        "packages/grpc-svc",
+        "packages/shared-mocks-lib",
+        "packages/*"
+    ]
 }

@@ -1,6 +1,6 @@
 {
     "name": "@mojaloop/accounts-and-balances-bc-grpc-client-lib",
-    "version": "0.3.4",
+    "version": "0.5.0",
     "description": "Accounts and Balances BC - gRPC Client Library",
     "repository": {
         "type": "git",
@@ -38,16 +38,17 @@
         "clean:tsbuildinfo": "rm -f dist/tsconfig.tsbuildinfo"
     },
     "engines": {
-        "node": ">=18.13.0"
+        "node": ">=20.10.0"
     },
-    "devDependencies": {},
-    "dependencies": {
-        "@grpc/grpc-js": "~1.9.11",
-        "@grpc/proto-loader": "~0.7.10",
-        "@mojaloop/security-bc-client-lib": "~0.3.9",
-        "@mojaloop/security-bc-public-types-lib": "~0.3.6",
-        "@mojaloop/accounts-and-balances-bc-public-types-lib": "~0.3.2",
-        "@mojaloop/logging-bc-public-types-lib": "~0.1.22",
+    "devDependencies": {
         "tslib": "~2.6.2"
+    },
+    "dependencies": {
+        "@grpc/grpc-js": "~1.9.12",
+        "@grpc/proto-loader": "~0.7.10",
+        "@mojaloop/security-bc-client-lib": "~0.5.3",
+        "@mojaloop/security-bc-public-types-lib": "~0.5.3",
+        "@mojaloop/accounts-and-balances-bc-public-types-lib": "~0.3.2",
+        "@mojaloop/logging-bc-public-types-lib": "~0.5.2"
     }
 }
