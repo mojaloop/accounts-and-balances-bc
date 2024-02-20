@@ -44,11 +44,11 @@
         "tslib": "~2.6.2"
     },
     "dependencies": {
-        "@grpc/grpc-js": "~1.9.12",
+        "@grpc/grpc-js": "~1.10.1",
         "@grpc/proto-loader": "~0.7.10",
-        "@mojaloop/security-bc-client-lib": "~0.5.3",
-        "@mojaloop/security-bc-public-types-lib": "~0.5.3",
-        "@mojaloop/accounts-and-balances-bc-public-types-lib": "~0.3.2",
+        "@mojaloop/security-bc-client-lib": "~0.5.7",
+        "@mojaloop/security-bc-public-types-lib": "~0.5.5",
+        "@mojaloop/accounts-and-balances-bc-public-types-lib": "~0.5.1",
         "@mojaloop/logging-bc-public-types-lib": "~0.5.2"
     }
 }
