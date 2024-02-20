@@ -63,7 +63,7 @@ export class TigerBeetleLedgerAdapter implements ILedgerAdapter {
 
         this._logger.info(`TigerBeetleAdapter.init() creating client instance to clusterId: ${this._clusterId} and replica addresses: ${this._replicaAddresses}...`);
         this._client = TB.createClient({
-            cluster_id: this._clusterId,
+            cluster_id: BigInt(this._clusterId),
             replica_addresses: this._replicaAddresses
         });
     }
