@@ -48,7 +48,6 @@ Accounts and Balances BC Public Types Library.
 Mock implementation used for testing.
 [README](./packages/shared-mocks-lib/README.md)
 
-
 ## 3. <a name='InstallingandBuilding'></a>Installing and Building
 
 Firstly, clone your fork of the `accounts-and-balances-bc` onto your local machine:
@@ -117,8 +116,6 @@ npm run start:builtin-ledger-grpc-svc
 ```
 
 ## 5. Dependencies
-
-## Dependencies
 
 ### Kafka
 
