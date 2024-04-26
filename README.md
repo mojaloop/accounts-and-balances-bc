@@ -1,128 +1,78 @@
 # Accounts and Balances Bounded Context
 
-## Dependencies
+The Accounts and Balances BC acts as the “central ledger” for the system. It interacts primarily with the Settlements BC, Participants Lifecycle BC and Transfers BCs, and is a directed sub-system, which means that it is a dependency of the BCs that use it as a “financial system of record” for the financial accounting.
 
-### Kafka
+See the Reference Architecture documentation [Accounts and Balances API](https://mojaloop.github.io/reference-architecture-doc/boundedContexts/accountsAndBalances/) for context on this vNext implementation guidelines.  
 
-#### Docker
-```shell
-$ docker run \
-    --name c_kafka \
-    -e NUM_PARTITIONS=10 \
-    -e ADVERTISED_HOST=localhost \
-    -p 2181:2181 \
-    -p 9092:9092 \
-    -d \
-    johnnypark/kafka-zookeeper
-```
+## Contents
+- [accounts-and-balances-bc](#accounts-and-balances-bc)
+  - [Contents](#contents)
+  - [Packages](#packages)
+  - [Running Locally](#running-locally)
+  - [Configuration](#configuration)
+  - [Tests](#tests)
+  - [Auditing Dependencies](#auditing-dependencies)
+  - [CI/CD](#cicd-pipelines)
+  - [Documentation](#documentation)
 
-### MongoDB
+## Packages
+The Accounts and Balances BC consists of the following packages;
 
-#### Docker
-```shell
-$ docker run \
-    --name c_mongodb \
-    -e MONGO_INITDB_ROOT_USERNAME=root \
-    -e MONGO_INITDB_ROOT_PASSWORD=root \
-    -p 27017:27017 \
-    -d \
-    mongo
-```
+`builtin-ledger-grpc-client-lib`
+Builtin Ledger GRPC Client Library.
+[README](./packages/builtin-ledger-grpc-client-lib/README.md)
 
-#### MongoDB Shell
-```shell
-$ use admin
+`builtin-ledger-grpc-svc`
+Builtin Ledger GRPC Service.
+[README](./packages/builtin-ledger-grpc-svc/README.md)
 
-$ db.createUser({
-    user: "accounts-and-balances-bc",
-    pwd: "123456789",
-    roles: [{role: "readWrite", db: "accounts_and_balances_bc"}]
-})
-```
+`grpc-client-lib`
+GRPC Client Library.
+[README](./packages/grpc-client-lib/README.md)
+ 
+`grpc-svc`
+GRPCS Service.
+[README](./packages/grpc-svc/README.md)
+ 
+`public-types-lib`
+Accounts and Balances BC Public Types Library.
+[README](packages/public-types-lib/README.md) 
 
-### Elasticsearch
+`shared-mocks-lib`
+Mock implementation used for testing.
+[README](./packages/shared-mocks-lib/README.md)
 
-#### Docker
-```shell
-$ docker network create n_elasticsearch
+## Running Locally
 
-$ docker run \
-    --name c_elasticsearch \
-    -e "discovery.type=single-node" \
-    -e ES_JAVA_OPTS="-Xms512m -Xmx512m" \
-    --net n_elasticsearch \
-    -p 9200:9200 \
-    -p 9300:9300 \
-    -it \
-    elasticsearch:8.4.3
+Please follow the instruction in [Onboarding Document](Onboarding.md) to setup and run the service locally.
 
-(Detach from the container with Ctrl + p and Ctrl + q (first Ctrl + p and, right after, Ctrl + q).)
+## Configuration
 
-$ docker cp c_elasticsearch:/usr/share/elasticsearch/config/certs/http_ca.crt ./elasticsearch_http_ca.crt
-```
+See the README.md file on each services for more Environment Variable Configuration options.
 
-#### HTTP Client
-**POST/PUT** https://localhost:9200/_security/role/accounts-and-balances-bc
-```json
-{
-    "indices": [
-        {
-            "names": [
-                "accounts",
-                "journal_entries"
-            ],
-            "privileges": ["all"]
-        }
-    ]
-}
-```
-**POST/PUT** https://localhost:9200/_security/user/accounts-and-balances-bc
-```json
-{
-    "password": "123456789",
-    "roles": ["accounts-and-balances-bc"]
-}
-```
+## Tests
 
+### Unit Tests
 
-
-Run:
-```shell
-npm install
-```
-Then:
-```shell
-npm run build
-```
-
-# Run Unit Tests
-
-```shell
+```bash
 npm run test:unit
 ```
 
-# Run Integration Tests
+### Run Integration Tests
 
 ```shell
 npm run test:integration
 ```
 
-Make sure you have the following services up and running (available in platform-shared-tools docker-compose files):
-
-- infra
-    - mongo
-    - redis
-    - kafka & zoo
-
-- cross-cutting
-    - authentication-svc
-    - authorization-svc
-    - identity-svc
-    - platform-configuration-svc
+### Run all tests at once
+Requires integration tests pre-requisites
+```shell
+npm run test
+```
 
 # Collect coverage (from both unit and integration test types)
 
-After running the unit and/or integration tests:
+After running the unit and/or integration tests: 
 
 ```shell
 npm run posttest
@@ -134,8 +84,49 @@ You can then consult the html report in:
 coverage/lcov-report/index.html
 ```
 
-# Run all tests at once
-Requires integration tests pre-requisites
-```shell
-npm run test
+## Auditing Dependencies
+We use npm audit to check dependencies for node vulnerabilities. 
+
+To start a new resolution process, run:
 ```
+npm run audit:fix
+``` 
+
+You can check to see if the CI will pass based on the current dependencies with:
+
+```
+npm run audit:check
+```
+
+## CI/CD Pipelines
+
+### Execute locally the pre-commit checks - these will be executed with every commit and in the default CI/CD pipeline 
+
+Make sure these pass before committing any code
+```
+npm run pre_commit_check
+```
+
+### Work Flow 
+
+ As part of our CI/CD process, we use CircleCI. The CircleCI workflow automates the process of publishing changed packages to the npm registry and building Docker images for select packages before publishing them to DockerHub. It also handles versioning, tagging commits, and pushing changes back to the repository.
+
+The process includes five phases. 
+1. Setup : This phase initializes the environment, loads common functions, and retrieves commits and git change history since the last successful CI build.
+
+2. Detecting Changed Package.
+
+3. Publishing Changed Packages to NPM.
+
+4. Building Docker Images and Publishing to DockerHub.
+
+5. Pushing Commits to Git.
+
+ All code is automatically linted, built, and unit tested by CircleCI pipelines, where unit test results are kept for all runs. All libraries are automatically published to npm.js, and all Docker images are published to Docker Hub.
+
+ ## Documentation
+The following documentation provides insight into the FSP Interoperability API Bounded Context.
+
+- **Reference Architecture** - https://mojaloop.github.io/reference-architecture-doc/boundedContexts/accountsAndBalances/
+- **MIRO Board** - https://miro.com/app/board/o9J_lJyA1TA=/
+- **Work Sessions** - https://docs.google.com/document/d/1Nm6B_tSR1mOM0LEzxZ9uQnGwXkruBeYB2slgYK1Kflo/edit#heading=h.6w64vxvw6er4
