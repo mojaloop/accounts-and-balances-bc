@@ -107,7 +107,7 @@ This will do the following:
 * run all of the containers together
 * ensure that all dependencies have started for each services.
 
-**Important:** please make sure you follow the steps available through the **admin-ui** demonstrated in the sections [here](https://github.com/mojaloop/platform-shared-tools/tree/main/packages/deployment/docker-compose-apps#participants) (you can ignore the Account-Lookup part). There is required data to already exist such as **participants** endpoints exists and its accounts have funds available, otherwise the integrations will fail.
+**Important:** please make sure you follow the steps available through the **admin-ui** demonstrated in the sections [here](https://github.com/mojaloop/platform-shared-tools/tree/main/packages/deployment/docker-compose-apps#participants) (you can ignore the Account-Lookup part). Configuration such as **participants** endpoints and its accounts with funds available are pre-configured as part of setup, otherwise the integrations will fail.
 
 ### 4.2 Run the server
 

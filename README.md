@@ -2,7 +2,7 @@
 
 The Accounts and Balances BC acts as the “central ledger” for the system. It interacts primarily with the Settlements BC, Participants Lifecycle BC and Transfers BCs, and is a directed sub-system, which means that it is a dependency of the BCs that use it as a “financial system of record” for the financial accounting.
 
-See the Reference Architecture documentation [Thirdparty API](https://mojaloop.github.io/reference-architecture-doc/boundedContexts/thirdPartyApi/) for context on this vNext implementation guidelines.  
+See the Reference Architecture documentation of [Accounts and Balances BC](https://mojaloop.github.io/reference-architecture-doc/boundedContexts/accountsAndBalances) for context on this vNext implementation guidelines.  
 
 ## Contents
 - [accounts-and-balances-bc](#accounts-and-balances-bc)
