@@ -71,7 +71,7 @@ import {TigerBeetleLedgerAdapter} from "../implementations/tiger_beetle_ledger_a
 const packageJSON = require("../../package.json");
 const BC_NAME = "accounts-and-balances-bc";
 const APP_NAME = "coa-grpc-svc";
-const APP_VERSION = packageJSON.version;
+const BC_VERSION = packageJSON.version;
 const LOG_LEVEL: LogLevel = process.env.LOG_LEVEL as LogLevel || LogLevel.DEBUG;
 const PRODUCTION_MODE = process.env["PRODUCTION_MODE"] || false;
 
@@ -154,7 +154,7 @@ export class ChartOfAccountsGrpcService {
             logger = new KafkaLogger(
                 BC_NAME,
                 APP_NAME,
-                APP_VERSION,
+                BC_VERSION,
                 kafkaProducerOptions,
                 KAFKA_LOGS_TOPIC,
                 LOG_LEVEL
@@ -176,7 +176,7 @@ export class ChartOfAccountsGrpcService {
             configProvider = new DefaultConfigProvider(logger, authRequester, messageConsumer);
         }
 
-        this.configClient = GetCoAConfigClient(configProvider, BC_NAME, APP_NAME, APP_VERSION);
+        this.configClient = GetCoAConfigClient(BC_NAME, configProvider);
         await this.configClient.init();
         await this.configClient.bootstrap(true);
         await this.configClient.fetch();
@@ -244,7 +244,7 @@ export class ChartOfAccountsGrpcService {
             const cryptoProvider = new LocalAuditClientCryptoProvider(AUDIT_KEY_FILE_PATH);
             const auditDispatcher = new KafkaAuditClientDispatcher(kafkaProducerOptions, KAFKA_AUDITS_TOPIC, auditLogger);
             // NOTE: to pass the same kafka logger to the audit client, make sure the logger is started/initialised already
-            auditingClient = new AuditClient(BC_NAME, APP_NAME, APP_VERSION, cryptoProvider, auditDispatcher);
+            auditingClient = new AuditClient(BC_NAME, APP_NAME, BC_VERSION, cryptoProvider, auditDispatcher);
             await auditingClient.init();
         }
         this.auditingClient = auditingClient;
@@ -260,8 +260,10 @@ export class ChartOfAccountsGrpcService {
 
             // setup privileges - bootstrap app privs and get priv/role associations
             authorizationClient = new AuthorizationClient(
-                BC_NAME, APP_NAME, APP_VERSION,
-                AUTH_Z_SVC_BASEURL, logger.createChild("AuthorizationClient"),
+                BC_NAME, 
+                BC_VERSION,
+                AUTH_Z_SVC_BASEURL, 
+                logger.createChild("AuthorizationClient"),
                 authRequester,
                 messageConsumer
             );
@@ -278,7 +280,7 @@ export class ChartOfAccountsGrpcService {
             const labels: Map<string, string> = new Map<string, string>();
             labels.set("bc", BC_NAME);
             labels.set("app", APP_NAME);
-            labels.set("version", APP_VERSION);
+            labels.set("version", BC_VERSION);
             PrometheusMetrics.Setup({prefix:"", defaultLabels: labels}, this.logger);
             metrics = PrometheusMetrics.getInstance();
         }
@@ -341,7 +343,7 @@ export class ChartOfAccountsGrpcService {
 
             this.expressServer = this.app.listen(SVC_DEFAULT_HTTP_PORT, () => {
                 this.logger.info(`🚀Server ready at: http://localhost:${SVC_DEFAULT_HTTP_PORT}`);
-                this.logger.info(`ChartOfAccountsGrpcService v: ${APP_VERSION} started`);
+                this.logger.info(`ChartOfAccountsGrpcService v: ${BC_VERSION} started`);
                 resolve();
             });
         });
