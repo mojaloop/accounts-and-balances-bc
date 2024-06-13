@@ -166,7 +166,7 @@ export class BuiltinLedgerGrpcService {
             configProvider = new DefaultConfigProvider(logger, authRequester, messageConsumer);
         }
 
-        this.configClient = GetBuiltinLedgerConfigClient(configProvider, BC_NAME, APP_NAME, APP_VERSION);
+        this.configClient = GetBuiltinLedgerConfigClient(BC_NAME, configProvider);
         await this.configClient.init();
         await this.configClient.bootstrap(true);
         await this.configClient.fetch();
@@ -215,8 +215,10 @@ export class BuiltinLedgerGrpcService {
 
             // setup privileges - bootstrap app privs and get priv/role associations
             authorizationClient = new AuthorizationClient(
-                BC_NAME, APP_NAME, APP_VERSION,
-                AUTH_Z_SVC_BASEURL, logger.createChild("AuthorizationClient"),
+                BC_NAME, 
+                APP_VERSION,
+                AUTH_Z_SVC_BASEURL, 
+                logger.createChild("AuthorizationClient"),
                 authRequester,
                 messageConsumer
             );

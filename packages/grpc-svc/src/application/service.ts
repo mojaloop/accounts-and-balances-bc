@@ -176,7 +176,7 @@ export class ChartOfAccountsGrpcService {
             configProvider = new DefaultConfigProvider(logger, authRequester, messageConsumer);
         }
 
-        this.configClient = GetCoAConfigClient(configProvider, BC_NAME, APP_NAME, APP_VERSION);
+        this.configClient = GetCoAConfigClient(BC_NAME, configProvider);
         await this.configClient.init();
         await this.configClient.bootstrap(true);
         await this.configClient.fetch();
@@ -260,8 +260,10 @@ export class ChartOfAccountsGrpcService {
 
             // setup privileges - bootstrap app privs and get priv/role associations
             authorizationClient = new AuthorizationClient(
-                BC_NAME, APP_NAME, APP_VERSION,
-                AUTH_Z_SVC_BASEURL, logger.createChild("AuthorizationClient"),
+                BC_NAME, 
+                APP_VERSION,
+                AUTH_Z_SVC_BASEURL, 
+                logger.createChild("AuthorizationClient"),
                 authRequester,
                 messageConsumer
             );
