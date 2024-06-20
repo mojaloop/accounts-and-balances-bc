@@ -46,7 +46,6 @@ import {IBuiltinLedgerAccountsRepo, IBuiltinLedgerJournalEntriesRepo} from "../d
 import {BuiltinLedgerAccountsMongoRepo} from "../implementations/builtin_ledger_accounts_mongo_repo";
 import {BuiltinLedgerJournalEntriesMongoRepo} from "../implementations/builtin_ledger_journal_entries_mongo_repo";
 import {BuiltinLedgerGrpcServer} from "./grpc_server/grpc_server";
-import {BuiltinLedgerPrivilegesDefinition} from "./privileges";
 import process from "process";
 import {IMetrics} from "@mojaloop/platform-shared-lib-observability-types-lib";
 import {PrometheusMetrics} from "@mojaloop/platform-shared-lib-observability-client-lib";
@@ -57,6 +56,7 @@ import {IConfigurationClient} from "@mojaloop/platform-configuration-bc-public-t
 import {MLKafkaJsonConsumer, MLKafkaJsonConsumerOptions} from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib";
 import {DefaultConfigProvider, IConfigProvider} from "@mojaloop/platform-configuration-bc-client-lib";
 import {GetBuiltinLedgerConfigClient} from "./configset";
+import { AccountsAndBalancesPrivilegesDefinition } from "@mojaloop/accounts-and-balances-bc-privileges-definition-lib";
 
 /* ********** Constants Begin ********** */
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -222,7 +222,7 @@ export class BuiltinLedgerGrpcService {
                 authRequester,
                 messageConsumer
             );
-            authorizationClient.addPrivilegesArray(BuiltinLedgerPrivilegesDefinition);
+            authorizationClient.addPrivilegesArray(AccountsAndBalancesPrivilegesDefinition);
             await (authorizationClient as AuthorizationClient).bootstrap(true);
             await (authorizationClient as AuthorizationClient).fetch();
             // init message consumer to automatically update on role changed events

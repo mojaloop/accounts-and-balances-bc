@@ -1,0 +1,41 @@
+{
+    "name": "@mojaloop/accounts-and-balances-bc-privileges-definition-lib",
+    "version": "0.6.0",
+    "description": "Accounts and Balances BC - Privileges Definition Library",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/mojaloop/accounts-and-balances-bc/tree/main/packages/privileges-definition-lib"
+    },
+    "bugs": {
+        "url": "https://github.com/mojaloop/accounts-and-balances-bc/issues"
+    },
+    "license": "Apache-2.0",
+    "contributors": [
+        "Pedro Sousa Barreto <pedrob@crosslaketech.com>",
+        "José Antunes <jose.antunes@arg.software>",
+        "Rui Rocha <rui.rocha@arg.software>"
+    ],
+    "private": true,
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "clean": "npm run clean:npm; npm run clean:dist",
+        "clean:dist": "rm -rf dist",
+        "clean:npm": "rm -rf node_modules",
+        "dep:check": "ncu -e 2",
+        "dep:update": "ncu -u",
+        "lint": "eslint ./src",
+        "lint:fix": "eslint ./src --fix",
+        "build": "tsc",
+        "test:unit": "echo \"privileges-definition-lib doesn't have unit tests\""
+    },
+    "engines": {
+        "node": ">=20.10.0"
+    },
+    "devDependencies": {
+        "tslib": "~2.6.3"
+    }
+}

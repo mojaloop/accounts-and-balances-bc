@@ -53,6 +53,7 @@
     },
     "workspaces": [
         "packages/public-types-lib",
+        "packages/privileges-definition-lib",
         "packages/builtin-ledger-grpc-client-lib",
         "packages/builtin-ledger-grpc-svc",
         "packages/grpc-client-lib",

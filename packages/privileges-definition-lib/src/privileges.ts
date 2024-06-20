@@ -25,15 +25,19 @@
  * Crosslake
  - Pedro Sousa Barreto <pedrob@crosslaketech.com>
 
+ * Arg Software
+ - José Antunes <jose.antunes@arg.software>
+ - Rui Rocha <rui.rocha@arg.software>
+
  --------------
  ******/
 
 "use strict";
 
+import { BuiltinLedgerPrivileges, ChartOfAccountsPrivilegeNames } from "./privilege_names";
 
-import {BuiltinLedgerPrivileges} from "../domain/privilege_names";
-
-export const BuiltinLedgerPrivilegesDefinition = [
+export const AccountsAndBalancesPrivilegesDefinition = [
+    // BuiltinLedgerPrivilegesDefinition
     {
         privId: BuiltinLedgerPrivileges.BUILTIN_LEDGER_CREATE_ACCOUNT,
         labelName: "Create Builtin Ledger Accounts",
@@ -62,7 +66,36 @@ export const BuiltinLedgerPrivilegesDefinition = [
         privId: BuiltinLedgerPrivileges.BUILTIN_LEDGER_DELETE_ACCOUNT,
         labelName: "Mark Builtin Ledger Account as deleted",
         description: "Mark an inactive account as deleted (entries can be archived) in the Builtin Ledger\""
+    },
+    // ChartOfAccountsPrivilegesDefinition
+    {
+        privId: ChartOfAccountsPrivilegeNames.COA_CREATE_ACCOUNT,
+        labelName: "Create Account",
+        description: "Allows for the creation of accounts"
+    }, {
+        privId: ChartOfAccountsPrivilegeNames.COA_CREATE_JOURNAL_ENTRY,
+        labelName: "Create Journal Entry",
+        description: "Allows for the creation of journal entries"
+    }, {
+        privId: ChartOfAccountsPrivilegeNames.COA_VIEW_ACCOUNT,
+        labelName: "View Account",
+        description: "Allows for the retrieval of accounts"
+    }, {
+        privId: ChartOfAccountsPrivilegeNames.COA_VIEW_JOURNAL_ENTRY,
+        labelName: "View Journal Entry",
+        description: "Allows for the retrieval of journal entries"
+    },{
+        privId: ChartOfAccountsPrivilegeNames.COA_DEACTIVATE_ACCOUNT,
+        labelName: "Deactivate Account",
+        description: "Mark account as inactive (no entries can be recorded)"
+    }, {
+        privId: ChartOfAccountsPrivilegeNames.COA_REACTIVATE_ACCOUNT,
+        labelName: "Reactivate Account",
+        description: "Mark an inactive as active"
+    },{
+        privId: ChartOfAccountsPrivilegeNames.COA_DELETE_ACCOUNT,
+        labelName: "Mark account as deleted",
+        description: "Mark an inactive account as deleted (entries can be archived)"
     }
 
 ];
-
