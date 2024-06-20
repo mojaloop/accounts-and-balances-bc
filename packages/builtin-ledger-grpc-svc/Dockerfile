@@ -15,6 +15,7 @@ COPY package*.json ./
 COPY packages/public-types-lib/package*.json ./packages/public-types-lib/
 COPY packages/builtin-ledger-grpc-client-lib/package*.json ./packages/builtin-ledger-grpc-client-lib/
 COPY packages/builtin-ledger-grpc-svc/package*.json ./packages/builtin-ledger-grpc-svc/
+COPY packages/privileges-definition-lib/package*.json ./packages/privileges-definition-lib/
 
 # If you are building your code for production
 #RUN npm ci --only=production
@@ -32,6 +33,7 @@ COPY tsconfig.json ./
 
 # copy required supporting packages/packages (especially private ones not published to npm)
 COPY packages/public-types-lib ./packages/public-types-lib
+COPY packages/privileges-definition-lib ./packages/privileges-definition-lib
 
 # copy required client lib code
 COPY packages/builtin-ledger-grpc-client-lib ./packages/builtin-ledger-grpc-client-lib

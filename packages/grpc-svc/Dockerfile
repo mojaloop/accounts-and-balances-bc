@@ -13,6 +13,7 @@ RUN npm install -g node-gyp
 # A wildcard is used to ensure both package.json AND package-lock.json are copied
 COPY package*.json ./
 COPY packages/public-types-lib/package*.json ./packages/public-types-lib/
+COPY packages/privileges-definition-lib/package*.json ./packages/privileges-definition-lib/
 
 # need this the client lib to as a dependency - to call the builtin ledger
 COPY packages/builtin-ledger-grpc-client-lib/package*.json ./packages/builtin-ledger-grpc-client-lib/
@@ -37,6 +38,7 @@ COPY tsconfig.json ./
 
 # copy required supporting packages/packages (especially private ones not published to npm)
 COPY packages/public-types-lib ./packages/public-types-lib
+COPY packages/privileges-definition-lib ./packages/privileges-definition-lib
 
 # copy required client libs code
 COPY packages/builtin-ledger-grpc-client-lib ./packages/builtin-ledger-grpc-client-lib
