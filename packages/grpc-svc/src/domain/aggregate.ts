@@ -33,7 +33,7 @@ import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {CallSecurityContext, IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
 import {ForbiddenError} from "@mojaloop/security-bc-public-types-lib";
-import {ChartOfAccountsPrivilegeNames} from "./privilege_names";
+import {ChartOfAccountsPrivilegeNames} from "@mojaloop/accounts-and-balances-bc-privileges-definition-lib";
 import {
     ILedgerAdapter,
     LedgerAdapterAccount,

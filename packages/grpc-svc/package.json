@@ -59,6 +59,7 @@
         "@grpc/proto-loader": "~0.7.13",
         "@mojaloop/accounts-and-balances-bc-grpc-client-lib": "*",
         "@mojaloop/accounts-and-balances-bc-public-types-lib": "*",
+        "@mojaloop/accounts-and-balances-bc-privileges-definition-lib": "*",
         "@mojaloop/logging-bc-public-types-lib": "~0.5.4",
         "@mojaloop/logging-bc-client-lib": "~0.5.8",
         "@mojaloop/platform-shared-lib-observability-client-lib": "~0.5.8",

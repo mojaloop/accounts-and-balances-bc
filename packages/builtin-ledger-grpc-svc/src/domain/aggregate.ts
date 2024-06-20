@@ -45,7 +45,6 @@ import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {IAuditClient, AuditSecurityContext} from "@mojaloop/auditing-bc-public-types-lib";
 
 import {ForbiddenError, IAuthorizationClient, CallSecurityContext} from "@mojaloop/security-bc-public-types-lib";
-import {BuiltinLedgerPrivileges} from "./privilege_names";
 
 import {bigintToString, stringToBigint} from "./converters";
 import {
@@ -57,6 +56,7 @@ import {
 import {IBuiltinLedgerAccountsRepo, IBuiltinLedgerJournalEntriesRepo} from "./infrastructure";
 import {IHistogram, IMetrics} from "@mojaloop/platform-shared-lib-observability-types-lib";
 import {Currency, IConfigurationClient} from "@mojaloop/platform-configuration-bc-public-types-lib";
+import { BuiltinLedgerPrivileges } from "@mojaloop/accounts-and-balances-bc-privileges-definition-lib";
 
 enum AuditingActions {
 	BUILTIN_LEDGER_ACCOUNT_CREATED = "BUILTIN_LEDGER_ACCOUNT_CREATED",

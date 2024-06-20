@@ -45,7 +45,7 @@ import {AuthorizationClient, LoginHelper} from "@mojaloop/security-bc-client-lib
 import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
 import {IChartOfAccountsRepo} from "../domain/infrastructure-types/chart_of_accounts_repo";
 import {MLKafkaJsonConsumer, MLKafkaJsonConsumerOptions} from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib";
-import {ChartOfAccountsPrivilegesDefinition} from "./privileges";
+import { AccountsAndBalancesPrivilegesDefinition } from "@mojaloop/accounts-and-balances-bc-privileges-definition-lib";
 import {GrpcServer} from "./grpc_server/grpc_server";
 import {BuiltinLedgerAdapter, ChartOfAccountsMongoRepo} from "../implementations";
 import {AccountsAndBalancesAggregate} from "../domain/aggregate";
@@ -267,7 +267,7 @@ export class ChartOfAccountsGrpcService {
                 authRequester,
                 messageConsumer
             );
-            authorizationClient.addPrivilegesArray(ChartOfAccountsPrivilegesDefinition);
+            authorizationClient.addPrivilegesArray(AccountsAndBalancesPrivilegesDefinition);
             await (authorizationClient as AuthorizationClient).bootstrap(true);
             await (authorizationClient as AuthorizationClient).fetch();
             // init message consumer to automatically update on role changed events

@@ -57,6 +57,7 @@
         "@grpc/proto-loader": "~0.7.13",
         "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-client-lib": "*",
         "@mojaloop/accounts-and-balances-bc-public-types-lib": "*",
+        "@mojaloop/accounts-and-balances-bc-privileges-definition-lib": "*",
         "@mojaloop/auditing-bc-client-lib": "~0.5.3",
         "@mojaloop/auditing-bc-public-types-lib": "~0.5.2",
         "@mojaloop/logging-bc-client-lib": "~0.5.8",
