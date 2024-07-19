@@ -119,7 +119,6 @@ export class AccountsAndBalancesAggregate {
 	}
 
 	private _logAction(secCtx: CallSecurityContext, actionName: string) {
-		debugger
 		this._logger.isDebugEnabled() && this._logger.debug(`User/App '${secCtx.username ?? secCtx.clientId}' called ${actionName}`);
 	}
 
