@@ -334,6 +334,48 @@ export class AccountsAndBalancesGrpcClient {
 		});
 	}
 
+	async getJournalEntriesByOwnerId(ownerId: string): Promise<AccountsAndBalancesJournalEntry[]> {
+		await this._updateCallMetadata();
+
+		return new Promise((resolve, reject) => {
+			this._client.getJournalEntriesByOwnerId(
+				{grpcId: ownerId},
+				this._callMetadata,
+				(error, resp) => {
+					if (error || !resp) return reject(error);
+
+					const grpcJournalEntriesOutput: GrpcJournalEntry__Output[] = resp.grpcJournalEntryArray || [];
+					// resolve(grpcJournalEntriesOutput);
+
+					const journalEntries: AccountsAndBalancesJournalEntry[] =
+						grpcJournalEntriesOutput.map((grpcJournalEntryOutput) => {
+						if (
+							!grpcJournalEntryOutput.currencyCode
+							|| !grpcJournalEntryOutput.amount
+							|| !grpcJournalEntryOutput.debitedAccountId
+							|| !grpcJournalEntryOutput.creditedAccountId
+						) {
+							throw new Error(); // TODO: create custom error.
+						}
+
+						const journalEntry: AccountsAndBalancesJournalEntry = {
+							id: grpcJournalEntryOutput.id ?? null,
+							ownerId: grpcJournalEntryOutput.ownerId ?? null,
+							currencyCode: grpcJournalEntryOutput.currencyCode,
+							amount: grpcJournalEntryOutput.amount,
+							pending: grpcJournalEntryOutput.pending!,
+							debitedAccountId: grpcJournalEntryOutput.debitedAccountId,
+							creditedAccountId: grpcJournalEntryOutput.creditedAccountId,
+							timestamp: grpcJournalEntryOutput.timestamp ?? null
+						};
+						return journalEntry;
+					});
+					resolve(journalEntries);
+				}
+			);
+		});
+	}
+
 	async deleteAccountsByIds(accountIds: string[]): Promise<void> {
 		const grpcAccountIds: GrpcId[] = accountIds.map((accountId) => {
 			return {grpcId: accountId};

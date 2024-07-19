@@ -119,6 +119,7 @@ export class AccountsAndBalancesAggregate {
 	}
 
 	private _logAction(secCtx: CallSecurityContext, actionName: string) {
+		debugger
 		this._logger.isDebugEnabled() && this._logger.debug(`User/App '${secCtx.username ?? secCtx.clientId}' called ${actionName}`);
 	}
 
@@ -527,6 +528,40 @@ export class AccountsAndBalancesAggregate {
 		try {
 			ledgerAdapterJournalEntries =
 				await this._ledgerAdapter.getJournalEntriesByAccountId(accountId, coaAccount.currencyDecimals);
+		} catch (error: any) {
+			this._logger.error(error);
+			if (error instanceof AccountsAndBalancesError) {
+				throw error;
+			}
+			throw new AccountsAndBalancesError(error.message ?? "unknown error");
+		}
+
+		const journalEntries: AccountsAndBalancesJournalEntry[] = ledgerAdapterJournalEntries.map((ledgerAdapterJournalEntry) => {
+			const journalEntry: AccountsAndBalancesJournalEntry = {
+				id: ledgerAdapterJournalEntry.id,
+				ownerId: ledgerAdapterJournalEntry.ownerId,
+				currencyCode: ledgerAdapterJournalEntry.currencyCode,
+				amount: ledgerAdapterJournalEntry.amount,
+				pending: ledgerAdapterJournalEntry.pending,
+				debitedAccountId: ledgerAdapterJournalEntry.debitedAccountId,
+				creditedAccountId: ledgerAdapterJournalEntry.creditedAccountId,
+				timestamp: ledgerAdapterJournalEntry.timestamp
+			};
+			return journalEntry;
+		});
+		return journalEntries;
+	}
+
+	async getJournalEntriesByOwnerId(secCtx: CallSecurityContext, ownerId: string): Promise<AccountsAndBalancesJournalEntry[]> {
+		this.enforcePrivilege(secCtx, ChartOfAccountsPrivilegeNames.COA_VIEW_JOURNAL_ENTRY);
+		this._logAction(secCtx, "getJournalEntriesByOwnerId");
+
+
+
+		let ledgerAdapterJournalEntries: LedgerAdapterJournalEntry[];
+		try {
+			ledgerAdapterJournalEntries =
+				await this._ledgerAdapter.getJournalEntriesByOwnerId(ownerId);
 		} catch (error: any) {
 			this._logger.error(error);
 			if (error instanceof AccountsAndBalancesError) {

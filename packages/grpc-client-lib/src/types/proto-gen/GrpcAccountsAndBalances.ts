@@ -85,6 +85,15 @@ export interface GrpcAccountsAndBalancesClient extends grpc.Client {
   getJournalEntriesByAccountId(argument: _GrpcId, options: grpc.CallOptions, callback: grpc.requestCallback<_GrpcJournalEntryArray__Output>): grpc.ClientUnaryCall;
   getJournalEntriesByAccountId(argument: _GrpcId, callback: grpc.requestCallback<_GrpcJournalEntryArray__Output>): grpc.ClientUnaryCall;
   
+  GetJournalEntriesByOwnerId(argument: _GrpcId, metadata: grpc.Metadata, options: grpc.CallOptions, callback: grpc.requestCallback<_GrpcJournalEntryArray__Output>): grpc.ClientUnaryCall;
+  GetJournalEntriesByOwnerId(argument: _GrpcId, metadata: grpc.Metadata, callback: grpc.requestCallback<_GrpcJournalEntryArray__Output>): grpc.ClientUnaryCall;
+  GetJournalEntriesByOwnerId(argument: _GrpcId, options: grpc.CallOptions, callback: grpc.requestCallback<_GrpcJournalEntryArray__Output>): grpc.ClientUnaryCall;
+  GetJournalEntriesByOwnerId(argument: _GrpcId, callback: grpc.requestCallback<_GrpcJournalEntryArray__Output>): grpc.ClientUnaryCall;
+  getJournalEntriesByOwnerId(argument: _GrpcId, metadata: grpc.Metadata, options: grpc.CallOptions, callback: grpc.requestCallback<_GrpcJournalEntryArray__Output>): grpc.ClientUnaryCall;
+  getJournalEntriesByOwnerId(argument: _GrpcId, metadata: grpc.Metadata, callback: grpc.requestCallback<_GrpcJournalEntryArray__Output>): grpc.ClientUnaryCall;
+  getJournalEntriesByOwnerId(argument: _GrpcId, options: grpc.CallOptions, callback: grpc.requestCallback<_GrpcJournalEntryArray__Output>): grpc.ClientUnaryCall;
+  getJournalEntriesByOwnerId(argument: _GrpcId, callback: grpc.requestCallback<_GrpcJournalEntryArray__Output>): grpc.ClientUnaryCall;
+  
   ProcessHighLevelBatch(argument: _GrpcHighLevelRequestArray, metadata: grpc.Metadata, options: grpc.CallOptions, callback: grpc.requestCallback<_GrpcHighLevelResponseArray__Output>): grpc.ClientUnaryCall;
   ProcessHighLevelBatch(argument: _GrpcHighLevelRequestArray, metadata: grpc.Metadata, callback: grpc.requestCallback<_GrpcHighLevelResponseArray__Output>): grpc.ClientUnaryCall;
   ProcessHighLevelBatch(argument: _GrpcHighLevelRequestArray, options: grpc.CallOptions, callback: grpc.requestCallback<_GrpcHighLevelResponseArray__Output>): grpc.ClientUnaryCall;
@@ -113,6 +122,8 @@ export interface GrpcAccountsAndBalancesHandlers extends grpc.UntypedServiceImpl
   
   GetJournalEntriesByAccountId: grpc.handleUnaryCall<_GrpcId__Output, _GrpcJournalEntryArray>;
   
+  GetJournalEntriesByOwnerId: grpc.handleUnaryCall<_GrpcId__Output, _GrpcJournalEntryArray>;
+  
   ProcessHighLevelBatch: grpc.handleUnaryCall<_GrpcHighLevelRequestArray__Output, _GrpcHighLevelResponseArray>;
   
 }
@@ -126,5 +137,6 @@ export interface GrpcAccountsAndBalancesDefinition extends grpc.ServiceDefinitio
   GetAccountsByIds: MethodDefinition<_GrpcIdArray, _GrpcAccountArray, _GrpcIdArray__Output, _GrpcAccountArray__Output>
   GetAccountsByOwnerId: MethodDefinition<_GrpcId, _GrpcAccountArray, _GrpcId__Output, _GrpcAccountArray__Output>
   GetJournalEntriesByAccountId: MethodDefinition<_GrpcId, _GrpcJournalEntryArray, _GrpcId__Output, _GrpcJournalEntryArray__Output>
+  GetJournalEntriesByOwnerId: MethodDefinition<_GrpcId, _GrpcJournalEntryArray, _GrpcId__Output, _GrpcJournalEntryArray__Output>
   ProcessHighLevelBatch: MethodDefinition<_GrpcHighLevelRequestArray, _GrpcHighLevelResponseArray, _GrpcHighLevelRequestArray__Output, _GrpcHighLevelResponseArray__Output>
 }

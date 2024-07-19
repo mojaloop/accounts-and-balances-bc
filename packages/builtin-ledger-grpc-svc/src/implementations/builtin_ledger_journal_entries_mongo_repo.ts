@@ -195,4 +195,21 @@ export class BuiltinLedgerJournalEntriesMongoRepo implements IBuiltinLedgerJourn
         return journalEntries;
     }
 
+    async getJournalEntriesByOwnerId(ownerId: string): Promise<BuiltinLedgerJournalEntry[]> {
+        let journalEntries: any[];
+        try {
+            journalEntries = await this._collection.find(
+                { ownerId: ownerId }
+            ).toArray();
+        } catch (error: unknown) {
+            this._logger.error(error);
+            throw error;
+        }
+
+        journalEntries.forEach((journalEntry) => {
+            journalEntry.amount = stringToBigint(journalEntry.amount, journalEntry.currencyDecimals);
+            journalEntry.id = journalEntry._id;
+        });
+        return journalEntries;
+    }
 }

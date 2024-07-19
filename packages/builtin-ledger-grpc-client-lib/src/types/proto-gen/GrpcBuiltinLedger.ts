@@ -77,6 +77,15 @@ export interface GrpcBuiltinLedgerClient extends grpc.Client {
   getJournalEntriesByAccountId(argument: _BuiltinLedgerGrpcId, options: grpc.CallOptions, callback: grpc.requestCallback<_BuiltinLedgerGrpcJournalEntryArray__Output>): grpc.ClientUnaryCall;
   getJournalEntriesByAccountId(argument: _BuiltinLedgerGrpcId, callback: grpc.requestCallback<_BuiltinLedgerGrpcJournalEntryArray__Output>): grpc.ClientUnaryCall;
   
+  GetJournalEntriesByOwnerId(argument: _BuiltinLedgerGrpcId, metadata: grpc.Metadata, options: grpc.CallOptions, callback: grpc.requestCallback<_BuiltinLedgerGrpcJournalEntryArray__Output>): grpc.ClientUnaryCall;
+  GetJournalEntriesByOwnerId(argument: _BuiltinLedgerGrpcId, metadata: grpc.Metadata, callback: grpc.requestCallback<_BuiltinLedgerGrpcJournalEntryArray__Output>): grpc.ClientUnaryCall;
+  GetJournalEntriesByOwnerId(argument: _BuiltinLedgerGrpcId, options: grpc.CallOptions, callback: grpc.requestCallback<_BuiltinLedgerGrpcJournalEntryArray__Output>): grpc.ClientUnaryCall;
+  GetJournalEntriesByOwnerId(argument: _BuiltinLedgerGrpcId, callback: grpc.requestCallback<_BuiltinLedgerGrpcJournalEntryArray__Output>): grpc.ClientUnaryCall;
+  getJournalEntriesByOwnerId(argument: _BuiltinLedgerGrpcId, metadata: grpc.Metadata, options: grpc.CallOptions, callback: grpc.requestCallback<_BuiltinLedgerGrpcJournalEntryArray__Output>): grpc.ClientUnaryCall;
+  getJournalEntriesByOwnerId(argument: _BuiltinLedgerGrpcId, metadata: grpc.Metadata, callback: grpc.requestCallback<_BuiltinLedgerGrpcJournalEntryArray__Output>): grpc.ClientUnaryCall;
+  getJournalEntriesByOwnerId(argument: _BuiltinLedgerGrpcId, options: grpc.CallOptions, callback: grpc.requestCallback<_BuiltinLedgerGrpcJournalEntryArray__Output>): grpc.ClientUnaryCall;
+  getJournalEntriesByOwnerId(argument: _BuiltinLedgerGrpcId, callback: grpc.requestCallback<_BuiltinLedgerGrpcJournalEntryArray__Output>): grpc.ClientUnaryCall;
+  
   ProcessHighLevelBatch(argument: _BuiltinLedgerGrpcHighLevelRequestArray, metadata: grpc.Metadata, options: grpc.CallOptions, callback: grpc.requestCallback<_BuiltinLedgerGrpcHighLevelResponseArray__Output>): grpc.ClientUnaryCall;
   ProcessHighLevelBatch(argument: _BuiltinLedgerGrpcHighLevelRequestArray, metadata: grpc.Metadata, callback: grpc.requestCallback<_BuiltinLedgerGrpcHighLevelResponseArray__Output>): grpc.ClientUnaryCall;
   ProcessHighLevelBatch(argument: _BuiltinLedgerGrpcHighLevelRequestArray, options: grpc.CallOptions, callback: grpc.requestCallback<_BuiltinLedgerGrpcHighLevelResponseArray__Output>): grpc.ClientUnaryCall;
@@ -103,6 +112,8 @@ export interface GrpcBuiltinLedgerHandlers extends grpc.UntypedServiceImplementa
   
   GetJournalEntriesByAccountId: grpc.handleUnaryCall<_BuiltinLedgerGrpcId__Output, _BuiltinLedgerGrpcJournalEntryArray>;
   
+  GetJournalEntriesByOwnerId: grpc.handleUnaryCall<_BuiltinLedgerGrpcId__Output, _BuiltinLedgerGrpcJournalEntryArray>;
+  
   ProcessHighLevelBatch: grpc.handleUnaryCall<_BuiltinLedgerGrpcHighLevelRequestArray__Output, _BuiltinLedgerGrpcHighLevelResponseArray>;
   
 }
@@ -115,5 +126,6 @@ export interface GrpcBuiltinLedgerDefinition extends grpc.ServiceDefinition {
   DeleteAccountsByIds: MethodDefinition<_BuiltinLedgerGrpcIdArray, _google_protobuf_Empty, _BuiltinLedgerGrpcIdArray__Output, _google_protobuf_Empty__Output>
   GetAccountsByIds: MethodDefinition<_BuiltinLedgerGrpcIdArray, _BuiltinLedgerGrpcAccountArray, _BuiltinLedgerGrpcIdArray__Output, _BuiltinLedgerGrpcAccountArray__Output>
   GetJournalEntriesByAccountId: MethodDefinition<_BuiltinLedgerGrpcId, _BuiltinLedgerGrpcJournalEntryArray, _BuiltinLedgerGrpcId__Output, _BuiltinLedgerGrpcJournalEntryArray__Output>
+  GetJournalEntriesByOwnerId: MethodDefinition<_BuiltinLedgerGrpcId, _BuiltinLedgerGrpcJournalEntryArray, _BuiltinLedgerGrpcId__Output, _BuiltinLedgerGrpcJournalEntryArray__Output>
   ProcessHighLevelBatch: MethodDefinition<_BuiltinLedgerGrpcHighLevelRequestArray, _BuiltinLedgerGrpcHighLevelResponseArray, _BuiltinLedgerGrpcHighLevelRequestArray__Output, _BuiltinLedgerGrpcHighLevelResponseArray__Output>
 }

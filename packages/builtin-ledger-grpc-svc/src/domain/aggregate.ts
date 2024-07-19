@@ -617,6 +617,35 @@ export class BuiltinLedgerAggregate {
 		return builtinLedgerJournalEntryDtos;
 	}
 
+    async getJournalEntriesByOwnerId(secCtx: CallSecurityContext, ownerId: string): Promise<BuiltinLedgerJournalEntryDto[]> {
+		this._enforcePrivilege(secCtx, BuiltinLedgerPrivileges.BUILTIN_LEDGER_VIEW_JOURNAL_ENTRY);
+		this._logAction(secCtx, "getJournalEntriesByOwnerId");
+
+		let builtinLedgerJournalEntries: BuiltinLedgerJournalEntry[];
+		try {
+			builtinLedgerJournalEntries
+				= await this._builtinLedgerJournalEntriesRepo.getJournalEntriesByOwnerId(ownerId);
+		} catch (error: unknown) {
+			this._logger.error(error);
+			throw error;
+		}
+
+		const builtinLedgerJournalEntryDtos: BuiltinLedgerJournalEntryDto[]
+			= builtinLedgerJournalEntries.map((builtinLedgerJournalEntry) => {
+			return {
+				id: builtinLedgerJournalEntry.id,
+				ownerId: builtinLedgerJournalEntry.ownerId,
+				currencyCode: builtinLedgerJournalEntry.currencyCode,
+				pending: builtinLedgerJournalEntry.pending,
+				amount: bigintToString(builtinLedgerJournalEntry.amount, builtinLedgerJournalEntry.currencyDecimals),
+				debitedAccountId: builtinLedgerJournalEntry.debitedAccountId,
+				creditedAccountId: builtinLedgerJournalEntry.creditedAccountId,
+				timestamp: builtinLedgerJournalEntry.timestamp
+			};
+		});
+		return builtinLedgerJournalEntryDtos;
+	}
+
 	async deleteAccountsByIds(secCtx: CallSecurityContext, accountIds: string[]): Promise<void> {
 		this._enforcePrivilege(secCtx, BuiltinLedgerPrivileges.BUILTIN_LEDGER_DELETE_ACCOUNT);
 		this._logAction(secCtx, "deleteAccountsByIds");

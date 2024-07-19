@@ -63,4 +63,5 @@ export interface IBuiltinLedgerJournalEntriesRepo {
 
     getJournalEntry(entryId: string): Promise<BuiltinLedgerJournalEntry|null>;
 	getJournalEntriesByAccountId(accountId: string): Promise<BuiltinLedgerJournalEntry[]>;
+	getJournalEntriesByOwnerId(ownerId: string): Promise<BuiltinLedgerJournalEntry[]>;
 }

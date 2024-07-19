@@ -268,6 +268,17 @@ export class BuiltinLedgerGrpcClient {
 		});
 	}
 
+    async getJournalEntriesByOwnerId(ownerId: BuiltinLedgerGrpcId): Promise<BuiltinLedgerGrpcJournalEntryArray__Output> {
+		await this._updateCallMetadata();
+
+		return new Promise( (resolve, reject) => {
+			this._client.getJournalEntriesByOwnerId(ownerId, this._callMetadata, (error, resp) => {
+				if (error || !resp) return reject(error);
+				resolve(resp);
+			});
+		});
+	}
+
 	async deleteAccountsByIds(accountsArray: BuiltinLedgerGrpcIdArray): Promise<void> {
 		await this._updateCallMetadata();
 

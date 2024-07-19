@@ -82,4 +82,14 @@ export class BuiltinLedgerJournalEntriesMockRepo implements IBuiltinLedgerJourna
 		}
 		return builtinLedgerJournalEntries;
 	}
+
+	async getJournalEntriesByOwnerId(ownerId: string): Promise<BuiltinLedgerJournalEntry[]> {
+		const builtinLedgerJournalEntries: BuiltinLedgerJournalEntry[] = [];
+		for (const builtinLedgerJournalEntry of this.builtinLedgerJournalEntries.values()) {
+			if (builtinLedgerJournalEntry.ownerId === ownerId) {
+				builtinLedgerJournalEntries.push(builtinLedgerJournalEntry);
+			}
+		}
+		return builtinLedgerJournalEntries;
+	}
 }

@@ -255,6 +255,35 @@ export class TigerBeetleLedgerAdapter implements ILedgerAdapter {
         });
     }
 
+    async getJournalEntriesByOwnerId(ledgerOwnerId: string): Promise<LedgerAdapterJournalEntry[]> {
+        // Create request for TigerBeetle:
+        const accIdTB = this._uuidToBigint(ledgerOwnerId);
+
+        // Invoke Client:
+        const transfers: TB.Transfer[] = [];
+        try {
+            //TODO requires UserData lookup via (user_data)
+            //TODO transfers = await this._client.lookupTransfers(request);
+        } catch (error: unknown) {
+            this._logger.error(error);
+            throw error;
+        }
+
+        return transfers.map(item => {
+            return {
+                id: this._bigIntToUuid(item.id),
+                ownerId: this._bigIntToUuid(item.user_data_128),
+                currencyCode: this._currencyCodeTxtFrom(item.ledger),
+                currencyDecimals: null, // TODO: null?
+                amount: `${item.amount}`,
+                pending: false,
+                debitedAccountId: this._bigIntToUuid(item.debit_account_id),
+                creditedAccountId: this._bigIntToUuid(item.credit_account_id),
+                timestamp: Number(item.timestamp)
+            };
+        });
+    }
+
     async deleteAccountsByIds(ledgerAccountIds: string[]): Promise<void> {
         // TODO later
     }

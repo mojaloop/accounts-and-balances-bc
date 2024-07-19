@@ -91,6 +91,9 @@ export interface ILedgerAdapter {
         ledgerAccountId: string,
         currencyDecimals: number
     ): Promise<LedgerAdapterJournalEntry[]>;
+    getJournalEntriesByOwnerId(
+        ledgerOwnerId: string
+    ): Promise<LedgerAdapterJournalEntry[]>;
 
     deleteAccountsByIds(accountIds: string[]): Promise<void>;
     deactivateAccountsByIds(accountIds: string[]): Promise<void>;

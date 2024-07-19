@@ -110,6 +110,7 @@ export class BuiltinLedgerGrpcHandlers {
 			"CreateJournalEntries": this._createJournalEntries.bind(this),
 			"GetAccountsByIds": this._getAccountsByIds.bind(this),
 			"GetJournalEntriesByAccountId": this._getJournalEntriesByAccountId.bind(this),
+			"GetJournalEntriesByOwnerId": this._getJournalEntriesByOwnerId.bind(this),
 			"DeleteAccountsByIds": this._deleteAccountsByIds.bind(this),
 			"DeactivateAccountsByIds": this._deactivateAccountsByIds.bind(this),
 			"ActivateAccountsByIds": this._activateAccountsByIds.bind(this),
@@ -396,6 +397,44 @@ export class BuiltinLedgerGrpcHandlers {
 		let foundDtos: BuiltinLedgerJournalEntryDto[];
 		try {
 			foundDtos = await this._aggregate.getJournalEntriesByAccountId(secCtx, accountId);
+		} catch (error: unknown) {
+			return callback(this._handleAggregateError(error));
+		}
+
+		const returnEntries: BuiltinLedgerGrpcJournalEntry__Output[] = foundDtos.map((dto) => {
+			const grpcJournalEntry: BuiltinLedgerGrpcJournalEntry__Output = {
+				id: dto.id ?? undefined,
+				currencyCode: dto.currencyCode,
+				amount: dto.amount,
+				debitedAccountId: dto.debitedAccountId,
+				creditedAccountId: dto.creditedAccountId,
+				timestamp: dto.timestamp || undefined
+			};
+			return grpcJournalEntry;
+		});
+
+		callback(null, {builtinLedgerGrpcJournalEntryArray: returnEntries});
+	}
+
+	private async _getJournalEntriesByOwnerId(
+		call: ServerUnaryCall<BuiltinLedgerGrpcId, BuiltinLedgerGrpcJournalEntryArray__Output>,
+		callback: sendUnaryData<BuiltinLedgerGrpcJournalEntryArray__Output>
+	): Promise<void> {
+		const secCtx = await this._getSecCtxFromCall(call, callback);
+		if (!secCtx) return;
+
+		const ownerId: string | undefined = call.request.builtinLedgerGrpcId;
+		if (!ownerId) {
+			callback(
+				{code: status.UNKNOWN, details: UNKNOWN_ERROR_MESSAGE},
+				null
+			);
+			return;
+		}
+
+		let foundDtos: BuiltinLedgerJournalEntryDto[];
+		try {
+			foundDtos = await this._aggregate.getJournalEntriesByOwnerId(secCtx, ownerId);
 		} catch (error: unknown) {
 			return callback(this._handleAggregateError(error));
 		}

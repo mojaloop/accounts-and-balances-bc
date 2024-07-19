@@ -120,6 +120,7 @@ export class GrpcHandlers {
 			"GetAccountsByIds": this._getAccountsByIds.bind(this),
 			"GetAccountsByOwnerId": this._getAccountsByOwnerId.bind(this),
 			"GetJournalEntriesByAccountId": this._getJournalEntriesByAccountId.bind(this),
+			"GetJournalEntriesByOwnerId": this._getJournalEntriesByOwnerId.bind(this),
 			"DeleteAccountsByIds": this._deleteAccountsByIds.bind(this),
 			"DeactivateAccountsByIds": this._deactivateAccountsByIds.bind(this),
 			"ActivateAccountsByIds": this._activateAccountsByIds.bind(this),
@@ -622,6 +623,44 @@ export class GrpcHandlers {
 		let journalEntries: AccountsAndBalancesJournalEntry[];
 		try {
 			journalEntries = await this._aggregate.getJournalEntriesByAccountId(secCtx, accountId);
+		} catch (error: unknown) {
+			return callback(this._handleAggregateError(error));
+		}
+
+		const grpcJournalEntries: GrpcJournalEntry[] = journalEntries.map((journalEntry) => {
+			const grpcJournalEntry: GrpcJournalEntry = {
+				id: journalEntry.id ?? undefined,
+				ownerId: journalEntry.ownerId ?? undefined,
+				currencyCode: journalEntry.currencyCode,
+				amount: journalEntry.amount,
+				debitedAccountId: journalEntry.debitedAccountId,
+				creditedAccountId: journalEntry.creditedAccountId,
+				timestamp: journalEntry.timestamp ?? undefined
+			};
+			return grpcJournalEntry;
+		});
+		callback(null, {grpcJournalEntryArray: grpcJournalEntries});
+	}
+
+	private async _getJournalEntriesByOwnerId(
+		call: ServerUnaryCall<GrpcId, GrpcJournalEntryArray>,
+		callback: sendUnaryData<GrpcJournalEntryArray>
+	): Promise<void> {
+		const secCtx = await this._getSecCtxFromCall(call, callback);
+		if(!secCtx) return; // callback was called by _getSecCtxFromCall()
+
+		const ownerId: string | undefined = call.request.grpcId;
+		if (!ownerId) {
+			callback(
+				{code: status.UNKNOWN, details: UNKNOWN_ERROR_MESSAGE},
+				null
+			);
+			return;
+		}
+
+		let journalEntries: AccountsAndBalancesJournalEntry[];
+		try {
+			journalEntries = await this._aggregate.getJournalEntriesByOwnerId(secCtx, ownerId);
 		} catch (error: unknown) {
 			return callback(this._handleAggregateError(error));
 		}

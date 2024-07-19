@@ -14,6 +14,7 @@ service GrpcAccountsAndBalances {
   rpc GetAccountsByIds(GrpcIdArray) returns (GrpcAccountArray);
   rpc GetAccountsByOwnerId(GrpcId) returns (GrpcAccountArray);
   rpc GetJournalEntriesByAccountId(GrpcId) returns (GrpcJournalEntryArray);
+  rpc GetJournalEntriesByOwnerId(GrpcId) returns (GrpcJournalEntryArray);
 
   rpc DeleteAccountsByIds(GrpcIdArray) returns (google.protobuf.Empty);
   rpc DeactivateAccountsByIds(GrpcIdArray) returns (google.protobuf.Empty);

@@ -246,6 +246,51 @@ export class BuiltinLedgerAdapter implements ILedgerAdapter {
 		return ledgerAdapterJournalEntries;
 	}
 
+	async getJournalEntriesByOwnerId(
+		ledgerOwnerId: string
+	): Promise<LedgerAdapterJournalEntry[]> {
+		let builtinLedgerGrpcJournalEntryArrayOutput: BuiltinLedgerGrpcJournalEntryArray__Output;
+		try {
+			builtinLedgerGrpcJournalEntryArrayOutput
+				= await this._builtinLedgerClient.getJournalEntriesByOwnerId({builtinLedgerGrpcId: ledgerOwnerId});
+		} catch (error: unknown) {
+			this._logger.error(error);
+			throw error;
+		}
+
+		if (!builtinLedgerGrpcJournalEntryArrayOutput.builtinLedgerGrpcJournalEntryArray) {
+			throw new Error();
+		}
+
+		const ledgerAdapterJournalEntries: LedgerAdapterJournalEntry[] =
+			builtinLedgerGrpcJournalEntryArrayOutput.builtinLedgerGrpcJournalEntryArray
+				.map((builtinLedgerGrpcJournalEntryOutput) => {
+					if (
+						!builtinLedgerGrpcJournalEntryOutput.currencyCode
+						|| !builtinLedgerGrpcJournalEntryOutput.amount
+						|| !builtinLedgerGrpcJournalEntryOutput.debitedAccountId
+						|| !builtinLedgerGrpcJournalEntryOutput.creditedAccountId
+					) {
+						throw new Error(); // TODO: create custom error.
+					}
+
+					const ledgerAdapterJournalEntry: LedgerAdapterJournalEntry = {
+						id: builtinLedgerGrpcJournalEntryOutput.id ?? null, // TODO: ?? or ||?
+						ownerId: builtinLedgerGrpcJournalEntryOutput.ownerId ?? null,
+						currencyCode: builtinLedgerGrpcJournalEntryOutput.currencyCode,
+						currencyDecimals: null, // TODO: null?
+						amount: builtinLedgerGrpcJournalEntryOutput.amount,
+						pending: builtinLedgerGrpcJournalEntryOutput.pending!,
+						debitedAccountId: builtinLedgerGrpcJournalEntryOutput.debitedAccountId,
+						creditedAccountId: builtinLedgerGrpcJournalEntryOutput.creditedAccountId,
+						timestamp: builtinLedgerGrpcJournalEntryOutput.timestamp ?? null // TODO: ?? or ||?
+					};
+					return ledgerAdapterJournalEntry;
+				});
+
+		return ledgerAdapterJournalEntries;
+	}
+
 	async deleteAccountsByIds(ledgerAccountIds: string[]): Promise<void> {
 		const builtinLedgerGrpcAccountIds: BuiltinLedgerGrpcId[] = ledgerAccountIds.map((ledgerAccountId) => {
 			return {builtinLedgerGrpcId: ledgerAccountId};
