@@ -133,3 +133,4 @@ devspace*
 
 # Gedit backups.
 *~
+/test_certs/

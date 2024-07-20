@@ -1,0 +1,18 @@
+// Original file: proto_files/builtin_ledger.proto
+
+import type { GrpcBuiltinLedger_CheckLiquidAndReserveRequest as _aandb_builtinledger_GrpcBuiltinLedger_CheckLiquidAndReserveRequest, GrpcBuiltinLedger_CheckLiquidAndReserveRequest__Output as _aandb_builtinledger_GrpcBuiltinLedger_CheckLiquidAndReserveRequest__Output } from '../../aandb/builtinledger/GrpcBuiltinLedger_CheckLiquidAndReserveRequest';
+import type { GrpcBuiltinLedger_CancelReservationAndCommitRequest as _aandb_builtinledger_GrpcBuiltinLedger_CancelReservationAndCommitRequest, GrpcBuiltinLedger_CancelReservationAndCommitRequest__Output as _aandb_builtinledger_GrpcBuiltinLedger_CancelReservationAndCommitRequest__Output } from '../../aandb/builtinledger/GrpcBuiltinLedger_CancelReservationAndCommitRequest';
+import type { GrpcBuiltinLedger_CancelReservationRequest as _aandb_builtinledger_GrpcBuiltinLedger_CancelReservationRequest, GrpcBuiltinLedger_CancelReservationRequest__Output as _aandb_builtinledger_GrpcBuiltinLedger_CancelReservationRequest__Output } from '../../aandb/builtinledger/GrpcBuiltinLedger_CancelReservationRequest';
+
+export interface GrpcBuiltinLedger_HighLevelRequest {
+  'checkLiquidityAndReserve'?: (_aandb_builtinledger_GrpcBuiltinLedger_CheckLiquidAndReserveRequest | null);
+  'cancelReservationAndCommit'?: (_aandb_builtinledger_GrpcBuiltinLedger_CancelReservationAndCommitRequest | null);
+  'cancelReservation'?: (_aandb_builtinledger_GrpcBuiltinLedger_CancelReservationRequest | null);
+  'highLeveRequestType'?: "checkLiquidityAndReserve"|"cancelReservationAndCommit"|"cancelReservation";
+}
+
+export interface GrpcBuiltinLedger_HighLevelRequest__Output {
+  'checkLiquidityAndReserve'?: (_aandb_builtinledger_GrpcBuiltinLedger_CheckLiquidAndReserveRequest__Output);
+  'cancelReservationAndCommit'?: (_aandb_builtinledger_GrpcBuiltinLedger_CancelReservationAndCommitRequest__Output);
+  'cancelReservation'?: (_aandb_builtinledger_GrpcBuiltinLedger_CancelReservationRequest__Output);
+}

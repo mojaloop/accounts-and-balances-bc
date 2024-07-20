@@ -1,0 +1,166 @@
+syntax = "proto3";
+
+package aandb.controlplane;
+
+import "google/protobuf/empty.proto";
+//import "google/protobuf/timestamp.proto";
+
+import "common.proto";
+
+// control plane stream
+service GrpcControlPlaneService{
+    rpc ClientStream(stream GrpcControlPlane_FromClientMsg) returns (stream GrpcControlPlane_ToClientMsg);
+    rpc LedgerStream(stream GrpcControlPlane_FromLedgerMsg) returns (stream GrpcControlPlane_ToLedgerMsg);
+
+    /*
+    * Management unary methods, ledger won't call this, only for the clients
+    */
+    rpc GetCoAAccountsByIds(GrpcControlPlane_IdList) returns (GrpcControlPlane_CoaAccountList);
+    rpc CreateAccounts(GrpcControlPlane_CreateAccountsRequestList) returns (GrpcControlPlane_CreateAccountsResponseList);
+
+    rpc ActivateAccountsByIds(GrpcControlPlane_IdList) returns (google.protobuf.Empty);
+    rpc DeleteAccountsByIds(GrpcControlPlane_IdList) returns (google.protobuf.Empty);
+    rpc DeactivateAccountsByIds(GrpcControlPlane_IdList) returns (google.protobuf.Empty);
+}
+
+/*
+// control plan unary calls for account management requests from the client
+service GrpcAccountManagementService{
+    rpc CreateAccounts(GrpcControlPlane_CreateAccountsRequestList) returns (GrpcControlPlane_CreateAccountsResponseList);
+
+    rpc ActivateAccountsByIds(GrpcControlPlane_IdList) returns (google.protobuf.Empty);
+    rpc DeleteAccountsByIds(GrpcControlPlane_IdList) returns (google.protobuf.Empty);
+    rpc DeactivateAccountsByIds(GrpcControlPlane_IdList) returns (google.protobuf.Empty);
+}
+*/
+
+/*
+***************************************
+Client to Control Plane Messages
+****************************************
+*/
+
+message GrpcControlPlane_FromClientMsg{
+    oneof requestType{
+        GrpcControlPlane_ClientInitialRequest initialRequest = 1;
+        // add a method to send the client stats to the backend
+    }
+}
+// initial message all clients must send to register,
+// will be responded with GrpcControlPlane_InitialResponseToClient
+message GrpcControlPlane_ClientInitialRequest{
+    string clientName = 1;
+    string token = 2;
+}
+
+/*
+***************************************
+ControlPlane to Client Messages
+***************************************
+*/
+message GrpcControlPlane_ToClientMsg{
+    oneof responseType{
+        GrpcControlPlane_InitialResponseToClient initialResponse = 1;
+
+        GrpcControlPlane_CoaAccountList accountMap = 2;
+
+        //
+        GrpcControlPlane_LedgerEndpointDetails updatedEndpointDetails = 3;
+
+        // add a method to receive stats from the backend
+    }
+}
+
+message GrpcControlPlane_InitialResponseToClient{
+    GrpcControlPlane_LedgerServiceType ledgerServiceType = 1;
+    GrpcControlPlane_LedgerEndpointDetails ledgerEndpointDetails =2;
+
+    GrpcControlPlane_CoaAccountList accountMap = 3;
+    GrpcControlPlane_CoaCurrencyList coaCurrencies = 4;
+}
+
+message GrpcControlPlane_LedgerEndpointDetails{
+    // message depends on ledgerServiceType
+    oneof ledgerEndpointDetails{
+        GrpcControlPlane_TigerBeetleInfo tigerBeetleInfo = 2;
+        GrpcControlPlane_BuiltinLedgerEndpointList builtinLedgerEndpoints = 3;
+    }
+}
+
+message GrpcControlPlane_TigerBeetleInfo{
+    uint32 clusterId = 1;
+    string replicas = 2;
+}
+
+message GrpcControlPlane_BuiltinLedgerEndpointList{
+    repeated GrpcControlPlane_BuiltinLedgerEndpoint endpoints = 1;
+}
+
+message GrpcControlPlane_BuiltinLedgerEndpoint{
+    string instanceId = 1;
+    string url = 2;
+}
+
+/*
+***************************************
+Generic Messages
+***************************************
+*/
+message GrpcControlPlane_CoaCurrency{
+    string code = 1;
+    string num = 2;
+    uint32  decimals = 3;
+}
+
+message GrpcControlPlane_CoaCurrencyList{
+    repeated GrpcControlPlane_CoaCurrency list = 1;
+}
+
+enum GrpcControlPlane_LedgerServiceType{
+    BuiltinGrpc = 0;
+    TigerBeetle = 1;
+}
+
+message GrpcControlPlane_CoaAccountList{
+    repeated GrpcControlPlane_CoaAccount accounts = 1;
+}
+
+message GrpcControlPlane_CoaAccount{
+    string id = 1;
+    string ledgerAccountId = 2;
+    string ownerId = 3;
+    string state = 4;
+    string type = 6;
+    string currencyCode = 7;
+    string currencyNum = 8; // it is string to keep leading zeros as in iso 4217
+    uint32 currencyDecimals = 9;
+}
+
+/*
+***************************************
+Ledger to Control Plane Messages
+***************************************
+*/
+
+message GrpcControlPlane_FromLedgerMsg{
+    oneof requestType{
+        GrpcControlPlane_LedgerInitialMsg initialMsg = 1;
+    }
+}
+
+message GrpcControlPlane_LedgerInitialMsg{
+    GrpcControlPlane_LedgerServiceType ledgerType = 1;
+    string instanceId = 2;
+    string address = 3;
+}
+
+/*
+***************************************
+Control Plane to Ledger Messages
+***************************************
+*/
+message GrpcControlPlane_ToLedgerMsg{
+    oneof responseType{
+        string welcomeMsg = 1;
+    }
+}

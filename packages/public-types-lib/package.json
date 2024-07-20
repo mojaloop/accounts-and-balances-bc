@@ -1,6 +1,6 @@
 {
     "name": "@mojaloop/accounts-and-balances-bc-public-types-lib",
-    "version": "0.5.1",
+    "version": "0.6.0-alpha.2",
     "description": "Accounts and Balances BC - Public Types Library",
     "repository": {
         "type": "git",
@@ -29,12 +29,17 @@
         "lint": "eslint ./src",
         "lint:fix": "eslint ./src --fix",
         "build": "tsc",
-        "test:unit": "echo \"public-types-lib doesn't have unit tests\""
+        "test:unit": "echo \"public-types-lib doesn't have unit tests\"",
+        "gen-types": "sh gen-types.sh",
+        "prebuild": "npm run gen-types",
+        "postbuild": "mkdir -p dist/proto; cp ./proto_files/*.proto dist/proto/"
     },
     "engines": {
         "node": ">=20.10.0"
     },
     "devDependencies": {
-        "tslib": "~2.6.2"
+        "tslib": "~2.6.2",
+        "@grpc/grpc-js": "~1.10.6",
+        "@grpc/proto-loader": "~0.7.12"
     }
 }

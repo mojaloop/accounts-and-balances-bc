@@ -28,7 +28,7 @@
  ******/
 
 import {BuiltinLedgerAccount, BuiltinLedgerJournalEntry} from "./entities";
-import {AccountsAndBalancesAccountState} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import {AnbAccountState} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 // TODO: use DTOs instead? if so, they need to have the currency decimals.
 
@@ -52,15 +52,16 @@ export interface IBuiltinLedgerAccountsRepo {
 		pending: boolean,
 		timestampLastJournalEntry: number
 	): Promise<void>;
-	updateAccountStatesByIds(accountIds: string[], accountState: AccountsAndBalancesAccountState): Promise<void>;
+	updateAccountStatesByIds(accountIds: string[], accountState: AnbAccountState): Promise<void>;
 }
 
 export interface IBuiltinLedgerJournalEntriesRepo {
 	init(): Promise<void>;
 	destroy(): Promise<void>;
-	storeNewJournalEntry(journalEntry: BuiltinLedgerJournalEntry): Promise<void>;
-    storeNewJournalEntries(entries: BuiltinLedgerJournalEntry[]): Promise<void>;
+	storeNewJournalEntry(journalEntry: BuiltinLedgerJournalEntry): Promise<string>;
+    storeNewJournalEntries(entries: BuiltinLedgerJournalEntry[]): Promise<string[]>;
 
     getJournalEntry(entryId: string): Promise<BuiltinLedgerJournalEntry|null>;
 	getJournalEntriesByAccountId(accountId: string): Promise<BuiltinLedgerJournalEntry[]>;
+    getJournalEntriesByOwnerId(ownerId: string): Promise<BuiltinLedgerJournalEntry[]>;
 }

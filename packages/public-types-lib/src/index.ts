@@ -30,3 +30,10 @@
 export * from "./types";
 export * from "./errors";
 
+export const GRPC_LOAD_PROTO_OPTIONS = {
+    longs: Number,
+    keepCase: true,
+    oneofs: true
+};
+
+export const GRPC_METADATA_TOKEN_FIELD_KEY = "accessToken";

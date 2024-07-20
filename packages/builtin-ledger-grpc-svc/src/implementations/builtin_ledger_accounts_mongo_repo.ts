@@ -34,7 +34,7 @@ import {
     BuiltinLedgerAccount,
     IBuiltinLedgerAccountsRepo,
 } from "../domain";
-import {AccountsAndBalancesAccountState} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import {AnbAccountState} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {Redis} from "ioredis";
 
 export const BUILTIN_LEDGER_ACCOUNT_MONGO_SCHEMA: any = {
@@ -45,7 +45,7 @@ export const BUILTIN_LEDGER_ACCOUNT_MONGO_SCHEMA: any = {
         "id",
         "state",
         "type",
-        "limitCheckMode",
+        // "limitCheckMode",
         "currencyCode",
         "currencyDecimals",
         "postedDebitBalance",
@@ -59,13 +59,17 @@ export const BUILTIN_LEDGER_ACCOUNT_MONGO_SCHEMA: any = {
         id: {bsonType: "string"},
         state: {bsonType: "string"},
         type: {bsonType: "string"},
-        limitCheckMode: {bsonType: "string"},
+        // limitCheckMode: {bsonType: "string"},
         currencyCode: {bsonType: "string"},
         currencyDecimals: {bsonType: "int"},
-        postedDebitBalance: {bsonType: "string"},
-        pendingDebitBalance: {bsonType: "string"},
-        postedCreditBalance: {bsonType: "string"},
-        pendingCreditBalance: {bsonType: "string"},
+        // postedDebitBalance: {bsonType: "string"},
+        // pendingDebitBalance: {bsonType: "string"},
+        // postedCreditBalance: {bsonType: "string"},
+        // pendingCreditBalance: {bsonType: "string"},
+        postedDebitBalance: {bsonType: "long"},
+        pendingDebitBalance: {bsonType: "long"},
+        postedCreditBalance: {bsonType: "long"},
+        pendingCreditBalance: {bsonType: "long"},
         timestampLastJournalEntry: {bsonType: ["number", "null"]},
     },
     additionalProperties: false
@@ -187,8 +191,8 @@ export class BuiltinLedgerAccountsMongoRepo implements IBuiltinLedgerAccountsRep
         const mongoAccount: any = {
             id: builtinLedgerAccount.id,
             state: builtinLedgerAccount.state,
-            type: builtinLedgerAccount.type,
-            limitCheckMode: builtinLedgerAccount.limitCheckMode,
+            // type: builtinLedgerAccount.type,
+            // limitCheckMode: builtinLedgerAccount.limitCheckMode,
             currencyCode: builtinLedgerAccount.currencyCode,
             currencyDecimals: builtinLedgerAccount.currencyDecimals,
             postedDebitBalance: builtinLedgerAccount.postedDebitBalance.toString(),
@@ -335,7 +339,7 @@ export class BuiltinLedgerAccountsMongoRepo implements IBuiltinLedgerAccountsRep
         }
     }
 
-    async updateAccountStatesByIds(accountIds: string[], accountState: AccountsAndBalancesAccountState): Promise<void> {
+    async updateAccountStatesByIds(accountIds: string[], accountState: AnbAccountState): Promise<void> {
         let updateResult: any;
         try {
             updateResult = await this._collection.updateMany(
@@ -360,20 +364,37 @@ export class BuiltinLedgerAccountsMongoRepo implements IBuiltinLedgerAccountsRep
 
     async updateAccounts(accounts: BuiltinLedgerAccount[]): Promise<void>{
         const operations = accounts.map(value=>{
+            /* try this, increase the number balances fields, instead of rewritting everything
+            updateOne: {
+                filter: {
+                    _id: element.productId
+                },
+                update: {
+                    $inc: {
+                        productQuantity: element.productQuantity
+                    }
+                }
+            }*/
+
+
             return {
                 replaceOne: {
                     "filter": {id: value.id},
                     "replacement": {
                         id: value.id,
                         state: value.state,
-                        type: value.type,
-                        limitCheckMode: value.limitCheckMode,
+                        // type: value.type,
+                        // limitCheckMode: value.limitCheckMode,
                         currencyCode: value.currencyCode,
                         currencyDecimals: value.currencyDecimals,
                         postedDebitBalance: value.postedDebitBalance.toString(),
                         pendingDebitBalance: value.pendingDebitBalance.toString(),
                         postedCreditBalance: value.postedCreditBalance.toString(),
                         pendingCreditBalance: value.pendingCreditBalance.toString(),
+                        // postedDebitBalance: value.postedDebitBalance,
+                        // pendingDebitBalance: value.pendingDebitBalance,
+                        // postedCreditBalance: value.postedCreditBalance,
+                        // pendingCreditBalance: value.pendingCreditBalance,
                         timestampLastJournalEntry: value.timestampLastJournalEntry
                     }
                 }
@@ -390,16 +411,20 @@ export class BuiltinLedgerAccountsMongoRepo implements IBuiltinLedgerAccountsRep
                 throw err;
             }
 
-            // don't bother the updates, just remove from cache
-            const keys = accounts.map(item => {
-                return this._getKeyWithPrefix(item.id);
-            });
-            await this._redisClient.del(keys);
+
         } catch (error: unknown) {
             this._logger.error(error);
             throw error;
         }
 
+        try{
+            // updates the cache
+            for(const acc of accounts){
+                await this._setToCache(acc);
+            }
+        }catch (e) {
+            // we don't care about the cache failing
+        }
 
     }
 }

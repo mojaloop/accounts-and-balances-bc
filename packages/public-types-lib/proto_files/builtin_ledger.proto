@@ -1,0 +1,206 @@
+syntax = "proto3";
+
+package aandb.builtinledger;
+import "google/protobuf/empty.proto";
+
+import "common.proto";
+
+// service to handle client requests
+
+service GrpcBuiltinLedgerService {
+    /*
+    * Client methods, for data plane high speed requests
+    */
+    // high batch requests
+    rpc ProcessHighLevelBatch(GrpcBuiltinLedger_HighLevelRequestList) returns (GrpcBuiltinLedger_HighLevelResponseList);
+
+    // low level single requests
+    rpc CreateJournalEntries(GrpcBuiltinLedger_CreateJournalEntryRequestList) returns (GrpcControlPlane_IdList);
+
+    // get accounts with balances
+    rpc GetAccountsByIds(GrpcControlPlane_IdList) returns (GrpcBuiltinLedger_AccountList);
+    //rpc GetAccountsByOwnerId(GrpcControlPlane_Id) returns (GrpcBuiltinLedger_AccountList);
+
+    // get entries TODO add paging
+    rpc GetEntriesByAccountId(GrpcControlPlane_Id) returns (GrpcBuiltinLedger_JournalEntryList);
+    //rpc GetEntriesByOwnerId(GrpcControlPlane_Id) returns (GrpcBuiltinLedger_JournalEntryList);
+
+    /*
+    * Management methods, clients won't call this, only the CoA / control plane
+    */
+    rpc CreateAccounts(GrpcControlPlane_CreateAccountsRequestList) returns (GrpcControlPlane_CreateAccountsResponseList);
+
+    //    rpc ActivateAccountsByIds(GrpcControlPlane_IdList) returns (google.protobuf.Empty);
+    //    rpc DeleteAccountsByIds(GrpcControlPlane_IdList) returns (google.protobuf.Empty);
+    //    rpc DeactivateAccountsByIds(GrpcControlPlane_IdList) returns (google.protobuf.Empty);
+}
+
+
+/*************************
+high batch requests
+*************************/
+
+message GrpcBuiltinLedger_HighLevelRequestList {
+    repeated GrpcBuiltinLedger_HighLevelRequest requestArray = 1;
+}
+message GrpcBuiltinLedger_HighLevelRequest {
+    oneof highLeveRequestType{
+        GrpcBuiltinLedger_CheckLiquidAndReserveRequest checkLiquidityAndReserve = 1;
+        GrpcBuiltinLedger_CancelReservationAndCommitRequest cancelReservationAndCommit = 2;
+        GrpcBuiltinLedger_CancelReservationRequest cancelReservation = 3;
+    }
+}
+message GrpcBuiltinLedger_CheckLiquidAndReserveRequest {
+    string requestId = 1;
+    string payerPositionAccountId = 2;
+    string payerLiquidityAccountId = 3;
+    string hubJokeAccountId = 4;
+    string transferAmount = 5;
+    string currencyCode = 6;
+    string payerNetDebitCap = 7; // same currency unit as transfer
+    string transferId = 8;
+
+    // required for lookup-less TigerBeetle mode
+    optional string payerControlAccountId = 9;
+    optional string hubTmpControlAccountId = 10;
+}
+message GrpcBuiltinLedger_CancelReservationAndCommitRequest {
+    string requestId = 1;
+    string payerPositionAccountId = 2;
+    string payeePositionAccountId = 3;
+    string hubJokeAccountId = 4;
+    string transferAmount = 5;
+    string currencyCode = 6;
+    string currencyNum = 7; // it is string to keep leading zeros as in iso 4217
+    int32 currencyDecimals = 8;
+    string transferId = 9;
+
+    // required for lookup-less TigerBeetle mode
+    optional string payerControlAccountId = 10;
+    optional string hubTmpControlAccountId = 11;
+    optional string payeeControlAccountId = 12;
+}
+message GrpcBuiltinLedger_CancelReservationRequest {
+    string requestId = 1;
+    string payerPositionAccountId = 2;
+    string hubJokeAccountId = 3;
+    string transferAmount = 4;
+    string currencyCode = 5;
+    string transferId = 6;
+
+    // required for lookup-less TigerBeetle mode
+    optional string payerControlAccountId = 7;
+    optional string hubTmpControlAccountId = 8;
+}
+
+message GrpcBuiltinLedger_HighLevelResponseList {
+    repeated GrpcBuiltinLedger_HighLevelResponse responses = 1;
+}
+message GrpcBuiltinLedger_HighLevelResponse {
+    int32 requestType = 1;
+    string requestId = 2;
+    bool success = 3;
+    string errorMessage = 4;
+}
+
+/*************************
+Other Types
+*************************/
+/* Create entry request. */
+
+message GrpcBuiltinLedger_CreateJournalEntryRequestList {
+    repeated GrpcBuiltinLedger_CreateJournalEntryRequest entriesToCreate = 1;
+
+    message GrpcBuiltinLedger_CreateJournalEntryRequest {
+//        string requestedId = 1;
+        string ownerId = 2;
+        string currencyCode = 3;
+        string amount = 4;
+        bool pending = 5;
+        string debitedAccountId = 6;
+        string creditedAccountId = 7;
+    }
+}
+
+/* Ids */
+// Used to send queries
+message GrpcBuiltinLedger_Id {
+    string id = 1;
+}
+
+message GrpcBuiltinLedger_IdList {
+    repeated GrpcBuiltinLedger_Id idList = 1;
+}
+
+//message GrpcBuiltinLedger_CreateResponseId {
+//    string requestedId = 1;
+//    string attributedId = 2;
+//}
+//
+//// TODO replace discrete fields above with this
+//message GrpcBuiltinLedger_Currency{
+//    string currencyCode = 1;
+//    string currencyNum = 2; // it is string to keep leading zeros as in iso 4217
+//    int32 currencyDecimals = 3;
+//}
+//
+
+/* Account. */
+message GrpcBuiltinLedger_AccountList {
+    repeated GrpcBuiltinLedger_Account accounts = 1;
+}
+message GrpcBuiltinLedger_Account {
+    string id = 1;
+    string state = 3;
+//    string type = 4;
+    string currencyCode = 5;
+    string postedDebitBalance = 6;
+    string pendingDebitBalance = 7;
+    string postedCreditBalance = 8;
+    string pendingCreditBalance = 9;
+    string balance = 10;
+    optional uint64 timestampLastJournalEntry = 11;
+}
+
+/* Journal entry. */
+message GrpcBuiltinLedger_JournalEntryList {
+    repeated GrpcBuiltinLedger_JournalEntry entries = 1;
+}
+
+message GrpcBuiltinLedger_JournalEntry {
+    string id = 1;
+    string ownerId = 2;
+    string currencyCode = 3;
+    string amount = 4;
+    bool pending = 5;
+    string debitedAccountId = 6;
+    string creditedAccountId = 7;
+    uint64 timestamp = 8;
+}
+
+///* Create account request. */
+//
+//message GrpcBuiltinLedger_CreateAccountRequest {
+//    string requestedId = 1;
+//    string type = 3;
+//    string ownerId = 4;
+//    string currencyCode = 5;
+//}
+//message GrpcBuiltinLedger_CreateAccountRequestArray {
+//    repeated GrpcBuiltinLedger_CreateAccountRequest accountsToCreate = 1;
+//}
+//message GrpcBuiltinLedger_CreateAccountResponseArray{
+//    repeated GrpcBuiltinLedger_CreateResponseId ids = 1;
+//}
+//
+
+
+
+///*
+//High level requests
+//*/
+////message GrpcSuccessResponse {
+////  bool success = 1;
+////}
+//
+

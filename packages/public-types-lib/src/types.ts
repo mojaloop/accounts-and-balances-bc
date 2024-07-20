@@ -30,37 +30,75 @@
  ******/
 "use strict";
 
+export const AnbAccountState = {
+    ACTIVE: "ACTIVE",               // normal state, can add new entries
+    INACTIVE: "INACTIVE",           // available for reads only, cannot add new entries
+    DELETED: "DELETED"              // not available to reads or writes, historic only (can be changed back to inactive)
+} as const;
+export type AnbAccountState = keyof typeof AnbAccountState;
 
-//TODO change types to interfaces
+export const AnbAccountType = {
+    POSITION: "POSITION",                           // participant position account
+    LIQUIDITY: "LIQUIDITY",                         // participant liquidity account
+    TIGERBEETLE_CONTROL: "TIGERBEETLE_CONTROL",     // tigerBeetle control account (for lookup-less liquidity check)
+    SETTLEMENT: "SETTLEMENT",                       // per batch/participant settlement account
+    HUB_RECONCILIATION: "HUB_RECONCILIATION",       // hub joke account (counterpart to participant liquidity accounts)
+    HUB_TMP_CONTROL: "HUB_TMP_CONTROL"              // hub tmp account (counterpart to participant control accounts)
+} as const;
+export type AnbAccountType = keyof typeof AnbAccountType;
 
-export type AccountsAndBalancesAccountState = "ACTIVE" | "DELETED" | "INACTIVE";
+/*
+* Accounts
+* */
 
-export type AccountsAndBalancesAccountType =
-	"FEE" | "POSITION" | "SETTLEMENT" | "HUB_MULTILATERAL_SETTLEMENT" | "HUB_RECONCILIATION";
-
-export type AccountsAndBalancesAccount = {
-	id: string | null;
-	ownerId: string;
-	state: AccountsAndBalancesAccountState;
-	type: AccountsAndBalancesAccountType;
-	currencyCode: string;
-	postedDebitBalance: string | null;
-	pendingDebitBalance: string | null
-	postedCreditBalance: string | null;
-	pendingCreditBalance: string | null;
-	balance: string | null;
-	timestampLastJournalEntry: number | null;
+// Represents an existing account, use IAnbCreateAccountRequest to create accounts use IAnbCreateAccountRequest
+export interface IAnbAccount {
+	id: string;                                     // account id in accounts and balances (not the possibly different external ledger account id)
+	ownerId: string | null;                         // optional owner id
+	state: AnbAccountState;
+	type: AnbAccountType;
+	currencyCode: string;                           // 3 letter (alphabetic) iso 4217 code // TODO consider changing to struct
+    pendingDebitBalance: string;                    // pending debit value - only increases - string in currency format
+    postedDebitBalance: string;                     // posted debit value - only increases - string in currency format
+    pendingCreditBalance: string;                   // pending credit value - only increases - string in currency format
+    postedCreditBalance: string;                    // posted credit value - only increases - string in currency format
+	balance: string;                                // posted balance - string in currency format
+	timestampLastJournalEntry: number | null;       // null if no entries exist yet
 }
 
-export type AccountsAndBalancesJournalEntry = {
-	id: string | null;
+
+export interface IAnbCreateAccountRequest {
+    requestedId: string | null;
+    ownerId: string;
+    type: AnbAccountType;
+    currencyCode: string;
+    // currencyNum: string;
+}
+
+/*
+* Entries
+* */
+
+// Represents an existing journal entry, use IAnbCreateAccountRequest to create use IAnbCreateJournalEntryRequest
+export interface IAnbJournalEntry{
+	id: string;
 	ownerId: string | null;
 	currencyCode: string;
 	amount: string;
 	pending: boolean;
 	debitedAccountId: string;
 	creditedAccountId: string;
-	timestamp: number | null;
+	timestamp: number;
+}
+
+export interface IAnbCreateJournalEntryRequest {
+    requestedId: string | null;
+    ownerId: string | null;
+    currencyCode: string;
+    amount: string;
+    pending: boolean;
+    debitedAccountId: string;
+    creditedAccountId: string;
 }
 
 
@@ -68,14 +106,18 @@ export type AccountsAndBalancesJournalEntry = {
 * High level batch requests
 * */
 
-export declare const enum AccountsBalancesHighLevelRequestTypes {
+export type IAnbHighLevelRequest =
+    IAnbCheckLiquidAndReserveRequest | IAnbCancelReservationAndCommitRequest | IAnbCancelReservationRequest;
+
+// we want to keep these small in the write, so a number enum is efficient
+export declare const enum AnbHighLevelRequestTypes {
     checkLiquidAndReserve = 0,
     cancelReservationAndCommit = 1,
     cancelReservation = 2
 }
 
-export interface IAccountsBalancesHighLevelRequest {
-    requestType: AccountsBalancesHighLevelRequestTypes;
+export interface IAnbHighLevelCommonRequest {
+    requestType: AnbHighLevelRequestTypes;
     requestId: string;
     transferId: string;
     payerPositionAccountId: string;
@@ -83,36 +125,46 @@ export interface IAccountsBalancesHighLevelRequest {
     transferAmount: string;
     currencyCode: string;
 
-    payerLiquidityAccountId: string | null; // only for checkLiquidAndReserve
-    payeePositionAccountId: string | null;  // only for cancelReservationAndCommit
-    payerNetDebitCap: string | null;        // only for checkLiquidAndReserve
+    // required for lookup-less TigerBeetle mode
+    payerControlAccountId: string | null;       // control account that reflects sum of FSP liq and pos balances
+    hubTmpControlAccountId: string | null;     // 2nd hub tmp account to use for the test liq transfers
 }
 
-export interface IAccountsBalancesHighLevelResponse {
-    requestType: AccountsBalancesHighLevelRequestTypes;
+export interface IAnbHighLevelResponse {
+    requestType: AnbHighLevelRequestTypes;
     requestId: string;
     success: boolean;
     errorMessage: string | null;
 }
 
-
-/*
-/!**
- * Type used to request the creation of an account by the CoA Service
- *!/
-export type AccountsAndBalancesCreateAccountRequest = {
-	requestedId: string | null;
-	ownerId: string;
-	type: AccountsAndBalancesAccountType;
-	currencyCode: string;
+export interface IAnbCheckLiquidAndReserveRequest extends IAnbHighLevelCommonRequest{
+    payerLiquidityAccountId: string; // only for checkLiquidAndReserve
+    payerNetDebitCap: string;        // only for checkLiquidAndReserve
 }
 
-export type AccountsAndBalancesJournalEntryRequest = {
-	requestedId: string | null;
-	ownerId: string | null;
-	currencyCode: string;
-	amount: string;
-	pending: boolean;
-	debitedAccountId: string;
-	creditedAccountId: string;
-}*/
+export interface IAnbCancelReservationAndCommitRequest extends IAnbHighLevelCommonRequest{
+    payeePositionAccountId: string;  // only for cancelReservationAndCommit
+
+    // required for lookup-less TigerBeetle mode
+    payeeControlAccountId: string | null;   // control account that reflects sum of FSP liq and pos balances
+}
+
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+export interface IAnbCancelReservationRequest extends IAnbHighLevelCommonRequest{
+    // no specific fields
+}
+
+
+/*
+* Other
+* */
+export interface IAnbCreateResponse {
+    requestedId: string | null;
+    attributedId: string;
+}
+
+export interface IAnbGrpcCertificatesFiles {
+    caCertFilePath: string;
+    privateKeyFilePath:string;
+    certChainFilePath:string;
+}

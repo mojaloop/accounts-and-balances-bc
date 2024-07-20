@@ -16,7 +16,7 @@
     ],
     "private": true,
     "scripts": {
-        "prepare": "husky install",
+        "gen:testcerts": "chmod +x ./scripts/gen-test-certs.sh; ./scripts/gen-test-certs.sh",
         "pre_commit_check": "npm run build && npm run lint && npm run test:unit",
         "clean": "npm run clean:dist; npm run clean:npm",
         "clean:npm": "rm -Rf node_modules; npm -ws run clean:npm",
@@ -32,7 +32,7 @@
         "coverage:gen-report": "nyc report --reporter=lcov --reporter=text --temp-dir=./coverage",
         "test:integration": "jest",
         "start:builtin-ledger-grpc-svc": "npm -w @mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-svc start",
-        "start:grpc-svc": "npm -w @mojaloop/accounts-and-balances-bc-coa-grpc-svc start"
+        "start:coa-grpc-svc": "npm -w @mojaloop/accounts-and-balances-bc-coa-grpc-svc start"
     },
     "engines": {
         "node": ">=20.10.0"
@@ -42,22 +42,20 @@
         "@types/node": "~20.2.6",
         "@typescript-eslint/eslint-plugin": "~5.59.11",
         "@typescript-eslint/parser": "~5.59.11",
-        "eslint": "~8.41.0",
+        "tslib": "~2.6.2",
+        "eslint": "^8.57.0",
         "husky": "~8.0.3",
         "nyc": "^15.1.0",
         "jest": "~29.5.0",
         "npm-check-updates": "~16.10.19",
         "ts-jest": "~29.1.2",
-        "typescript": "~5.0.4",
-        "tslib": "~2.5.3"
+        "typescript": "~5.0.4"
     },
     "workspaces": [
         "packages/public-types-lib",
-        "packages/builtin-ledger-grpc-client-lib",
+        "packages/ab_client_lib",
+        "packages/coa-grpc-svc",
         "packages/builtin-ledger-grpc-svc",
-        "packages/grpc-client-lib",
-        "packages/grpc-svc",
-        "packages/shared-mocks-lib",
         "packages/*"
     ]
 }

@@ -28,7 +28,7 @@
  ******/
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {Collection, Db, MongoClient, MongoServerError, ObjectId} from "mongodb";
+import {Collection, Db, MongoClient, MongoServerError, ObjectId, WithId} from "mongodb";
 import {IBuiltinLedgerJournalEntriesRepo} from "../domain/infrastructure";
 import {BuiltinLedgerJournalEntry} from "../domain/entities";
 import {bigintToString, stringToBigint} from "../domain/converters";
@@ -38,7 +38,7 @@ export const BUILTIN_LEDGER_JOURNAL_ENTRY_MONGO_SCHEMA: any = {
     title: "Built-in Ledger Journal Entry Mongo Schema",
     required: [
         "_id",
-        //"id",
+        // "id",
         "currencyCode",
         "currencyDecimals",
         "pending",
@@ -50,10 +50,11 @@ export const BUILTIN_LEDGER_JOURNAL_ENTRY_MONGO_SCHEMA: any = {
     ],
     properties: {
         _id: {"bsonType": "objectId"},
-        //id: {bsonType: "string"},
+        // id: {bsonType: "string"},
         currencyCode: {bsonType: "string"},
         currencyDecimals: {bsonType: "int"},
-        amount: {bsonType: "string"},
+        // amount: {bsonType: "string"},
+        amount: {bsonType: "long"},
         pending: {bsonType: "bool"},
         debitedAccountId: {bsonType: "string"},
         creditedAccountId: {bsonType: "string"},
@@ -108,6 +109,7 @@ export class BuiltinLedgerJournalEntriesMongoRepo implements IBuiltinLedgerJourn
                 validator: {$jsonSchema: BUILTIN_LEDGER_JOURNAL_ENTRY_MONGO_SCHEMA}
             });
             //await this._collection.createIndex({"id": 1}, {unique: true});
+            // this._collection = await db.createCollection(BuiltinLedgerJournalEntriesMongoRepo.COLLECTION_NAME);
         } catch (error: unknown) {
             this._logger.error(error);
             throw error;
@@ -118,13 +120,13 @@ export class BuiltinLedgerJournalEntriesMongoRepo implements IBuiltinLedgerJourn
         await this._client.close();
     }
 
-    async storeNewJournalEntry(builtinLedgerJournalEntry: BuiltinLedgerJournalEntry): Promise<void> {
+    async storeNewJournalEntry(builtinLedgerJournalEntry: BuiltinLedgerJournalEntry): Promise<string> {
         const mongoJournalEntry: any = {
             //id: builtinLedgerJournalEntry.id,
             currencyCode: builtinLedgerJournalEntry.currencyCode,
             currencyDecimals: builtinLedgerJournalEntry.currencyDecimals,
             pending: builtinLedgerJournalEntry.pending,
-            amount: bigintToString(builtinLedgerJournalEntry.amount, builtinLedgerJournalEntry.currencyDecimals),
+            amount: builtinLedgerJournalEntry.amount,
             debitedAccountId: builtinLedgerJournalEntry.debitedAccountId,
             creditedAccountId: builtinLedgerJournalEntry.creditedAccountId,
             ownerId: builtinLedgerJournalEntry.ownerId,
@@ -132,21 +134,23 @@ export class BuiltinLedgerJournalEntriesMongoRepo implements IBuiltinLedgerJourn
         };
 
         try {
-            await this._collection.insertOne(mongoJournalEntry);
+            const result = await this._collection.insertOne(mongoJournalEntry);
+            return result.insertedId.toString();
         } catch (error: unknown) {
             this._logger.error(error);
             throw error;
         }
     }
 
-    async storeNewJournalEntries(entries: BuiltinLedgerJournalEntry[]): Promise<void>{
+    async storeNewJournalEntries(entries: BuiltinLedgerJournalEntry[]): Promise<string[]>{
         const entriesMapped = entries.map(entry => {
             return {
-                //id: entry.id,
+                // id: entry.id,
                 currencyCode: entry.currencyCode,
                 currencyDecimals: entry.currencyDecimals,
                 pending: entry.pending,
-                amount: bigintToString(entry.amount, entry.currencyDecimals),
+                // amount: bigintToString(entry.amount, entry.currencyDecimals),
+                amount: entry.amount,
                 debitedAccountId: entry.debitedAccountId,
                 creditedAccountId: entry.creditedAccountId,
                 ownerId: entry.ownerId,
@@ -155,21 +159,46 @@ export class BuiltinLedgerJournalEntriesMongoRepo implements IBuiltinLedgerJourn
         });
 
         try {
-            await this._collection.insertMany(entriesMapped);
+            const result = await this._collection.insertMany(entriesMapped, {ordered: true});
+
+            if ((result.insertedCount ) !== entriesMapped.length) {
+                const err = new Error(`Error in storeNewJournalEntries - mismatch between requests length and MongoDb response length, requested ${entriesMapped.length} inserts and got ${result.insertedCount}`);
+                this._logger.error(err);
+                throw err;
+            }
+
+            const retIds: string[] = [];
+            for (const [key, value] of Object.entries(result.insertedIds)) {
+                retIds.push(value.id.toString());
+            }
+
+            return retIds;
         } catch (error: unknown) {
             this._logger.error(error);
             throw error;
         }
     }
 
+    private _convertEntryFromDb(doc:any):BuiltinLedgerJournalEntry{
+        return {
+            id: doc._id.toString(),
+            ownerId: doc.ownerId,
+            amount: BigInt(doc.amount),
+            pending: doc.pending,
+            currencyCode : doc.currencyCode,
+            currencyDecimals: doc.currencyDecimals,
+            debitedAccountId: doc.debitedAccountId,
+            creditedAccountId: doc.creditedAccountId,
+            timestamp: doc.timestamp
+        }
+    }
+
     async getJournalEntry(entryId: string): Promise<BuiltinLedgerJournalEntry|null>{
         try {
-            // const found = await this._collection.findOne({"id": entryId}, {projection:{_id: 0}});
             const found = await this._collection.findOne({"_id": new ObjectId(entryId)});
-            if(found){
-                found.id = found._id;
-            }
-            return found as BuiltinLedgerJournalEntry|null;
+            if(!found) return null;
+
+            return this._convertEntryFromDb(found);
         } catch (error: unknown) {
             this._logger.error(error);
             throw error;
@@ -182,17 +211,30 @@ export class BuiltinLedgerJournalEntriesMongoRepo implements IBuiltinLedgerJourn
             journalEntries = await this._collection.find(
                 {$or: [{debitedAccountId: accountId}, {creditedAccountId: accountId}]}
             ).toArray();
-            // ).project({_id: 0}).toArray();
+            if(!journalEntries || journalEntries.length==0) return [];
+
+            return journalEntries.map(this._convertEntryFromDb);
         } catch (error: unknown) {
             this._logger.error(error);
             throw error;
         }
 
-        journalEntries.forEach((journalEntry) => {
-            journalEntry.amount = stringToBigint(journalEntry.amount, journalEntry.currencyDecimals);
-            journalEntry.id = journalEntry._id;
-        });
-        return journalEntries;
+
+    }
+
+    async getJournalEntriesByOwnerId(ownerId: string): Promise<BuiltinLedgerJournalEntry[]> {
+        let journalEntries: any[];
+        try {
+            journalEntries = await this._collection.find({"ownerId": ownerId}).toArray();
+            if(!journalEntries || journalEntries.length==0) return [];
+
+            return journalEntries.map(this._convertEntryFromDb);
+        } catch (error: unknown) {
+            this._logger.error(error);
+            throw error;
+        }
+
+
     }
 
 }

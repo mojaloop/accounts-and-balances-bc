@@ -13,7 +13,6 @@ RUN npm install -g node-gyp
 # A wildcard is used to ensure both package.json AND package-lock.json are copied
 COPY package*.json ./
 COPY packages/public-types-lib/package*.json ./packages/public-types-lib/
-COPY packages/builtin-ledger-grpc-client-lib/package*.json ./packages/builtin-ledger-grpc-client-lib/
 COPY packages/builtin-ledger-grpc-svc/package*.json ./packages/builtin-ledger-grpc-svc/
 
 # If you are building your code for production
@@ -33,8 +32,6 @@ COPY tsconfig.json ./
 # copy required supporting packages/packages (especially private ones not published to npm)
 COPY packages/public-types-lib ./packages/public-types-lib
 
-# copy required client lib code
-COPY packages/builtin-ledger-grpc-client-lib ./packages/builtin-ledger-grpc-client-lib
 # copy service code
 COPY packages/builtin-ledger-grpc-svc ./packages/builtin-ledger-grpc-svc
 
@@ -52,7 +49,11 @@ RUN apk add librdkafka
 
 COPY --from=builder /app .
 
+#TODO Remove
+COPY ./test_certs ./test_certs
+
 # grpc service
 EXPOSE 3350
 
+ENV NODE_ENV=production
 CMD [ "npm", "run", "start:builtin-ledger-grpc-svc" ]

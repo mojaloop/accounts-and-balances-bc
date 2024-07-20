@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package aandb;
+
+import "google/protobuf/empty.proto";
+
+
+/*
+******************************************************************************
+Control Plane account management messages
+(common to control plane and builtin ledger)
+******************************************************************************
+*/
+
+message GrpcControlPlane_Id{
+    string id =1;
+}
+message GrpcControlPlane_IdList{
+    repeated GrpcControlPlane_Id ids = 1;
+}
+
+message GrpcControlPlane_CreateAccountsRequestList{
+    repeated GrpcControlPlane_CreateAccountRequest requests = 1;
+
+    message GrpcControlPlane_CreateAccountRequest{
+        string requestedId = 1;
+        string ownerId = 2;
+        string type = 3;
+        string currencyCode = 4;
+//        GrpcControlPlane_Currency currency = 4;
+    }
+}
+
+message GrpcControlPlane_CreateAccountsResponseList{
+    repeated GrpcControlPlane_CreateAccountsResponse responses = 1;
+}
+message GrpcControlPlane_CreateAccountsResponse{
+    string requestedId = 1;
+    string attributedId = 2;
+}
+
+//// NOTE consider replacing discrete currency fields above with this
+message GrpcControlPlane_Currency{
+    string currencyCode = 1;
+    string currencyNum = 2; // it is string to keep leading zeros as in iso 4217
+    int32 currencyDecimals = 3;
+}

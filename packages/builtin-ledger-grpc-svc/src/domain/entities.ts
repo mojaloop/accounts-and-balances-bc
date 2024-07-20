@@ -28,42 +28,64 @@
  ******/
 "use strict";
 
-import {AccountsAndBalancesAccountState, AccountsAndBalancesAccountType} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
-
-
+import {AnbAccountState, AnbAccountType} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import {bigintToString} from "./converters";
 
 export type CreatedIdMapResponse = {
 	requestedId:string;
 	attributedId: string
 }
 
-export type BuiltinLedgerAccountDto = {
-	id: string | null;
-	state: AccountsAndBalancesAccountState;
-	type: AccountsAndBalancesAccountType;
+// // Used for external comms - using strings
+export class BuiltinLedgerAccountDto {
+	id: string;
+	state: AnbAccountState;
+	//type: AnbAccountType;
 	currencyCode: string;
 
-	postedDebitBalance: string | null;
-	postedCreditBalance: string | null;
-	pendingDebitBalance: string | null;
-	pendingCreditBalance: string | null;
-
+	postedDebitBalance: string;
+	postedCreditBalance: string;
+	pendingDebitBalance: string;
+	pendingCreditBalance: string;
+    balance: string;
 	// debitBalance: string | null;
 	// creditBalance: string | null;
-	timestampLastJournalEntry: number | null;
-};
 
-// TODO: find a better name.
-export type LimitCheckMode =
+	timestampLastJournalEntry?: number;
+
+    static fromBuiltinLedgerAccount(builtinLedgerAccount:BuiltinLedgerAccount):BuiltinLedgerAccountDto{
+        const ret = new BuiltinLedgerAccountDto();
+        ret.id =  builtinLedgerAccount.id;
+        ret.state = builtinLedgerAccount.state;
+        // ret.type = builtinLedgerAccount.type;
+        ret.currencyCode = builtinLedgerAccount.currencyCode;
+
+        ret.postedDebitBalance = bigintToString(builtinLedgerAccount.postedDebitBalance, builtinLedgerAccount.currencyDecimals);
+        ret.pendingDebitBalance = bigintToString(builtinLedgerAccount.pendingDebitBalance, builtinLedgerAccount.currencyDecimals);
+        ret.postedCreditBalance = bigintToString(builtinLedgerAccount.postedCreditBalance, builtinLedgerAccount.currencyDecimals);
+        ret.pendingCreditBalance = bigintToString(builtinLedgerAccount.pendingCreditBalance, builtinLedgerAccount.currencyDecimals);
+        ret.timestampLastJournalEntry = builtinLedgerAccount.timestampLastJournalEntry || undefined;
+
+        const balance = builtinLedgerAccount.postedCreditBalance - builtinLedgerAccount.postedDebitBalance;
+        ret.balance = bigintToString(balance , builtinLedgerAccount.currencyDecimals)
+
+        return ret;
+    }
+}
+
+
+/*export type LimitCheckMode =
 	"NONE"
 	| "DEBITS_CANNOT_EXCEED_CREDITS"
 	| "CREDITS_CANNOT_EXCEED_DEBITS";
+*/
 
+// internal structure with integers
 export type BuiltinLedgerAccount = {
 	id: string;
-	state: AccountsAndBalancesAccountState;
-	type: AccountsAndBalancesAccountType;
-	limitCheckMode: LimitCheckMode;
+	state: AnbAccountState;
+	//type: AnbAccountType;
+	// limitCheckMode: LimitCheckMode;
 	currencyCode: string;
 	currencyDecimals: number;
 
@@ -77,6 +99,7 @@ export type BuiltinLedgerAccount = {
 	timestampLastJournalEntry: number | null;
 };
 
+// Used for external comms
 export type BuiltinLedgerJournalEntryDto = {
 	id: string | null;
 	ownerId: string | null;
@@ -85,11 +108,12 @@ export type BuiltinLedgerJournalEntryDto = {
 	pending: boolean;							// use pending balances instead of posted balances
 	debitedAccountId: string;
 	creditedAccountId: string;
-	timestamp: number | null;
+	timestamp: number | null;                 // TODO change to timestamp in microseconds (ms with 3 decimal places), using performance.timeOrigin +performance.now()
 };
 
+// internal structure with integers
 export type BuiltinLedgerJournalEntry = {
-	id: string;
+	id?: string;                                // unefined when creating, valid when reading
 	ownerId: string | null;
 	currencyCode: string;
 	currencyDecimals: number;
@@ -97,5 +121,5 @@ export type BuiltinLedgerJournalEntry = {
 	pending: boolean;							// use pending balances instead of posted balances
 	debitedAccountId: string;
 	creditedAccountId: string;
-	timestamp: number;
+	timestamp: number;                        // TODO change to timestamp in microseconds (ms with 3 decimal places), using performance.timeOrigin +performance.now()
 };

@@ -27,6 +27,7 @@
  --------------
  ******/
 "use strict";
+/*
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {
@@ -40,27 +41,7 @@ import {BuiltinLedgerJournalEntryDto, CreatedIdMapResponse} from "../../domain/e
 import { BuiltinLedgerAggregate } from "../../domain/aggregate";
 import {ForbiddenError, UnauthorizedError, CallSecurityContext} from "@mojaloop/security-bc-public-types-lib";
 
-import {
-    BuiltinLedgerGrpcAccount__Output,
-    BuiltinLedgerGrpcAccountArray__Output,
-    BuiltinLedgerGrpcId,
-    BuiltinLedgerGrpcId__Output,
-    BuiltinLedgerGrpcIdArray,
-    BuiltinLedgerGrpcIdArray__Output,
-    BuiltinLedgerGrpcJournalEntry__Output,
-    BuiltinLedgerGrpcCreateAccountArray,
-    BuiltinLedgerGrpcCreatedId,
-    BuiltinLedgerGrpcCreateIdsResponse__Output,
-    BuiltinLedgerGrpcCreateAccount,
-    BuiltinLedgerGrpcCreateJournalEntry,
-    BuiltinLedgerGrpcCreateJournalEntryArray,
-    BuiltinLedgerGrpcJournalEntryArray__Output,
-    GrpcBuiltinLedgerHandlers,
-    Empty, BuiltinLedgerGrpcHighLevelRequestArray,
-    BuiltinLedgerGrpcHighLevelRequest,
-    BuiltinLedgerGrpcHighLevelResponse,
-    BuiltinLedgerGrpcHighLevelResponseArray
-} from "@mojaloop/accounts-and-balances-bc-builtin-ledger-grpc-client-lib";
+
 import {
     AccountNotFoundError,
     AccountsAndBalancesAccountState,
@@ -117,13 +98,13 @@ export class BuiltinLedgerGrpcHandlers {
 		};
 	}
 
-	/**
+	/!**
 	 * This will return the secCtx if successful,
 	 * if not will call the callback with the correct err and return null
 	 * @param call ServerUnaryCall
 	 * @param callback sendUnaryData
 	 * @private
-	 */
+	 *!/
 	private async _getSecCtxFromCall(call: ServerUnaryCall<any, any>, callback: sendUnaryData<any>): Promise<CallSecurityContext | null> {
         const timerEndFn = this._histo.startTimer({callName: "_getSecCtxFromCall"});
 
@@ -163,8 +144,8 @@ export class BuiltinLedgerGrpcHandlers {
 
         const highLevelRequests:IAccountsBalancesHighLevelRequest[] = [];
 
-        // TODO remove console.log()
-        console.log(`BuiltinLedgerGrpcHandlers _processHighLevelBatch() start with batch of: ${grpcReq.requestArray.length}`);
+        // TODO remove this._logger.isDebugEnabled() && this._logger.debug()
+        this._logger.isDebugEnabled() && this._logger.debug(`BuiltinLedgerGrpcHandlers _processHighLevelBatch() start with batch of: ${grpcReq.requestArray.length}`);
         const startTime = Date.now();
 
         try {
@@ -204,10 +185,9 @@ export class BuiltinLedgerGrpcHandlers {
 
             timerEndFn({success: "true"});
 
-            // TODO remove console.log()
-            console.log(`BuiltinLedgerGrpcHandlers _processHighLevelBatch() completed with batch of: \t${grpcReq.requestArray.length}`);
-            console.log(`took: ${Date.now()-startTime}`);
-            console.log("\n\n");
+            this._logger.isDebugEnabled() && this._logger.debug(`BuiltinLedgerGrpcHandlers _processHighLevelBatch() completed with batch of: \t${grpcReq.requestArray.length}`);
+            this._logger.isDebugEnabled() && this._logger.debug(`took: ${Date.now()-startTime}`);
+            this._logger.isDebugEnabled() && this._logger.debug("\n\n");
 
             return callback(null, grpcResponse);
         }catch(error){
@@ -247,7 +227,7 @@ export class BuiltinLedgerGrpcHandlers {
             }
         }else if(req.requestType === AccountsBalancesHighLevelRequestTypes.cancelReservation){
             if (!req.payeePositionAccountId) {
-                throw new AccountNotFoundError("Invalid accounts on CancelReservationAndCommit request");
+                throw new AccountNotFoundError("Invalid accounts on CancelReservation request");
             }
         }else{
             throw new Error("Invalid BuiltinLedgerGrpcHighLevelRequest.requestType");
@@ -501,3 +481,4 @@ export class BuiltinLedgerGrpcHandlers {
 		return srvError;
 	}
 }
+*/
