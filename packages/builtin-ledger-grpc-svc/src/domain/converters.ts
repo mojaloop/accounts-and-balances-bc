@@ -59,8 +59,10 @@ export function bigintToString(bigintValue: bigint, decimals: number): string {
 	}
 	decimals = decimals || 0;
 
+    const isNegative = bigintValue < 0n;
+    let bigintValueToString: string = bigintValue.toString().replace("-", "");
+
 	// Get the string corresponding to the bigint and insert a dot according to the decimals.
-	let bigintValueToString: string = bigintValue.toString();
 	if (bigintValueToString.length <= decimals) {
 		bigintValueToString = "0".repeat(decimals - bigintValueToString.length + 1) + bigintValueToString;
 	}
@@ -78,6 +80,11 @@ export function bigintToString(bigintValue: bigint, decimals: number): string {
 	if (finalString.endsWith(".")) {
 		finalString = finalString.slice(0, -1);
 	}
+
+    // Handle negative numbers
+    if (isNegative) {
+        finalString = "-" + finalString;
+    }
 
 	return finalString;
 }
