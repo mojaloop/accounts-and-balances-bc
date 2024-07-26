@@ -34,10 +34,21 @@ import {AccountsAndBalancesClient} from "../client";
 import {
     consoleLogger,
     currencyList,
-    getClient, hubJokeAccountId, payeePositionAccountId, payerLiquidityAccountId, payerPosAccountId
+    getClient,
+    // hubJokeAccountId, payeePositionAccountId, payerLiquidityAccountId, payerPosAccountId
 } from "./common";
 import {IAnbCreateAccountRequest} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
+const hubJokeAccountId = "00000000-0000-0000-0000-000000000001";        // 1
+const hubControlAccountId = "00000000-0000-0000-0000-000000000005";     // 5
+
+const payerPosAccountId = "00000000-0000-0000-0000-000000001001";       // 4097
+const payerLiquidityAccountId = "00000000-0000-0000-0000-000000001002"; // 4098
+const payerControlAccountId = "00000000-0000-0000-0000-000000001005";   // 4101
+
+const payeePosAccountId = "00000000-0000-0000-0000-000000002001";       // 8193
+const payeeLiquidityAccountId = "00000000-0000-0000-0000-000000002002"; // 8194
+const payeeControlAccountId = "00000000-0000-0000-0000-000000002005";   // 8197
 
 let client: AccountsAndBalancesClient;
 
@@ -52,31 +63,49 @@ const start = async ()=> {
     if (!isReady){
         throw new Error("Client not ready - cannot continue");
     }
+    const curCode = currencyList[0].code;
 
     const createRequests: IAnbCreateAccountRequest[] = [
         {
             requestedId: hubJokeAccountId,
             type: "HUB_RECONCILIATION",
             ownerId: "hub",
-            currencyCode: currencyList[0].code
-       },
-    {
+            currencyCode: curCode
+       }, {
+            requestedId: hubControlAccountId,
+            type: "HUB_TMP_CONTROL",
+            ownerId: "hub",
+            currencyCode: curCode
+        },{
             requestedId: payerPosAccountId,
             type: "POSITION",
             ownerId: "payer1",
-            currencyCode: currencyList[0].code
-        },
-        {
+            currencyCode: curCode
+        },{
             requestedId: payerLiquidityAccountId,
             type: "LIQUIDITY",
             ownerId: "payer1",
-            currencyCode: currencyList[0].code
-        },
-        {
-            requestedId: payeePositionAccountId,
+            currencyCode: curCode
+        },  {
+            requestedId: payerControlAccountId,
+            type: "TIGERBEETLE_CONTROL",
+            ownerId: "payer1",
+            currencyCode: curCode
+        },{
+            requestedId: payeePosAccountId,
             type: "POSITION",
             ownerId: "payee1",
-            currencyCode: currencyList[0].code
+            currencyCode: curCode
+        },{
+            requestedId: payeeLiquidityAccountId,
+            type: "LIQUIDITY",
+            ownerId: "payee1",
+            currencyCode: curCode
+        },  {
+            requestedId: payeeControlAccountId,
+            type: "TIGERBEETLE_CONTROL",
+            ownerId: "payee1",
+            currencyCode: curCode
         }
     ];
 

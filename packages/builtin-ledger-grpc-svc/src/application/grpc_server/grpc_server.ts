@@ -185,7 +185,7 @@ export class BuiltinLedgerGrpcServer {
                 //     next(metadata);
                 // }
             });
-        }
+        };
 
         this._server = new grpc.Server({
             //"grpc.max_concurrent_streams": 1,
@@ -389,14 +389,14 @@ export class BuiltinLedgerGrpcServer {
 
 
         let resp:IAnbHighLevelRequest;
-        let respCommon = {
+        const respCommon = {
             requestId: commonFields.requestId!,
             transferId: commonFields.transferId,
             hubJokeAccountId: commonFields.hubJokeAccountId,
             payerPositionAccountId: commonFields.payerPositionAccountId,
             currencyCode: commonFields.currencyCode,
             transferAmount: commonFields.transferAmount,
-        }
+        };
 
         if (req.highLeveRequestType === "checkLiquidityAndReserve") {
             if (!req.checkLiquidityAndReserve?.payerLiquidityAccountId) {
@@ -411,7 +411,7 @@ export class BuiltinLedgerGrpcServer {
                 requestType: AnbHighLevelRequestTypes.checkLiquidAndReserve,
                 payerLiquidityAccountId: req.checkLiquidityAndReserve.payerLiquidityAccountId,
                 payerNetDebitCap: req.checkLiquidityAndReserve.payerNetDebitCap
-            }
+            };
             resp = specificResp;
         } else if (req.highLeveRequestType === "cancelReservationAndCommit") {
             if (!req.cancelReservationAndCommit?.payeePositionAccountId) {

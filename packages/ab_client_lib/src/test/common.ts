@@ -88,6 +88,7 @@ export const consoleLogger = new ConsoleLogger();
 // for builtin ledger
 export const hubJokeAccountId = "8e7b4e00-b9c4-42b1-a2ad-579cc903eca2";
 export const payerPosAccountId = "e3ec30de-7bef-4b3f-bc10-771528eea378";
+
 export const payerLiquidityAccountId = "e3ec30de-7bef-4b3f-bc10-771528eea378";
 export const payeePositionAccountId = "298e426f-ce95-4005-937b-87f9208f8d63";
 

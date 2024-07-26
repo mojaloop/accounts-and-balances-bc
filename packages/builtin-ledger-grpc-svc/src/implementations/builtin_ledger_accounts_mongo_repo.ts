@@ -79,13 +79,15 @@ declare type CacheItem = {
     account:BuiltinLedgerAccount, timestamp:number
 }
 
+const DB_NAME = "accounts_and_balances_bc_builtin_ledger";
+
 export class BuiltinLedgerAccountsMongoRepo implements IBuiltinLedgerAccountsRepo {
     // Properties received through the constructor.
     private readonly _logger: ILogger;
     private readonly _url: string;
     // Other properties.
     private static readonly TIMEOUT_MS: number = 5_000;
-    private static readonly DB_NAME: string = "accounts_and_balances_bc_builtin_ledger";
+    private static readonly DB_NAME: string = DB_NAME;
     private static readonly COLLECTION_NAME: string = "accounts";
     private static readonly DUPLICATE_KEY_ERROR_CODE: number = 11000;
     private _client: MongoClient;

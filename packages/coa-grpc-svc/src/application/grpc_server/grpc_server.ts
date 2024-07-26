@@ -120,7 +120,8 @@ const PUBLIC_TYPES_LIB_PATH = require.resolve("@mojaloop/accounts-and-balances-b
 const CONTROLPLANE_PROTO_FILE_NAME = "control_plane.proto";
 
 const CLIENT_AUTO_SYNC_ACCOUNT_TYPES: AnbAccountType[] = [
-    AnbAccountType.POSITION, AnbAccountType.LIQUIDITY, AnbAccountType.HUB_RECONCILIATION
+    AnbAccountType.POSITION, AnbAccountType.LIQUIDITY, AnbAccountType.HUB_RECONCILIATION,
+    AnbAccountType.HUB_TMP_CONTROL, AnbAccountType.TIGERBEETLE_CONTROL
 ];
 
 interface IPeer{

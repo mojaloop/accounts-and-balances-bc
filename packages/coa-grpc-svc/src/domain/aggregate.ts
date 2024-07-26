@@ -166,7 +166,9 @@ export class AccountsAndBalancesAggregate {
 			}
 
             if (request.type!=="POSITION" && request.type!=="LIQUIDITY" &&
-                request.type!=="SETTLEMENT" && request.type!=="HUB_RECONCILIATION") {
+                request.type!=="SETTLEMENT" && request.type!=="HUB_RECONCILIATION" &&
+                request.type!=="HUB_TMP_CONTROL" && request.type!=="TIGERBEETLE_CONTROL"
+            ) {
                 throw new InvalidAccountParametersError("Invalid account.type");
             }
 

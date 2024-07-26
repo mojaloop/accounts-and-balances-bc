@@ -97,8 +97,19 @@ export class TigerBeetleLedgerAdapter implements ILedgerAdapter {
         const request: TB.Account[] = createRequests.map(item => {
             const coa = TigerBeetleUtils.coaNumFromAccountType(item.accountType);
             const ledger = TigerBeetleUtils.ledgerNumFromCurrencyCode(item.currencyCode, this._currencyList);
+            let flags = TB.AccountFlags.none;
+
+            // TODO add ownerId to user_data_128 guarding that it converts to bigint
+
+            if(item.accountType === "TIGERBEETLE_CONTROL"){
+                flags |= TB.AccountFlags.debits_must_not_exceed_credits;
+            }
+
+            const id = TigerBeetleUtils.uuidToBigint(item.requestedId);
+            this._logger.debug(`Creating account with request ext id: ${item.requestedId} and TB id: ${id}`);
+
             return {
-                id: TigerBeetleUtils.uuidToBigint(item.requestedId), // u128
+                id: id, // u128
                 debits_pending: 0n,  // u64
                 debits_posted: 0n,  // u64
                 credits_pending: 0n, // u64
@@ -109,7 +120,7 @@ export class TigerBeetleLedgerAdapter implements ILedgerAdapter {
                 reserved: 0, // [48]u8
                 ledger: ledger,   // u32, ledger value
                 code: coa, // u16, a chart of accounts code describing the type of account (e.g. clearing, settlement)
-                flags: 0,  // u16
+                flags: flags,  // u16
                 timestamp: 0n, // u64, Reserved: This will be set by the server.
             };
         });
@@ -120,6 +131,7 @@ export class TigerBeetleLedgerAdapter implements ILedgerAdapter {
             if (errors.length) {
                 throw new Error("Cannot create account - error code: "+errors[0].result);
             }
+            this._logger.debug(`Created ${request.length} TB accounts successfully`);
         } catch (error: unknown) {
             this._logger.error(error);
             throw error;

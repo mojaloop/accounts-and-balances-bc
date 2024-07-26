@@ -207,7 +207,7 @@ export class TigerBeetleDataPlaneClient_NoLookup extends TigerBeetleDataPlaneCli
         */
 
         const tbTransfs:TB.Transfer[] = [{
-            id: cancelTransferId,
+            id: TigerBeetleUtils.uuidToBigint(randomUUID()),
             debit_account_id: hubJokeAccountId,  // u128
             credit_account_id: payerPositionAccountId, // u128
             amount: amount, // u64
@@ -221,7 +221,7 @@ export class TigerBeetleDataPlaneClient_NoLookup extends TigerBeetleDataPlaneCli
             flags: TB.TransferFlags.pending | TB.TransferFlags.linked, // u16
             timestamp: 0n, //u64, Reserved: This will be set by the server.
         },{
-            id: cancelTransferId,
+            id: TigerBeetleUtils.uuidToBigint(randomUUID()),
             debit_account_id: hubTmpControlAccountId,  // u128
             credit_account_id: payerControlAccountId, // u128
             amount: amount, // u64
@@ -235,7 +235,7 @@ export class TigerBeetleDataPlaneClient_NoLookup extends TigerBeetleDataPlaneCli
             flags: TB.TransferFlags.pending | TB.TransferFlags.linked, // u16
             timestamp: 0n, //u64, Reserved: This will be set by the server.
         },{
-            id: commitTransferId,
+            id: TigerBeetleUtils.uuidToBigint(randomUUID()),
             debit_account_id: payerPositionAccountId,  // u128
             credit_account_id: payeePositionAccountId, // u128
             amount: amount, // u64
@@ -249,7 +249,7 @@ export class TigerBeetleDataPlaneClient_NoLookup extends TigerBeetleDataPlaneCli
             flags: TB.TransferFlags.linked, // u16
             timestamp: 0n, //u64, Reserved: This will be set by the server.
         },{
-            id: commitTransferId,
+            id: TigerBeetleUtils.uuidToBigint(randomUUID()),
             debit_account_id: payerControlAccountId,  // u128
             credit_account_id: payeeControlAccountId, // u128
             amount: amount, // u64

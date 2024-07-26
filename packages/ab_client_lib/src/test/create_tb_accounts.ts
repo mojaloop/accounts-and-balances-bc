@@ -48,16 +48,16 @@ const code = 1;
 // const payeePositionAccountId = uuidToBigint(payeePositionAccountId_GUID);
 
 
-const hubJokeAccountId = uuidToBigint("8e7b4e00-b9c4-42b1-a2ad-579cc903eca2");
-const payerPosAccountId = uuidToBigint("e9bf41e2-fe87-4a9a-a4c1-ae0a2b16d20d"); // bluebank position EUR
-const payerLiquidityAccountId = uuidToBigint("644029f1-9b38-4c93-a6ab-1e6f1a8a1fe1"); // bluebank liq / settlement EUR
-const payeePositionAccountId = uuidToBigint("ea27e118-fa0b-47e1-b045-152f05492a3a"); // greenbank position EUR
+const hubJokeAccountId = 1n;
+const hubControlAccountId = 5n;
 
-const test1_PositionAccountId = uuidToBigint("5849f76f-089c-475a-a5ae-515c945d928b"); // test1 position EUR
-const test1_LiquidityAccountId = uuidToBigint("e3ec30de-7bef-4b3f-bc10-771528eea378"); // test1 liq / settlement EUR
+const payerPosAccountId = 1001n;
+const payerLiquidityAccountId = 1002n;
+const payerControlAccountId = 1005n;
 
-const test2_PositionAccountId = uuidToBigint("6cd1dafe-f9e5-4c41-9dcf-45ed1d3881cc"); // test2 position EUR
-const test2_LiquidityAccountId = uuidToBigint("bbbc64cb-77dd-4fcf-8be1-a739b6b01e09"); // test2 liq / settlement EUR
+const payeePosAccountId = 2001n;
+const payeeLiquidityAccountId = 2002n;
+const payeeControlAccountId = 2005n;
 
 const start = async ()=> {
 
@@ -66,42 +66,39 @@ const start = async ()=> {
         replica_addresses: ["13000"],
     });
 
-
-    console.debug(`Creating hubJokeAccountId with id: ${hubJokeAccountId}`);
-    console.debug(`Creating payerPosAccountId with id: ${payerPosAccountId}`);
-    console.debug(`Creating payerLiquidityAccountId with id: ${payerLiquidityAccountId}`);
-    console.debug(`Creating payeePositionAccountId with id: ${payeePositionAccountId}`);
-
-    console.debug(`Creating test1_PositionAccountId with id: ${test1_PositionAccountId}`);
-    console.debug(`Creating test1_LiquidityAccountId with id: ${test1_LiquidityAccountId}`);
-
-    console.debug(`Creating test2_PositionAccountId with id: ${test2_PositionAccountId}`);
-    console.debug(`Creating test2_LiquidityAccountId with id: ${test2_LiquidityAccountId}`);
-
     const createAccountRequests: TB.Account[] = [];
+    // hub accounts
+    console.debug(`Creating hubJokeAccountId with id: ${hubJokeAccountId}`);
     createAccountRequests.push(getTbCreateAccountReq(hubJokeAccountId));
+    console.debug(`Creating hubControlAccountId with id: ${hubControlAccountId}`);
+    createAccountRequests.push(getTbCreateAccountReq(hubControlAccountId));
+
+    // payer accounts
+    console.debug(`Creating payerPosAccountId with id: ${payerPosAccountId}`);
     createAccountRequests.push(getTbCreateAccountReq(payerPosAccountId));
+    console.debug(`Creating payerLiquidityAccountId with id: ${payerLiquidityAccountId}`);
     createAccountRequests.push(getTbCreateAccountReq(payerLiquidityAccountId));
-    createAccountRequests.push(getTbCreateAccountReq(payeePositionAccountId));
 
-    createAccountRequests.push(getTbCreateAccountReq(test1_PositionAccountId));
-    createAccountRequests.push(getTbCreateAccountReq(test1_LiquidityAccountId));
-    createAccountRequests.push(getTbCreateAccountReq(test2_PositionAccountId));
-    createAccountRequests.push(getTbCreateAccountReq(test2_LiquidityAccountId));
+    console.debug(`Creating payerControlAccountId with id: ${payerControlAccountId}`);
+    createAccountRequests.push(getTbCreateControlAccountReq(payerControlAccountId));
 
+    // payee accounts
+    console.debug(`Creating payeePosAccountId with id: ${payeePosAccountId}`);
+    createAccountRequests.push(getTbCreateAccountReq(payeePosAccountId));
+    console.debug(`Creating payeeLiquidityAccountId with id: ${payeeLiquidityAccountId}`);
+    createAccountRequests.push(getTbCreateAccountReq(payeeLiquidityAccountId));
+
+    console.debug(`Creating payeeControlAccountId with id: ${payeeControlAccountId}`);
+    createAccountRequests.push(getTbCreateControlAccountReq(payeeControlAccountId));
 
     const createAccountsResp = await client.createAccounts(createAccountRequests);
     console.log(createAccountsResp);
 
-    console.debug("depositing to payerLiquidityAccountId from hubJokeAccountId");
-    console.debug("depositing to test1_LiquidityAccountId from hubJokeAccountId");
-    console.debug("depositing to test2_LiquidityAccountId from hubJokeAccountId");
-
     const transferRequests: TB.Transfer[] = [];
+    console.debug("depositing to payerLiquidityAccountId from hubJokeAccountId");
     transferRequests.push(getTbCreateFundsInTransferReq(hubJokeAccountId, payerLiquidityAccountId));
-    transferRequests.push(getTbCreateFundsInTransferReq(hubJokeAccountId, test1_LiquidityAccountId));
-    transferRequests.push(getTbCreateFundsInTransferReq(hubJokeAccountId, test2_LiquidityAccountId));
-
+    console.debug("depositing to payerControlAccountId from hubControlAccountId");
+    transferRequests.push(getTbCreateFundsInTransferReq(hubControlAccountId, payerControlAccountId));
 
     const createTransfersResp = await client.createTransfers(transferRequests);
     console.log(createTransfersResp);
@@ -147,6 +144,24 @@ function getTbCreateAccountReq(accountId:bigint){
         ledger: ledgerID,
         code: code,
         flags: 0,
+        timestamp: 0n,
+    };
+}
+
+function getTbCreateControlAccountReq(accountId:bigint){
+    return {
+        id: accountId,
+        debits_pending: 0n,
+        debits_posted: 0n,
+        credits_pending: 0n,
+        credits_posted: 0n,
+        user_data_128: 0n,
+        user_data_64: 0n,
+        user_data_32: 0,
+        reserved: 0,
+        ledger: ledgerID,
+        code: code,
+        flags: TB.AccountFlags.debits_must_not_exceed_credits,
         timestamp: 0n,
     };
 }
