@@ -103,6 +103,7 @@ export class TigerBeetleDataPlaneClient_NoLookup extends TigerBeetleDataPlaneCli
         */
 
         const tbTransfs:TB.Transfer[] = [{
+            // execute a test transfer of amount+ntc from the payer control account
             id: TigerBeetleUtils.uuidToBigint(randomUUID()), // u128
             debit_account_id: payerControlAccountId,  // u128
             credit_account_id: hubTmpControlAccountId, // u128
@@ -117,6 +118,7 @@ export class TigerBeetleDataPlaneClient_NoLookup extends TigerBeetleDataPlaneCli
             flags: TB.TransferFlags.pending | TB.TransferFlags.linked, // u16
             timestamp: 0n, //u64, Reserved: This will be set by the server.
         },{
+            // reverse the test transfer
             id: TigerBeetleUtils.uuidToBigint(randomUUID()), // u128
             debit_account_id: hubTmpControlAccountId,  // u128
             credit_account_id: payerControlAccountId, // u128
@@ -131,6 +133,7 @@ export class TigerBeetleDataPlaneClient_NoLookup extends TigerBeetleDataPlaneCli
             flags: TB.TransferFlags.pending | TB.TransferFlags.linked, // u16
             timestamp: 0n, //u64, Reserved: This will be set by the server.
         },{
+            // reserve transfer amount (from payer pos account)
             id: TigerBeetleUtils.uuidToBigint(randomUUID()), // u128
             debit_account_id: payerPositionAccountId,  // u128
             credit_account_id: hubJokeAccountId, // u128
@@ -145,6 +148,7 @@ export class TigerBeetleDataPlaneClient_NoLookup extends TigerBeetleDataPlaneCli
             flags: TB.TransferFlags.pending | TB.TransferFlags.linked, // u16
             timestamp: 0n, //u64, Reserved: This will be set by the server.
         },{
+            // reserve transfer amount (from control account)
             id: TigerBeetleUtils.uuidToBigint(randomUUID()), // u128
             debit_account_id: payerControlAccountId,  // u128
             credit_account_id: hubTmpControlAccountId, // u128
@@ -207,6 +211,7 @@ export class TigerBeetleDataPlaneClient_NoLookup extends TigerBeetleDataPlaneCli
         */
 
         const tbTransfs:TB.Transfer[] = [{
+            // reverse reservation
             id: TigerBeetleUtils.uuidToBigint(randomUUID()),
             debit_account_id: hubJokeAccountId,  // u128
             credit_account_id: payerPositionAccountId, // u128
@@ -221,6 +226,7 @@ export class TigerBeetleDataPlaneClient_NoLookup extends TigerBeetleDataPlaneCli
             flags: TB.TransferFlags.pending | TB.TransferFlags.linked, // u16
             timestamp: 0n, //u64, Reserved: This will be set by the server.
         },{
+            // reverse reservation in control account
             id: TigerBeetleUtils.uuidToBigint(randomUUID()),
             debit_account_id: hubTmpControlAccountId,  // u128
             credit_account_id: payerControlAccountId, // u128
@@ -235,6 +241,7 @@ export class TigerBeetleDataPlaneClient_NoLookup extends TigerBeetleDataPlaneCli
             flags: TB.TransferFlags.pending | TB.TransferFlags.linked, // u16
             timestamp: 0n, //u64, Reserved: This will be set by the server.
         },{
+            // transfer from payer pos to payee pos
             id: TigerBeetleUtils.uuidToBigint(randomUUID()),
             debit_account_id: payerPositionAccountId,  // u128
             credit_account_id: payeePositionAccountId, // u128
@@ -249,6 +256,7 @@ export class TigerBeetleDataPlaneClient_NoLookup extends TigerBeetleDataPlaneCli
             flags: TB.TransferFlags.linked, // u16
             timestamp: 0n, //u64, Reserved: This will be set by the server.
         },{
+            // transfer from payer ctrl to payee ctrl
             id: TigerBeetleUtils.uuidToBigint(randomUUID()),
             debit_account_id: payerControlAccountId,  // u128
             credit_account_id: payeeControlAccountId, // u128

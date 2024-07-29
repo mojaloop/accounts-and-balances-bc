@@ -47,30 +47,21 @@ import {randomUUID} from "crypto";
 
 let client: AccountsAndBalancesClient;
 
-const hubJokeAccountId = "00000000-0000-0000-0000-000000000001";        // 1
-const hubControlAccountId = "00000000-0000-0000-0000-000000000005";     // 5
+const hubJokeAccountId:string = "00000000-0000-0000-0000-000000000001";        // 1
+const hubControlAccountId:string = "00000000-0000-0000-0000-000000000005";     // 5
 
-// const payerPosAccountId = "00000000-0000-0000-0000-000000001001";       // 4097
-// const payerLiquidityAccountId = "00000000-0000-0000-0000-000000001002"; // 4098
-// const payerControlAccountId = "00000000-0000-0000-0000-000000001005";   // 4101
-//
-// const payeePosAccountId = "00000000-0000-0000-0000-000000002001";       // 8193
-// const payeeLiquidityAccountId = "00000000-0000-0000-0000-000000002002"; // 8194
-// const payeeControlAccountId = "00000000-0000-0000-0000-000000002005";   // 8197
+const payerPosAccountId:string = "00000000-0000-0000-0000-000000001001";       // 4097
+const payerLiquidityAccountId:string = "00000000-0000-0000-0000-000000001002"; // 4098
+const payerControlAccountId:string = "00000000-0000-0000-0000-000000001005";   // 4101
 
-
-// reverse payer and apyee
-const payeePosAccountId = "00000000-0000-0000-0000-000000001001";       // 4097
-const payeeLiquidityAccountId = "00000000-0000-0000-0000-000000001002"; // 4098
-const payeeControlAccountId = "00000000-0000-0000-0000-000000001005";   // 4101
-
-const payerPosAccountId = "00000000-0000-0000-0000-000000002001";       // 8193
-const payerLiquidityAccountId = "00000000-0000-0000-0000-000000002002"; // 8194
-const payerControlAccountId = "00000000-0000-0000-0000-000000002005";   // 8197
-
+const payeePosAccountId:string = "00000000-0000-0000-0000-000000002001";       // 8193
+const payeeLiquidityAccountId:string = "00000000-0000-0000-0000-000000002002"; // 8194
+const payeeControlAccountId:string = "00000000-0000-0000-0000-000000002005";   // 8197
 
 const testDurationSecs = 120;
 const batchSize = 2600;
+
+const baseReqId = 900000;
 
 const start = async ()=> {
     client = await getClient();
@@ -85,8 +76,17 @@ const start = async ()=> {
     }
 
     // test single transfer
-    const resp = await request_processHighLevelBatch(1);
-    console.log(resp);
+    // const resp = await request_processHighLevelBatch(1  );
+    // console.log(resp);
+
+    // test single leg:
+    // const req1 = get_checkLiquidAndReserve_tbTransfer(randomUUID(), 1, payerPosAccountId, payerLiquidityAccountId,payerControlAccountId);
+    // let resps: IAnbHighLevelResponse[] = await client.processHighLevelBatch([req1]);
+
+    const req2 = get_cancelReservationAndCommit_tbTransfer(randomUUID(), 2, payerPosAccountId, payerControlAccountId, payeePosAccountId, payeeControlAccountId);
+    let resps = await client.processHighLevelBatch([req2]);
+
+
 
     // const startLoadTs = Date.now();
     //
@@ -131,36 +131,78 @@ async function request_processHighLevelBatch(count:number):Promise<IAnbHighLevel
         // payer to payee
         const request1:IAnbCheckLiquidAndReserveRequest = {
             requestType: AnbHighLevelRequestTypes.checkLiquidAndReserve,
-            requestId: `${req1Id+900000}`,
+            requestId: `${req1Id + baseReqId}`,
             currencyCode: "EUR",
             transferId: transferId,
             transferAmount: "1",
-            payerPositionAccountId: payerPosAccountId.toString(),
-            payerLiquidityAccountId: payerLiquidityAccountId.toString(),
-            hubJokeAccountId: hubJokeAccountId.toString(),
+            payerPositionAccountId: payerPosAccountId,
+            payerLiquidityAccountId: payerLiquidityAccountId,
+            hubJokeAccountId: hubJokeAccountId,
             payerNetDebitCap: "0",
-            payerControlAccountId: payerControlAccountId.toString(),
-            hubTmpControlAccountId: hubControlAccountId.toString()
+            payerControlAccountId: payerControlAccountId,
+            hubTmpControlAccountId: hubControlAccountId
         };
 
         const request2:IAnbCancelReservationAndCommitRequest = {
             requestType: AnbHighLevelRequestTypes.cancelReservationAndCommit,
-            requestId: `${req2Id+900000}`,
+            requestId: `${req2Id + baseReqId}`,
             currencyCode: "EUR",
             transferId: transferId,
             transferAmount: "1",
-            payerPositionAccountId: payerPosAccountId.toString(),
-            payeePositionAccountId: payeePosAccountId.toString(),
-            hubJokeAccountId: hubJokeAccountId.toString(),
-            payerControlAccountId: payerControlAccountId.toString(),
-            hubTmpControlAccountId: hubControlAccountId.toString(),
-            payeeControlAccountId: payeeControlAccountId.toString()
+            payerPositionAccountId: payerPosAccountId,
+            payeePositionAccountId: payeePosAccountId,
+            hubJokeAccountId: hubJokeAccountId,
+            payerControlAccountId: payerControlAccountId,
+            hubTmpControlAccountId: hubControlAccountId,
+            payeeControlAccountId: payeeControlAccountId
         };
         allRequests.push(...[request1,request2]);
     }
 
     const resps: IAnbHighLevelResponse[] = await client.processHighLevelBatch(allRequests);
     return resps;
+}
+
+
+function get_checkLiquidAndReserve_tbTransfer(
+    transferId:string, reqId:number,
+    payerPos:string, payerLiquidity:string, payerControl:string
+){
+    const request:IAnbCheckLiquidAndReserveRequest = {
+        requestType: AnbHighLevelRequestTypes.checkLiquidAndReserve,
+        requestId: `${reqId + baseReqId}`,
+        currencyCode: "EUR",
+        transferId: transferId,
+        transferAmount: "1",
+        payerPositionAccountId: payerPos,
+        payerLiquidityAccountId: payerLiquidity,
+        hubJokeAccountId: hubJokeAccountId,
+        payerNetDebitCap: "0",
+        payerControlAccountId: payerControl,
+        hubTmpControlAccountId: hubControlAccountId
+    };
+    return request;
+}
+
+function get_cancelReservationAndCommit_tbTransfer(
+    transferId:string, reqId:number,
+    payerPos:string, payerControl:string,
+    payeePos:string, payeeControl:string,
+){
+    const request:IAnbCancelReservationAndCommitRequest = {
+        requestType: AnbHighLevelRequestTypes.cancelReservationAndCommit,
+        requestId: `${reqId + baseReqId}`,
+        currencyCode: "EUR",
+        transferId: transferId,
+        transferAmount: "1",
+        payerPositionAccountId: payerPos,
+        payeePositionAccountId: payeePos,
+        hubJokeAccountId: hubJokeAccountId,
+        payerControlAccountId: payerControl,
+        hubTmpControlAccountId: hubControlAccountId,
+        payeeControlAccountId: payeeControl
+    };
+    return request;
 }
 
 // https://stackoverflow.com/questions/7343890/standard-deviation-javascript/63838108#63838108

@@ -201,15 +201,22 @@ export class TigerBeetleDataPlaneClient implements ILedgerDataPlaneClient {
         if(errors.length <= 0){
             timerEndFn({success: "true"});
         }else {
-            for(const error of errors){
-                if(error.result==CreateTransferError.ok) continue;
+            for (let i = 0; i < errors.length; i++){
+                const error = errors[i];
+                if(error.result==CreateTransferError.ok || error.result==CreateTransferError.linked_event_failed) continue;
 
-                const resp = responses.find(value => value.requestId === pendingTbRequests[1].reqId);
+                const resp = responses.find(value => value.requestId === pendingTbRequests[i].reqId);
                 if(!resp) throw new AccountNotFoundError("Error creating transfers, could not find original request matching a TB error response");
 
-                resp.success = false;
-                resp.errorMessage = `TigerBeetle transfer failed with error code: ${error.result}`;
-                this._logger.warn(`HighLevel request with id: ${resp.requestId} failed in TigerBeetle with error code: ${error.result} `);
+                if(error.result === TB.CreateTransferError.exceeds_credits){
+                    resp.success = false;
+                    resp.errorMessage = "";
+                }else{
+                    // any other error is considered an exception
+                    const errMessage = `HighLevel request with id: ${resp.requestId} failed in TigerBeetle with error code: ${error.result} `;
+                    this._logger.warn(errMessage);
+                    throw new AccountsAndBalancesError( errMessage)
+                }
             }
             timerEndFn({success: "false"});
         }
