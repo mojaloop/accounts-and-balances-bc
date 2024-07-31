@@ -27,7 +27,7 @@
 
 "use strict";
 import {Currency} from "@mojaloop/platform-configuration-bc-public-types-lib";
-import {CurrencyCodeNotFoundError} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
+import {AccountsAndBalancesError, CurrencyCodeNotFoundError} from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
 export function getCurrencyOrThrow(currencies:Currency[], currencyCode:string): Currency{
     const currency: Currency | undefined = currencies.find((value) => value.code === currencyCode);
@@ -38,13 +38,16 @@ export function getCurrencyOrThrow(currencies:Currency[], currencyCode:string): 
 }
 
 export function stringToBigint(stringValue: string, decimals: number): bigint {
-    const num = BigInt(stringValue);
-    const scale = BigInt(decimals);
-    return num * (10n**scale);
+    const num = Number(stringValue);
+    const floatNum = num * (10**decimals);
+    const intNum = Math.trunc(floatNum);
+    if(intNum != floatNum)
+        throw new AccountsAndBalancesError("Provided string number has more decimals than the decimals param, stringToBigint() would lose precision");
+    return BigInt(intNum);
 }
 
 export function bigintToString(bigintValue: bigint, decimals: number): string {
-    const scale = BigInt(decimals);
-    const num = bigintValue / (10n**scale);
+    let num = Number(bigintValue);
+    num = num / (10**decimals);
     return num.toString();
 }

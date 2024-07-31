@@ -106,6 +106,7 @@ import {
     GrpcControlPlane_CoaAccountList
 } from "@mojaloop/accounts-and-balances-bc-public-types-lib/dist/proto/aandb/controlplane/GrpcControlPlane_CoaAccountList";
 import process from "process";
+import {TigerBeetleDataPlaneClient_NoLookup2} from "./implementations/tigerbeetle/tigerbeetle_client_no_lookup2";
 
 const PUBLIC_TYPES_LIB_PATH = require.resolve("@mojaloop/accounts-and-balances-bc-public-types-lib");
 const CONTROL_PLANE_PROTO_FILE_NAME = "control_plane.proto";
@@ -475,7 +476,7 @@ export class AccountsAndBalancesClient {
 
         let client: TigerBeetleDataPlaneClient;
         if(USE_TIGERBEETLE_NOLOOKUP){
-            client = new TigerBeetleDataPlaneClient_NoLookup(
+            client = new TigerBeetleDataPlaneClient_NoLookup2(
                 this._tigerBeetleClusterId, this._tigerBeetleReplicaAddresses,
                 this._currencies, this._logger, this._metrics
             );

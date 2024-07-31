@@ -68,6 +68,13 @@ const start = async ()=> {
         // await delay(5000);
     // }
 
+    // const resp = await client.lookupTransfers([52164700239966177532209503749357130996n]);
+    // const resp = await client.getAccountTransfers({
+    //     account_id:4097n, limit: 10, flags: TB.AccountFilterFlags.debits,
+    //     timestamp_min: 1n, timestamp_max: BigInt(2**63 - 1),
+    // });
+    // console.log(resp);
+
     return Promise.resolve();
 };
 
@@ -82,35 +89,39 @@ const delay = (ms) => new Promise(res => setTimeout(res, ms));
 async function executeLookups(client: TB.Client):Promise<void> {
     const startTime = Date.now();
 
+    console.log(`\t\t\tPending\t\t\tPosted `);
+    console.log(`Account       \t\tdebits | credits  \tdebits | credits \t\tTB acc id`);
+    console.log("-".repeat(100));
+
     const hubLookupRequests: TB.AccountID[] = [];
     // hub accounts
     hubLookupRequests.push(TigerBeetleUtils.uuidToBigint(hubJokeAccountId));
     hubLookupRequests.push(TigerBeetleUtils.uuidToBigint(hubControlAccountId));
     const hubAccountsResp = await client.lookupAccounts(hubLookupRequests);
-    console.log(`Hub joke      - ${getSummary(hubAccountsResp[0])}`);
-    console.log(`Hub control   - ${getSummary(hubAccountsResp[1])}`);
+    console.log(`Hub joke     \t\t${getSummary(hubAccountsResp[0])}\t\t\t${TigerBeetleUtils.uuidToBigint(hubJokeAccountId)}`);
+    console.log(`Hub control  \t\t${getSummary(hubAccountsResp[1])}\t\t\t${TigerBeetleUtils.uuidToBigint(hubControlAccountId)}`);
     console.log();
 
     // payer
     const payerLookupRequests: TB.AccountID[] = [];
     payerLookupRequests.push(TigerBeetleUtils.uuidToBigint(payerPosAccountId));
-    payerLookupRequests.push(TigerBeetleUtils.uuidToBigint(payerLiquidityAccountId));
     payerLookupRequests.push(TigerBeetleUtils.uuidToBigint(payerControlAccountId));
+    payerLookupRequests.push(TigerBeetleUtils.uuidToBigint(payerLiquidityAccountId));
     const payerAccountsResp = await client.lookupAccounts(payerLookupRequests);
-    console.log(`Payer pos     - ${getSummary(payerAccountsResp[0])}`);
-    console.log(`Payer control - ${getSummary(payerAccountsResp[2])}`);
-    console.log(`Payer liq     - ${getSummary(payerAccountsResp[1])}`);
+    console.log(`Payer pos    \t\t${getSummary(payerAccountsResp[0])}\t\t\t${TigerBeetleUtils.uuidToBigint(payerPosAccountId)}`);
+    console.log(`Payer control\t\t${getSummary(payerAccountsResp[1])}\t\t\t${TigerBeetleUtils.uuidToBigint(payerControlAccountId)}`);
+    console.log(`Payer liq    \t\t${getSummary(payerAccountsResp[2])}\t\t\t${TigerBeetleUtils.uuidToBigint(payerLiquidityAccountId)}`);
     console.log();
 
     // payee
     const payeeLookupRequests: TB.AccountID[] = [];
     payeeLookupRequests.push(TigerBeetleUtils.uuidToBigint(payeePosAccountId));
-    payeeLookupRequests.push(TigerBeetleUtils.uuidToBigint(payeeLiquidityAccountId));
     payeeLookupRequests.push(TigerBeetleUtils.uuidToBigint(payeeControlAccountId));
+    payeeLookupRequests.push(TigerBeetleUtils.uuidToBigint(payeeLiquidityAccountId));
     const payeeAccountsResp = await client.lookupAccounts(payeeLookupRequests);
-    console.log(`Payee pos     - ${getSummary(payeeAccountsResp[0])}`);
-    console.log(`Payee control - ${getSummary(payeeAccountsResp[2])}`);
-    console.log(`Payee liq     - ${getSummary(payeeAccountsResp[1])}`);
+    console.log(`Payee pos    \t\t${getSummary(payeeAccountsResp[0])}\t\t\t${TigerBeetleUtils.uuidToBigint(payeePosAccountId)}`);
+    console.log(`Payee control\t\t${getSummary(payeeAccountsResp[1])}\t\t\t${TigerBeetleUtils.uuidToBigint(payeeControlAccountId)}`);
+    console.log(`Payee liq    \t\t${getSummary(payeeAccountsResp[2])}\t\t\t${TigerBeetleUtils.uuidToBigint(payeeLiquidityAccountId)}`);
     console.log();
 
     console.log(`--- Lookups complete --- took: ${Date.now() - startTime} ms\n`);
@@ -118,17 +129,19 @@ async function executeLookups(client: TB.Client):Promise<void> {
 }
 
 function getSummary(tbAcc:TB.Account):string{
+    if(!tbAcc) return "(n/a)";
     const pendingDebits = pad(bigintToString(tbAcc.debits_pending, decimals), 4);
     const pendingCredits = pad(bigintToString(tbAcc.credits_pending, decimals), 4);
-    const pendingBalance =  pad(bigintToString((tbAcc.debits_pending - tbAcc.credits_pending), decimals), 4);
+    const pendingBalance =  bigintToString((tbAcc.debits_pending - tbAcc.credits_pending), decimals);
 
 
     const postedDebits = pad(bigintToString(tbAcc.debits_posted, decimals), 4);
     const postedCredits = pad(bigintToString(tbAcc.credits_posted, decimals), 4);
-    const postedBalance =  pad(bigintToString((tbAcc.debits_posted - tbAcc.credits_posted), decimals), 4);
+    const postedBalance =  bigintToString((tbAcc.debits_posted - tbAcc.credits_posted), decimals);
 
     // return `pending: ${pendingDebits} - ${pendingCredits} = ${pendingBalance} \t\t posted:  ${postedDebits} - ${postedCredits} = ${postedBalance}`;
-    return `pending: ${pendingDebits} - ${pendingCredits}  \t\t posted:  ${postedDebits} - ${postedCredits} `;
+    return `${pendingDebits} | ${pendingCredits} (${pendingBalance}) \t\t${postedDebits} | ${postedCredits} (${postedBalance})`;
+    // return `${pendingDebits} | ${pendingCredits}  \t\t${postedDebits} | ${postedCredits} `;
 }
 
 

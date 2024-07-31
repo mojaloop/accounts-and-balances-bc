@@ -34,7 +34,7 @@ import {AccountsAndBalancesClient} from "../client";
 import {
     consoleLogger,
     currencyList,
-    getClient, hubJokeAccountId, payeePositionAccountId, payerLiquidityAccountId, payerPosAccountId
+    getClient,
 } from "./common";
 import {
     AnbHighLevelRequestTypes, IAnbCancelReservationAndCommitRequest,
@@ -44,6 +44,19 @@ import {
     IAnbHighLevelResponse
 } from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 import {randomUUID} from "crypto";
+
+
+const hubJokeAccountId:string = "00000000-0000-0000-0000-000000000001";        // 1
+const hubControlAccountId:string = "00000000-0000-0000-0000-000000000005";     // 5
+
+const payerPosAccountId:string = "00000000-0000-0000-0000-000000001001";       // 4097
+const payerLiquidityAccountId:string = "00000000-0000-0000-0000-000000001002"; // 4098
+const payerControlAccountId:string = "00000000-0000-0000-0000-000000001005";   // 4101
+
+const payeePosAccountId:string = "00000000-0000-0000-0000-000000002001";       // 8193
+const payeeLiquidityAccountId:string = "00000000-0000-0000-0000-000000002002"; // 8194
+const payeeControlAccountId:string = "00000000-0000-0000-0000-000000002005";   // 8197
+
 
 let client: AccountsAndBalancesClient;
 
@@ -131,7 +144,7 @@ async function request_processHighLevelBatch(count:number):Promise<IAnbHighLevel
             transferId: transferId,
             transferAmount: "1",
             payerPositionAccountId: payerPosAccountId,
-            payeePositionAccountId: payeePositionAccountId,
+            payeePositionAccountId: payeePosAccountId,
             hubJokeAccountId: hubJokeAccountId,
             payerControlAccountId: null,
             hubTmpControlAccountId: null,

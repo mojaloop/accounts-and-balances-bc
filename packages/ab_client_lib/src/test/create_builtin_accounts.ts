@@ -109,8 +109,16 @@ const start = async ()=> {
         }
     ];
 
+
+
     const resp = await client.createAccounts(createRequests);
     consoleLogger.debug(resp);
+
+    /*
+    * initial transfers:
+    * create_transfers code=1 ledger=978 id=1 debit_account_id=1 credit_account_id=4098 amount=999900;
+    * create_transfers code=1 ledger=978 id=2 debit_account_id=5 credit_account_id=4101 amount=999900;
+    * */
 };
 
 

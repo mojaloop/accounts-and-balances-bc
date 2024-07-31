@@ -59,7 +59,7 @@ const payeeLiquidityAccountId:string = "00000000-0000-0000-0000-000000002002"; /
 const payeeControlAccountId:string = "00000000-0000-0000-0000-000000002005";   // 8197
 
 const testDurationSecs = 120;
-const batchSize = 2600;
+const batchSize = 8000/8;
 
 const baseReqId = 900000;
 
@@ -79,46 +79,55 @@ const start = async ()=> {
     // const resp = await request_processHighLevelBatch(1  );
     // console.log(resp);
 
-    // test single leg:
-    // const req1 = get_checkLiquidAndReserve_tbTransfer(randomUUID(), 1, payerPosAccountId, payerLiquidityAccountId,payerControlAccountId);
-    // let resps: IAnbHighLevelResponse[] = await client.processHighLevelBatch([req1]);
 
-    const req2 = get_cancelReservationAndCommit_tbTransfer(randomUUID(), 2, payerPosAccountId, payerControlAccountId, payeePosAccountId, payeeControlAccountId);
-    let resps = await client.processHighLevelBatch([req2]);
+    // const transferId = randomUUID();
+    //
+    // // test single leg:
+    // const req1 = get_checkLiquidAndReserve_tbTransfer(transferId, 1, payerPosAccountId, payerLiquidityAccountId,payerControlAccountId);
+    // const resp1: IAnbHighLevelResponse[] = await client.processHighLevelBatch([req1]);
+    //
+    // const req2 = get_cancelReservationAndCommit_tbTransfer(transferId, 2, payerPosAccountId, payerControlAccountId, payeePosAccountId, payeeControlAccountId);
+    // const resps2 = await client.processHighLevelBatch([req2]);
+
+    // test from usual payee to usual payer
+    // const req1 = get_checkLiquidAndReserve_tbTransfer(transferId, 1, payeePosAccountId, payeeLiquidityAccountId,payeeControlAccountId);
+    // const resp1: IAnbHighLevelResponse[] = await client.processHighLevelBatch([req1]);
+    //
+    // const req2 = get_cancelReservationAndCommit_tbTransfer(transferId, 2, payeePosAccountId, payeeControlAccountId, payerPosAccountId, payerControlAccountId);
+    // const resps2 = await client.processHighLevelBatch([req2]);
 
 
+    const startLoadTs = Date.now();
 
-    // const startLoadTs = Date.now();
-    //
-    // let transferCount = 0;
-    // let totalMs = 0;
-    // let iteration = 0;
-    // let maxBatchMs = -1, minBatchMs = -1;
-    // const batchDurations: number[] = [];
-    // while(Date.now() - testStartTs <= testDurationSecs*1000) {
-    //     const batchStartTs = Date.now();
-    //     const resp = await request_processHighLevelBatch(batchSize);
-    //     const tookMs = Date.now() - batchStartTs;
-    //
-    //     iteration++;
-    //     totalMs += tookMs;
-    //     batchDurations.push(tookMs);
-    //     transferCount += resp.length;
-    //     if(minBatchMs == -1 || tookMs < minBatchMs) minBatchMs = tookMs;
-    //     if(maxBatchMs == -1 || tookMs > maxBatchMs) maxBatchMs = tookMs;
-    //
-    //     if(iteration % 20 == 0) {
-    //         console.log(`loadtest completed batch of ${resp.length} sets took: ${tookMs}  - ${tookMs / resp.length} ms per req - iteration: ${iteration}\n`);
-    //     }
-    // }
-    //
-    // const loadTookMs = Date.now()-startLoadTs;
-    // const stdDev = standardDeviation(batchDurations);
-    //
-    // consoleLogger.debug(`TEST COMPLETE - ${iteration} batches sent, ${batchSize * 2} batchSize`);
-    // consoleLogger.debug(`  Total runtime ${Math.ceil(loadTookMs/1000)} secs`);
-    // consoleLogger.debug(`  Batch durations - avg: ${Math.ceil(loadTookMs / iteration)} ms - min: ${minBatchMs} ms - max: ${maxBatchMs} ms - stdDev: ${Math.round(stdDev*100)/100}`);
-    // consoleLogger.debug(`  Average per req: ${Math.round((loadTookMs / transferCount) * 1000) / 1000} ms`);
+    let transferCount = 0;
+    let totalMs = 0;
+    let iteration = 0;
+    let maxBatchMs = -1, minBatchMs = -1;
+    const batchDurations: number[] = [];
+    while(Date.now() - testStartTs <= testDurationSecs*1000) {
+        const batchStartTs = Date.now();
+        const resp = await request_processHighLevelBatch(batchSize);
+        const tookMs = Date.now() - batchStartTs;
+
+        iteration++;
+        totalMs += tookMs;
+        batchDurations.push(tookMs);
+        transferCount += resp.length;
+        if(minBatchMs == -1 || tookMs < minBatchMs) minBatchMs = tookMs;
+        if(maxBatchMs == -1 || tookMs > maxBatchMs) maxBatchMs = tookMs;
+
+        if(iteration % 20 == 0) {
+            console.log(`loadtest completed batch of ${resp.length} sets took: ${tookMs}  - ${tookMs / resp.length} ms per req - iteration: ${iteration}\n`);
+        }
+    }
+
+    const loadTookMs = Date.now()-startLoadTs;
+    const stdDev = standardDeviation(batchDurations);
+
+    consoleLogger.debug(`TEST COMPLETE - ${iteration} batches sent, ${batchSize * 2} batchSize`);
+    consoleLogger.debug(`  Total runtime ${Math.ceil(loadTookMs/1000)} secs`);
+    consoleLogger.debug(`  Batch durations - avg: ${Math.ceil(loadTookMs / iteration)} ms - min: ${minBatchMs} ms - max: ${maxBatchMs} ms - stdDev: ${Math.round(stdDev*100)/100}`);
+    consoleLogger.debug(`  Average per req: ${Math.round((loadTookMs / transferCount) * 1000) / 1000} ms`);
 
 };
 
