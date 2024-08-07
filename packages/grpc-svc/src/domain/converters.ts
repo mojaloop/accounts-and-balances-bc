@@ -27,63 +27,19 @@
  --------------
  ******/
 
-const REGEX: RegExp = /^(-{0,1})([0]|([1-9][0-9]{0,17}))([.][0-9]{0,3}[1-9])?$/;
+import { AccountsAndBalancesError } from "@mojaloop/accounts-and-balances-bc-public-types-lib";
 
-// Can be optimized.
 export function stringToBigint(stringValue: string, decimals: number): bigint {
-	if (!REGEX.test(stringValue)) {
-		throw new Error("stringToBigint() - regex test failed");
-	}
-
-	// Count the decimals on the received string.
-	const stringValueSplitted: string[] = stringValue.split(".");
-	const existingDecimals: number = stringValueSplitted[1]?.length ?? 0;
-	if (existingDecimals > decimals) {
-		throw new Error("stringToBigint() - existingDecimals > decimals");
-	}
-
-	// Format the received string according to the decimals.
-	const stringValueFormatted: string =
-		stringValue.replace(".", "")
-		+ "0".repeat(decimals - existingDecimals);
-
-	const bigintValue: bigint = BigInt(stringValueFormatted);
-	return bigintValue;
+    const num = Number(stringValue);
+    const floatNum = num * (10**decimals);
+    const intNum = Math.trunc(floatNum);
+    if(intNum != floatNum)
+        throw new AccountsAndBalancesError("Provided string number has more decimals than the decimals param, stringToBigint() would lose precision");
+    return BigInt(intNum);
 }
 
-// Can be optimized.
 export function bigintToString(bigintValue: bigint, decimals: number): string {
-	if (bigintValue === 0n) {
-		return "0";
-	}
-	decimals = decimals || 0;
-
-	// Get the string corresponding to the bigint and insert a dot according to the decimals.
-	let bigintValueToString: string = bigintValue.toString();
-    const negative = bigintValueToString.startsWith("-");
-    if(negative)
-        bigintValueToString = bigintValueToString.slice(1);
-
-	if(bigintValueToString.length <= decimals){
-		bigintValueToString = "0".repeat(decimals - bigintValueToString.length + 1) + bigintValueToString;
-	}
-
-	const dotIdx: number = bigintValueToString.length - decimals;
-	const bigintValueToStringWithDot: string =
-		bigintValueToString.slice(0, dotIdx) + "." + bigintValueToString.slice(dotIdx);
-
-	let finalString: string = bigintValueToStringWithDot;
-	// Remove trailing zeros, if necessary.
-	while (finalString.endsWith("0")) {
-		finalString = finalString.slice(0, -1);
-	}
-	// Remove dot, if necessary.
-	if (finalString.endsWith(".")) {
-		finalString = finalString.slice(0, -1);
-	}
-
-    if (negative)
-        finalString = "-"+finalString;
-
-    return finalString;
+    let num = Number(bigintValue);
+    num = num / (10**decimals);
+    return num.toString();
 }
