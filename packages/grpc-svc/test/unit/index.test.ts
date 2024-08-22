@@ -60,12 +60,20 @@ describe("number converter - stringToBigint", ()=>{
         expect(stringToBigint("20000", 2)).toEqual(2000000n);
     });
 
+    test("stringToBigint() - '25.01', 4 decimals", async () => {
+        expect(stringToBigint("25.01", 4)).toEqual(250100n);
+    });
+
     test("stringToBigint() - negative '-20', 2 decimals", async () => {
 		expect(stringToBigint("-20", 2)).toEqual(-2000n);
 	});
 
     test("stringToBigint() - negative '-20', 0 decimals", async () => {
         expect(stringToBigint("-20", 0)).toEqual(-20n);
+    });
+
+    test("stringToBigint() - negative '25.01', 4 decimals", async () => {
+        expect(stringToBigint("-25.01", 4)).toEqual(-250100n);
     });
 });
 

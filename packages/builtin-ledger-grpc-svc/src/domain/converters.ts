@@ -31,7 +31,7 @@ import { AccountsAndBalancesError } from "@mojaloop/accounts-and-balances-bc-pub
 
 export function stringToBigint(stringValue: string, decimals: number): bigint {
     const num = Number(stringValue);
-    const floatNum = num * (10**decimals);
+    const floatNum = +(num * (10**decimals)).toFixed(8);
     const intNum = Math.trunc(floatNum);
     if(intNum != floatNum)
         throw new AccountsAndBalancesError("Provided string number has more decimals than the decimals param, stringToBigint() would lose precision");
