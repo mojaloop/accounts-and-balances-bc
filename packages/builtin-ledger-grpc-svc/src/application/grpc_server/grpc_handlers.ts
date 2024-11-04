@@ -246,9 +246,7 @@ export class BuiltinLedgerGrpcHandlers {
                 throw new AccountNotFoundError("Invalid accounts on CancelReservationAndCommit request");
             }
         }else if(req.requestType === AccountsBalancesHighLevelRequestTypes.cancelReservation){
-            if (!req.payeePositionAccountId) {
-                throw new AccountNotFoundError("Invalid accounts on CancelReservationAndCommit request");
-            }
+            // nothing to replace - already done by code above for mandatory accounts
         }else{
             throw new Error("Invalid BuiltinLedgerGrpcHighLevelRequest.requestType");
         }
