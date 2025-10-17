@@ -1,4 +1,11 @@
-# Accounts and Balances Bounded Context
+# [DEPRECATED] Accounts and Balances Bounded Context
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------
+**Deprecation Notice**: This repo was deprecated as of October 2025. It is no longer maintained, and is no longer referenced by any releases of Mojaloop.
+
+For a list of active Mojaloop repos, please refer to [Mojaloop documentation](https://docs.mojaloop.io) or [Mojaloop GitHub Org](https://github.com/mojaloop).
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------
 
 The Accounts and Balances BC acts as the “central ledger” for the system. It interacts primarily with the Settlements BC, Participants Lifecycle BC and Transfers BCs, and is a directed sub-system, which means that it is a dependency of the BCs that use it as a “financial system of record” for the financial accounting.
 
